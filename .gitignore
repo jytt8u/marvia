@@ -1,0 +1,17 @@
+# сборка
+/bin/
+*.exe
+
+# ключи, конфиги, базы — не должны попасть в историю ни при каких условиях
+*.key
+*.pem
+.env
+clients.txt
+users.json
+config.local.*
+
+# состояние панели и нод
+*.db
+*.db-wal
+*.db-shm
+*.usage.json
