@@ -417,12 +417,19 @@ func (a *API) subscription(w http.ResponseWriter, r *http.Request) {
 // Секретов здесь нет и быть не должно: свой ключ клиент получил один раз в
 // ссылке аккаунта, а список нод он обновляет постоянно и по открытому каналу.
 func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
+	// Транспорт передаётся явно: нашему клиенту нужно знать, как именно
+	// подключаться, а разбирать это из ссылки — лишний источник расхождений
+	// между тем, что собрала панель, и тем, что понял клиент.
 	type nodeView struct {
 		Name      string `json:"name"`
 		Address   string `json:"address"`
 		SNI       string `json:"sni,omitempty"`
 		PublicKey string `json:"public_key"`
 		Link      string `json:"link"`
+
+		WSPath           string `json:"ws_path,omitempty"`
+		RealityPublicKey string `json:"reality_public_key,omitempty"`
+		RealityShortID   string `json:"reality_short_id,omitempty"`
 	}
 
 	views := make([]nodeView, 0, len(nodes))
@@ -433,6 +440,9 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 		views = append(views, nodeView{
 			Name: n.Name, Address: n.Address, SNI: n.SNI,
 			PublicKey: n.PublicKey, Link: VeilNodeLink(n),
+			WSPath:           n.WSPath,
+			RealityPublicKey: n.RealityPublicKey,
+			RealityShortID:   n.RealityShortID,
 		})
 	}
 
