@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veil — панель</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --border: #dfe3e8;
+  --text: #1b1f24;
+  --muted: #6b7480;
+  --accent: #2f6fed;
+  --accent-text: #ffffff;
+  --ok: #1a7f45;
+  --warn: #a86400;
+  --bad: #c0392b;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171c;
+    --surface: #1c2027;
+    --surface-2: #232830;
+    --border: #2f3641;
+    --text: #e6e9ee;
+    --muted: #949daa;
+    --accent: #4d86ff;
+    --ok: #4ec27f;
+    --warn: #e0a33a;
+    --bad: #ef6b5b;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+}
+a { color: var(--accent); }
+h1, h2, h3 { margin: 0 0 .6rem; line-height: 1.25; }
+h1 { font-size: 1.25rem; }
+h2 { font-size: 1.05rem; }
+
+.wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
+
+header.top {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: .9rem; margin-bottom: 1.1rem;
+}
+header.top .brand { font-weight: 700; font-size: 1.15rem; letter-spacing: .02em; }
+header.top .spacer { flex: 1; }
+
+.tabs { display: flex; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.tabs button {
+  background: transparent; border: 1px solid transparent; color: var(--muted);
+  padding: .45rem .8rem; border-radius: var(--radius); cursor: pointer; font: inherit;
+}
+.tabs button.active { background: var(--surface); border-color: var(--border); color: var(--text); font-weight: 600; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;
+}
+.card > h2 { display: flex; align-items: center; gap: .5rem; }
+
+button {
+  font: inherit; cursor: pointer; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  padding: .4rem .75rem;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button.danger { color: var(--bad); }
+button.tiny { padding: .2rem .5rem; font-size: .85rem; }
+button:disabled { opacity: .5; cursor: default; }
+
+input, select {
+  font: inherit; color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 8px; padding: .4rem .55rem; width: 100%;
+}
+label.field { display: block; }
+label.field > span { display: block; font-size: .82rem; color: var(--muted); margin-bottom: .2rem; }
+
+.grid { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; }
+.row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.kinds { display: flex; gap: .8rem; flex-wrap: wrap; }
+.kinds label { display: flex; gap: .3rem; align-items: center; font-size: .9rem; }
+.kinds input { width: auto; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: .55rem .5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+td.actions { text-align: right; white-space: nowrap; }
+
+.tag { display: inline-block; padding: .1rem .45rem; border-radius: 999px; font-size: .75rem; border: 1px solid var(--border); }
+.tag.ok { color: var(--ok); border-color: currentColor; }
+.tag.bad { color: var(--bad); border-color: currentColor; }
+.tag.warn { color: var(--warn); border-color: currentColor; }
+
+.bar { height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-top: .25rem; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+.bar > i.warn { background: var(--warn); }
+.bar > i.bad { background: var(--bad); }
+.muted { color: var(--muted); font-size: .85rem; }
+.mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .82rem; word-break: break-all; }
+
+.linkbox { display: flex; gap: .5rem; align-items: flex-start; margin: .45rem 0; }
+.linkbox .mono {
+  flex: 1; background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: .45rem .55rem;
+}
+
+dialog#modal {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text);
+  max-width: 680px; width: calc(100% - 2rem); padding: 1.1rem;
+}
+dialog#modal::backdrop { background: rgba(0,0,0,.5); }
+
+.gate { max-width: 420px; margin: 12vh auto; }
+.note {
+  border-left: 3px solid var(--warn); padding: .5rem .7rem;
+  background: var(--surface-2); border-radius: 0 8px 8px 0; font-size: .88rem;
+}
+#toast {
+  position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  padding: .5rem .9rem; border-radius: 999px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
+  opacity: 0; pointer-events: none; transition: opacity .18s;
+}
+#toast.show { opacity: 1; }
+#toast.bad { border-color: var(--bad); color: var(--bad); }
+.empty { color: var(--muted); padding: 1rem .5rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="wrap gate" id="gate">
+  <h1>Veil — панель</h1>
+  <div class="card">
+    <p class="muted">Введи админский токен. Он останется в этом браузере и не уйдёт никуда, кроме самой панели.</p>
+    <label class="field"><span>Админский токен</span>
+      <input id="tokenInput" type="password" autocomplete="off" spellcheck="false">
+    </label>
+    <div class="row" style="margin-top:.7rem">
+      <button class="primary" id="tokenSubmit">Войти</button>
+      <span class="muted">выпустить: <code class="mono">veil-panel -new-token</code></span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header class="top">
+    <span class="brand">Veil</span>
+    <span class="muted" id="summary"></span>
+    <span class="spacer"></span>
+    <button id="refresh">Обновить</button>
+    <button id="logout">Выйти</button>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="users" class="active">Подписчики</button>
+    <button data-tab="nodes">Ноды</button>
+  </nav>
+
+  <section id="tab-users">
+    <div class="card">
+      <h2>Выдать доступ</h2>
+      <div class="grid">
+        <label class="field"><span>Метка</span><input id="nu-label" placeholder="заказ 1043"></label>
+        <label class="field"><span>Срок, дней</span><input id="nu-days" type="number" min="0" value="30"></label>
+        <label class="field"><span>Квота, ГБ</span><input id="nu-gb" type="number" min="0" value="100"></label>
+        <label class="field"><span>Устройств</span><input id="nu-ips" type="number" min="0" value="3"></label>
+      </div>
+      <div class="kinds" style="margin:.8rem 0">
+        <label><input type="checkbox" value="vp1" checked> vp1 — наш клиент</label>
+        <label><input type="checkbox" value="vless" checked> vless — v2rayNG, Hiddify</label>
+        <label><input type="checkbox" value="trojan" checked> trojan</label>
+      </div>
+      <button class="primary" id="nu-create">Создать и показать ссылки</button>
+    </div>
+
+    <div class="card">
+      <h2>Подписчики <span class="muted" id="users-count"></span></h2>
+      <div id="users-body"></div>
+    </div>
+  </section>
+
+  <section id="tab-nodes" hidden>
+    <div class="card">
+      <h2>Добавить ноду</h2>
+      <div class="grid">
+        <label class="field"><span>Имя</span><input id="nn-name" placeholder="msk-1"></label>
+        <label class="field"><span>Адрес и порт</span><input id="nn-address" placeholder="msk.example.com:443"></label>
+        <label class="field"><span>SNI (домен)</span><input id="nn-sni" placeholder="msk.example.com"></label>
+        <label class="field"><span>Публичный ключ ноды</span><input id="nn-key" placeholder="из журнала veil-server"></label>
+      </div>
+      <button class="primary" id="nn-create" style="margin-top:.8rem">Добавить</button>
+    </div>
+
+    <div class="card">
+      <h2>Ноды <span class="muted" id="nodes-count"></span></h2>
+      <div id="nodes-body"></div>
+    </div>
+  </section>
+</div>
+
+<dialog id="modal"><div id="modal-body"></div>
+  <div class="row" style="margin-top:1rem;justify-content:flex-end">
+    <button id="modal-close">Закрыть</button>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+
+<script nonce="%NONCE%">
+"use strict";
+
+/* Всё содержимое ставится через textContent, а не через разметку строкой.
+   Метки подписчиков приходят от продавца и его бота, и одна угловая скобка в
+   имени не должна превращаться в исполняемый код на странице, где лежит
+   админский токен. */
+
+const state = { token: localStorage.getItem("veil.token") || "", users: [], nodes: [] };
+
+const $ = (id) => document.getElementById(id);
+
+function el(tag, props, ...kids) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else if (v !== null && v !== undefined) node.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    node.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return node;
+}
+
+let toastTimer = 0;
+function toast(message, bad) {
+  const box = $("toast");
+  box.textContent = message;
+  box.className = bad ? "show bad" : "show";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { box.className = ""; }, 3200);
+}
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: Object.assign(
+      { "Authorization": "Bearer " + state.token },
+      body ? { "Content-Type": "application/json" } : {}
+    ),
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) { logout(); throw new Error("токен не подошёл"); }
+  if (res.status === 204) return null;
+
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (_) { /* не JSON */ }
+  if (!res.ok) throw new Error((data && data.error) || ("код " + res.status));
+  return data;
+}
+
+/* ---------- человеческие форматы ---------- */
+
+function bytes(n) {
+  if (!n) return "0";
+  const units = ["Б", "КБ", "МБ", "ГБ", "ТБ"];
+  let i = 0, v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return (v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)) + " " + units[i];
+}
+
+function plural(n, one, few, many) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+
+function untilText(iso) {
+  if (!iso) return { text: "бессрочно", cls: "" };
+
+  const left = new Date(iso) - Date.now();
+  if (left < 0) return { text: "истекла", cls: "bad" };
+
+  // Округляем вверх, а не вниз. Выданная на семь дней подписка живёт на
+  // несколько секунд меньше семи суток, и округление вниз показывало бы
+  // «6 дней» сразу после выдачи — продавец решит, что панель его обсчитала.
+  const days = Math.ceil(left / 86400000);
+  if (days === 0) return { text: "истекает сегодня", cls: "warn" };
+  return { text: days + " " + plural(days, "день", "дня", "дней"), cls: days <= 3 ? "warn" : "" };
+}
+
+function agoText(iso) {
+  if (!iso) return { text: "не выходила на связь", cls: "bad" };
+  const sec = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (sec > 120) {
+    const min = Math.floor(sec / 60);
+    if (min < 60) return { text: min + " " + plural(min, "минуту", "минуты", "минут") + " назад", cls: "bad" };
+    const hours = Math.floor(min / 60);
+    return { text: hours + " " + plural(hours, "час", "часа", "часов") + " назад", cls: "bad" };
+  }
+  return { text: sec < 20 ? "только что" : sec + " с назад", cls: "ok" };
+}
+
+/* ---------- копирование ---------- */
+
+async function copy(value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast("Скопировано");
+  } catch (_) {
+    // Буфер обмена доступен только по HTTPS или на localhost. Панель за
+    // прокси без TLS этого не получит, поэтому запасной путь обязателен.
+    const area = el("textarea", { style: "position:fixed;opacity:0" });
+    area.value = value;
+    document.body.append(area);
+    area.select();
+    const okCopy = document.execCommand("copy");
+    area.remove();
+    toast(okCopy ? "Скопировано" : "Скопируй вручную: буфер недоступен без HTTPS", !okCopy);
+  }
+}
+
+function linkRow(label, value) {
+  return el("div", {},
+    el("div", { class: "muted", text: label }),
+    el("div", { class: "linkbox" },
+      el("div", { class: "mono", text: value }),
+      el("button", { class: "tiny", onclick: () => copy(value) }, "Копировать")
+    )
+  );
+}
+
+/* ---------- окно с выданными ссылками ---------- */
+
+function showLinks(title, links, issued, hasVP1) {
+  const body = $("modal-body");
+  body.replaceChildren();
+  body.append(el("h2", { text: title }));
+
+  if (issued && issued.some((i) => i.kind === "vp1")) {
+    body.append(el("div", { class: "note", text:
+      "Приватный ключ vp1 показывается один раз — панель его не хранит. " +
+      "Если покупатель его потеряет, выпусти новый через «Ещё доступ»." }));
+  } else if (hasVP1 && !links.account) {
+    // Продавец видит доступ vp1 в списке, но ссылки на него здесь нет.
+    // Без объяснения это выглядит как поломка, хотя это осознанное свойство.
+    body.append(el("div", { class: "note", text:
+      "Ссылки для нашего клиента здесь нет: приватный ключ vp1 показывался " +
+      "один раз и в панели не хранится. Чтобы выдать доступ заново, нажми " +
+      "«Ещё доступ» — старый ключ можно потом отозвать." }));
+  }
+
+  if (links.account) body.append(linkRow("Наш клиент", links.account));
+  if (links.subscription) body.append(linkRow("Подписка для v2rayNG, Hiddify и подобных", links.subscription));
+  (links.stock || []).forEach((link, i) => {
+    body.append(linkRow("Прямая ссылка " + (i + 1), link));
+  });
+
+  if (!links.account && !(links.stock || []).length) {
+    body.append(el("p", { class: "muted", text: "Ссылок нет: сначала добавь хотя бы одну ноду." }));
+  }
+  $("modal").showModal();
+}
+
+/* ---------- подписчики ---------- */
+
+function usageCell(user) {
+  const used = user.used || 0;
+  const limit = user.traffic_limit || 0;
+  const wrap = el("div", {});
+  wrap.append(el("div", { class: "mono", text: limit ? bytes(used) + " из " + bytes(limit) : bytes(used) }));
+
+  if (limit) {
+    const share = Math.min(1, used / limit);
+    const cls = share >= 1 ? "bad" : share > 0.85 ? "warn" : "";
+    wrap.append(el("div", { class: "bar" }, el("i", { class: cls, style: "width:" + (share * 100).toFixed(1) + "%" })));
+  }
+  return wrap;
+}
+
+function kindTags(user) {
+  const seen = [];
+  for (const c of user.credentials || []) if (!seen.includes(c.kind)) seen.push(c.kind);
+  return el("div", { class: "row" }, seen.map((k) => el("span", { class: "tag", text: k })));
+}
+
+function renderUsers() {
+  const host = $("users-body");
+  host.replaceChildren();
+  $("users-count").textContent = state.users.length ? "· " + state.users.length : "";
+
+  if (!state.users.length) {
+    host.append(el("div", { class: "empty", text: "Пока никого. Выдай первый доступ выше." }));
+    return;
+  }
+
+  const rows = state.users.map((user) => {
+    const until = untilText(user.expires_at);
+    return el("tr", {},
+      el("td", {},
+        el("div", { text: user.label || "без метки" }),
+        el("div", { class: "muted", text: "#" + user.id })
+      ),
+      el("td", {}, user.enabled
+        ? el("span", { class: "tag ok", text: "активен" })
+        : el("span", { class: "tag bad", text: "отключён" })),
+      el("td", {}, usageCell(user)),
+      el("td", {}, el("span", { class: "tag " + until.cls, text: until.text })),
+      el("td", {}, kindTags(user)),
+      el("td", { class: "actions" },
+        el("button", { class: "tiny", onclick: () => openLinks(user) }, "Ссылки"),
+        " ",
+        el("button", { class: "tiny", onclick: () => extend(user, 30) }, "+30 дней"),
+        " ",
+        el("button", { class: "tiny", onclick: () => toggle(user) }, user.enabled ? "Отключить" : "Включить"),
+        " ",
+        el("button", { class: "tiny", onclick: () => addKind(user) }, "Ещё доступ"),
+        " ",
+        el("button", { class: "tiny danger", onclick: () => removeUser(user) }, "Удалить")
+      )
+    );
+  });
+
+  host.append(el("table", {},
+    el("thead", {}, el("tr", {},
+      el("th", { text: "Подписчик" }), el("th", { text: "Статус" }),
+      el("th", { text: "Трафик" }), el("th", { text: "Подписка" }),
+      el("th", { text: "Доступы" }), el("th", {})
+    )),
+    el("tbody", {}, rows)
+  ));
+}
+
+async function createUser() {
+  const kinds = Array.from(document.querySelectorAll(".kinds input:checked")).map((i) => i.value);
+  if (!kinds.length) { toast("Выбери хотя бы один вид доступа", true); return; }
+
+  const days = Number($("nu-days").value) || 0;
+  const gb = Number($("nu-gb").value) || 0;
+  const body = {
+    label: $("nu-label").value.trim(),
+    traffic_limit: Math.round(gb * 1024 * 1024 * 1024),
+    max_ips: Number($("nu-ips").value) || 0,
+    kinds: kinds,
+  };
+  if (days > 0) body.expires_at = new Date(Date.now() + days * 86400000).toISOString();
+
+  try {
+    const res = await api("POST", "/api/v1/users", body);
+    $("nu-label").value = "";
+    await load();
+    showLinks("Доступ выдан — отправь покупателю", res.links || {}, res.issued);
+  } catch (err) { toast(err.message, true); }
+}
+
+async function openLinks(user) {
+  try {
+    const links = await api("GET", "/api/v1/users/" + user.id + "/links");
+    const hasVP1 = (user.credentials || []).some((c) => c.kind === "vp1");
+    showLinks(user.label || ("Подписчик #" + user.id), links, null, hasVP1);
+  } catch (err) { toast(err.message, true); }
+}
+
+async function addKind(user) {
+  const kind = prompt("Какой доступ выпустить: vp1, vless или trojan?", "vless");
+  if (!kind) return;
+  try {
+    const res = await api("POST", "/api/v1/users/" + user.id + "/credentials", { kind: kind.trim(), label: "" });
+    await load();
+    showLinks("Новый доступ выдан", res.links || {}, res.issued);
+  } catch (err) { toast(err.message, true); }
+}
+
+async function extend(user, days) {
+  const from = user.expires_at && new Date(user.expires_at) > new Date() ? new Date(user.expires_at) : new Date();
+  const next = new Date(from.getTime() + days * 86400000).toISOString();
+  try {
+    await api("PATCH", "/api/v1/users/" + user.id, { expires_at: next, enabled: true });
+    toast("Продлено на " + days + " " + plural(days, "день", "дня", "дней"));
+    await load();
+  } catch (err) { toast(err.message, true); }
+}
+
+async function toggle(user) {
+  try {
+    await api("PATCH", "/api/v1/users/" + user.id, { enabled: !user.enabled });
+    await load();
+  } catch (err) { toast(err.message, true); }
+}
+
+async function removeUser(user) {
+  if (!confirm("Удалить " + (user.label || ("#" + user.id)) + " вместе со статистикой?")) return;
+  try {
+    await api("DELETE", "/api/v1/users/" + user.id);
+    await load();
+  } catch (err) { toast(err.message, true); }
+}
+
+/* ---------- ноды ---------- */
+
+function renderNodes() {
+  const host = $("nodes-body");
+  host.replaceChildren();
+  $("nodes-count").textContent = state.nodes.length ? "· " + state.nodes.length : "";
+
+  if (!state.nodes.length) {
+    host.append(el("div", { class: "empty", text: "Нод нет. Без них подписка пустая." }));
+    return;
+  }
+
+  const rows = state.nodes.map((node) => {
+    const seen = agoText(node.last_seen);
+    return el("tr", {},
+      el("td", {},
+        el("div", { text: node.name || "без имени" }),
+        el("div", { class: "muted mono", text: node.address })
+      ),
+      el("td", { class: "mono", text: node.sni || "—" }),
+      el("td", {}, el("span", { class: "tag " + seen.cls, text: seen.text })),
+      el("td", {}, node.enabled
+        ? el("span", { class: "tag ok", text: "включена" })
+        : el("span", { class: "tag bad", text: "выключена" })),
+      el("td", { class: "actions" },
+        el("button", { class: "tiny danger", onclick: () => removeNode(node) }, "Удалить")
+      )
+    );
+  });
+
+  host.append(el("table", {},
+    el("thead", {}, el("tr", {},
+      el("th", { text: "Нода" }), el("th", { text: "SNI" }),
+      el("th", { text: "Связь" }), el("th", { text: "Статус" }), el("th", {})
+    )),
+    el("tbody", {}, rows)
+  ));
+}
+
+async function createNode() {
+  const body = {
+    name: $("nn-name").value.trim(),
+    address: $("nn-address").value.trim(),
+    sni: $("nn-sni").value.trim(),
+    public_key: $("nn-key").value.trim(),
+  };
+  if (!body.address) { toast("Нужен адрес вида host:port", true); return; }
+
+  try {
+    const res = await api("POST", "/api/v1/nodes", body);
+    ["nn-name", "nn-address", "nn-sni", "nn-key"].forEach((id) => { $(id).value = ""; });
+    await load();
+
+    const modalBody = $("modal-body");
+    modalBody.replaceChildren();
+    modalBody.append(
+      el("h2", { text: "Нода добавлена" }),
+      el("div", { class: "note", text: "Токен ноды показывается один раз: в базе лежит только его хеш." }),
+      linkRow("Запусти на сервере", "veil-server -panel " + location.origin +
+        " -panel-token " + res.token + " -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org")
+    );
+    $("modal").showModal();
+  } catch (err) { toast(err.message, true); }
+}
+
+async function removeNode(node) {
+  if (!confirm("Удалить ноду " + (node.name || node.address) + "? Её статистика тоже пропадёт.")) return;
+  try {
+    await api("DELETE", "/api/v1/nodes/" + node.id);
+    await load();
+  } catch (err) { toast(err.message, true); }
+}
+
+/* ---------- загрузка и вход ---------- */
+
+async function load() {
+  const [users, nodes] = await Promise.all([
+    api("GET", "/api/v1/users"),
+    api("GET", "/api/v1/nodes"),
+  ]);
+  state.users = (users && users.users) || [];
+  state.nodes = (nodes && nodes.nodes) || [];
+
+  const active = state.users.filter((u) => u.enabled).length;
+  const alive = state.nodes.filter((n) => n.last_seen && (Date.now() - new Date(n.last_seen)) < 120000).length;
+  $("summary").textContent =
+    active + " из " + state.users.length + " активны · нод на связи " + alive + " из " + state.nodes.length;
+
+  renderUsers();
+  renderNodes();
+}
+
+function logout() {
+  state.token = "";
+  localStorage.removeItem("veil.token");
+  $("app").hidden = true;
+  $("gate").hidden = false;
+}
+
+async function enter(token) {
+  state.token = token;
+  try {
+    await load();
+    localStorage.setItem("veil.token", token);
+    $("gate").hidden = true;
+    $("app").hidden = false;
+  } catch (err) {
+    state.token = "";
+    toast(err.message, true);
+  }
+}
+
+/* ---------- сборка страницы ---------- */
+
+$("tokenSubmit").addEventListener("click", () => {
+  const token = $("tokenInput").value.trim();
+  if (token) enter(token);
+});
+$("tokenInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("tokenSubmit").click(); });
+$("logout").addEventListener("click", logout);
+$("refresh").addEventListener("click", () => load().catch((e) => toast(e.message, true)));
+$("modal-close").addEventListener("click", () => $("modal").close());
+$("nu-create").addEventListener("click", createUser);
+$("nn-create").addEventListener("click", createNode);
+
+document.querySelectorAll(".tabs button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b === btn));
+    $("tab-users").hidden = btn.dataset.tab !== "users";
+    $("tab-nodes").hidden = btn.dataset.tab !== "nodes";
+  });
+});
+
+if (state.token) enter(state.token);
+</script>
+</body>
+</html>
