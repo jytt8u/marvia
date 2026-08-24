@@ -543,3 +543,91 @@ func TestDisableAndExtendUser(t *testing.T) {
 		t.Fatalf("продление не применилось: %+v", out.User)
 	}
 }
+
+// TestWebAppIsServedWithStrictPolicy: на странице панели живёт админский
+// токен, поэтому чужой скрипт в этом origin равносилен выдаче полного
+// доступа. Проверяем, что политика жёсткая и что одноразовое значение
+// подставлено, а не осталось шаблоном.
+func TestWebAppIsServedWithStrictPolicy(t *testing.T) {
+	h := newHarness(t)
+
+	resp, err := h.server.Client().Get(h.server.URL + "/")
+	if err != nil {
+		t.Fatalf("страница: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("код %d", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Fatalf("тип содержимого %q", ct)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	page := string(body)
+	if strings.Contains(page, "%NONCE%") {
+		t.Fatal("шаблон nonce не заменён — скрипт не запустится под политикой")
+	}
+
+	policy := resp.Header.Get("Content-Security-Policy")
+	for _, must := range []string{"default-src 'none'", "script-src 'nonce-", "connect-src 'self'", "frame-ancestors 'none'"} {
+		if !strings.Contains(policy, must) {
+			t.Fatalf("в политике нет %q: %s", must, policy)
+		}
+	}
+
+	// Значение в заголовке и в разметке обязано совпадать.
+	start := strings.Index(policy, "'nonce-") + len("'nonce-")
+	end := strings.Index(policy[start:], "'") + start
+	nonce := policy[start:end]
+	if nonce == "" || !strings.Contains(page, `nonce="`+nonce+`"`) {
+		t.Fatalf("значение nonce в заголовке и на странице не совпадает: %q", nonce)
+	}
+
+	if resp.Header.Get("Cache-Control") != "no-store" {
+		t.Fatalf("страница кэшируется: %q", resp.Header.Get("Cache-Control"))
+	}
+}
+
+func TestUnknownPathIsNotTheApp(t *testing.T) {
+	h := newHarness(t)
+
+	resp, err := h.server.Client().Get(h.server.URL + "/wp-admin")
+	if err != nil {
+		t.Fatalf("запрос: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("на случайный путь ответили %d, ожидался 404", resp.StatusCode)
+	}
+}
+
+// TestUserLinksForExistingUser: самое частое обращение в поддержку —
+// «потерял конфиг». Для чужих протоколов ссылку можно собрать заново.
+func TestUserLinksForExistingUser(t *testing.T) {
+	h := newHarness(t)
+	h.createNode("msk")
+	created := h.createUser(0, panel.CredVP1, panel.CredVLESS, panel.CredTrojan)
+
+	var out struct {
+		Subscription string   `json:"subscription"`
+		Stock        []string `json:"stock"`
+	}
+	code := h.do(http.MethodGet, fmt.Sprintf("/api/v1/users/%d/links", created.User.ID), adminToken, nil, &out)
+	if code != http.StatusOK {
+		t.Fatalf("ссылки: код %d", code)
+	}
+	if !strings.HasPrefix(out.Subscription, "https://sub.example.com/sub/") {
+		t.Fatalf("адрес подписки: %q", out.Subscription)
+	}
+	if len(out.Stock) != 2 {
+		t.Fatalf("ссылок %d, ожидалось 2: %v", len(out.Stock), out.Stock)
+	}
+	for _, link := range out.Stock {
+		if strings.Contains(link, created.secretOf(panel.CredVP1)) {
+			t.Fatal("приватный ключ vp1 попал в ссылку для чужого клиента")
+		}
+	}
+}

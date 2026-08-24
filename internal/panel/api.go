@@ -42,6 +42,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/users/{id}", a.admin(a.getUser))
 	mux.HandleFunc("PATCH /api/v1/users/{id}", a.admin(a.updateUser))
 	mux.HandleFunc("DELETE /api/v1/users/{id}", a.admin(a.deleteUser))
+	mux.HandleFunc("GET /api/v1/users/{id}/links", a.admin(a.userLinks))
 	mux.HandleFunc("POST /api/v1/users/{id}/credentials", a.admin(a.addCredential))
 	mux.HandleFunc("DELETE /api/v1/credentials/{id}", a.admin(a.deleteCredential))
 
@@ -56,6 +57,10 @@ func (a *API) Handler() http.Handler {
 
 	// Подписка. Токен в адресе и есть авторизация.
 	mux.HandleFunc("GET /sub/{token}", a.subscription)
+
+	// Веб-интерфейс. Только по точному корню: всё остальное — 404, чтобы
+	// панель не отвечала страницей на случайные пути сканеров.
+	mux.HandleFunc("GET /{$}", a.ServeApp)
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -220,6 +225,35 @@ func (a *API) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// userLinks отдаёт ссылки уже заведённого подписчика.
+//
+// Нужно для самого частого обращения в поддержку: «потерял конфиг, пришлите
+// заново». Для vless и trojan ссылку можно собрать снова — секрет хранится в
+// базе. Для vp1 нельзя: приватной части у панели нет, и это не недоработка,
+// а осознанное свойство. Такому подписчику выпускают новый ключ.
+func (a *API) userLinks(w http.ResponseWriter, r *http.Request) {
+	id, okID := pathID(w, r)
+	if !okID {
+		return
+	}
+
+	user, err := a.store.GetUser(r.Context(), id)
+	if err != nil {
+		respondStoreErr(w, err)
+		return
+	}
+	nodes, err := a.store.ListNodes(r.Context())
+	if err != nil {
+		fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	ok(w, map[string]any{
+		"subscription": a.subURL(user.SubToken),
+		"stock":        StockLinks(nodes, user.Credentials, user.Label),
+	})
 }
 
 func (a *API) addCredential(w http.ResponseWriter, r *http.Request) {
