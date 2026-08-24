@@ -199,9 +199,16 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
       <div class="grid">
         <label class="field"><span>Имя</span><input id="nn-name" placeholder="msk-1"></label>
         <label class="field"><span>Адрес и порт</span><input id="nn-address" placeholder="msk.example.com:443"></label>
-        <label class="field"><span>SNI (домен)</span><input id="nn-sni" placeholder="msk.example.com"></label>
+        <label class="field"><span>SNI — домен ноды или сайта прикрытия</span><input id="nn-sni" placeholder="www.samsung.com"></label>
         <label class="field"><span>Публичный ключ ноды</span><input id="nn-key" placeholder="из журнала veil-server"></label>
+        <label class="field"><span>Публичный ключ REALITY (pbk)</span><input id="nn-pbk" placeholder="пусто — обычный TLS"></label>
+        <label class="field"><span>Короткий идентификатор (sid)</span><input id="nn-sid" placeholder="необязательно"></label>
       </div>
+      <p class="muted" style="margin:.6rem 0 0">
+        Заполни pbk, если нода запущена с <code class="mono">-reality-dest</code>: тогда ссылки
+        уйдут с <code class="mono">security=reality</code>, а SNI должен указывать на сайт прикрытия,
+        а не на твой домен.
+      </p>
       <button class="primary" id="nn-create" style="margin-top:.8rem">Добавить</button>
     </div>
 
@@ -533,7 +540,10 @@ function renderNodes() {
         el("div", { text: node.name || "без имени" }),
         el("div", { class: "muted mono", text: node.address })
       ),
-      el("td", { class: "mono", text: node.sni || "—" }),
+      el("td", {},
+        el("div", { class: "mono", text: node.sni || "—" }),
+        node.reality_public_key ? el("span", { class: "tag ok", text: "reality" }) : null
+      ),
       el("td", {}, el("span", { class: "tag " + seen.cls, text: seen.text })),
       el("td", {}, node.enabled
         ? el("span", { class: "tag ok", text: "включена" })
@@ -559,12 +569,14 @@ async function createNode() {
     address: $("nn-address").value.trim(),
     sni: $("nn-sni").value.trim(),
     public_key: $("nn-key").value.trim(),
+    reality_public_key: $("nn-pbk").value.trim(),
+    reality_short_id: $("nn-sid").value.trim(),
   };
   if (!body.address) { toast("Нужен адрес вида host:port", true); return; }
 
   try {
     const res = await api("POST", "/api/v1/nodes", body);
-    ["nn-name", "nn-address", "nn-sni", "nn-key"].forEach((id) => { $(id).value = ""; });
+    ["nn-name", "nn-address", "nn-sni", "nn-key", "nn-pbk", "nn-sid"].forEach((id) => { $(id).value = ""; });
     await load();
 
     const modalBody = $("modal-body");

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/veilproject/veil/internal/users"
@@ -64,14 +65,20 @@ type Credential struct {
 
 // Node — точка входа.
 type Node struct {
-	ID        int64      `json:"id"`
-	Name      string     `json:"name"`
-	Address   string     `json:"address"`
-	SNI       string     `json:"sni"`
-	PublicKey string     `json:"public_key"`
-	Enabled   bool       `json:"enabled"`
-	LastSeen  *time.Time `json:"last_seen,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Address   string `json:"address"`
+	SNI       string `json:"sni"`
+	PublicKey string `json:"public_key"`
+
+	// RealityPublicKey и RealityShortID заполняются, когда нода работает под
+	// маскировкой REALITY. По ним собираются ссылки для чужих клиентов:
+	// параметры pbk и sid.
+	RealityPublicKey string     `json:"reality_public_key,omitempty"`
+	RealityShortID   string     `json:"reality_short_id,omitempty"`
+	Enabled          bool       `json:"enabled"`
+	LastSeen         *time.Time `json:"last_seen,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
 }
 
 // Store — хранилище панели поверх SQLite.
@@ -113,6 +120,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     address    TEXT    NOT NULL,
     sni        TEXT    NOT NULL DEFAULT '',
     public_key TEXT    NOT NULL,
+    reality_public_key TEXT NOT NULL DEFAULT '',
+    reality_short_id   TEXT NOT NULL DEFAULT '',
     token_hash TEXT    NOT NULL UNIQUE,
     enabled    INTEGER NOT NULL DEFAULT 1,
     last_seen  TEXT,
@@ -142,7 +151,34 @@ func Open(path string) (*Store, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("создание схемы: %w", err)
 	}
+	if err := migrate(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	return &Store{db: db}, nil
+}
+
+// migrate доводит уже существующую базу до текущей схемы.
+//
+// CREATE TABLE IF NOT EXISTS новых столбцов не добавляет, а обновление панели
+// не должно требовать от продавца ручных действий с базой. Попытка добавить
+// уже существующий столбец — не ошибка, а признак, что миграция отработала
+// в прошлый запуск.
+func migrate(db *sql.DB) error {
+	steps := []string{
+		`ALTER TABLE nodes ADD COLUMN reality_public_key TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE nodes ADD COLUMN reality_short_id TEXT NOT NULL DEFAULT ''`,
+	}
+
+	for _, step := range steps {
+		if _, err := db.Exec(step); err != nil {
+			if strings.Contains(err.Error(), "duplicate column name") {
+				continue
+			}
+			return fmt.Errorf("обновление схемы (%s): %w", step, err)
+		}
+	}
+	return nil
 }
 
 // Close закрывает базу.
@@ -414,6 +450,9 @@ type CreateNodeParams struct {
 	Address   string `json:"address"`
 	SNI       string `json:"sni"`
 	PublicKey string `json:"public_key"`
+
+	RealityPublicKey string `json:"reality_public_key"`
+	RealityShortID   string `json:"reality_short_id"`
 }
 
 // CreateNode регистрирует ноду и выдаёт ей токен.
@@ -432,9 +471,9 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 	now := time.Now().UTC()
 
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO nodes (name, address, sni, public_key, token_hash, enabled, created_at)
-		 VALUES (?, ?, ?, ?, ?, 1, ?)`,
-		p.Name, p.Address, p.SNI, p.PublicKey, HashToken(token), format(now))
+		`INSERT INTO nodes (name, address, sni, public_key, reality_public_key, reality_short_id, token_hash, enabled, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+		p.Name, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, HashToken(token), format(now))
 	if err != nil {
 		return Node{}, "", fmt.Errorf("создание ноды: %w", err)
 	}
@@ -444,13 +483,14 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 	}
 
 	return Node{ID: id, Name: p.Name, Address: p.Address, SNI: p.SNI,
-		PublicKey: p.PublicKey, Enabled: true, CreatedAt: now}, token, nil
+		PublicKey: p.PublicKey, RealityPublicKey: p.RealityPublicKey, RealityShortID: p.RealityShortID,
+		Enabled: true, CreatedAt: now}, token, nil
 }
 
 // ListNodes возвращает все ноды.
 func (s *Store) ListNodes(ctx context.Context) ([]Node, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, address, sni, public_key, enabled, last_seen, created_at FROM nodes ORDER BY id`)
+		`SELECT id, name, address, sni, public_key, reality_public_key, reality_short_id, enabled, last_seen, created_at FROM nodes ORDER BY id`)
 	if err != nil {
 		return nil, fmt.Errorf("чтение нод: %w", err)
 	}
@@ -464,7 +504,8 @@ func (s *Store) ListNodes(ctx context.Context) ([]Node, error) {
 			lastSeen  sql.NullString
 			createdAt string
 		)
-		if err := rows.Scan(&n.ID, &n.Name, &n.Address, &n.SNI, &n.PublicKey, &enabled, &lastSeen, &createdAt); err != nil {
+		if err := rows.Scan(&n.ID, &n.Name, &n.Address, &n.SNI, &n.PublicKey,
+			&n.RealityPublicKey, &n.RealityShortID, &enabled, &lastSeen, &createdAt); err != nil {
 			return nil, err
 		}
 		n.Enabled = enabled != 0
@@ -496,9 +537,10 @@ func (s *Store) AuthenticateNode(ctx context.Context, token string) (Node, error
 		createdAt string
 	)
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, name, address, sni, public_key, enabled, last_seen, created_at
+		`SELECT id, name, address, sni, public_key, reality_public_key, reality_short_id, enabled, last_seen, created_at
 		 FROM nodes WHERE token_hash = ?`, HashToken(token)).
-		Scan(&n.ID, &n.Name, &n.Address, &n.SNI, &n.PublicKey, &enabled, &lastSeen, &createdAt)
+		Scan(&n.ID, &n.Name, &n.Address, &n.SNI, &n.PublicKey,
+			&n.RealityPublicKey, &n.RealityShortID, &enabled, &lastSeen, &createdAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Node{}, ErrNotFound
 	}

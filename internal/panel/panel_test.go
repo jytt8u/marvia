@@ -631,3 +631,65 @@ func TestUserLinksForExistingUser(t *testing.T) {
 		}
 	}
 }
+
+// TestRealityNodeLinks: у ноды под REALITY ссылки должны нести публичный ключ
+// и короткий идентификатор вместо обычного security=tls. Ошибка здесь тихая и
+// дорогая: клиент подключится обычным TLS, нода отправит его на сайт
+// прикрытия, и покупатель придёт с «не работает».
+func TestRealityNodeLinks(t *testing.T) {
+	h := newHarness(t)
+
+	pair, _ := vp1.GenerateKeyPair()
+	realityKey, _ := vp1.GenerateKeyPair()
+
+	var node createNodeResponse
+	code := h.do(http.MethodPost, "/api/v1/nodes", adminToken, map[string]any{
+		"name": "msk-reality", "address": "185.0.0.1:443",
+		"sni": "www.samsung.com", "public_key": vp1.EncodeKey(pair.Public),
+		"reality_public_key": vp1.EncodeKey(realityKey.Public),
+		"reality_short_id":   "0123abcd",
+	}, &node)
+	if code != http.StatusOK {
+		t.Fatalf("создание ноды: код %d", code)
+	}
+	if node.Node.RealityPublicKey != vp1.EncodeKey(realityKey.Public) {
+		t.Fatalf("ключ REALITY не сохранился: %q", node.Node.RealityPublicKey)
+	}
+
+	created := h.createUser(0, panel.CredVLESS)
+	if len(created.Links.Stock) != 1 {
+		t.Fatalf("ссылок %d, ожидалась одна: %v", len(created.Links.Stock), created.Links.Stock)
+	}
+
+	link := created.Links.Stock[0]
+	for _, must := range []string{
+		"security=reality",
+		"pbk=" + vp1.EncodeKey(realityKey.Public),
+		"sid=0123abcd",
+		"sni=www.samsung.com",
+		"fp=chrome",
+	} {
+		if !strings.Contains(link, must) {
+			t.Fatalf("в ссылке нет %q: %s", must, link)
+		}
+	}
+	if strings.Contains(link, "security=tls") {
+		t.Fatalf("ссылка на ноду под REALITY осталась обычным TLS: %s", link)
+	}
+}
+
+// TestPlainNodeKeepsTLSLinks: нода без REALITY должна остаться на обычном TLS.
+func TestPlainNodeKeepsTLSLinks(t *testing.T) {
+	h := newHarness(t)
+	h.createNode("msk")
+
+	created := h.createUser(0, panel.CredVLESS)
+	link := created.Links.Stock[0]
+
+	if !strings.Contains(link, "security=tls") {
+		t.Fatalf("обычная нода потеряла security=tls: %s", link)
+	}
+	if strings.Contains(link, "pbk=") {
+		t.Fatalf("в ссылку обычной ноды попал ключ REALITY: %s", link)
+	}
+}
