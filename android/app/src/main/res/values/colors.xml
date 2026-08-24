@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="veil_ink">#FF0B1020</color>
+    <color name="veil_paper">#FFF6F7FB</color>
+    <color name="veil_accent">#FF3B6EF3</color>
+    <color name="veil_on_accent">#FFFFFFFF</color>
+    <color name="veil_live">#FF17A673</color>
+    <color name="veil_fail">#FFD1495B</color>
+    <color name="ic_launcher_background">#FF0B1020</color>
+</resources>
