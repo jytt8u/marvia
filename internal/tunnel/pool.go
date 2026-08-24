@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	mrand "math/rand/v2"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/yamux"
 	"github.com/veilproject/veil/internal/mux"
@@ -17,16 +19,29 @@ type DialFunc func(ctx context.Context) (net.Conn, error)
 
 // Значения по умолчанию.
 //
-// Почему не одна сессия на всё: во-первых, head-of-line blocking — потерянный
-// TCP-сегмент останавливает все потоки разом, и одна медленная загрузка
-// подвешивает страницу. Во-вторых, единственное соединение, тянущее весь
-// трафик пользователя, выглядит неестественно: браузеры держат несколько.
+// Почему не одна сессия на всё: head-of-line blocking — потерянный TCP-сегмент
+// останавливает все потоки разом, и одна медленная загрузка подвешивает
+// страницу. Почему не по соединению на запрос: пачка коротких одинаковых
+// соединений видна за версту.
 //
-// Почему не по соединению на запрос: это ровно то, от чего мы ушли, — пачка
-// коротких одинаковых соединений видна за версту.
+// Почему именно две, а не четыре, как было сначала. По разборам поведения
+// ТСПУ 2026 года одним из сигналов служит несколько параллельных
+// TLS-хендшейков к одному имени в коротком окне: три и больше подряд —
+// и соединения начинают молча дропаться примерно на две минуты. Пул,
+// открывающий четыре сессии на старте, попадает под это правило сам.
 const (
-	DefaultMaxSessions = 4
-	DefaultMaxStreams  = 16
+	DefaultMaxSessions = 2
+	DefaultMaxStreams  = 32
+)
+
+// Разбег между открытием сессий.
+//
+// Новое соединение до ноды не поднимается сразу вслед за предыдущим: между
+// ними выдерживается пауза со случайной добавкой. Фиксированная пауза была бы
+// собственной приметой, поэтому она плавает.
+const (
+	dialGapBase   = 1500 * time.Millisecond
+	dialGapJitter = 1500 // миллисекунд
 )
 
 // Pool раздаёт логические потоки, пряча за собой управление сессиями.
@@ -38,6 +53,11 @@ type Pool struct {
 	mu       sync.Mutex
 	sessions []*yamux.Session
 	closed   bool
+
+	// dialMu не даёт двум хендшейкам идти одновременно, lastDial хранит
+	// время последнего, чтобы выдержать разбег.
+	dialMu   sync.Mutex
+	lastDial time.Time
 }
 
 // NewPool создаёт пул. Нулевые значения лимитов заменяются на умолчания.
@@ -105,10 +125,34 @@ func (p *Pool) session(ctx context.Context) (*yamux.Session, error) {
 	return p.spawn(ctx)
 }
 
-// spawn поднимает новую сессию. Дозвон идёт без удержания мьютекса: он может
-// занять секунды, и держать на нём весь пул нельзя.
+// spawn поднимает новую сессию.
+//
+// Дозвон сериализован отдельным мьютексом: два хендшейка одновременно — уже
+// половина того порога, по которому ТСПУ опознаёт туннель. Общий мьютекс пула
+// при этом не удерживается: дозвон занимает секунды, и вешать на него весь пул
+// нельзя.
 func (p *Pool) spawn(ctx context.Context) (*yamux.Session, error) {
+	p.dialMu.Lock()
+	defer p.dialMu.Unlock()
+
+	// Пока стояли в очереди, соседняя горутина могла поднять сессию, и место
+	// в ней уже есть. Тогда лишнее соединение открывать незачем.
+	if s := p.roomy(); s != nil {
+		return s, nil
+	}
+
+	if gap := p.dialGap() - time.Since(p.lastDial); gap > 0 {
+		timer := time.NewTimer(gap)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
+
 	conn, err := p.dial(ctx)
+	p.lastDial = time.Now()
 	if err != nil {
 		return nil, err
 	}
@@ -166,4 +210,23 @@ func (p *Pool) leastLoadedLocked() *yamux.Session {
 		}
 	}
 	return best
+}
+
+// dialGap выбирает паузу перед открытием очередной сессии.
+func (p *Pool) dialGap() time.Duration {
+	return dialGapBase + time.Duration(mrand.IntN(dialGapJitter))*time.Millisecond
+}
+
+// roomy возвращает живую сессию, в которой ещё есть место под поток.
+func (p *Pool) roomy() *yamux.Session {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.pruneLocked()
+	for _, s := range p.sessions {
+		if s.NumStreams() < p.maxStreams {
+			return s
+		}
+	}
+	return nil
 }

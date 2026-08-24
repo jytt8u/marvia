@@ -28,12 +28,12 @@ func TestAdmitUnknownKey(t *testing.T) {
 	_, encoded := newKey(t)
 	other, _ := newKey(t)
 
-	r, err := NewRegistry([]User{{PublicKey: encoded, Enabled: true}})
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true}})
 	if err != nil {
 		t.Fatalf("реестр: %v", err)
 	}
 
-	if _, err := r.Admit(other, addr("1.2.3.4")); !errors.Is(err, ErrUnknown) {
+	if _, err := r.Admit(KindVP1, other, addr("1.2.3.4")); !errors.Is(err, ErrUnknown) {
 		t.Fatalf("ожидался ErrUnknown, получено: %v", err)
 	}
 }
@@ -43,17 +43,17 @@ func TestAdmitDisabledAndExpired(t *testing.T) {
 	rawOld, encOld := newKey(t)
 
 	r, err := NewRegistry([]User{
-		{PublicKey: encOff, Enabled: false},
-		{PublicKey: encOld, Enabled: true, ExpiresAt: time.Now().Add(-time.Hour)},
+		{Secret: encOff, Enabled: false},
+		{Secret: encOld, Enabled: true, ExpiresAt: time.Now().Add(-time.Hour)},
 	})
 	if err != nil {
 		t.Fatalf("реестр: %v", err)
 	}
 
-	if _, err := r.Admit(rawOff, addr("1.2.3.4")); !errors.Is(err, ErrDisabled) {
+	if _, err := r.Admit(KindVP1, rawOff, addr("1.2.3.4")); !errors.Is(err, ErrDisabled) {
 		t.Fatalf("выключенный пользователь: ожидался ErrDisabled, получено: %v", err)
 	}
-	if _, err := r.Admit(rawOld, addr("1.2.3.4")); !errors.Is(err, ErrExpired) {
+	if _, err := r.Admit(KindVP1, rawOld, addr("1.2.3.4")); !errors.Is(err, ErrExpired) {
 		t.Fatalf("истёкшая подписка: ожидался ErrExpired, получено: %v", err)
 	}
 }
@@ -64,12 +64,12 @@ func TestAdmitDisabledAndExpired(t *testing.T) {
 func TestQuotaBlocksMidSession(t *testing.T) {
 	raw, encoded := newKey(t)
 
-	r, err := NewRegistry([]User{{PublicKey: encoded, Enabled: true, TrafficLimit: 1000}})
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true, TrafficLimit: 1000}})
 	if err != nil {
 		t.Fatalf("реестр: %v", err)
 	}
 
-	session, err := r.Admit(raw, addr("1.2.3.4"))
+	session, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
 	if err != nil {
 		t.Fatalf("первое подключение должно пройти: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestQuotaBlocksMidSession(t *testing.T) {
 	}
 	session.Close()
 
-	if _, err := r.Admit(raw, addr("1.2.3.4")); !errors.Is(err, ErrQuotaExceeded) {
+	if _, err := r.Admit(KindVP1, raw, addr("1.2.3.4")); !errors.Is(err, ErrQuotaExceeded) {
 		t.Fatalf("после исчерпания квоты: ожидался ErrQuotaExceeded, получено: %v", err)
 	}
 }
@@ -92,13 +92,13 @@ func TestQuotaBlocksMidSession(t *testing.T) {
 func TestIPLimit(t *testing.T) {
 	raw, encoded := newKey(t)
 
-	r, err := NewRegistry([]User{{PublicKey: encoded, Enabled: true, MaxIPs: 2}})
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true, MaxIPs: 2}})
 	if err != nil {
 		t.Fatalf("реестр: %v", err)
 	}
 
 	for _, ip := range []string{"10.0.0.1", "10.0.0.2"} {
-		s, err := r.Admit(raw, addr(ip))
+		s, err := r.Admit(KindVP1, raw, addr(ip))
 		if err != nil {
 			t.Fatalf("адрес %s должен пройти: %v", ip, err)
 		}
@@ -106,13 +106,13 @@ func TestIPLimit(t *testing.T) {
 	}
 
 	// Тот же адрес снова — можно: это то же устройство.
-	s, err := r.Admit(raw, addr("10.0.0.1"))
+	s, err := r.Admit(KindVP1, raw, addr("10.0.0.1"))
 	if err != nil {
 		t.Fatalf("повторное подключение с известного адреса должно проходить: %v", err)
 	}
 	s.Close()
 
-	if _, err := r.Admit(raw, addr("10.0.0.3")); !errors.Is(err, ErrTooManyIPs) {
+	if _, err := r.Admit(KindVP1, raw, addr("10.0.0.3")); !errors.Is(err, ErrTooManyIPs) {
 		t.Fatalf("третий адрес: ожидался ErrTooManyIPs, получено: %v", err)
 	}
 }
@@ -122,7 +122,7 @@ func TestIPLimit(t *testing.T) {
 func TestIPWindowExpires(t *testing.T) {
 	raw, encoded := newKey(t)
 
-	r, err := NewRegistry([]User{{PublicKey: encoded, Enabled: true, MaxIPs: 1}})
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true, MaxIPs: 1}})
 	if err != nil {
 		t.Fatalf("реестр: %v", err)
 	}
@@ -130,18 +130,18 @@ func TestIPWindowExpires(t *testing.T) {
 	now := time.Now()
 	r.now = func() time.Time { return now }
 
-	s, err := r.Admit(raw, addr("10.0.0.1"))
+	s, err := r.Admit(KindVP1, raw, addr("10.0.0.1"))
 	if err != nil {
 		t.Fatalf("первое подключение: %v", err)
 	}
 	s.Close()
 
-	if _, err := r.Admit(raw, addr("10.0.0.2")); !errors.Is(err, ErrTooManyIPs) {
+	if _, err := r.Admit(KindVP1, raw, addr("10.0.0.2")); !errors.Is(err, ErrTooManyIPs) {
 		t.Fatalf("второй адрес сразу: ожидался ErrTooManyIPs, получено: %v", err)
 	}
 
 	now = now.Add(ipWindow + time.Minute)
-	s, err = r.Admit(raw, addr("10.0.0.2"))
+	s, err = r.Admit(KindVP1, raw, addr("10.0.0.2"))
 	if err != nil {
 		t.Fatalf("после окна адрес должен пройти: %v", err)
 	}
@@ -151,25 +151,25 @@ func TestIPWindowExpires(t *testing.T) {
 func TestConnLimit(t *testing.T) {
 	raw, encoded := newKey(t)
 
-	r, err := NewRegistry([]User{{PublicKey: encoded, Enabled: true, MaxConns: 2}})
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true, MaxConns: 2}})
 	if err != nil {
 		t.Fatalf("реестр: %v", err)
 	}
 
-	first, err := r.Admit(raw, addr("1.2.3.4"))
+	first, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
 	if err != nil {
 		t.Fatalf("первое соединение: %v", err)
 	}
-	second, err := r.Admit(raw, addr("1.2.3.4"))
+	second, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
 	if err != nil {
 		t.Fatalf("второе соединение: %v", err)
 	}
-	if _, err := r.Admit(raw, addr("1.2.3.4")); !errors.Is(err, ErrTooManyConns) {
+	if _, err := r.Admit(KindVP1, raw, addr("1.2.3.4")); !errors.Is(err, ErrTooManyConns) {
 		t.Fatalf("третье соединение: ожидался ErrTooManyConns, получено: %v", err)
 	}
 
 	first.Close()
-	third, err := r.Admit(raw, addr("1.2.3.4"))
+	third, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
 	if err != nil {
 		t.Fatalf("после освобождения слота: %v", err)
 	}
@@ -182,19 +182,19 @@ func TestConnLimit(t *testing.T) {
 func TestReplaceKeepsUsage(t *testing.T) {
 	raw, encoded := newKey(t)
 
-	r, err := NewRegistry([]User{{PublicKey: encoded, Enabled: true, TrafficLimit: 1000}})
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true, TrafficLimit: 1000}})
 	if err != nil {
 		t.Fatalf("реестр: %v", err)
 	}
 
-	session, err := r.Admit(raw, addr("1.2.3.4"))
+	session, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
 	if err != nil {
 		t.Fatalf("подключение: %v", err)
 	}
 	session.Add(400, 100)
 
 	// Владелец ноды поднял лимит и переписал файл.
-	if err := r.Replace([]User{{PublicKey: encoded, Enabled: true, TrafficLimit: 5000}}); err != nil {
+	if err := r.Replace([]User{{Secret: encoded, Enabled: true, TrafficLimit: 5000}}); err != nil {
 		t.Fatalf("замена списка: %v", err)
 	}
 
@@ -276,13 +276,13 @@ func TestUsageSurvivesRestart(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "usage.json")
 
-	list := []User{{PublicKey: encoded, Enabled: true, TrafficLimit: 1000}}
+	list := []User{{Secret: encoded, Enabled: true, TrafficLimit: 1000}}
 
 	before, err := NewRegistry(list)
 	if err != nil {
 		t.Fatalf("реестр: %v", err)
 	}
-	session, err := before.Admit(raw, addr("1.2.3.4"))
+	session, err := before.Admit(KindVP1, raw, addr("1.2.3.4"))
 	if err != nil {
 		t.Fatalf("подключение: %v", err)
 	}
@@ -310,7 +310,7 @@ func TestUsageSurvivesRestart(t *testing.T) {
 	}
 
 	// Остаток квоты — 200 байт, значит пустить ещё можно.
-	session, err = after.Admit(raw, addr("1.2.3.4"))
+	session, err = after.Admit(KindVP1, raw, addr("1.2.3.4"))
 	if err != nil {
 		t.Fatalf("остаток квоты есть, подключение должно пройти: %v", err)
 	}
@@ -338,8 +338,8 @@ func TestAccountSharedBetweenKeys(t *testing.T) {
 	laptopRaw, laptopKey := newKey(t)
 
 	list := []User{
-		{PublicKey: phoneKey, Label: "телефон", Enabled: true, TrafficLimit: 1000, Account: "42"},
-		{PublicKey: laptopKey, Label: "ноутбук", Enabled: true, TrafficLimit: 1000, Account: "42"},
+		{Secret: phoneKey, Label: "телефон", Enabled: true, TrafficLimit: 1000, Account: "42"},
+		{Secret: laptopKey, Label: "ноутбук", Enabled: true, TrafficLimit: 1000, Account: "42"},
 	}
 	r, err := NewRegistry(list)
 	if err != nil {
@@ -349,7 +349,7 @@ func TestAccountSharedBetweenKeys(t *testing.T) {
 		t.Fatalf("аккаунтов %d, ожидался 1", r.Len())
 	}
 
-	phone, err := r.Admit(phoneRaw, addr("10.0.0.1"))
+	phone, err := r.Admit(KindVP1, phoneRaw, addr("10.0.0.1"))
 	if err != nil {
 		t.Fatalf("телефон: %v", err)
 	}
@@ -359,7 +359,7 @@ func TestAccountSharedBetweenKeys(t *testing.T) {
 	phone.Close()
 
 	// Ноутбук должен видеть уже израсходованное телефоном.
-	laptop, err := r.Admit(laptopRaw, addr("10.0.0.2"))
+	laptop, err := r.Admit(KindVP1, laptopRaw, addr("10.0.0.2"))
 	if err != nil {
 		t.Fatalf("ноутбук: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestAccountSharedBetweenKeys(t *testing.T) {
 	}
 	laptop.Close()
 
-	if _, err := r.Admit(phoneRaw, addr("10.0.0.1")); !errors.Is(err, ErrQuotaExceeded) {
+	if _, err := r.Admit(KindVP1, phoneRaw, addr("10.0.0.1")); !errors.Is(err, ErrQuotaExceeded) {
 		t.Fatalf("телефон после исчерпания общей квоты: получено %v", err)
 	}
 
@@ -384,12 +384,12 @@ func TestAccountSharedBetweenKeys(t *testing.T) {
 func TestSessionInvalidatedMidFlight(t *testing.T) {
 	raw, encoded := newKey(t)
 
-	r, err := NewRegistry([]User{{PublicKey: encoded, Enabled: true, Account: "7"}})
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true, Account: "7"}})
 	if err != nil {
 		t.Fatalf("реестр: %v", err)
 	}
 
-	session, err := r.Admit(raw, addr("1.2.3.4"))
+	session, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
 	if err != nil {
 		t.Fatalf("подключение: %v", err)
 	}
@@ -398,7 +398,7 @@ func TestSessionInvalidatedMidFlight(t *testing.T) {
 	}
 
 	// Продавец отключил подписчика, панель прислала новый список.
-	if err := r.Replace([]User{{PublicKey: encoded, Enabled: false, Account: "7"}}); err != nil {
+	if err := r.Replace([]User{{Secret: encoded, Enabled: false, Account: "7"}}); err != nil {
 		t.Fatalf("замена списка: %v", err)
 	}
 	if err := session.Valid(); !errors.Is(err, ErrDisabled) {
@@ -406,7 +406,7 @@ func TestSessionInvalidatedMidFlight(t *testing.T) {
 	}
 
 	// Истёкшая подписка — то же самое.
-	if err := r.Replace([]User{{PublicKey: encoded, Enabled: true, Account: "7",
+	if err := r.Replace([]User{{Secret: encoded, Enabled: true, Account: "7",
 		ExpiresAt: time.Now().Add(-time.Minute)}}); err != nil {
 		t.Fatalf("замена списка: %v", err)
 	}
@@ -417,7 +417,7 @@ func TestSessionInvalidatedMidFlight(t *testing.T) {
 	// Удалили из списка целиком.
 	other, otherKey := newKey(t)
 	_ = other
-	if err := r.Replace([]User{{PublicKey: otherKey, Enabled: true}}); err != nil {
+	if err := r.Replace([]User{{Secret: otherKey, Enabled: true}}); err != nil {
 		t.Fatalf("замена списка: %v", err)
 	}
 	if err := session.Valid(); !errors.Is(err, ErrUnknown) {

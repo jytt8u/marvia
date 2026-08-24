@@ -27,8 +27,17 @@ var (
 
 // User — запись о клиенте, как её задаёт владелец ноды или панель.
 type User struct {
-	// PublicKey — публичный ключ клиента в base64. Он же идентификатор ключа.
-	PublicKey string `json:"public_key"`
+	// Kind — вид учётных данных: vp1, vless или trojan.
+	// Пусто означает vp1: это умолчание и основной протокол ноды.
+	Kind string `json:"kind,omitempty"`
+
+	// Secret — сам секрет: публичный ключ для vp1, UUID для vless,
+	// пароль для trojan.
+	Secret string `json:"secret,omitempty"`
+
+	// PublicKey — прежнее имя поля Secret, оставлено для совместимости с уже
+	// написанными файлами и примерами в документации.
+	PublicKey string `json:"public_key,omitempty"`
 
 	// Label — человекочитаемая пометка для владельца ноды. На работу не влияет.
 	Label string `json:"label,omitempty"`
@@ -65,12 +74,31 @@ type User struct {
 	Account string `json:"account,omitempty"`
 }
 
+// Normalized приводит запись к каноническому виду: подставляет умолчание для
+// вида и переносит секрет из устаревшего поля.
+func (u User) Normalized() User {
+	if u.Kind == "" {
+		u.Kind = KindVP1
+	}
+	if u.Secret == "" {
+		u.Secret = u.PublicKey
+	}
+	if u.PublicKey == "" && u.Kind == KindVP1 {
+		u.PublicKey = u.Secret
+	}
+	return u
+}
+
 // AccountID возвращает идентификатор аккаунта, к которому относится ключ.
+//
+// Пусто означает «ключ сам себе аккаунт» — так работает локальный файл, где
+// никаких аккаунтов нет. Панель проставляет сюда идентификатор подписчика,
+// и тогда телефон, ноутбук и запись для чужого клиента делят одну квоту.
 func (u User) AccountID() string {
 	if u.Account != "" {
 		return u.Account
 	}
-	return u.PublicKey
+	return u.Kind + "|" + u.Secret
 }
 
 // Usage — накопленный расход.
@@ -133,8 +161,10 @@ func (r *Registry) Replace(list []User) error {
 	nextKeys := make(map[string]*account, len(list))
 	nextAccounts := make(map[string]*account, len(list))
 
-	for i, u := range list {
-		key, err := DecodePublicKey(u.PublicKey)
+	for i, raw := range list {
+		u := raw.Normalized()
+
+		identity, err := Identity(u.Kind, u.Secret)
 		if err != nil {
 			return fmt.Errorf("пользователь %d (%s): %w", i+1, u.Label, err)
 		}
@@ -145,7 +175,7 @@ func (r *Registry) Replace(list []User) error {
 			acc = &account{id: id, user: u, ips: make(map[string]time.Time)}
 			nextAccounts[id] = acc
 		}
-		nextKeys[string(key)] = acc
+		nextKeys[credentialKey(u.Kind, identity)] = acc
 	}
 
 	r.mu.Lock()
@@ -171,13 +201,15 @@ type Session struct {
 	closed   bool
 }
 
-// Admit решает, пускать ли соединение с этим ключом, и открывает сессию.
-func (r *Registry) Admit(pub []byte, remote net.Addr) (*Session, error) {
-
+// Admit решает, пускать ли соединение, и открывает сессию.
+//
+// identity — то, что нода вычитала из провода: публичный ключ клиента для VP1,
+// UUID для VLESS, двоичный хеш пароля для Trojan.
+func (r *Registry) Admit(kind string, identity []byte, remote net.Addr) (*Session, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	acc, ok := r.byKey[string(pub)]
+	acc, ok := r.byKey[credentialKey(kind, identity)]
 	if !ok {
 		return nil, ErrUnknown
 	}
@@ -312,6 +344,18 @@ func (r *Registry) Stats() []Stat {
 		})
 	}
 	return out
+}
+
+// HasCredential сообщает, знает ли нода такие учётные данные.
+//
+// Нужен диспетчеру: у VLESS и VP1 первый байт может совпадать, и различить их
+// удаётся только поиском UUID в списке. Ответ не говорит, пустят ли клиента —
+// это решает Admit, где проверяются срок, квота и лимиты.
+func (r *Registry) HasCredential(kind string, identity []byte) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, ok := r.byKey[credentialKey(kind, identity)]
+	return ok
 }
 
 // Len возвращает число зарегистрированных аккаунтов.
