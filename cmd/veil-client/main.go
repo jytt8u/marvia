@@ -35,6 +35,11 @@ type tunnelDialer struct {
 	serverPub  []byte
 	tlsCfg     *transport.ClientConfig // nil — режим -plain, без маскировки
 	wsCfg      *transport.WSDialConfig // не nil — соединение через WebSocket за CDN
+
+	// realityCfg не nil, когда нода прикрывается чужим сайтом. Обычный TLS
+	// в этом режиме не подойдёт: нода не узнает клиента и молча отправит его
+	// на сайт прикрытия.
+	realityCfg *transport.RealityDialConfig
 }
 
 func main() {
@@ -49,6 +54,8 @@ func main() {
 	plain := flag.Bool("plain", false, "работать без TLS-маскировки (режим M0, для отладки)")
 	wsPath := flag.String("ws-path", "", "путь туннеля WebSocket, если нода стоит за CDN")
 	wsHost := flag.String("ws-host", "", "домен, ведущий на CDN (по умолчанию — значение -sni)")
+	realityPBK := flag.String("reality-pbk", "", "публичный ключ REALITY ноды в base64")
+	realitySID := flag.String("reality-sid", "", "короткий идентификатор REALITY, шестнадцатеричный")
 
 	flag.Parse()
 
@@ -63,6 +70,8 @@ func main() {
 		plain:      *plain,
 		wsPath:     *wsPath,
 		wsHost:     *wsHost,
+		realityPBK: *realityPBK,
+		realitySID: *realitySID,
 	}
 
 	if err := run(opts); err != nil {
@@ -82,6 +91,8 @@ type clientOptions struct {
 	plain      bool
 	wsPath     string
 	wsHost     string
+	realityPBK string
+	realitySID string
 }
 
 func run(opts clientOptions) error {
@@ -107,7 +118,27 @@ func run(opts clientOptions) error {
 	}
 
 	dialer := &tunnelDialer{serverAddr: opts.serverAddr, static: static, serverPub: serverPub}
-	if !opts.plain || opts.wsPath != "" {
+
+	if opts.realityPBK != "" {
+		if opts.wsPath != "" {
+			return errors.New("-reality-pbk и -ws-path вместе не работают: CDN расшифровывает TLS у себя, и REALITY через него невозможен")
+		}
+		pub, err := vp1.DecodeKey(strings.TrimSpace(opts.realityPBK))
+		if err != nil {
+			return fmt.Errorf("публичный ключ REALITY: %w", err)
+		}
+		name := opts.sni
+		if name == "" {
+			return errors.New("для REALITY нужно имя сайта прикрытия: укажи -sni")
+		}
+		dialer.realityCfg = &transport.RealityDialConfig{
+			ServerName: name,
+			PublicKey:  pub,
+			ShortID:    strings.TrimSpace(opts.realitySID),
+		}
+	}
+
+	if dialer.realityCfg == nil && (!opts.plain || opts.wsPath != "") {
 		tlsCfg, err := buildTLSConfig(opts)
 		if err != nil {
 			return err
@@ -144,6 +175,8 @@ func run(opts clientOptions) error {
 		log.Printf("(ключ временный — при перезапуске сменится; для постоянного укажи -key)")
 	}
 	switch {
+	case dialer.realityCfg != nil:
+		log.Printf("маскировка: REALITY под %s, отпечаток Chrome", dialer.realityCfg.ServerName)
 	case dialer.wsCfg != nil:
 		log.Printf("транспорт: WebSocket на %s%s, отпечаток Chrome", dialer.wsCfg.Host, dialer.wsCfg.Path)
 		if dialer.wsCfg.TLS.InsecureSkipVerify {
@@ -260,6 +293,10 @@ func (d *tunnelDialer) dial(ctx context.Context) (net.Conn, error) {
 		err error
 	)
 	switch {
+	case d.realityCfg != nil:
+		// Нода не предъявляет своего сертификата: подлинность проверяется
+		// общим секретом, а не удостоверяющим центром.
+		raw, err = transport.DialReality(ctx, d.serverAddr, *d.realityCfg)
 	case d.wsCfg != nil:
 		// За CDN: подключаемся к его адресам, а имя ноды в конфиге вообще
 		// не фигурирует.

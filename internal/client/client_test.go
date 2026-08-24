@@ -3,7 +3,6 @@ package client_test
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -84,20 +83,38 @@ func TestNodeTransportDetection(t *testing.T) {
 	}
 }
 
-// TestRealityNodeGivesClearError: клиент REALITY ещё не написан, и молчаливая
-// попытка подключиться обычным TLS выглядела бы как «интернет не работает» —
-// нода отправила бы нас на сайт прикрытия.
-func TestRealityNodeGivesClearError(t *testing.T) {
+// TestRealityNodeRejectsBadKey: кривой публичный ключ должен отвергаться
+// сразу, при разборе подписки, а не превращаться в непонятный обрыв связи.
+func TestRealityNodeRejectsBadKey(t *testing.T) {
 	pair, _ := vp1.GenerateKeyPair()
 	node := client.Node{
 		Name: "msk", Address: "msk.example.com:443", SNI: "www.samsung.com",
-		PublicKey: vp1.EncodeKey(pair.Public), RealityPublicKey: "cGFk",
+		PublicKey: vp1.EncodeKey(pair.Public), RealityPublicKey: "не-ключ",
 	}
 
-	_, err := client.NewDialer(node, pair, client.Options{})
-	if !errors.Is(err, client.ErrRealityClientMissing) {
-		t.Fatalf("ожидалась внятная ошибка про REALITY, получено: %v", err)
+	if _, err := client.NewDialer(node, pair, client.Options{}); err == nil {
+		t.Fatal("кривой ключ REALITY принят молча")
 	}
+}
+
+// TestRealityNodeBuildsDialer: с правильным ключом дозвон собирается.
+func TestRealityNodeBuildsDialer(t *testing.T) {
+	pair, _ := vp1.GenerateKeyPair()
+	reality, _ := vp1.GenerateKeyPair()
+	node := client.Node{
+		Name: "msk", Address: "msk.example.com:443", SNI: "www.samsung.com",
+		PublicKey:        vp1.EncodeKey(pair.Public),
+		RealityPublicKey: vp1.EncodeKey(reality.Public), RealityShortID: "0123abcd",
+	}
+
+	if node.Transport() != client.TransportReality {
+		t.Fatalf("транспорт определён как %q", node.Transport())
+	}
+	dialer, err := client.NewDialer(node, pair, client.Options{})
+	if err != nil {
+		t.Fatalf("дозвон до ноды под REALITY не собрался: %v", err)
+	}
+	_ = dialer.Close()
 }
 
 func TestFetchSubscription(t *testing.T) {

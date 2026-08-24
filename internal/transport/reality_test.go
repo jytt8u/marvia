@@ -3,8 +3,10 @@ package transport_test
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -226,4 +228,135 @@ func TestListenRealityAcceptsShortIDs(t *testing.T) {
 		t.Fatalf("корректные идентификаторы отвергнуты: %v", err)
 	}
 	_ = ln.Close()
+}
+
+// TestRealityClientTalksToReferenceServer — главная проверка клиента REALITY.
+//
+// Клиент написан вручную, потому что готовой библиотеки не существует. Ручная
+// реализация протокола проверяется единственным осмысленным способом: живым
+// разговором с эталонной реализацией. Сервер здесь — тот самый xtls/reality,
+// который используют Xray и sing-box; если наш клиент договорился с ним, он
+// верен по построению.
+func TestRealityClientTalksToReferenceServer(t *testing.T) {
+	const shortID = "0123456789abcdef"
+
+	real := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("сайт прикрытия"))
+	}))
+	defer real.Close()
+
+	parsed, err := url.Parse(real.URL)
+	if err != nil {
+		t.Fatalf("адрес сайта прикрытия: %v", err)
+	}
+
+	pair, err := vp1.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("ключи REALITY: %v", err)
+	}
+
+	tcp, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("слушатель: %v", err)
+	}
+	ln, err := transport.ListenReality(tcp, transport.RealityConfig{
+		Dest:        parsed.Host,
+		ServerNames: []string{"example.com"},
+		PrivateKey:  pair.Private,
+		ShortIDs:    []string{shortID},
+	})
+	if err != nil {
+		t.Fatalf("маскировка REALITY: %v", err)
+	}
+	defer ln.Close()
+
+	// Нода отвечает эхом: содержимое не важно, важен сам факт разговора.
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				_, _ = io.Copy(conn, conn)
+			}()
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	conn, err := transport.DialReality(ctx, tcp.Addr().String(), transport.RealityDialConfig{
+		ServerName: "example.com",
+		PublicKey:  pair.Public,
+		ShortID:    shortID,
+	})
+	if err != nil {
+		t.Fatalf("клиент не договорился с эталонным сервером: %v", err)
+	}
+	defer conn.Close()
+
+	want := "данные внутри REALITY"
+	_ = conn.SetDeadline(time.Now().Add(20 * time.Second))
+
+	if _, err := conn.Write([]byte(want)); err != nil {
+		t.Fatalf("запись: %v", err)
+	}
+	got := make([]byte, len(want))
+	if _, err := io.ReadFull(conn, got); err != nil {
+		t.Fatalf("чтение: %v", err)
+	}
+	if string(got) != want {
+		t.Fatalf("получено %q", got)
+	}
+}
+
+// TestRealityClientRejectsWrongKey: с чужим ключом нода нас не узнает и
+// отправит на сайт прикрытия. Клиент обязан это заметить и сказать прямо, а
+// не выглядеть как «интернет не работает».
+func TestRealityClientRejectsWrongKey(t *testing.T) {
+	real := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("сайт прикрытия"))
+	}))
+	defer real.Close()
+
+	parsed, _ := url.Parse(real.URL)
+	pair, _ := vp1.GenerateKeyPair()
+	impostor, _ := vp1.GenerateKeyPair()
+
+	tcp, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("слушатель: %v", err)
+	}
+	ln, err := transport.ListenReality(tcp, transport.RealityConfig{
+		Dest:        parsed.Host,
+		ServerNames: []string{"example.com"},
+		PrivateKey:  pair.Private,
+	})
+	if err != nil {
+		t.Fatalf("маскировка REALITY: %v", err)
+	}
+	defer ln.Close()
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			_ = conn.Close()
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	_, err = transport.DialReality(ctx, tcp.Addr().String(), transport.RealityDialConfig{
+		ServerName: "example.com",
+		PublicKey:  impostor.Public,
+	})
+	if !errors.Is(err, transport.ErrNotRealityServer) {
+		t.Fatalf("ожидалась внятная ошибка про сайт прикрытия, получено: %v", err)
+	}
 }
