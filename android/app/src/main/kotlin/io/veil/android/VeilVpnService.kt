@@ -8,6 +8,7 @@ import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.veil.mobile.Mobile
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +34,9 @@ class VeilVpnService : VpnService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var worker: Job? = null
+
+    /** Останавливались ли мы уже. См. [shutdown] — там объяснено, зачем. */
+    private var finished = false
 
     @Volatile
     private var core: Core? = null
@@ -144,7 +148,28 @@ class VeilVpnService : VpnService() {
         }
     }
 
+    /**
+     * shutdown останавливает туннель и объявляет итоговое состояние.
+     *
+     * Останавливаемся ровно один раз, и вот почему. После stopSelf система
+     * зовёт onDestroy, а тот тоже останавливается — и объявлял бы обычное
+     * «отключено» поверх только что записанной причины обрыва. На экране
+     * оставалось бы «Отключено. Трафик идёт напрямую», хотя подключение
+     * только что провалилось. Это худший вид ошибки: человек видит, что не
+     * работает, и не видит почему.
+     */
     private fun shutdown(state: TunnelState) {
+        if (finished) {
+            return
+        }
+        finished = true
+
+        if (state is TunnelState.Failed) {
+            // В журнал — чтобы причину можно было достать с чужого телефона,
+            // где экран уже закрыли и пересказывают по памяти.
+            Log.w(TAG, "туннель не поднялся: ${state.reason}")
+        }
+
         worker?.cancel()
         worker = null
 
@@ -226,6 +251,7 @@ class VeilVpnService : VpnService() {
     companion object {
         const val ACTION_STOP = "io.veil.android.action.STOP"
 
+        private const val TAG = "Veil"
         private const val CHANNEL = "veil.tunnel"
         private const val NOTIFICATION_ID = 1
         private const val POLL_INTERVAL_MS = 5_000L
