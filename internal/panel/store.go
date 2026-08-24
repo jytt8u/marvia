@@ -133,6 +133,15 @@ CREATE TABLE IF NOT EXISTS nodes (
     created_at TEXT    NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS node_reports (
+    node_id     INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ok          INTEGER NOT NULL,
+    latency_ms  INTEGER NOT NULL DEFAULT 0,
+    reported_at TEXT    NOT NULL,
+    PRIMARY KEY (node_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS usage (
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     node_id    INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,

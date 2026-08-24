@@ -307,3 +307,93 @@ func splitHostPort(t *testing.T, addr string) (string, uint16) {
 	}
 	return host, value
 }
+
+// TestSelectBestSkipsDeadNode — то, ради чего замеры и нужны.
+//
+// Мёртвая нода в списке — обычное дело: её заблокировали час назад, а панель
+// за границей всё ещё считает её живой. Клиент обязан сам это увидеть.
+func TestSelectBestSkipsDeadNode(t *testing.T) {
+	node := startTestNode(t)
+
+	// Порт, на котором заведомо никого нет.
+	closed, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("слушатель: %v", err)
+	}
+	deadAddr := closed.Addr().String()
+	_ = closed.Close()
+
+	nodes := []client.Node{
+		{ID: 1, Name: "мёртвая", Address: deadAddr, SNI: "node.example", PublicKey: node.info.PublicKey},
+		{ID: 2, Name: "живая", Address: node.info.Address, SNI: node.info.SNI, PublicKey: node.info.PublicKey},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	dialer, measurements, err := client.SelectBest(ctx, nodes, node.clientKey, node.opts)
+	if err != nil {
+		t.Fatalf("выбор ноды: %v", err)
+	}
+	defer dialer.Close()
+
+	if dialer.Node().Name != "живая" {
+		t.Fatalf("выбрана нода %q", dialer.Node().Name)
+	}
+	if len(measurements) != 2 {
+		t.Fatalf("замеров %d, ожидалось 2", len(measurements))
+	}
+
+	// Порядок замеров обязан совпадать с порядком нод: иначе отчёт уедет
+	// не про те ноды, и панель опустит в списке живую.
+	if measurements[0].Node.Name != "мёртвая" || measurements[1].Node.Name != "живая" {
+		t.Fatalf("порядок замеров сбился: %q, %q", measurements[0].Node.Name, measurements[1].Node.Name)
+	}
+	if measurements[0].OK() {
+		t.Fatal("мёртвая нода помечена рабочей")
+	}
+	if !measurements[1].OK() {
+		t.Fatalf("живая нода помечена мёртвой: %v", measurements[1].Err)
+	}
+
+	reports := client.ReportsFrom(measurements)
+	if len(reports) != 2 {
+		t.Fatalf("отчётов %d, ожидалось 2", len(reports))
+	}
+	if reports[0].OK || !reports[1].OK {
+		t.Fatalf("отчёты не соответствуют замерам: %+v", reports)
+	}
+	if reports[1].LatencyMS < 0 {
+		t.Fatal("отрицательная задержка")
+	}
+}
+
+// TestSelectBestFailsWhenAllDead: если не работает ни одна нода, клиент должен
+// сказать об этом прямо и всё равно отдать замеры — именно про такой случай
+// продавцу важнее всего узнать.
+func TestSelectBestFailsWhenAllDead(t *testing.T) {
+	closed, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("слушатель: %v", err)
+	}
+	addr := closed.Addr().String()
+	_ = closed.Close()
+
+	pair, _ := vp1.GenerateKeyPair()
+	nodes := []client.Node{{ID: 7, Name: "мёртвая", Address: addr, SNI: "node.example", PublicKey: vp1.EncodeKey(pair.Public)}}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	dialer, measurements, err := client.SelectBest(ctx, nodes, pair, client.Options{})
+	if err == nil {
+		_ = dialer.Close()
+		t.Fatal("выбрана нода там, где не работает ни одна")
+	}
+	if len(measurements) != 1 || measurements[0].OK() {
+		t.Fatalf("замеры не отданы или неверны: %+v", measurements)
+	}
+	if got := client.ReportsFrom(measurements); len(got) != 1 || got[0].NodeID != 7 {
+		t.Fatalf("отчёт собран неверно: %+v", got)
+	}
+}
