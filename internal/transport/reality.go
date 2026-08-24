@@ -70,6 +70,13 @@ type RealityConfig struct {
 	// до 16 символов каждый. Пустая строка тоже допустима и означает
 	// нулевой идентификатор.
 	ShortIDs []string
+
+	// Debug включает подробный разбор каждого хендшейка в стандартный вывод.
+	//
+	// Нужен ровно для одного случая: клиент не подключается, и надо понять,
+	// на чём именно нода его не узнала — ключ, идентификатор или часы.
+	// В бою держать включённым нельзя: в вывод попадают ключи.
+	Debug bool
 }
 
 // ListenReality оборачивает TCP-слушатель в REALITY.
@@ -114,6 +121,7 @@ func ListenReality(inner net.Listener, cfg RealityConfig) (net.Listener, error) 
 		PrivateKey:  append([]byte(nil), cfg.PrivateKey...),
 		ShortIds:    shortIDs,
 		MaxTimeDiff: realityMaxTimeDiff,
+		Show:        cfg.Debug,
 
 		// Возобновление сессий выключено намеренно: билет заметно сокращает
 		// повторный хендшейк, и такая пара «длинный первый, короткие

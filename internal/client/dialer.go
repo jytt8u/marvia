@@ -12,14 +12,6 @@ import (
 	"github.com/veilproject/veil/internal/vp1"
 )
 
-// ErrRealityClientMissing — нода работает под REALITY, а клиентская сторона
-// этого камуфляжа у нас пока не написана.
-//
-// Ошибка отдельная и внятная не просто так: подключиться к такой ноде обычным
-// TLS нельзя — она молча отправит нас на сайт прикрытия, и наружу это будет
-// выглядеть как «интернет не работает».
-var ErrRealityClientMissing = errors.New("нода работает под REALITY, клиентская сторона которого ещё не реализована")
-
 // Dialer держит соединение до одной ноды и раздаёт потоки до целей.
 type Dialer struct {
 	node Node
@@ -96,7 +88,18 @@ func transportDialer(node Node, serverName string, opts Options) (func(context.C
 		}, nil
 
 	case TransportReality:
-		return nil, fmt.Errorf("%w (нода %s)", ErrRealityClientMissing, node.Name)
+		pub, err := vp1.DecodeKey(node.RealityPublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("публичный ключ REALITY ноды %s: %w", node.Name, err)
+		}
+		cfg := transport.RealityDialConfig{
+			ServerName: serverName,
+			PublicKey:  pub,
+			ShortID:    node.RealityShortID,
+		}
+		return func(ctx context.Context) (net.Conn, error) {
+			return transport.DialReality(ctx, node.Address, cfg)
+		}, nil
 
 	default:
 		return func(ctx context.Context) (net.Conn, error) {
