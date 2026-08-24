@@ -74,11 +74,15 @@ type Node struct {
 	// RealityPublicKey и RealityShortID заполняются, когда нода работает под
 	// маскировкой REALITY. По ним собираются ссылки для чужих клиентов:
 	// параметры pbk и sid.
-	RealityPublicKey string     `json:"reality_public_key,omitempty"`
-	RealityShortID   string     `json:"reality_short_id,omitempty"`
-	Enabled          bool       `json:"enabled"`
-	LastSeen         *time.Time `json:"last_seen,omitempty"`
-	CreatedAt        time.Time  `json:"created_at"`
+	RealityPublicKey string `json:"reality_public_key,omitempty"`
+	RealityShortID   string `json:"reality_short_id,omitempty"`
+
+	// WSPath заполняется, когда нода работает за CDN через WebSocket.
+	// Тогда в ссылки уходит type=ws, а адрес указывает на CDN, а не на ноду.
+	WSPath    string     `json:"ws_path,omitempty"`
+	Enabled   bool       `json:"enabled"`
+	LastSeen  *time.Time `json:"last_seen,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 // Store — хранилище панели поверх SQLite.
@@ -122,6 +126,7 @@ CREATE TABLE IF NOT EXISTS nodes (
     public_key TEXT    NOT NULL,
     reality_public_key TEXT NOT NULL DEFAULT '',
     reality_short_id   TEXT NOT NULL DEFAULT '',
+    ws_path            TEXT NOT NULL DEFAULT '',
     token_hash TEXT    NOT NULL UNIQUE,
     enabled    INTEGER NOT NULL DEFAULT 1,
     last_seen  TEXT,
@@ -168,6 +173,7 @@ func migrate(db *sql.DB) error {
 	steps := []string{
 		`ALTER TABLE nodes ADD COLUMN reality_public_key TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN reality_short_id TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE nodes ADD COLUMN ws_path TEXT NOT NULL DEFAULT ''`,
 	}
 
 	for _, step := range steps {
@@ -453,6 +459,7 @@ type CreateNodeParams struct {
 
 	RealityPublicKey string `json:"reality_public_key"`
 	RealityShortID   string `json:"reality_short_id"`
+	WSPath           string `json:"ws_path"`
 }
 
 // CreateNode регистрирует ноду и выдаёт ей токен.
@@ -471,9 +478,9 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 	now := time.Now().UTC()
 
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO nodes (name, address, sni, public_key, reality_public_key, reality_short_id, token_hash, enabled, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`,
-		p.Name, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, HashToken(token), format(now))
+		`INSERT INTO nodes (name, address, sni, public_key, reality_public_key, reality_short_id, ws_path, token_hash, enabled, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+		p.Name, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, p.WSPath, HashToken(token), format(now))
 	if err != nil {
 		return Node{}, "", fmt.Errorf("создание ноды: %w", err)
 	}
@@ -484,13 +491,13 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 
 	return Node{ID: id, Name: p.Name, Address: p.Address, SNI: p.SNI,
 		PublicKey: p.PublicKey, RealityPublicKey: p.RealityPublicKey, RealityShortID: p.RealityShortID,
-		Enabled: true, CreatedAt: now}, token, nil
+		WSPath: p.WSPath, Enabled: true, CreatedAt: now}, token, nil
 }
 
 // ListNodes возвращает все ноды.
 func (s *Store) ListNodes(ctx context.Context) ([]Node, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, address, sni, public_key, reality_public_key, reality_short_id, enabled, last_seen, created_at FROM nodes ORDER BY id`)
+		`SELECT id, name, address, sni, public_key, reality_public_key, reality_short_id, ws_path, enabled, last_seen, created_at FROM nodes ORDER BY id`)
 	if err != nil {
 		return nil, fmt.Errorf("чтение нод: %w", err)
 	}
@@ -505,7 +512,7 @@ func (s *Store) ListNodes(ctx context.Context) ([]Node, error) {
 			createdAt string
 		)
 		if err := rows.Scan(&n.ID, &n.Name, &n.Address, &n.SNI, &n.PublicKey,
-			&n.RealityPublicKey, &n.RealityShortID, &enabled, &lastSeen, &createdAt); err != nil {
+			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &enabled, &lastSeen, &createdAt); err != nil {
 			return nil, err
 		}
 		n.Enabled = enabled != 0
@@ -537,10 +544,10 @@ func (s *Store) AuthenticateNode(ctx context.Context, token string) (Node, error
 		createdAt string
 	)
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, name, address, sni, public_key, reality_public_key, reality_short_id, enabled, last_seen, created_at
+		`SELECT id, name, address, sni, public_key, reality_public_key, reality_short_id, ws_path, enabled, last_seen, created_at
 		 FROM nodes WHERE token_hash = ?`, HashToken(token)).
 		Scan(&n.ID, &n.Name, &n.Address, &n.SNI, &n.PublicKey,
-			&n.RealityPublicKey, &n.RealityShortID, &enabled, &lastSeen, &createdAt)
+			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &enabled, &lastSeen, &createdAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Node{}, ErrNotFound
 	}

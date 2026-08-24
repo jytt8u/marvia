@@ -203,11 +203,14 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
         <label class="field"><span>Публичный ключ ноды</span><input id="nn-key" placeholder="из журнала veil-server"></label>
         <label class="field"><span>Публичный ключ REALITY (pbk)</span><input id="nn-pbk" placeholder="пусто — обычный TLS"></label>
         <label class="field"><span>Короткий идентификатор (sid)</span><input id="nn-sid" placeholder="необязательно"></label>
+        <label class="field"><span>Путь WebSocket (за CDN)</span><input id="nn-wspath" placeholder="пусто — прямое подключение"></label>
       </div>
       <p class="muted" style="margin:.6rem 0 0">
-        Заполни pbk, если нода запущена с <code class="mono">-reality-dest</code>: тогда ссылки
-        уйдут с <code class="mono">security=reality</code>, а SNI должен указывать на сайт прикрытия,
-        а не на твой домен.
+        Заполни pbk, если нода запущена с <code class="mono">-reality-dest</code>: ссылки уйдут
+        с <code class="mono">security=reality</code>, а SNI должен указывать на сайт прикрытия.
+        Заполни путь WebSocket, если нода стоит за CDN: тогда адрес выше — это адрес CDN,
+        а настоящий адрес ноды в конфиг не попадёт. Вместе они не работают: CDN
+        расшифровывает TLS у себя, и REALITY через него невозможен.
       </p>
       <button class="primary" id="nn-create" style="margin-top:.8rem">Добавить</button>
     </div>
@@ -542,7 +545,8 @@ function renderNodes() {
       ),
       el("td", {},
         el("div", { class: "mono", text: node.sni || "—" }),
-        node.reality_public_key ? el("span", { class: "tag ok", text: "reality" }) : null
+        node.reality_public_key ? el("span", { class: "tag ok", text: "reality" }) : null,
+        node.ws_path ? el("span", { class: "tag ok", text: "за CDN" }) : null
       ),
       el("td", {}, el("span", { class: "tag " + seen.cls, text: seen.text })),
       el("td", {}, node.enabled
@@ -571,12 +575,13 @@ async function createNode() {
     public_key: $("nn-key").value.trim(),
     reality_public_key: $("nn-pbk").value.trim(),
     reality_short_id: $("nn-sid").value.trim(),
+    ws_path: $("nn-wspath").value.trim(),
   };
   if (!body.address) { toast("Нужен адрес вида host:port", true); return; }
 
   try {
     const res = await api("POST", "/api/v1/nodes", body);
-    ["nn-name", "nn-address", "nn-sni", "nn-key", "nn-pbk", "nn-sid"].forEach((id) => { $(id).value = ""; });
+    ["nn-name", "nn-address", "nn-sni", "nn-key", "nn-pbk", "nn-sid", "nn-wspath"].forEach((id) => { $(id).value = ""; });
     await load();
 
     const modalBody = $("modal-body");

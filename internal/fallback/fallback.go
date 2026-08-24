@@ -148,3 +148,10 @@ func (c *notifyConn) Close() error {
 	c.once.Do(func() { _ = c.onClose() })
 	return err
 }
+
+// Handler отдаёт сайт-прикрытие как обычный обработчик HTTP.
+//
+// Нужен транспорту WebSocket: там нода и так работает HTTP-сервером, и
+// заворачивать соединение в одноразовый слушатель незачем — достаточно
+// отдать обработчик напрямую.
+func (h *Handler) Handler() http.Handler { return h.handler }

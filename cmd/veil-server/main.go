@@ -82,6 +82,7 @@ type serverOptions struct {
 	realitySNI      string
 	realityKey      string
 	realityShortIDs string
+	wsPath          string
 	plain           bool
 	coverSite       string
 	coverTitle      string
@@ -107,6 +108,8 @@ func main() {
 	flag.StringVar(&opts.realitySNI, "reality-sni", "", "имена в SNI через запятую (по умолчанию — хост из -reality-dest)")
 	flag.StringVar(&opts.realityKey, "reality-key", "", "приватный ключ REALITY в base64 (по умолчанию — из VEIL_REALITY_KEY)")
 	flag.StringVar(&opts.realityShortIDs, "reality-short-id", "", "короткие идентификаторы клиентов через запятую, шестнадцатеричные")
+
+	flag.StringVar(&opts.wsPath, "ws-path", "", "путь туннеля WebSocket, например /assets/app.js (режим для работы за CDN)")
 
 	flag.StringVar(&opts.coverSite, "cover", "", "адрес настоящего сайта для неопознанных гостей, например https://example.org")
 	flag.StringVar(&opts.coverTitle, "cover-title", "", "если сайт-прикрытие не задан, отдавать заглушку с таким заголовком")
@@ -146,6 +149,11 @@ func run(opts serverOptions) error {
 
 	addr := ln.Addr()
 	switch {
+	case opts.wsPath != "":
+		ln, err = listenWS(ln, opts, cover)
+		if err != nil {
+			return err
+		}
 	case opts.plain:
 		// маскировки нет
 	case opts.realityDest != "":
@@ -171,7 +179,7 @@ func run(opts serverOptions) error {
 	} else {
 		log.Printf("пользователей: %d, расход пишется в %s", registry.Len(), usagePath)
 	}
-	if cover == nil && opts.realityDest == "" {
+	if cover == nil && opts.realityDest == "" && opts.wsPath == "" {
 		log.Printf("ВНИМАНИЕ: сайт-прикрытие не задан — неопознанные соединения будут рваться, что заметно сканерам")
 	}
 	if cover == nil && opts.realityDest != "" {
@@ -310,6 +318,48 @@ func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, 
 	})
 
 	return registry, usagePath, nil
+}
+
+// listenWS поднимает транспорт WebSocket — режим для работы за CDN.
+//
+// Смысл режима не в самом WebSocket, а в том, что настоящий адрес ноды
+// перестаёт существовать для цензора: пользователь подключается к адресам
+// CDN, за которыми живут миллионы обычных сайтов. Ковровая блокировка
+// диапазонов хостингов такую ноду не задевает.
+//
+// Сертификат нужен не всегда. CDN сам занимается TLS перед пользователем, а
+// до ноды может ходить как по HTTPS, так и по обычному HTTP — второе выбирают,
+// когда нода стоит в закрытом периметре или туннеле до CDN.
+func listenWS(inner net.Listener, opts serverOptions, cover *fallback.Handler) (net.Listener, error) {
+	if opts.realityDest != "" {
+		return nil, errors.New("-ws-path и -reality-dest вместе не работают: CDN расшифровывает TLS у себя, и REALITY через него невозможен")
+	}
+
+	cfg := transport.WSConfig{Path: opts.wsPath}
+	if cover != nil {
+		cfg.Cover = cover.Handler()
+	}
+
+	switch {
+	case opts.plain:
+		log.Printf("транспорт WebSocket на пути %s, без TLS — только за CDN или обратным прокси", opts.wsPath)
+	default:
+		cert, err := loadCertificate(opts)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Certificate = &cert
+		log.Printf("транспорт WebSocket на пути %s, поверх TLS", opts.wsPath)
+	}
+
+	listener, err := transport.ListenWS(inner, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("транспорт WebSocket: %w", err)
+	}
+	if cover == nil {
+		log.Printf("ВНИМАНИЕ: сайт-прикрытие не задан — на все прочие пути нода отвечает 404, что заметно при переборе")
+	}
+	return listener, nil
 }
 
 // listenReality поднимает маскировку REALITY.
