@@ -58,6 +58,10 @@ func (a *API) Handler() http.Handler {
 	// Подписка. Токен в адресе и есть авторизация.
 	mux.HandleFunc("GET /sub/{token}", a.subscription)
 
+	// Отчёты о доступности от клиентов. Тем же токеном: админского на
+	// устройстве покупателя быть не должно ни при каких обстоятельствах.
+	mux.HandleFunc("POST /sub/{token}/report", a.report)
+
 	// Веб-интерфейс. Только по точному корню: всё остальное — 404, чтобы
 	// панель не отвечала страницей на случайные пути сканеров.
 	mux.HandleFunc("GET /{$}", a.ServeApp)
@@ -304,13 +308,68 @@ func (a *API) deleteCredential(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// report принимает от клиента отчёты о доступности нод.
+//
+// Ответ всегда 204, даже если часть отчётов не про наши ноды: подписка на
+// устройстве могла устареть, и превращать это в ошибку незачем.
+func (a *API) report(w http.ResponseWriter, r *http.Request) {
+	user, err := a.store.UserBySubToken(r.Context(), r.PathValue("token"))
+	if err != nil {
+		// Как и в подписке, не подсказываем, существует ли токен.
+		http.NotFound(w, r)
+		return
+	}
+
+	var body struct {
+		Reports []Report `json:"reports"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	if len(body.Reports) > maxReportsPerRequest {
+		fail(w, http.StatusBadRequest, "слишком много отчётов в одном запросе")
+		return
+	}
+
+	if err := a.store.SaveReports(r.Context(), user.ID, body.Reports); err != nil {
+		fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// maxReportsPerRequest — верхняя граница на один запрос. Нод у продавца
+// десятки, а не тысячи; всё сверх этого — попытка нагрузить панель.
+const maxReportsPerRequest = 256
+
 func (a *API) listNodes(w http.ResponseWriter, r *http.Request) {
 	list, err := a.store.ListNodes(r.Context())
 	if err != nil {
 		fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	ok(w, map[string]any{"nodes": list})
+
+	// Продавцу нужна не просто «нода включена», а «сколько людей до неё не
+	// доходит». Без этого он узнаёт о блокировке из обращений в поддержку.
+	health, err := a.store.NodeHealth(r.Context())
+	if err != nil {
+		log.Printf("сводка доступности: %v", err)
+		health = map[int64]Health{}
+	}
+
+	type view struct {
+		Node
+		Health   Health `json:"health"`
+		Degraded bool   `json:"degraded"`
+	}
+
+	views := make([]view, 0, len(list))
+	for _, n := range list {
+		h := health[n.ID]
+		views = append(views, view{Node: n, Health: h, Degraded: h.Degraded()})
+	}
+
+	ok(w, map[string]any{"nodes": views})
 }
 
 func (a *API) createNode(w http.ResponseWriter, r *http.Request) {
@@ -391,6 +450,16 @@ func (a *API) subscription(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ноды идут в том порядке, в каком их стоит пробовать: сверху те, на
+	// которые не жалуются и которые отвечают быстрее. Ничего не выбрасываем —
+	// отчёты приходят от недоверенных клиентов, и один вредитель не должен
+	// лишать остальных рабочей ноды.
+	if health, err := a.store.NodeHealth(r.Context()); err == nil {
+		nodes = RankNodes(nodes, health)
+	} else {
+		log.Printf("сводка доступности: %v", err)
+	}
+
 	w.Header().Set("Subscription-Userinfo", userInfoHeader(user))
 	w.Header().Set("Profile-Update-Interval", "12")
 
@@ -421,6 +490,7 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 	// подключаться, а разбирать это из ссылки — лишний источник расхождений
 	// между тем, что собрала панель, и тем, что понял клиент.
 	type nodeView struct {
+		ID        int64  `json:"id"`
 		Name      string `json:"name"`
 		Address   string `json:"address"`
 		SNI       string `json:"sni,omitempty"`
@@ -438,7 +508,7 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 			continue
 		}
 		views = append(views, nodeView{
-			Name: n.Name, Address: n.Address, SNI: n.SNI,
+			ID: n.ID, Name: n.Name, Address: n.Address, SNI: n.SNI,
 			PublicKey: n.PublicKey, Link: VeilNodeLink(n),
 			WSPath:           n.WSPath,
 			RealityPublicKey: n.RealityPublicKey,

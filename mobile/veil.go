@@ -71,7 +71,21 @@ func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
 		return nil, fmt.Errorf("список нод: %w", err)
 	}
 
-	dialer, err := pickNode(sub, key)
+	// Ноду выбираем замерами с самого устройства, а не берём первую из
+	// списка: панель стоит за границей и видит ноду живой ровно тогда, когда
+	// для телефона в Иркутске она уже мертва.
+	dialer, measurements, err := client.SelectBest(context.Background(), sub.Nodes, key, client.Options{})
+
+	// Отчёт уходит в любом случае, в том числе когда не подключилось ни к
+	// одной ноде: продавцу важнее всего узнать именно про такой случай.
+	go func() {
+		if err := client.SendReports(context.Background(), account.SubscriptionURL, client.ReportsFrom(measurements)); err != nil {
+			// Панель недоступна — не повод не работать. Туннель от неё не
+			// зависит, список нод уже получен.
+			_ = err
+		}
+	}()
+
 	if err != nil {
 		return nil, err
 	}
@@ -91,29 +105,6 @@ func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
 	t.bridge = bridge
 
 	return t, nil
-}
-
-// pickNode выбирает ноду из подписки.
-//
-// Пока это первая подходящая. Осмысленный выбор — по замерам с самого
-// устройства: панель стоит за границей и видит ноду живой тогда, когда для
-// телефона в Иркутске она уже мертва.
-func pickNode(sub client.Subscription, key vp1.KeyPair) (*client.Dialer, error) {
-	var last error
-
-	for _, node := range sub.Nodes {
-		dialer, err := client.NewDialer(node, key, client.Options{})
-		if err != nil {
-			last = err
-			continue
-		}
-		return dialer, nil
-	}
-
-	if last != nil {
-		return nil, fmt.Errorf("ни одна нода не подошла: %w", last)
-	}
-	return nil, errors.New("в подписке нет ни одной ноды")
 }
 
 // note запоминает последнюю ошибку, чтобы приложение могло её показать.

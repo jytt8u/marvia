@@ -526,6 +526,26 @@ async function removeUser(user) {
 
 /* ---------- ноды ---------- */
 
+// healthCell показывает, сколько людей реально доходит до ноды.
+//
+// Панель стоит за границей и блокировку сама не увидит. Пока продавец не
+// видит этих цифр, он узнаёт о проблеме из обращений в поддержку.
+function healthCell(node) {
+  const h = node.health || {};
+  const total = (h.ok || 0) + (h.failed || 0);
+  if (!total) return el("span", { class: "muted", text: "нет отчётов" });
+
+  const box = el("div", {});
+  box.append(el("span", {
+    class: node.degraded ? "tag bad" : "tag ok",
+    text: (h.ok || 0) + " из " + total + " доходят",
+  }));
+  if (h.median_latency_ms) {
+    box.append(el("div", { class: "muted", text: h.median_latency_ms + " мс" }));
+  }
+  return box;
+}
+
 function renderNodes() {
   const host = $("nodes-body");
   host.replaceChildren();
@@ -548,6 +568,8 @@ function renderNodes() {
         node.reality_public_key ? el("span", { class: "tag ok", text: "reality" }) : null,
         node.ws_path ? el("span", { class: "tag ok", text: "за CDN" }) : null
       ),
+      el("td", {}, healthCell(node),
+      ),
       el("td", {}, el("span", { class: "tag " + seen.cls, text: seen.text })),
       el("td", {}, node.enabled
         ? el("span", { class: "tag ok", text: "включена" })
@@ -561,7 +583,8 @@ function renderNodes() {
   host.append(el("table", {},
     el("thead", {}, el("tr", {},
       el("th", { text: "Нода" }), el("th", { text: "SNI" }),
-      el("th", { text: "Связь" }), el("th", { text: "Статус" }), el("th", {})
+      el("th", { text: "Связь" }), el("th", { text: "Доходят" }),
+      el("th", { text: "Статус" }), el("th", {})
     )),
     el("tbody", {}, rows)
   ));

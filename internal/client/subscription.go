@@ -20,6 +20,10 @@ const (
 
 // Node — точка входа в том виде, в каком её отдаёт панель.
 type Node struct {
+	// ID нужен, чтобы отчёты о доступности ссылались на ноду точно, а не по
+	// имени, которое продавец может переименовать.
+	ID int64 `json:"id"`
+
 	Name      string `json:"name"`
 	Address   string `json:"address"`
 	SNI       string `json:"sni,omitempty"`

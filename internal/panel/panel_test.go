@@ -726,3 +726,177 @@ func TestCDNNodeLinks(t *testing.T) {
 		t.Fatalf("ссылка на ноду за CDN собрана не тем транспортом: %s", link)
 	}
 }
+
+// reportNode отправляет отчёт от имени подписчика.
+func (h *harness) reportNode(subToken string, nodeID int64, okFlag bool, latency int64) int {
+	h.t.Helper()
+
+	body, _ := json.Marshal(map[string]any{
+		"reports": []map[string]any{{"node_id": nodeID, "ok": okFlag, "latency_ms": latency}},
+	})
+	req, err := http.NewRequest(http.MethodPost, h.server.URL+"/sub/"+subToken+"/report", bytes.NewReader(body))
+	if err != nil {
+		h.t.Fatalf("запрос: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := h.server.Client().Do(req)
+	if err != nil {
+		h.t.Fatalf("отчёт: %v", err)
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode
+}
+
+// subscriptionOrder возвращает порядок нод в подписке.
+func (h *harness) subscriptionOrder(subToken string) []string {
+	h.t.Helper()
+
+	resp, err := h.server.Client().Get(h.server.URL + "/sub/" + subToken + "?format=json")
+	if err != nil {
+		h.t.Fatalf("подписка: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var out struct {
+		Nodes []struct {
+			Name string `json:"name"`
+		} `json:"nodes"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		h.t.Fatalf("разбор подписки: %v", err)
+	}
+
+	names := make([]string, 0, len(out.Nodes))
+	for _, n := range out.Nodes {
+		names = append(names, n.Name)
+	}
+	return names
+}
+
+// TestReportsReorderSubscription: ноды, до которых люди не доходят, должны
+// опускаться в списке. Это главное, ради чего отчёты и нужны — панель стоит
+// за границей и сама блокировку не увидит.
+func TestReportsReorderSubscription(t *testing.T) {
+	h := newHarness(t)
+
+	broken := h.createNode("broken")
+	alive := h.createNode("alive")
+
+	// Жалуются трое разных подписчиков: одного мало, у него мог просто
+	// отключиться вайфай.
+	for i := 0; i < 3; i++ {
+		reporter := h.createUser(0)
+		if code := h.reportNode(reporter.User.SubToken, broken.Node.ID, false, 0); code != http.StatusNoContent {
+			t.Fatalf("отчёт об отказе: код %d", code)
+		}
+		if code := h.reportNode(reporter.User.SubToken, alive.Node.ID, true, 40); code != http.StatusNoContent {
+			t.Fatalf("отчёт об успехе: код %d", code)
+		}
+	}
+
+	watcher := h.createUser(0)
+	order := h.subscriptionOrder(watcher.User.SubToken)
+
+	if len(order) != 2 {
+		t.Fatalf("нод в подписке %d, ожидалось 2: %v", len(order), order)
+	}
+	if order[0] != "alive" {
+		t.Fatalf("сверху оказалась %q, ожидалась живая нода: %v", order[0], order)
+	}
+	// Проблемная нода остаётся в списке: отчёты — подсказка, а не команда.
+	if order[1] != "broken" {
+		t.Fatalf("проблемная нода пропала из подписки: %v", order)
+	}
+}
+
+// TestOneReporterCannotBuryNode — защита от вредителя.
+//
+// Отчёты приходят от недоверенных клиентов. Если бы одной жалобы хватало,
+// любой покупатель мог бы выкинуть все ноды продавца из подписок и убить
+// сервис без всякой блокировки.
+func TestOneReporterCannotBuryNode(t *testing.T) {
+	h := newHarness(t)
+
+	first := h.createNode("first")
+	h.createNode("second")
+
+	saboteur := h.createUser(0)
+	// Один и тот же подписчик жалуется много раз — вес не должен расти.
+	for i := 0; i < 20; i++ {
+		h.reportNode(saboteur.User.SubToken, first.Node.ID, false, 0)
+	}
+
+	var out struct {
+		Nodes []struct {
+			Name     string `json:"name"`
+			Degraded bool   `json:"degraded"`
+			Health   struct {
+				Failed int `json:"failed"`
+			} `json:"health"`
+		} `json:"nodes"`
+	}
+	h.do(http.MethodGet, "/api/v1/nodes", adminToken, nil, &out)
+
+	for _, n := range out.Nodes {
+		if n.Name != "first" {
+			continue
+		}
+		if n.Health.Failed != 1 {
+			t.Fatalf("двадцать жалоб одного подписчика посчитаны как %d — вес накручивается", n.Health.Failed)
+		}
+		if n.Degraded {
+			t.Fatal("одной жалобы хватило, чтобы признать ноду проблемной")
+		}
+	}
+}
+
+// TestReportsVisibleToSeller: продавец должен узнавать о блокировке из панели,
+// а не из обращений в поддержку.
+func TestReportsVisibleToSeller(t *testing.T) {
+	h := newHarness(t)
+	node := h.createNode("msk")
+
+	for i := 0; i < 4; i++ {
+		reporter := h.createUser(0)
+		h.reportNode(reporter.User.SubToken, node.Node.ID, false, 0)
+	}
+	good := h.createUser(0)
+	h.reportNode(good.User.SubToken, node.Node.ID, true, 120)
+
+	var out struct {
+		Nodes []struct {
+			Name     string `json:"name"`
+			Degraded bool   `json:"degraded"`
+			Health   struct {
+				OK              int   `json:"ok"`
+				Failed          int   `json:"failed"`
+				MedianLatencyMS int64 `json:"median_latency_ms"`
+			} `json:"health"`
+		} `json:"nodes"`
+	}
+	h.do(http.MethodGet, "/api/v1/nodes", adminToken, nil, &out)
+
+	if len(out.Nodes) != 1 {
+		t.Fatalf("нод %d", len(out.Nodes))
+	}
+	got := out.Nodes[0]
+	if got.Health.Failed != 4 || got.Health.OK != 1 {
+		t.Fatalf("сводка: %d отказов и %d успехов, ожидалось 4 и 1", got.Health.Failed, got.Health.OK)
+	}
+	if !got.Degraded {
+		t.Fatal("нода с четырьмя жалобами против одного успеха не помечена проблемной")
+	}
+	if got.Health.MedianLatencyMS != 120 {
+		t.Fatalf("медиана задержки %d, ожидалось 120", got.Health.MedianLatencyMS)
+	}
+}
+
+func TestReportWithUnknownTokenIsNotFound(t *testing.T) {
+	h := newHarness(t)
+	node := h.createNode("msk")
+
+	if code := h.reportNode("такого-токена-нет", node.Node.ID, false, 0); code != http.StatusNotFound {
+		t.Fatalf("код %d, ожидался 404", code)
+	}
+}
