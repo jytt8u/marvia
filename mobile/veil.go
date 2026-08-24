@@ -52,6 +52,16 @@ func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
 	if tunFD <= 0 {
 		return nil, errors.New("не передан дескриптор сетевого интерфейса")
 	}
+
+	// Дескриптор нам отдали насовсем: приложение вызвало detachFd и само его
+	// уже не закроет. Пока за него не взялся мост, отвечаем за него мы — иначе
+	// каждая неудачная попытка подключения оставляла бы висеть по интерфейсу.
+	bridgeOwnsFD := false
+	defer func() {
+		if !bridgeOwnsFD {
+			tunbridge.CloseFD(tunFD)
+		}
+	}()
 	if strings.TrimSpace(dns) == "" {
 		dns = DefaultDNS
 	}
@@ -92,6 +102,7 @@ func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
 
 	t := &Tunnel{dialer: dialer, nodeName: dialer.Node().Name, running: true}
 
+	bridgeOwnsFD = true
 	bridge, err := tunbridge.Start(tunbridge.Config{
 		FD:      tunFD,
 		Dialer:  dialer,

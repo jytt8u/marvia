@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Veil</string>
+
+    <string name="status_off">Отключено</string>
+    <string name="status_connecting">Подключаюсь…</string>
+    <string name="status_on">Подключено</string>
+    <string name="status_failed">Не подключилось</string>
+
+    <string name="detail_off">Трафик идёт напрямую</string>
+    <string name="detail_connecting">Выбираю самую быструю ноду</string>
+    <string name="detail_no_key">Вставь ключ доступа</string>
+    <string name="detail_node">Нода: %1$s</string>
+    <string name="detail_node_warning">Нода: %1$s · %2$s</string>
+
+    <string name="action_connect">Подключиться</string>
+    <string name="action_disconnect">Отключиться</string>
+    <string name="action_save">Сохранить ключ</string>
+
+    <string name="key_hint">Ключ доступа</string>
+    <string name="key_helper">Ссылка вида veil-account://… — её выдаёт бот при оплате</string>
+    <string name="key_saved">Ключ сохранён</string>
+    <string name="key_empty">Поле пустое</string>
+
+    <string name="consent_denied">Без разрешения системы туннель поднять нельзя</string>
+    <string name="error_no_interface">Система не выдала сетевой интерфейс</string>
+
+    <string name="notification_channel">Туннель</string>
+    <string name="notification_channel_desc">Показывает, работает ли туннель</string>
+    <string name="notification_stop">Отключить</string>
+</resources>
