@@ -29,8 +29,25 @@ import (
 // быть на него выписан.
 func nodeQuery(n Node) url.Values {
 	q := url.Values{}
-	q.Set("type", "tcp")
 	q.Set("fp", "chrome")
+
+	if n.WSPath != "" {
+		// Нода за CDN. Адрес в ссылке ведёт на CDN, а не на саму ноду —
+		// её настоящий адрес в конфиг не попадает вовсе, и ковровая
+		// блокировка диапазонов хостингов такую ноду не задевает.
+		//
+		// REALITY здесь невозможен: CDN расшифровывает TLS у себя.
+		q.Set("type", "ws")
+		q.Set("path", n.WSPath)
+		q.Set("security", "tls")
+		if n.SNI != "" {
+			q.Set("sni", n.SNI)
+			q.Set("host", n.SNI)
+		}
+		return q
+	}
+
+	q.Set("type", "tcp")
 
 	if n.RealityPublicKey != "" {
 		q.Set("security", "reality")

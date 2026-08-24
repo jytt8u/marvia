@@ -5,6 +5,7 @@ go 1.26.5
 require (
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
+	github.com/coder/websocket v1.8.15 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/flynn/noise v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect

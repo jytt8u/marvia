@@ -693,3 +693,36 @@ func TestPlainNodeKeepsTLSLinks(t *testing.T) {
 		t.Fatalf("в ссылку обычной ноды попал ключ REALITY: %s", link)
 	}
 }
+
+// TestCDNNodeLinks: у ноды за CDN ссылки должны нести type=ws и путь, а адрес
+// указывать на CDN. Настоящего адреса ноды в конфиге быть не должно — в этом
+// весь смысл режима.
+func TestCDNNodeLinks(t *testing.T) {
+	h := newHarness(t)
+
+	pair, _ := vp1.GenerateKeyPair()
+	var node createNodeResponse
+	code := h.do(http.MethodPost, "/api/v1/nodes", adminToken, map[string]any{
+		"name": "cdn-1", "address": "cdn.example.com:443",
+		"sni": "cdn.example.com", "public_key": vp1.EncodeKey(pair.Public),
+		"ws_path": "/assets/app.js",
+	}, &node)
+	if code != http.StatusOK {
+		t.Fatalf("создание ноды: код %d", code)
+	}
+	if node.Node.WSPath != "/assets/app.js" {
+		t.Fatalf("путь не сохранился: %q", node.Node.WSPath)
+	}
+
+	created := h.createUser(0, panel.CredVLESS)
+	link := created.Links.Stock[0]
+
+	for _, must := range []string{"type=ws", "path=%2Fassets%2Fapp.js", "security=tls", "sni=cdn.example.com", "cdn.example.com:443"} {
+		if !strings.Contains(link, must) {
+			t.Fatalf("в ссылке нет %q: %s", must, link)
+		}
+	}
+	if strings.Contains(link, "type=tcp") || strings.Contains(link, "pbk=") {
+		t.Fatalf("ссылка на ноду за CDN собрана не тем транспортом: %s", link)
+	}
+}

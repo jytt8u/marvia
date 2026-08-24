@@ -34,6 +34,7 @@ type tunnelDialer struct {
 	static     vp1.KeyPair
 	serverPub  []byte
 	tlsCfg     *transport.ClientConfig // nil — режим -plain, без маскировки
+	wsCfg      *transport.WSDialConfig // не nil — соединение через WebSocket за CDN
 }
 
 func main() {
@@ -46,6 +47,8 @@ func main() {
 	caFile := flag.String("ca", "", "файл PEM с доверенным сертификатом (для отладки с самоподписанным)")
 	insecure := flag.Bool("insecure", false, "не проверять сертификат сервера (только для отладки)")
 	plain := flag.Bool("plain", false, "работать без TLS-маскировки (режим M0, для отладки)")
+	wsPath := flag.String("ws-path", "", "путь туннеля WebSocket, если нода стоит за CDN")
+	wsHost := flag.String("ws-host", "", "домен, ведущий на CDN (по умолчанию — значение -sni)")
 
 	flag.Parse()
 
@@ -58,6 +61,8 @@ func main() {
 		caFile:     *caFile,
 		insecure:   *insecure,
 		plain:      *plain,
+		wsPath:     *wsPath,
+		wsHost:     *wsHost,
 	}
 
 	if err := run(opts); err != nil {
@@ -75,6 +80,8 @@ type clientOptions struct {
 	caFile     string
 	insecure   bool
 	plain      bool
+	wsPath     string
+	wsHost     string
 }
 
 func run(opts clientOptions) error {
@@ -100,12 +107,26 @@ func run(opts clientOptions) error {
 	}
 
 	dialer := &tunnelDialer{serverAddr: opts.serverAddr, static: static, serverPub: serverPub}
-	if !opts.plain {
+	if !opts.plain || opts.wsPath != "" {
 		tlsCfg, err := buildTLSConfig(opts)
 		if err != nil {
 			return err
 		}
-		dialer.tlsCfg = tlsCfg
+		if !opts.plain {
+			dialer.tlsCfg = tlsCfg
+		}
+		if opts.wsPath != "" {
+			host := opts.wsHost
+			if host == "" {
+				host = tlsCfg.ServerName
+			}
+			dialer.wsCfg = &transport.WSDialConfig{
+				Host:  host,
+				Path:  opts.wsPath,
+				TLS:   *tlsCfg,
+				Plain: opts.plain,
+			}
+		}
 	}
 
 	pool := tunnel.NewPool(dialer.dial, 0, 0)
@@ -122,9 +143,15 @@ func run(opts clientOptions) error {
 	if ephemeral {
 		log.Printf("(ключ временный — при перезапуске сменится; для постоянного укажи -key)")
 	}
-	if dialer.tlsCfg == nil {
+	switch {
+	case dialer.wsCfg != nil:
+		log.Printf("транспорт: WebSocket на %s%s, отпечаток Chrome", dialer.wsCfg.Host, dialer.wsCfg.Path)
+		if dialer.wsCfg.TLS.InsecureSkipVerify {
+			log.Printf("ВНИМАНИЕ: проверка сертификата отключена — соединение можно перехватить")
+		}
+	case dialer.tlsCfg == nil:
 		log.Printf("ВНИМАНИЕ: режим -plain, маскировки нет — трафик опознаётся DPI")
-	} else {
+	default:
 		log.Printf("маскировка: TLS, SNI %s, отпечаток Chrome", dialer.tlsCfg.ServerName)
 		if dialer.tlsCfg.InsecureSkipVerify {
 			log.Printf("ВНИМАНИЕ: проверка сертификата отключена — соединение можно перехватить")
@@ -232,9 +259,14 @@ func (d *tunnelDialer) dial(ctx context.Context) (net.Conn, error) {
 		raw net.Conn
 		err error
 	)
-	if d.tlsCfg != nil {
+	switch {
+	case d.wsCfg != nil:
+		// За CDN: подключаемся к его адресам, а имя ноды в конфиге вообще
+		// не фигурирует.
+		raw, err = transport.DialWS(ctx, d.serverAddr, *d.wsCfg)
+	case d.tlsCfg != nil:
 		raw, err = transport.Dial(ctx, d.serverAddr, *d.tlsCfg)
-	} else {
+	default:
 		var dialer net.Dialer
 		raw, err = dialer.DialContext(ctx, "tcp", d.serverAddr)
 	}
