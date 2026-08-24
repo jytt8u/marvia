@@ -155,27 +155,44 @@ type CreateUserParams struct {
 	TrafficLimit int64      `json:"traffic_limit"`
 	MaxIPs       int        `json:"max_ips"`
 	MaxConns     int        `json:"max_conns"`
+
+	// Kinds — какие наборы доступа выдать сразу: vp1, vless, trojan.
+	// Пусто означает только vp1.
+	//
+	// Продавцу, переводящему покупателей с чужой панели, обычно нужны все
+	// три: vless и trojan работают в приложениях, которые у людей уже стоят,
+	// а vp1 — в нашем клиенте, когда они до него дойдут.
+	Kinds []string `json:"kinds,omitempty"`
 }
 
-// CreateUser заводит подписчика и выдаёт ему ключ для нашего протокола.
-//
-// Приватный ключ возвращается ровно один раз и нигде не сохраняется — как у
-// WireGuard. Если продавец его потеряет, он выпустит новый: это дешевле, чем
-// хранить приватные ключи всех клиентов в одной базе, которую однажды сольют.
-func (s *Store) CreateUser(ctx context.Context, p CreateUserParams) (User, string, error) {
-	pair, err := vp1.GenerateKeyPair()
-	if err != nil {
-		return User{}, "", fmt.Errorf("генерация ключа: %w", err)
+// Issued — выданный набор доступа. Поле Secret показывается ровно один раз.
+type Issued struct {
+	ID     int64  `json:"id"`
+	Kind   string `json:"kind"`
+	Secret string `json:"secret"`
+}
+
+// CreateUser заводит подписчика и выдаёт ему запрошенные наборы доступа.
+func (s *Store) CreateUser(ctx context.Context, p CreateUserParams) (User, []Issued, error) {
+	kinds := p.Kinds
+	if len(kinds) == 0 {
+		kinds = []string{CredVP1}
 	}
+	for _, kind := range kinds {
+		if kind != CredVP1 && kind != CredVLESS && kind != CredTrojan {
+			return User{}, nil, fmt.Errorf("%w: %q", ErrUnknownKind, kind)
+		}
+	}
+
 	subToken, err := NewToken()
 	if err != nil {
-		return User{}, "", err
+		return User{}, nil, err
 	}
 
 	now := time.Now().UTC()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return User{}, "", err
+		return User{}, nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
@@ -184,31 +201,48 @@ func (s *Store) CreateUser(ctx context.Context, p CreateUserParams) (User, strin
 		 VALUES (?, 1, ?, ?, ?, ?, ?, ?)`,
 		p.Label, nullTime(p.ExpiresAt), p.TrafficLimit, p.MaxIPs, p.MaxConns, subToken, format(now))
 	if err != nil {
-		return User{}, "", fmt.Errorf("создание пользователя: %w", err)
+		return User{}, nil, fmt.Errorf("создание пользователя: %w", err)
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		return User{}, "", err
+		return User{}, nil, err
 	}
 
-	pub := vp1.EncodeKey(pair.Public)
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO credentials (user_id, kind, secret, label, created_at) VALUES (?, ?, ?, '', ?)`,
-		id, CredVP1, pub, format(now)); err != nil {
-		return User{}, "", fmt.Errorf("создание ключа: %w", err)
+	// Всё в одной транзакции: подписчик без единого набора доступа —
+	// бесполезная запись, которую продавцу пришлось бы чинить руками.
+	var (
+		issued []Issued
+		creds  []Credential
+	)
+	for _, kind := range kinds {
+		stored, shown, err := newSecret(kind)
+		if err != nil {
+			return User{}, nil, err
+		}
+		res, err := tx.ExecContext(ctx,
+			`INSERT INTO credentials (user_id, kind, secret, label, created_at) VALUES (?, ?, ?, '', ?)`,
+			id, kind, stored, format(now))
+		if err != nil {
+			return User{}, nil, fmt.Errorf("создание набора %s: %w", kind, err)
+		}
+		credID, err := res.LastInsertId()
+		if err != nil {
+			return User{}, nil, err
+		}
+		issued = append(issued, Issued{ID: credID, Kind: kind, Secret: shown})
+		creds = append(creds, Credential{ID: credID, Kind: kind, Secret: stored, CreatedAt: now})
 	}
 
 	if err := tx.Commit(); err != nil {
-		return User{}, "", err
+		return User{}, nil, err
 	}
 
 	user := User{
 		ID: id, Label: p.Label, Enabled: true, ExpiresAt: p.ExpiresAt,
 		TrafficLimit: p.TrafficLimit, MaxIPs: p.MaxIPs, MaxConns: p.MaxConns,
-		SubToken: subToken, CreatedAt: now,
-		Credentials: []Credential{{Kind: CredVP1, Secret: pub, CreatedAt: now}},
+		SubToken: subToken, CreatedAt: now, Credentials: creds,
 	}
-	return user, vp1.EncodeKey(pair.Private), nil
+	return user, issued, nil
 }
 
 // UpdateUserParams — изменяемые поля. nil означает «не трогать».
@@ -493,11 +527,11 @@ func (s *Store) AuthenticateNode(ctx context.Context, token string) (Node, error
 func (s *Store) NodeUsers(ctx context.Context, nodeID int64) ([]users.User, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT u.id, u.label, u.enabled, u.expires_at, u.traffic_limit, u.max_ips, u.max_conns,
-		       c.secret,
+		       c.kind, c.secret,
 		       COALESCE((SELECT SUM(up + down) FROM usage WHERE user_id = u.id AND node_id <> ?), 0)
 		FROM users u
-		JOIN credentials c ON c.user_id = u.id AND c.kind = ?
-		ORDER BY u.id`, nodeID, CredVP1)
+		JOIN credentials c ON c.user_id = u.id
+		ORDER BY u.id, c.id`, nodeID)
 	if err != nil {
 		return nil, fmt.Errorf("сборка списка для ноды: %w", err)
 	}
@@ -513,21 +547,25 @@ func (s *Store) NodeUsers(ctx context.Context, nodeID int64) ([]users.User, erro
 			limit     int64
 			maxIPs    int
 			maxConns  int
+			kind      string
 			secret    string
 			elsewhere int64
 		)
-		if err := rows.Scan(&userID, &label, &enabled, &expires, &limit, &maxIPs, &maxConns, &secret, &elsewhere); err != nil {
+		if err := rows.Scan(&userID, &label, &enabled, &expires, &limit, &maxIPs, &maxConns,
+			&kind, &secret, &elsewhere); err != nil {
 			return nil, err
 		}
 
 		u := users.User{
-			PublicKey: secret,
-			Label:     label,
-			Enabled:   enabled != 0,
-			MaxIPs:    maxIPs,
-			MaxConns:  maxConns,
-			// Все ключи одного подписчика попадают в один аккаунт: квота,
-			// срок и лимит устройств у телефона и ноутбука общие.
+			Kind:     kind,
+			Secret:   secret,
+			Label:    label,
+			Enabled:  enabled != 0,
+			MaxIPs:   maxIPs,
+			MaxConns: maxConns,
+			// Все наборы одного подписчика попадают в один аккаунт: квота,
+			// срок и лимит устройств у телефона, ноутбука и записи для
+			// чужого приложения общие.
 			Account: strconv.FormatInt(userID, 10),
 		}
 		if t := parseNullTime(expires); t != nil {

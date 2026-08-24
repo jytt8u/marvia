@@ -1,13 +1,13 @@
 package panel
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -115,19 +115,69 @@ func (a *API) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, private, err := a.store.CreateUser(r.Context(), p)
+	user, issued, err := a.store.CreateUser(r.Context(), p)
 	if err != nil {
+		if errors.Is(err, ErrUnknownKind) {
+			fail(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	ok(w, map[string]any{
 		"user": user,
-		// Приватный ключ отдаётся ровно здесь и больше нигде: панель его не
-		// хранит. Бот обязан сразу передать его покупателю.
-		"private_key":  private,
-		"account_link": a.accountLink(user, private, user.Label),
+		// Секреты отдаются ровно здесь и больше нигде. Для vp1 панель не
+		// хранит приватную часть вовсе; для vless и trojan хранит, но
+		// повторно через API не отдаёт. Бот обязан сразу переслать ссылки
+		// покупателю.
+		"issued": issued,
+		"links":  a.links(r.Context(), user, issued),
 	})
+}
+
+// links собирает готовые к отправке ссылки.
+//
+// Бот не должен ничего склеивать сам: одна ошибка в параметрах ссылки — и
+// покупатель приходит в поддержку с «не работает», а продавец не понимает,
+// в чём дело.
+func (a *API) links(ctx context.Context, user User, issued []Issued) map[string]any {
+	out := map[string]any{"subscription": a.subURL(user.SubToken)}
+
+	stock := make([]Credential, 0, len(issued))
+	for _, i := range issued {
+		switch i.Kind {
+		case CredVP1:
+			out["account"] = AccountLink(a.subBase, i.Secret, user.SubToken, user.Label)
+		default:
+			stock = append(stock, Credential{Kind: i.Kind, Secret: i.Secret})
+		}
+	}
+
+	if len(stock) == 0 {
+		return out
+	}
+
+	nodes, err := a.store.ListNodes(ctx)
+	if err != nil {
+		// Ссылки на ноды не собрались, но подписку отдать всё равно можно:
+		// клиент возьмёт список оттуда.
+		log.Printf("сборка ссылок: %v", err)
+		return out
+	}
+	if links := StockLinks(nodes, stock, user.Label); len(links) > 0 {
+		out["stock"] = links
+	}
+	return out
+}
+
+// subURL — адрес подписки для чужих клиентов.
+func (a *API) subURL(token string) string {
+	base := a.subBase
+	if base == "" {
+		base = "https://ПОДСТАВЬ-АДРЕС-ПАНЕЛИ"
+	}
+	return base + "/sub/" + token
 }
 
 func (a *API) getUser(w http.ResponseWriter, r *http.Request) {
@@ -178,14 +228,19 @@ func (a *API) addCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
+		Kind  string `json:"kind"`
 		Label string `json:"label"`
 	}
 	if r.ContentLength > 0 && !decode(w, r, &body) {
 		return
 	}
 
-	cred, private, err := a.store.AddCredential(r.Context(), id, body.Label)
+	cred, secret, err := a.store.AddCredential(r.Context(), id, body.Kind, body.Label)
 	if err != nil {
+		if errors.Is(err, ErrUnknownKind) {
+			fail(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		respondStoreErr(w, err)
 		return
 	}
@@ -195,10 +250,11 @@ func (a *API) addCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	issued := []Issued{{ID: cred.ID, Kind: cred.Kind, Secret: secret}}
 	ok(w, map[string]any{
-		"credential":   cred,
-		"private_key":  private,
-		"account_link": a.accountLink(user, private, cred.Label),
+		"credential": cred,
+		"issued":     issued,
+		"links":      a.links(r.Context(), user, issued),
 	})
 }
 
@@ -301,19 +357,20 @@ func (a *API) subscription(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lines := make([]string, 0, len(nodes))
-	for _, n := range nodes {
-		if !n.Enabled {
-			continue
-		}
-		lines = append(lines, nodeLink(n))
-	}
-	body := strings.Join(lines, "\n")
-
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Subscription-Userinfo", userInfoHeader(user))
 	w.Header().Set("Profile-Update-Interval", "12")
 
+	if r.URL.Query().Get("format") == "json" {
+		a.subscriptionJSON(w, user, nodes)
+		return
+	}
+
+	// По умолчанию отдаём то, что понимают чужие приложения. Наши ссылки
+	// сюда не попадают намеренно: на незнакомой схеме часть клиентов
+	// спотыкается и не принимает подписку целиком.
+	body := strings.Join(StockLinks(nodes, user.Credentials, user.Label), "\n")
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if r.URL.Query().Get("format") == "raw" {
 		_, _ = w.Write([]byte(body))
 		return
@@ -321,39 +378,36 @@ func (a *API) subscription(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(base64.StdEncoding.EncodeToString([]byte(body))))
 }
 
-// nodeLink собирает ссылку на ноду.
-func nodeLink(n Node) string {
-	q := url.Values{}
-	if n.SNI != "" {
-		q.Set("sni", n.SNI)
-	}
-	q.Set("fp", "chrome")
-
-	link := "veil://" + url.PathEscape(n.PublicKey) + "@" + n.Address
-	if encoded := q.Encode(); encoded != "" {
-		link += "?" + encoded
-	}
-	if n.Name != "" {
-		link += "#" + url.PathEscape(n.Name)
-	}
-	return link
-}
-
-// accountLink — то, что бот отправляет покупателю.
+// subscriptionJSON — подписка для нашего клиента.
 //
-// В ссылке личный ключ и адрес подписки: клиент импортирует её один раз, а
-// список нод потом обновляет сам. Ноды меняются часто, ключ — почти никогда.
-func (a *API) accountLink(user User, privateKey, label string) string {
-	base := a.subBase
-	if base == "" {
-		base = "https://ПОДСТАВЬ-АДРЕС-ПАНЕЛИ"
+// Секретов здесь нет и быть не должно: свой ключ клиент получил один раз в
+// ссылке аккаунта, а список нод он обновляет постоянно и по открытому каналу.
+func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
+	type nodeView struct {
+		Name      string `json:"name"`
+		Address   string `json:"address"`
+		SNI       string `json:"sni,omitempty"`
+		PublicKey string `json:"public_key"`
+		Link      string `json:"link"`
 	}
-	link := "veil-account://" + privateKey + "@" + strings.TrimPrefix(strings.TrimPrefix(base, "https://"), "http://") +
-		"/sub/" + user.SubToken
-	if label != "" {
-		link += "#" + url.PathEscape(label)
+
+	views := make([]nodeView, 0, len(nodes))
+	for _, n := range nodes {
+		if !n.Enabled {
+			continue
+		}
+		views = append(views, nodeView{
+			Name: n.Name, Address: n.Address, SNI: n.SNI,
+			PublicKey: n.PublicKey, Link: VeilNodeLink(n),
+		})
 	}
-	return link
+
+	ok(w, map[string]any{
+		"nodes":         views,
+		"traffic_limit": user.TrafficLimit,
+		"used":          user.Used,
+		"expires_at":    user.ExpiresAt,
+	})
 }
 
 // userInfoHeader формирует заголовок с остатком квоты.

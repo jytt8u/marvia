@@ -1,0 +1,125 @@
+package panel
+
+import (
+	"net/url"
+	"strings"
+)
+
+// Ссылки, которые бот отправляет покупателю.
+//
+// Форматы vless:// и trojan:// придуманы не нами — их понимают v2rayNG,
+// Hiddify, NekoBox и почти всё остальное, что уже стоит у людей. Именно
+// поэтому мы их и выдаём: покупателю не нужно ничего переставлять.
+//
+// Ссылка veil-account:// наша: в ней личный ключ и адрес, откуда брать список
+// нод. Её понимает только наш клиент.
+
+// nodeQuery собирает общие для чужих протоколов параметры.
+//
+// security=tls и sni обязательны: нода принимает соединения только внутри TLS
+// и опознаётся по имени домена. fp=chrome просит клиент подделать отпечаток
+// браузера — без этого он представится своим, а такой отпечаток DPI отличает.
+func nodeQuery(n Node) url.Values {
+	q := url.Values{}
+	q.Set("security", "tls")
+	q.Set("type", "tcp")
+	q.Set("fp", "chrome")
+	if n.SNI != "" {
+		q.Set("sni", n.SNI)
+		q.Set("host", n.SNI)
+	}
+	return q
+}
+
+// VLESSLink собирает ссылку для чужого клиента по VLESS.
+func VLESSLink(n Node, uuid, name string) string {
+	q := nodeQuery(n)
+	// VLESS не шифрует сам: шифрование целиком на внешнем TLS. Параметр
+	// обязателен, клиенты без него ссылку не принимают.
+	q.Set("encryption", "none")
+
+	return (&url.URL{
+		Scheme:   "vless",
+		User:     url.User(uuid),
+		Host:     n.Address,
+		RawQuery: q.Encode(),
+		Fragment: name,
+	}).String()
+}
+
+// TrojanLink собирает ссылку для чужого клиента по Trojan.
+func TrojanLink(n Node, password, name string) string {
+	return (&url.URL{
+		Scheme:   "trojan",
+		User:     url.User(password),
+		Host:     n.Address,
+		RawQuery: nodeQuery(n).Encode(),
+		Fragment: name,
+	}).String()
+}
+
+// VeilNodeLink собирает ссылку на ноду для нашего клиента.
+func VeilNodeLink(n Node) string {
+	q := url.Values{}
+	if n.SNI != "" {
+		q.Set("sni", n.SNI)
+	}
+	q.Set("fp", "chrome")
+
+	return (&url.URL{
+		Scheme:   "veil",
+		User:     url.User(n.PublicKey),
+		Host:     n.Address,
+		RawQuery: q.Encode(),
+		Fragment: n.Name,
+	}).String()
+}
+
+// StockLinks собирает ссылки для приложений, которые уже стоят у покупателя.
+//
+// Наши ссылки сюда намеренно не попадают: чужие клиенты не знают схемы veil://
+// и на незнакомой строке в подписке некоторые из них спотыкаются целиком.
+// Смешивать форматы в одном списке — верный способ сломать подписку тем, ради
+// кого мы всё это и делаем.
+func StockLinks(nodes []Node, creds []Credential, label string) []string {
+	links := make([]string, 0, len(nodes)*len(creds))
+
+	for _, n := range nodes {
+		if !n.Enabled {
+			continue
+		}
+		name := n.Name
+		if label != "" {
+			name = n.Name + " · " + label
+		}
+
+		for _, c := range creds {
+			switch c.Kind {
+			case CredVLESS:
+				links = append(links, VLESSLink(n, c.Secret, name))
+			case CredTrojan:
+				links = append(links, TrojanLink(n, c.Secret, name))
+			}
+		}
+	}
+	return links
+}
+
+// AccountLink — то, что бот отправляет покупателю для нашего клиента.
+//
+// В ссылке личный ключ и адрес подписки: клиент импортирует её один раз, а
+// список нод потом обновляет сам. Ноды меняются часто, ключ — почти никогда.
+func AccountLink(base, privateKey, subToken, label string) string {
+	host := strings.TrimPrefix(strings.TrimPrefix(strings.TrimRight(base, "/"), "https://"), "http://")
+	if host == "" {
+		host = "ПОДСТАВЬ-АДРЕС-ПАНЕЛИ"
+	}
+
+	return (&url.URL{
+		Scheme:   "veil-account",
+		User:     url.User(privateKey),
+		Host:     host,
+		Path:     "/sub/" + subToken,
+		Fragment: label,
+	}).String()
+}
