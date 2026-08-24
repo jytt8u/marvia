@@ -68,19 +68,23 @@ type deps struct {
 }
 
 type serverOptions struct {
-	listenAddr string
-	keyStr     string
-	keyFile    string
-	usersFile  string
-	panelURL   string
-	panelToken string
-	usageFile  string
-	certFile   string
-	keyPEMFile string
-	selfSigned string
-	plain      bool
-	coverSite  string
-	coverTitle string
+	listenAddr      string
+	keyStr          string
+	keyFile         string
+	usersFile       string
+	panelURL        string
+	panelToken      string
+	usageFile       string
+	certFile        string
+	keyPEMFile      string
+	selfSigned      string
+	realityDest     string
+	realitySNI      string
+	realityKey      string
+	realityShortIDs string
+	plain           bool
+	coverSite       string
+	coverTitle      string
 }
 
 func main() {
@@ -98,6 +102,11 @@ func main() {
 	flag.StringVar(&opts.keyPEMFile, "tls-key", "", "файл приватного ключа сертификата PEM")
 	flag.StringVar(&opts.selfSigned, "tls-self-signed", "", "выпустить самоподписанный сертификат на это имя (только для отладки)")
 	flag.BoolVar(&opts.plain, "plain", false, "работать без TLS-маскировки (для отладки)")
+
+	flag.StringVar(&opts.realityDest, "reality-dest", "", "настоящий сайт для маскировки REALITY, например www.samsung.com:443")
+	flag.StringVar(&opts.realitySNI, "reality-sni", "", "имена в SNI через запятую (по умолчанию — хост из -reality-dest)")
+	flag.StringVar(&opts.realityKey, "reality-key", "", "приватный ключ REALITY в base64 (по умолчанию — из VEIL_REALITY_KEY)")
+	flag.StringVar(&opts.realityShortIDs, "reality-short-id", "", "короткие идентификаторы клиентов через запятую, шестнадцатеричные")
 
 	flag.StringVar(&opts.coverSite, "cover", "", "адрес настоящего сайта для неопознанных гостей, например https://example.org")
 	flag.StringVar(&opts.coverTitle, "cover-title", "", "если сайт-прикрытие не задан, отдавать заглушку с таким заголовком")
@@ -136,7 +145,15 @@ func run(opts serverOptions) error {
 	defer ln.Close()
 
 	addr := ln.Addr()
-	if !opts.plain {
+	switch {
+	case opts.plain:
+		// маскировки нет
+	case opts.realityDest != "":
+		ln, err = listenReality(ln, opts)
+		if err != nil {
+			return err
+		}
+	default:
 		cert, err := loadCertificate(opts)
 		if err != nil {
 			return err
@@ -154,8 +171,15 @@ func run(opts serverOptions) error {
 	} else {
 		log.Printf("пользователей: %d, расход пишется в %s", registry.Len(), usagePath)
 	}
-	if cover == nil {
+	if cover == nil && opts.realityDest == "" {
 		log.Printf("ВНИМАНИЕ: сайт-прикрытие не задан — неопознанные соединения будут рваться, что заметно сканерам")
+	}
+	if cover == nil && opts.realityDest != "" {
+		// Под REALITY прикрытие обеспечивает сам транспорт: чужой гость
+		// уходит на настоящий сайт, не доходя до нашего кода. Флаг -cover
+		// здесь нужен только для редкого случая, когда клиент прошёл
+		// проверку REALITY, но говорит внутри что-то неопознанное.
+		log.Printf("прикрытие обеспечивает REALITY: неопознанные гости уходят на %s", opts.realityDest)
 	}
 
 	// Закрытие слушателя по сигналу разблокирует Accept.
@@ -286,6 +310,70 @@ func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, 
 	})
 
 	return registry, usagePath, nil
+}
+
+// listenReality поднимает маскировку REALITY.
+//
+// В этом режиме нода не предъявляет собственный сертификат: для всех, кто не
+// доказал право входа, она становится прозрачным зеркалом чужого сайта. Свой
+// домен и сертификат при этом не нужны вовсе.
+func listenReality(inner net.Listener, opts serverOptions) (net.Listener, error) {
+	if opts.certFile != "" || opts.selfSigned != "" {
+		return nil, errors.New("-reality-dest и обычный TLS-сертификат вместе не работают: выбери что-то одно")
+	}
+
+	keyStr := opts.realityKey
+	if keyStr == "" {
+		keyStr = os.Getenv("VEIL_REALITY_KEY")
+	}
+	if keyStr == "" {
+		return nil, errors.New("не задан ключ REALITY: укажи -reality-key или VEIL_REALITY_KEY (выпустить: veil-keygen -reality)")
+	}
+	key, err := vp1.DecodeKey(strings.TrimSpace(keyStr))
+	if err != nil {
+		return nil, fmt.Errorf("ключ REALITY: %w", err)
+	}
+
+	names := splitList(opts.realitySNI)
+	if len(names) == 0 {
+		// Умолчание безопасное: имя берём из самого адреса прикрытия, ровно
+		// то, что клиент и напишет в SNI.
+		host, _, splitErr := net.SplitHostPort(opts.realityDest)
+		if splitErr != nil {
+			return nil, fmt.Errorf("не разобрать -reality-dest %q: %w", opts.realityDest, splitErr)
+		}
+		names = []string{host}
+	}
+
+	listener, err := transport.ListenReality(inner, transport.RealityConfig{
+		Dest:        opts.realityDest,
+		ServerNames: names,
+		PrivateKey:  key,
+		ShortIDs:    splitList(opts.realityShortIDs),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("маскировка REALITY: %w", err)
+	}
+
+	pair, err := vp1.KeyPairFromPrivate(key)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("маскировка REALITY: прикрытие %s, SNI %s", opts.realityDest, strings.Join(names, ", "))
+	log.Printf("публичный ключ REALITY (pbk для клиентов): %s", vp1.EncodeKey(pair.Public))
+
+	return listener, nil
+}
+
+// splitList разбирает список, заданный через запятую.
+func splitList(raw string) []string {
+	var out []string
+	for _, part := range strings.Split(raw, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 func loadCertificate(opts serverOptions) (tls.Certificate, error) {

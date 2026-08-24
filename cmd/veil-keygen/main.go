@@ -14,6 +14,7 @@ import (
 
 func main() {
 	quiet := flag.Bool("quiet", false, "печатать только две строки: приватный и публичный ключ")
+	forReality := flag.Bool("reality", false, "пояснения под ключ REALITY")
 	flag.Parse()
 
 	pair, err := vp1.GenerateKeyPair()
@@ -34,6 +35,18 @@ func main() {
 	fmt.Printf("Приватный ключ: %s\n", priv)
 	fmt.Printf("Публичный ключ: %s\n", pub)
 	fmt.Println()
+
+	if *forReality {
+		// Ключ тот же самый по сути — X25519, — но роли у сторон другие,
+		// и путать их дорого: приватный ключ REALITY на ноде и приватный
+		// ключ клиента живут в разных местах.
+		fmt.Println("Приватный ключ — ноде:      -reality-key или VEIL_REALITY_KEY")
+		fmt.Println("Публичный ключ — клиентам:  параметр pbk в ссылке")
+		fmt.Println()
+		fmt.Println("Это обычная пара X25519, совместимая с тем, что выдаёт xray x25519.")
+		return
+	}
+
 	fmt.Println("Приватный ключ держи на своей машине. Публичный — это то, что")
 	fmt.Println("нужно знать другой стороне, чтобы вообще начать разговор.")
 }
