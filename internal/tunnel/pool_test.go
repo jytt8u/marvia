@@ -247,3 +247,76 @@ func TestPoolReusesSessions(t *testing.T) {
 		t.Fatalf("на %d потоков открыто %d соединений до ноды, ожидалось 1", maxStreams, got)
 	}
 }
+
+// TestPoolDoesNotBurstHandshakes — прямое следствие того, как ТСПУ ловит
+// туннели в 2026 году: несколько параллельных TLS-хендшейков к одному имени
+// в коротком окне сами по себе служат признаком, и соединения после этого
+// молча дропаются на пару минут.
+//
+// Поэтому пул обязан, во-первых, никогда не вести два хендшейка одновременно,
+// а во-вторых, не открывать новое соединение, если в уже поднятом есть место.
+func TestPoolDoesNotBurstHandshakes(t *testing.T) {
+	srv := startServer(t, func(stream net.Conn) {
+		defer stream.Close()
+		_, _ = io.Copy(stream, stream)
+	})
+
+	var (
+		inFlight atomic.Int32
+		peak     atomic.Int32
+		total    atomic.Int32
+	)
+
+	base := dialer(t, srv, nil)
+	counting := func(ctx context.Context) (net.Conn, error) {
+		now := inFlight.Add(1)
+		for {
+			best := peak.Load()
+			if now <= best || peak.CompareAndSwap(best, now) {
+				break
+			}
+		}
+		defer inFlight.Add(-1)
+
+		total.Add(1)
+		// Задержка делает гонку заметной: без сериализации сюда влетели бы
+		// все горутины разом.
+		time.Sleep(50 * time.Millisecond)
+		return base(ctx)
+	}
+
+	pool := tunnel.NewPool(counting, 4, 32)
+	defer pool.Close()
+
+	const streams = 20
+	var wg sync.WaitGroup
+	opened := make(chan net.Conn, streams)
+
+	for i := 0; i < streams; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			stream, err := pool.Open(ctx)
+			if err != nil {
+				t.Errorf("открытие потока: %v", err)
+				return
+			}
+			opened <- stream
+		}()
+	}
+	wg.Wait()
+	close(opened)
+	for s := range opened {
+		_ = s.Close()
+	}
+
+	if got := peak.Load(); got > 1 {
+		t.Fatalf("одновременных хендшейков: %d, допускается не больше одного", got)
+	}
+	if got := total.Load(); got != 1 {
+		t.Fatalf("на %d потоков открыто %d соединений, хватало одного", streams, got)
+	}
+}

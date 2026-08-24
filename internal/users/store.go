@@ -43,7 +43,8 @@ func LoadUsers(path string) ([]User, error) {
 			return nil, fmt.Errorf("%s не содержит ни одного пользователя", path)
 		}
 		for i := range parsed.Users {
-			if _, err := DecodePublicKey(parsed.Users[i].PublicKey); err != nil {
+			parsed.Users[i] = parsed.Users[i].Normalized()
+			if _, err := Identity(parsed.Users[i].Kind, parsed.Users[i].Secret); err != nil {
 				return nil, fmt.Errorf("%s, пользователь %d: %w", path, i+1, err)
 			}
 		}
@@ -87,7 +88,7 @@ func parsePlainList(path string, raw []byte) ([]User, error) {
 		if _, err := DecodePublicKey(text); err != nil {
 			return nil, fmt.Errorf("%s, строка %d: %w", path, line, err)
 		}
-		list = append(list, User{PublicKey: text, Label: label, Enabled: true})
+		list = append(list, User{Kind: KindVP1, Secret: text, PublicKey: text, Label: label, Enabled: true})
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("чтение %s: %w", path, err)
