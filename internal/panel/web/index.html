@@ -196,6 +196,19 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
   <section id="tab-nodes" hidden>
     <div class="card">
       <h2>Добавить ноду</h2>
+      <p class="muted" style="margin:0 0 .9rem">
+        Панель выдаст одноразовое приглашение и готовую строку. Вставь её на чистом
+        сервере от root — нода выпустит себе ключи, запишется сюда и поднимется сама.
+      </p>
+      <button class="primary" id="nn-invite">Получить команду</button>
+
+      <details style="margin-top:1.2rem">
+      <summary class="muted" style="cursor:pointer">…или вписать ноду вручную</summary>
+      <p class="muted">
+        Нужно в двух случаях: нода стоит за CDN — таких установщик пока не умеет, —
+        либо её ставили руками. Тогда ключи придётся взять из журнала
+        <code class="mono">veil-server</code>.
+      </p>
       <div class="grid">
         <label class="field"><span>Имя</span><input id="nn-name" placeholder="msk-1"></label>
         <label class="field"><span>Адрес и порт</span><input id="nn-address" placeholder="msk.example.com:443"></label>
@@ -212,7 +225,8 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
         а настоящий адрес ноды в конфиг не попадёт. Вместе они не работают: CDN
         расшифровывает TLS у себя, и REALITY через него невозможен.
       </p>
-      <button class="primary" id="nn-create" style="margin-top:.8rem">Добавить</button>
+      <button id="nn-create" style="margin-top:.8rem">Добавить</button>
+      </details>
     </div>
 
     <div class="card">
@@ -590,6 +604,27 @@ function renderNodes() {
   ));
 }
 
+async function inviteNode() {
+  try {
+    const res = await api("POST", "/api/v1/nodes/invite", { label: "" });
+
+    const modalBody = $("modal-body");
+    modalBody.replaceChildren();
+    modalBody.append(
+      el("h2", { text: "Команда для нового сервера" }),
+      el("div", { class: "note", text:
+        "Приглашение одноразовое и живёт час. Оно даёт единственное право — " +
+        "один раз назваться нодой, поэтому его не страшно передать тому, кто " +
+        "ставит сервер." })
+    );
+    modalBody.append(linkRow("Вставь на сервере от root", res.command));
+    modalBody.append(el("p", { class: "muted", text:
+      "Если 443 занят — поставь PORT=8443 перед sh. Другой сайт прикрытия — " +
+      "DEST=www.icloud.com:443. Своё имя ноды — NAME=amsterdam-1." }));
+    $("modal").showModal();
+  } catch (err) { toast(err.message, true); }
+}
+
 async function createNode() {
   const body = {
     name: $("nn-name").value.trim(),
@@ -611,9 +646,13 @@ async function createNode() {
     modalBody.replaceChildren();
     modalBody.append(
       el("h2", { text: "Нода добавлена" }),
-      el("div", { class: "note", text: "Токен ноды показывается один раз: в базе лежит только его хеш." }),
+      el("div", { class: "note", text:
+        "Токен показывается один раз: в базе лежит только его хеш. Положи его в " +
+        "переменную VEIL_NODE_TOKEN, а не в строку запуска — в строке его видит " +
+        "любой пользователь системы через ps." }),
+      linkRow("Токен ноды", res.token),
       linkRow("Запусти на сервере", "veil-server -panel " + location.origin +
-        " -panel-token " + res.token + " -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org")
+        " -key-file node.key -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org")
     );
     $("modal").showModal();
   } catch (err) { toast(err.message, true); }
@@ -677,6 +716,7 @@ $("logout").addEventListener("click", logout);
 $("refresh").addEventListener("click", () => load().catch((e) => toast(e.message, true)));
 $("modal-close").addEventListener("click", () => $("modal").close());
 $("nu-create").addEventListener("click", createUser);
+$("nn-invite").addEventListener("click", inviteNode);
 $("nn-create").addEventListener("click", createNode);
 
 document.querySelectorAll(".tabs button").forEach((btn) => {
