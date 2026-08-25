@@ -72,7 +72,10 @@ class VeilVpnService : VpnService() {
 
         val link = Store(this).accountLink
         if (link.isBlank()) {
-            shutdown(TunnelState.Failed(Mobile.FailAccount, getString(R.string.detail_no_key)))
+            // Вид пустой намеренно. С видом account сюда подставилась бы фраза
+            // «ключ не подошёл», а ключа просто нет — это разные вещи, и
+            // человека они ведут в разные стороны.
+            shutdown(TunnelState.Failed("", getString(R.string.detail_no_key)))
             return
         }
 
