@@ -1,5 +1,32 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
+}
+
+// Ключ подписи живёт вне репозитория и не попадает в него никогда.
+//
+// Подпись — это личность приложения на всю жизнь: телефон принимает обновление
+// только за той же подписью, что и установленную версию. Потеряешь ключ — и
+// обновить приложение у покупателей будет нечем, придётся просить их удалить
+// старое и поставить новое как чужое. Утечёт — кто угодно выпустит «обновление»
+// от твоего имени, и телефоны его примут.
+//
+// Путь задаётся переменной VEIL_RELEASE_KEYS, по умолчанию — каталог veil-keys
+// рядом с репозиторием. Файла нет — сборка release выйдет неподписанной и
+// честно об этом скажет, вместо того чтобы молча подписаться отладочным
+// ключом.
+val releaseKeysFile = file(
+    System.getenv("VEIL_RELEASE_KEYS")
+        ?: rootProject.file("../../veil-keys/veil-release.properties").path,
+)
+
+val releaseKeys = Properties().apply {
+    if (releaseKeysFile.exists()) {
+        releaseKeysFile.inputStream().use { load(it) }
+    } else {
+        logger.warn("ключ подписи не найден: $releaseKeysFile — сборка release будет неподписанной")
+    }
 }
 
 android {
@@ -21,13 +48,41 @@ android {
         }
     }
 
+    signingConfigs {
+        if (!releaseKeys.isEmpty) {
+            create("release") {
+                storeFile = file(releaseKeys.getProperty("storeFile"))
+                storePassword = releaseKeys.getProperty("storePassword")
+                keyAlias = releaseKeys.getProperty("keyAlias")
+                keyPassword = releaseKeys.getProperty("keyPassword")
+
+                // v3 включается явно. Она единственная позволяет однажды
+                // сменить ключ подписи, не теряя установленные приложения, —
+                // а ключ живёт тридцать лет, и за это время всякое бывает.
+                // v1 не нужна: это подпись для Android 6 и старше, а мы
+                // начинаем с седьмого.
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Сжатие кода выключено намеренно. Ядро приходит библиотекой,
-            // собранной gomobile, и R8 не видит, что её классы вызываются
-            // через JNI: он их выбрасывает, а приложение падает уже у
-            // покупателя. Правила в proguard-rules.pro это чинят, но включать
-            // сжатие имеет смысл вместе с настоящей подписью.
+            signingConfig = signingConfigs.findByName("release")
+
+            // Сжатие кода выключено намеренно, и это не забывчивость.
+            //
+            // Выигрыш от него здесь почти нулевой: из шестнадцати мегабайт
+            // пакета пятнадцать — это ядро на Go, скомпилированное в машинный
+            // код, до которого R8 не дотягивается вовсе. Сжать он может от силы
+            // сотню-другую килобайт байткода.
+            //
+            // А риск настоящий: классы моста вызываются через JNI, статический
+            // анализ обращений к ним не видит и выбрасывает их как ненужные.
+            // Правила в proguard-rules.pro это чинят, но ошибка в них
+            // проявляется не на сборке, а падением уже у покупателя.
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

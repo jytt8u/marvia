@@ -18,3 +18,8 @@ config.local.*
 # учёт трафика ноды
 *.usage.json
 .usage-*.tmp
+
+# ключи подписи приложения: подпись — личность приложения на всю жизнь
+*.jks
+*.keystore
+veil-release.properties
