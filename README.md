@@ -991,7 +991,7 @@ internal/panel/web  страница панели, вшитая в бинарн�
 internal/nodesync   сторона ноды в разговоре с панелью
 internal/socks5     минимальный SOCKS5-инбаунд
 internal/relay      перекладывание байтов с корректным полузакрытием
-internal/client     сторона клиента: ссылка доступа, список нод, замеры
+internal/client     сторона клиента: ссылка доступа, список нод, кэш, замеры
 internal/tunbridge  пакеты сетевого интерфейса → потоки туннеля (gvisor)
 internal/wintun     сетевой адаптер и маршруты на Windows
 mobile/             фасад ядра для gomobile bind

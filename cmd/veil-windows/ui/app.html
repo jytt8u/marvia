@@ -6,241 +6,319 @@
 <title>Veil</title>
 <style>
   :root {
-    --bg: #0b1020;
-    --panel: #121a30;
-    --line: #1e2942;
-    --text: #e8ecf6;
-    --muted: #7f8db0;
-    --accent: #3b6ef3;
-    --live: #17a673;
-    --fail: #d1495b;
+    --bg:        #070b16;
+    --panel:     #0d1424;
+    --raise:     #131c30;
+    --line:      rgba(255,255,255,.07);
+    --text:      #eef2fb;
+    --muted:     #7c8aab;
+    --accent:    #4d7cfe;
+    --live:      #21c48a;
+    --fail:      #ef5b6b;
   }
 
   * { box-sizing: border-box; }
 
   html, body {
-    height: 100%;
-    margin: 0;
+    height: 100%; margin: 0;
     background: var(--bg);
     color: var(--text);
-    font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
-    user-select: none;
-    overflow: hidden;
+    font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    user-select: none; overflow: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 
   .app { display: flex; height: 100%; }
 
-  /* ---------------------------------------------------------- боковая */
+  /* ------------------------------------------------------------ боковая */
 
   aside {
-    width: 190px;
-    flex: 0 0 190px;
+    width: 208px; flex: 0 0 208px;
     background: var(--panel);
+    padding: 20px 14px 14px;
+    display: flex; flex-direction: column; gap: 2px;
     border-right: 1px solid var(--line);
-    padding: 18px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
   }
 
   .brand {
-    display: flex; align-items: center; gap: 10px;
-    padding: 4px 10px 18px;
-    font-weight: 700; letter-spacing: .28em; font-size: 13px;
+    display: flex; align-items: center; gap: 11px;
+    padding: 2px 10px 22px;
+    font-weight: 650; letter-spacing: .3em; font-size: 12px; color: #cfd8ee;
   }
-  .brand svg { flex: 0 0 22px; }
+  .brand svg { flex: 0 0 24px; }
 
   .tab {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: 9px;
+    position: relative;
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 12px; border-radius: 10px;
     color: var(--muted); cursor: pointer;
     border: none; background: none; width: 100%;
-    font: inherit; text-align: left;
+    font: inherit; font-size: 13.5px; text-align: left;
+    transition: background .15s, color .15s;
   }
-  .tab:hover { background: #16203a; color: var(--text); }
-  .tab[aria-selected="true"] { background: #1b2745; color: var(--text); }
-  .tab svg { flex: 0 0 17px; opacity: .85; }
+  .tab:hover { background: rgba(255,255,255,.04); color: #c4cfe6; }
+  .tab[aria-selected="true"] { background: rgba(77,124,254,.13); color: var(--text); }
+  .tab[aria-selected="true"]::before {
+    content: ""; position: absolute; left: -14px; top: 9px; bottom: 9px;
+    width: 3px; border-radius: 0 3px 3px 0; background: var(--accent);
+  }
+  .tab svg { flex: 0 0 18px; opacity: .9; }
 
   .spacer { flex: 1; }
 
-  .meter { padding: 10px 12px; border-top: 1px solid var(--line); }
-  .meter div { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
-  .meter b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .speeds { display: flex; flex-direction: column; gap: 9px; padding: 14px 12px 6px; border-top: 1px solid var(--line); }
+  .speed { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); }
+  .speed svg { flex: 0 0 14px; }
+  .speed b { margin-left: auto; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .speed .total { color: var(--muted); font-weight: 400; font-size: 11.5px; margin-left: 0; }
 
-  /* ------------------------------------------------------------ центр */
+  /* -------------------------------------------------------------- центр */
 
-  main { flex: 1; display: flex; flex-direction: column; padding: 22px 26px; min-width: 0; }
-  .page { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+
+  /* Свечение за кнопкой. Оно и задаёт настроение всему окну, поэтому меняет
+     цвет вместе с состоянием, а не просто украшает. */
+  .glow {
+    position: absolute; left: 50%; top: 46%;
+    width: 620px; height: 620px; transform: translate(-50%, -50%);
+    border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, rgba(77,124,254,.16) 0%, rgba(77,124,254,0) 62%);
+    opacity: .55; transition: background .5s, opacity .5s;
+  }
+  body[data-state="connected"] .glow { background: radial-gradient(circle, rgba(33,196,138,.22) 0%, rgba(33,196,138,0) 62%); opacity: 1; }
+  body[data-state="failed"] .glow { background: radial-gradient(circle, rgba(239,91,107,.18) 0%, rgba(239,91,107,0) 62%); opacity: 1; }
+
+  .page { display: none; flex: 1; min-height: 0; flex-direction: column; padding: 26px 32px 28px; position: relative; }
   .page[data-open] { display: flex; }
 
-  .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+
+  /* ------------------------------------------------------------- кнопка */
 
   .power {
-    width: 168px; height: 168px; border-radius: 50%;
-    border: none; cursor: pointer;
-    background: #1b2745;
+    width: 176px; height: 176px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.09);
+    background: linear-gradient(160deg, #1b2540 0%, #121a2d 100%);
+    cursor: pointer; display: grid; place-items: center;
+    transition: transform .18s, box-shadow .35s, background .35s, border-color .35s;
+    box-shadow: 0 18px 46px rgba(0,0,0,.45);
+  }
+  .power svg { width: 62px; height: 62px; color: #93a3c4; transition: color .35s; }
+  .power:hover:not(:disabled) { transform: translateY(-2px); }
+  .power:active:not(:disabled) { transform: translateY(0) scale(.985); }
+  .power:disabled { cursor: default; opacity: .55; }
+
+  .power[data-state="connected"] {
+    background: linear-gradient(160deg, #27d79a 0%, #14a273 100%);
+    border-color: rgba(255,255,255,.22);
+    box-shadow: 0 0 0 10px rgba(33,196,138,.10), 0 0 64px rgba(33,196,138,.42);
+  }
+  .power[data-state="connected"] svg { color: #fff; }
+
+  .power[data-state="failed"] {
+    background: linear-gradient(160deg, #f26a79 0%, #cf3d4f 100%);
+    border-color: rgba(255,255,255,.2);
+    box-shadow: 0 0 0 10px rgba(239,91,107,.10), 0 0 54px rgba(239,91,107,.32);
+  }
+  .power[data-state="failed"] svg { color: #fff; }
+
+  .power[data-state="connecting"] { animation: breathe 1.5s ease-in-out infinite; }
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(77,124,254,.34), 0 18px 46px rgba(0,0,0,.45); }
+    50%      { box-shadow: 0 0 0 16px rgba(77,124,254,0), 0 18px 46px rgba(0,0,0,.45); }
+  }
+
+  .status { font-size: 27px; font-weight: 650; letter-spacing: -.01em; margin-top: 26px; }
+  .detail { color: var(--muted); text-align: center; max-width: 440px; margin-top: 7px; font-size: 13.5px; }
+  .detail.bad { color: #f0919b; }
+
+  /* ------------------------------------------------------------ карточка */
+
+  .node {
+    margin-top: 34px; width: 100%; max-width: 430px;
+    background: var(--raise); border: 1px solid var(--line);
+    border-radius: 14px; padding: 13px 16px;
+    display: flex; align-items: center; gap: 13px;
+    transition: border-color .3s;
+  }
+  body[data-state="connected"] .node { border-color: rgba(33,196,138,.3); }
+  .node .mark {
+    width: 34px; height: 34px; border-radius: 10px; flex: 0 0 34px;
     display: grid; place-items: center;
-    transition: box-shadow .25s, background .25s;
-    margin-bottom: 14px;
+    background: rgba(255,255,255,.05); color: var(--muted);
   }
-  .power svg { width: 58px; height: 58px; }
-  .power:disabled { cursor: default; }
-  .power[data-state="connected"] { background: var(--live); box-shadow: 0 0 0 12px rgba(23,166,115,.14); }
-  .power[data-state="connecting"] { background: #263354; }
-  .power[data-state="failed"] { background: var(--fail); box-shadow: 0 0 0 12px rgba(209,73,91,.14); }
-
-  .status { font-size: 24px; font-weight: 700; }
-  .detail { color: var(--muted); text-align: center; max-width: 460px; }
-  .detail.bad { color: var(--fail); }
-
-  .card {
-    background: var(--panel); border: 1px solid var(--line);
-    border-radius: 12px; padding: 14px 16px;
-    display: flex; align-items: center; gap: 14px;
+  body[data-state="connected"] .node .mark { background: rgba(33,196,138,.14); color: var(--live); }
+  .node .mark svg { width: 17px; height: 17px; }
+  .node .name { font-weight: 600; font-size: 14px; }
+  .node .sub { color: var(--muted); font-size: 12px; margin-top: 1px; }
+  .node .ping {
+    margin-left: auto; font-size: 12.5px; color: var(--muted);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+    background: rgba(255,255,255,.05); padding: 4px 9px; border-radius: 7px;
   }
-  .card .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: 0 0 10px; }
-  .card[data-live] .dot { background: var(--live); }
-  .card .name { font-weight: 600; }
-  .card .sub { color: var(--muted); font-size: 12px; }
-  .card .ping { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .node .ping:empty { display: none; }
 
-  /* ------------------------------------------------------------- ключ */
+  /* --------------------------------------------------------- предупрежд. */
+
+  .warn {
+    background: rgba(239,91,107,.1); border: 1px solid rgba(239,91,107,.28);
+    color: #f3a8b1; border-radius: 12px; padding: 11px 15px;
+    font-size: 13px; margin-bottom: 18px;
+  }
+
+  /* ------------------------------------------------------------ вкладки */
+
+  h2 { margin: 0 0 4px; font-size: 17px; font-weight: 650; }
+  .lead { color: var(--muted); font-size: 13px; margin: 0 0 20px; max-width: 560px; }
 
   label.field { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; }
-  textarea, input {
-    width: 100%; background: #0e1425; color: var(--text);
-    border: 1px solid var(--line); border-radius: 9px;
-    padding: 10px 12px; font: 13px/1.45 ui-monospace, Consolas, monospace;
-    resize: vertical; user-select: text;
+  textarea {
+    width: 100%; background: #0a1020; color: var(--text);
+    border: 1px solid var(--line); border-radius: 11px;
+    padding: 12px 14px; font: 12.5px/1.5 ui-monospace, Consolas, monospace;
+    resize: none; user-select: text; transition: border-color .15s;
   }
-  textarea:focus, input:focus { outline: none; border-color: var(--accent); }
+  textarea:focus { outline: none; border-color: var(--accent); }
 
   button.primary {
     background: var(--accent); color: #fff; border: none;
-    padding: 10px 18px; border-radius: 9px; cursor: pointer;
-    font: inherit; font-weight: 600;
+    padding: 10px 20px; border-radius: 10px; cursor: pointer;
+    font: inherit; font-weight: 600; transition: filter .15s;
   }
-  button.primary:disabled { opacity: .5; cursor: default; }
+  button.primary:hover { filter: brightness(1.08); }
 
-  .row { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
-  .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
-  .bad { color: var(--fail); }
+  .row { display: flex; gap: 12px; align-items: center; margin-top: 14px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 14px; max-width: 560px; }
+  .bad { color: #f0919b; }
 
   pre.log {
     flex: 1; margin: 0; overflow: auto; user-select: text;
-    background: #0e1425; border: 1px solid var(--line); border-radius: 10px;
-    padding: 12px; font: 12px/1.6 ui-monospace, Consolas, monospace;
-    color: var(--muted); white-space: pre-wrap;
+    background: #0a1020; border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; font: 12px/1.65 ui-monospace, Consolas, monospace;
+    color: #9aa8c6; white-space: pre-wrap;
   }
+  pre.log::-webkit-scrollbar { width: 9px; }
+  pre.log::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 6px; }
 
-  h2 { margin: 0 0 14px; font-size: 16px; }
-  p.about { color: var(--muted); max-width: 560px; }
-  .warn {
-    background: rgba(209,73,91,.12); border: 1px solid rgba(209,73,91,.35);
-    color: #f0b8c0; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
-  }
+  p.about { color: var(--muted); max-width: 580px; font-size: 13.5px; }
+  p.about b { color: #c9d3e8; font-weight: 600; }
 </style>
 </head>
-<body>
+<body data-state="idle">
 <div class="app">
 
   <aside>
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 20 5.2V11.5C20 16.6 16.6 20.9 12 22.2 7.4 20.9 4 16.6 4 11.5V5.2Z" fill="#3b6ef3"/><path d="M8.3 9.4 12 16.6 15.7 9.4" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 20 5.2V11.5C20 16.6 16.6 20.9 12 22.2 7.4 20.9 4 16.6 4 11.5V5.2Z" fill="#4d7cfe"/><path d="M8.3 9.4 12 16.6 15.7 9.4" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
       VEIL
     </div>
 
     <button class="tab" data-tab="home" aria-selected="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v9M6.5 6.5a8 8 0 1 0 11 0"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v9M6.5 6.5a8 8 0 1 0 11 0"/></svg>
       Главная
     </button>
     <button class="tab" data-tab="key">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M17 12v4M20 12v3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="12" r="3.6"/><path d="M11.6 12H21M17.5 12v3.4M20.4 12v2.6"/></svg>
       Ключ доступа
     </button>
     <button class="tab" data-tab="log">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg>
       Журнал
     </button>
     <button class="tab" data-tab="about">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 11.2v5M12 7.9h.01"/></svg>
       О программе
     </button>
 
     <div class="spacer"></div>
 
-    <div class="meter">
-      <div>Принято <b id="m-down">0 Б</b></div>
-      <div>Отправлено <b id="m-up">0 Б</b></div>
+    <div class="speeds">
+      <div class="speed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#21c48a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+        <span class="total" id="t-down">0 Б</span>
+        <b id="s-down">0 Б/с</b>
+      </div>
+      <div class="speed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4d7cfe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+        <span class="total" id="t-up">0 Б</span>
+        <b id="s-up">0 Б/с</b>
+      </div>
     </div>
   </aside>
 
   <main>
-    <!-- ------------------------------------------------------ главная -->
+    <div class="glow"></div>
+
+    <!-- -------------------------------------------------------- главная -->
     <section class="page" data-tab="home" data-open>
       <div id="elev-warn" class="warn" hidden>
-        Программа запущена без прав администратора. Windows не даст создать
-        сетевой адаптер — закрой окно и запусти из PowerShell от имени
-        администратора.
+        Программа запущена без прав администратора — Windows не даст создать
+        сетевой адаптер. Закрой окно и запусти заново, согласившись на запрос прав.
       </div>
 
       <div class="center">
         <button class="power" id="power" data-state="idle" title="Подключиться">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
-            <path d="M12 3v9"/><path d="M6.8 6.8a8 8 0 1 0 10.4 0"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
+            <path d="M12 3.2v9.2"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/>
           </svg>
         </button>
+
         <div class="status" id="status">Отключено</div>
         <div class="detail" id="detail">Трафик идёт напрямую</div>
-      </div>
 
-      <div class="card" id="node-card">
-        <span class="dot"></span>
-        <div>
-          <div class="name" id="node-name">Нода не выбрана</div>
-          <div class="sub" id="node-addr">подключись — она выберется сама, по замерам</div>
+        <div class="node" id="node-card">
+          <div class="mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2.5 19.5 5.5v6C19.5 16 16.3 19.9 12 21.2 7.7 19.9 4.5 16 4.5 11.5v-6z"/></svg>
+          </div>
+          <div>
+            <div class="name" id="node-name">Нода не выбрана</div>
+            <div class="sub" id="node-addr">подключись — она выберется сама, по замерам</div>
+          </div>
+          <div class="ping" id="node-ping"></div>
         </div>
-        <div class="ping" id="node-ping"></div>
       </div>
     </section>
 
-    <!-- ---------------------------------------------------------- ключ -->
+    <!-- ----------------------------------------------------------- ключ -->
     <section class="page" data-tab="key">
       <h2>Ключ доступа</h2>
-      <label class="field" for="account">Ссылка вида veil-account://… — её выдаёт бот при оплате</label>
+      <p class="lead">Ссылка вида veil-account://… — её присылает бот после оплаты.</p>
       <textarea id="account" rows="3" spellcheck="false" placeholder="veil-account://…"></textarea>
       <div class="row">
         <button class="primary" id="save">Сохранить</button>
-        <span id="save-msg" class="hint"></span>
+        <span id="save-msg" class="hint" style="margin:0"></span>
       </div>
       <p class="hint">
-        В ссылке личный ключ. Она хранится в профиле пользователя и никуда не
-        отправляется, кроме адреса подписки, который в ней же и записан.
+        В ссылке личный ключ. Она лежит в профиле пользователя и никуда не
+        отправляется — кроме адреса подписки, который в ней же и записан.
       </p>
     </section>
 
-    <!-- -------------------------------------------------------- журнал -->
+    <!-- --------------------------------------------------------- журнал -->
     <section class="page" data-tab="log">
       <h2>Журнал</h2>
+      <p class="lead">Что программа делала. Пригодится, если что-то не заработало.</p>
       <pre class="log" id="log">пусто</pre>
     </section>
 
-    <!-- ---------------------------------------------------- о программе -->
+    <!-- ----------------------------------------------------- о программе -->
     <section class="page" data-tab="about">
       <h2>О программе</h2>
       <p class="about">
         Veil забирает весь трафик компьютера и уводит его через ноду,
-        замаскированную под обычный сайт. Ноду программа выбирает сама — по
-        замерам с этой машины, а не по мнению панели.
+        замаскированную под обычный сайт. <b>Ноду программа выбирает сама</b> — по
+        замерам с этой машины, а не по мнению панели: панель стоит за границей и
+        видит ноду живой тогда, когда для тебя она уже мертва.
       </p>
       <p class="about">
-        Соединение до самой ноды идёт мимо туннеля отдельным маршрутом. Иначе
-        получился бы круг: пакеты, которыми программа разговаривает с нодой,
-        попадали бы в тот самый туннель, который к этой ноде и ведёт.
+        Соединение до самой ноды идёт <b>мимо туннеля</b>, отдельным маршрутом.
+        Иначе получился бы круг: пакеты, которыми программа разговаривает с
+        нодой, попадали бы в тот самый туннель, который к этой ноде и ведёт.
       </p>
       <p class="about">
-        При выходе маршруты снимаются сами. Если закрыть окно, не отключившись,
-        программа всё равно уберёт за собой.
+        При выходе маршруты снимаются сами — снимаются именно свои, поимённо.
+        Сбросить таблицу маршрутов целиком было бы проще, но это быстрый способ
+        оставить человека вообще без интернета.
       </p>
     </section>
   </main>
@@ -287,19 +365,22 @@ function bytes(n) {
   const units = ["Б", "КБ", "МБ", "ГБ", "ТБ"];
   let i = 0;
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
-  return (i === 0 ? n : n.toFixed(1)) + " " + units[i];
+  return (i === 0 ? Math.round(n) : n.toFixed(1)) + " " + units[i];
 }
 
-/* ------------------------------------------------------------ отрисовка */
+/* ------------------------------------------------------------- отрисовка */
 
 const titles = {
   idle: "Отключено",
-  connecting: "Подключаюсь…",
+  connecting: "Подключаюсь",
   connected: "Подключено",
   failed: "Не подключилось",
 };
 
+let prev = null;
+
 function render(s) {
+  document.body.dataset.state = s.state;
   $("status").textContent = titles[s.state] || s.state;
   $("power").dataset.state = s.state;
   $("power").disabled = s.state === "connecting" || !s.elevated;
@@ -312,26 +393,33 @@ function render(s) {
   else if (s.state === "connecting") detail.textContent = "выбираю самую быструю ноду";
   else if (s.state === "connected") detail.textContent = "весь трафик компьютера идёт через туннель";
   else if (!s.has_account) detail.textContent = "вставь ключ доступа на вкладке слева";
-  else detail.textContent = "Трафик идёт напрямую";
+  else detail.textContent = "трафик идёт напрямую";
 
-  const card = $("node-card");
   if (s.node) {
-    card.setAttribute("data-live", "");
     $("node-name").textContent = s.node;
     $("node-addr").textContent = s.address;
     $("node-ping").textContent = s.ping_ms ? s.ping_ms + " мс" : "";
   } else {
-    card.removeAttribute("data-live");
     $("node-name").textContent = "Нода не выбрана";
     $("node-addr").textContent = "подключись — она выберется сама, по замерам";
     $("node-ping").textContent = "";
   }
 
-  $("m-down").textContent = bytes(s.down || 0);
-  $("m-up").textContent = bytes(s.up || 0);
+  // Скорость считаем сами, по разнице между опросами: программе незачем
+  // помнить, когда её спрашивали в прошлый раз.
+  const now = Date.now();
+  if (prev && now > prev.t) {
+    const dt = (now - prev.t) / 1000;
+    $("s-down").textContent = bytes(Math.max(0, (s.down - prev.down) / dt)) + "/с";
+    $("s-up").textContent = bytes(Math.max(0, (s.up - prev.up) / dt)) + "/с";
+  }
+  prev = { t: now, up: s.up || 0, down: s.down || 0 };
+
+  $("t-down").textContent = bytes(s.down || 0);
+  $("t-up").textContent = bytes(s.up || 0);
 }
 
-/* ------------------------------------------------------------- действия */
+/* --------------------------------------------------------------- действия */
 
 let busy = false;
 
@@ -354,17 +442,19 @@ $("power").addEventListener("click", async () => {
 $("save").addEventListener("click", async () => {
   const msg = $("save-msg");
   msg.className = "hint";
+  msg.style.margin = "0";
   try {
     await api("POST", "api/account", { link: $("account").value });
     msg.textContent = "Сохранено";
     await tick();
   } catch (err) {
     msg.className = "hint bad";
+    msg.style.margin = "0";
     msg.textContent = err.message;
   }
 });
 
-/* -------------------------------------------------------------- опрос */
+/* ----------------------------------------------------------------- опрос */
 
 async function tick() {
   try {

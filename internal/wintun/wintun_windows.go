@@ -47,6 +47,11 @@ type Adapter struct {
 
 	gateway netip.Addr
 	gwLUID  winipcfg.LUID
+
+	// nrpt помнит, ставили ли мы политику разрешения имён. Снять её при
+	// выходе обязательно: она общесистемная и переживёт нашу смерть, а
+	// резолвер, на который она указывает, живёт только внутри туннеля.
+	nrpt bool
 }
 
 type route struct {
@@ -105,6 +110,14 @@ func Open(cfg Config) (_ *Adapter, err error) {
 		if err := a.luid.SetDNS(windows.AF_INET, []netip.Addr{cfg.DNS}, nil); err != nil {
 			return nil, fmt.Errorf("адрес для запросов имён: %w", err)
 		}
+
+		// Адреса на адаптере мало: система всё равно рассылает запросы по
+		// всем адаптерам сразу. Закрываем это политикой — подробности в
+		// nrpt_windows.go.
+		if err := setNRPT(cfg.DNS); err != nil {
+			return nil, err
+		}
+		a.nrpt = true
 	}
 
 	return a, nil
@@ -164,6 +177,16 @@ func (a *Adapter) Endpoint() stack.LinkEndpoint { return a.dev }
 // самого адаптера снимать не надо — они исчезают вместе с ним.
 func (a *Adapter) Close() error {
 	var first error
+
+	// Политику снимаем первой. Всё остальное можно чинить перезапуском, а
+	// забытое правило оставит человека с резолвером, до которого больше нет
+	// дороги, — и без имён он не откроет даже страницу поддержки.
+	if a.nrpt {
+		if err := clearNRPT(); err != nil {
+			first = err
+		}
+		a.nrpt = false
+	}
 
 	for _, r := range a.bypass {
 		if err := a.gwLUID.DeleteRoute(r.dest, r.next); err != nil && first == nil {

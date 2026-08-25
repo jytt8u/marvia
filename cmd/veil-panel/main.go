@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -41,6 +42,7 @@ type options struct {
 	acmeEmail  string
 	acmeCache  string
 	acmeHTTP   string
+	panelIPs   string
 }
 
 func main() {
@@ -59,6 +61,7 @@ func main() {
 	flag.StringVar(&opts.acmeEmail, "acme-email", "", "почта для писем Let's Encrypt об истечении")
 	flag.StringVar(&opts.acmeCache, "acme-cache", "acme", "каталог для полученных сертификатов")
 	flag.StringVar(&opts.acmeHTTP, "acme-http", ":80", "адрес для ответов на проверку ACME (пусто — не поднимать)")
+	flag.StringVar(&opts.panelIPs, "panel-ip", "", "адреса панели через запятую для ссылок доступа (пусто — выяснить по домену)")
 
 	newToken := flag.Bool("new-token", false, "выпустить админский токен и выйти")
 
@@ -103,7 +106,7 @@ func run(opts options) error {
 	}
 	defer store.Close()
 
-	api := panel.NewAPI(store, opts.adminToken, opts.subBase, opts.distDir)
+	api := panel.NewAPI(store, opts.adminToken, opts.subBase, opts.distDir).WithPanelIPs(panelAddresses(opts))
 	server := &http.Server{
 		Addr:              opts.listen,
 		Handler:           api.Handler(),
@@ -197,4 +200,50 @@ func serveACME(server *http.Server, opts options) error {
 		return fmt.Errorf("HTTPS-сервер: %w", err)
 	}
 	return nil
+}
+
+// panelAddresses выясняет, какие адреса вписывать в ссылки доступа.
+//
+// Заданы вручную — берём их. Не заданы — спрашиваем DNS про собственный домен
+// один раз при запуске. Это правильный ответ в обоих случаях: без CDN домен
+// ведёт прямо на нас, за CDN — на его адреса, а покупателю нужны ровно те, по
+// которым он и будет ходить.
+//
+// Спрашиваем здесь, а не у покупателя: один запрос при запуске панели вместо
+// запроса у каждого покупателя при каждом включении.
+func panelAddresses(opts options) []string {
+	if manual := strings.TrimSpace(opts.panelIPs); manual != "" {
+		out := []string{}
+		for _, part := range strings.Split(manual, ",") {
+			if part = strings.TrimSpace(part); part != "" {
+				out = append(out, part)
+			}
+		}
+		return out
+	}
+
+	host := opts.acmeDomain
+	if host == "" {
+		host = strings.TrimPrefix(strings.TrimPrefix(strings.TrimRight(opts.subBase, "/"), "https://"), "http://")
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+	}
+	if host == "" {
+		return nil
+	}
+
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		log.Printf("не выяснил адреса %s, ссылки доступа пойдут без подсказки: %v", host, err)
+		return nil
+	}
+
+	out := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		if v4 := ip.To4(); v4 != nil {
+			out = append(out, v4.String())
+		}
+	}
+	return out
 }

@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #8b98b8; } a:hover { color: #c3ccdf; }
+    .tile { border-radius: 16px; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; position: relative; }
+    .tname { font-size: 13.5px; font-weight: 600; }
+    .tnote { font-size: 11.5px; margin-top: 2px; }
+    .big { font-family: "IBM Plex Mono", monospace; font-size: 34px; line-height: 1; }
+    .unit { font-size: 12px; }
+    .track { height: 40px; border-radius: 20px; display: flex; align-items: center; flex-direction: row-reverse; padding: 4px; }
+    .knob { width: 32px; height: 32px; border-radius: 50%; }
+    .label { flex: 1; text-align: center; font-size: 11px; font-weight: 600; letter-spacing: .04em; padding-left: 10px; }
+    .row { display: flex; align-items: center; gap: 9px; font-size: 11.5px; font-family: "IBM Plex Mono", monospace; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px; }
+  </style>
+</helmet>
+
+<div style="width: 1040px; height: 760px; background: #05070c; color: #e9eef8; padding: 30px 34px; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
+
+  <div>
+    <div style="font-size: 11px; letter-spacing: .2em; color: #5a688a;">КАКОГО ЦВЕТА</div>
+    <div style="font-size: 22px; font-weight: 600; margin-top: 6px; letter-spacing: -.01em;">Шесть тёмных наборов</div>
+    <div style="font-size: 13px; color: #6b7899; margin-top: 5px;">одно и то же окно, меняется только цвет отклика — выбирается в настройках</div>
+  </div>
+
+  <div style="flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 16px; min-height: 0;">
+
+    <!-- Сталь -->
+    <div class="tile" style="background: #0c0e12; border: 1px solid rgba(255,255,255,.08);">
+      <div>
+        <div class="tname" style="color: #f2f4f8;">Сталь</div>
+        <div class="tnote" style="color: #767c88;">цвета нет вовсе, только светлее и темнее</div>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <div class="big" style="color: #f2f4f8;">3.2</div><div class="unit" style="color: #767c88;">МБ/с</div>
+      </div>
+      <div class="row" style="color: #9aa1ad;"><span class="dot" style="background: #f2f4f8;"></span>ae-1 · 112 мс</div>
+      <div class="track" style="background: #f2f4f8; border: 1px solid rgba(255,255,255,.2);">
+        <div class="knob" style="background: #0c0e12;"></div>
+        <div class="label" style="color: #0c0e12;">ВКЛЮЧЕНО</div>
+      </div>
+    </div>
+
+    <!-- Изумруд -->
+    <div class="tile" style="background: #070d0b; border: 1px solid rgba(33,196,138,.22);">
+      <div>
+        <div class="tname" style="color: #e6f5ef;">Изумруд</div>
+        <div class="tnote" style="color: #6b8a80;">как сейчас — спокойный и понятный</div>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <div class="big" style="color: #4dffbe;">3.2</div><div class="unit" style="color: #6b8a80;">МБ/с</div>
+      </div>
+      <div class="row" style="color: #8fa89f;"><span class="dot" style="background: #21c48a;"></span>ae-1 · 112 мс</div>
+      <div class="track" style="background: linear-gradient(90deg, #0f5c43, #17916a); border: 1px solid rgba(33,196,138,.45); box-shadow: 0 0 24px rgba(33,196,138,.24);">
+        <div class="knob" style="background: linear-gradient(160deg, #6bffcc, #16b47f);"></div>
+        <div class="label" style="color: #c8ffe9;">ВКЛЮЧЕНО</div>
+      </div>
+    </div>
+
+    <!-- Янтарь -->
+    <div class="tile" style="background: #0e0b06; border: 1px solid rgba(255,179,71,.22);">
+      <div>
+        <div class="tname" style="color: #f6efe2;">Янтарь</div>
+        <div class="tnote" style="color: #8c7e63;">тёплый, как свет лампы накаливания</div>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <div class="big" style="color: #ffc978;">3.2</div><div class="unit" style="color: #8c7e63;">МБ/с</div>
+      </div>
+      <div class="row" style="color: #a89877;"><span class="dot" style="background: #ffb347;"></span>ae-1 · 112 мс</div>
+      <div class="track" style="background: linear-gradient(90deg, #6b4413, #b8801f); border: 1px solid rgba(255,179,71,.45); box-shadow: 0 0 24px rgba(255,179,71,.2);">
+        <div class="knob" style="background: linear-gradient(160deg, #ffd79b, #e09a2c);"></div>
+        <div class="label" style="color: #ffe8c4;">ВКЛЮЧЕНО</div>
+      </div>
+    </div>
+
+    <!-- Лёд -->
+    <div class="tile" style="background: #060b10; border: 1px solid rgba(77,201,255,.22);">
+      <div>
+        <div class="tname" style="color: #e4f2fa;">Лёд</div>
+        <div class="tnote" style="color: #62808f;">холодный, ближе всего к «сетевой технике»</div>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <div class="big" style="color: #8fdcff;">3.2</div><div class="unit" style="color: #62808f;">МБ/с</div>
+      </div>
+      <div class="row" style="color: #8ea6b5;"><span class="dot" style="background: #4dc9ff;"></span>ae-1 · 112 мс</div>
+      <div class="track" style="background: linear-gradient(90deg, #0e4460, #1a7fa8); border: 1px solid rgba(77,201,255,.45); box-shadow: 0 0 24px rgba(77,201,255,.2);">
+        <div class="knob" style="background: linear-gradient(160deg, #b3ecff, #29a6dc);"></div>
+        <div class="label" style="color: #cdefff;">ВКЛЮЧЕНО</div>
+      </div>
+    </div>
+
+    <!-- Слива -->
+    <div class="tile" style="background: #0a070e; border: 1px solid rgba(176,108,255,.22);">
+      <div>
+        <div class="tname" style="color: #efe6fa;">Слива</div>
+        <div class="tnote" style="color: #7d6b93;">заметный, не похож ни на кого</div>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <div class="big" style="color: #cfa6ff;">3.2</div><div class="unit" style="color: #7d6b93;">МБ/с</div>
+      </div>
+      <div class="row" style="color: #9d8db0;"><span class="dot" style="background: #b06cff;"></span>ae-1 · 112 мс</div>
+      <div class="track" style="background: linear-gradient(90deg, #3d1f66, #6f3bad); border: 1px solid rgba(176,108,255,.45); box-shadow: 0 0 24px rgba(176,108,255,.2);">
+        <div class="knob" style="background: linear-gradient(160deg, #dcc0ff, #8f4fe0);"></div>
+        <div class="label" style="color: #ecdcff;">ВКЛЮЧЕНО</div>
+      </div>
+    </div>
+
+    <!-- Олива -->
+    <div class="tile" style="background: #0a0c07; border: 1px solid rgba(168,194,86,.22);">
+      <div>
+        <div class="tname" style="color: #eef2e2;">Олива</div>
+        <div class="tnote" style="color: #7f8a63;">приглушённый, не кричит в тёмной комнате</div>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <div class="big" style="color: #cbdd94;">3.2</div><div class="unit" style="color: #7f8a63;">МБ/с</div>
+      </div>
+      <div class="row" style="color: #9aa57e;"><span class="dot" style="background: #a8c256;"></span>ae-1 · 112 мс</div>
+      <div class="track" style="background: linear-gradient(90deg, #3f4a1c, #6d8130); border: 1px solid rgba(168,194,86,.45); box-shadow: 0 0 24px rgba(168,194,86,.18);">
+        <div class="knob" style="background: linear-gradient(160deg, #e2ecb8, #8ba53e);"></div>
+        <div class="label" style="color: #eaf2cc;">ВКЛЮЧЕНО</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

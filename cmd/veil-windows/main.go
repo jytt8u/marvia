@@ -43,6 +43,7 @@ func main() {
 	dns := flag.String("dns", defaultDNS, "адрес для запросов имён внутри туннеля")
 	mtu := flag.Uint("mtu", tunbridge.DefaultMTU, "MTU интерфейса")
 	noElevate := flag.Bool("no-elevate", false, "не просить прав администратора (окно откроется, туннель не поднимется)")
+	urlFile := flag.String("url-file", "", "записать адрес интерфейса в файл (для отладки и поддержки)")
 	flag.Parse()
 
 	// Без прав администратора Windows не даст ни создать адаптер, ни трогать
@@ -51,20 +52,20 @@ func main() {
 	// командной строки от администратора он не обязан.
 	if !elevated() && !*noElevate {
 		if err := relaunchElevated(); err != nil {
-			fmt.Fprintf(os.Stderr, "не получилось запросить права администратора: %v\n", err)
-			fmt.Fprintf(os.Stderr, "запусти программу из PowerShell от имени администратора\n")
+			alert("Veil", "Не получилось запросить права администратора:\n"+err.Error()+
+				"\n\nБез них Windows не даст создать сетевой адаптер.")
 			os.Exit(1)
 		}
 		return
 	}
 
-	if err := run(*dns, uint32(*mtu)); err != nil {
-		fmt.Fprintf(os.Stderr, "\nошибка: %v\n", err)
+	if err := run(*dns, uint32(*mtu), *urlFile); err != nil {
+		alert("Veil", err.Error())
 		os.Exit(1)
 	}
 }
 
-func run(dns string, mtu uint32) error {
+func run(dns string, mtu uint32, urlFile string) error {
 	log := newJournal()
 	ctl := NewController(dns, mtu, log)
 
@@ -81,10 +82,12 @@ func run(dns string, mtu uint32) error {
 		_ = server.Close()
 	}()
 
-	// Адрес печатаем всегда, даже когда открылось своё окно. Если окно
-	// почему-то оказалось пустым или закрылось, человеку есть куда ткнуться,
-	// не выясняя номер порта самостоятельно.
-	fmt.Printf("Veil работает. Если окно не открылось, страница здесь:\n  %s\n\n", url)
+	// Адрес кладём в журнал, а не печатаем: печатать некуда, программа
+	// оконная. В журнале он пригодится, если окно откроется пустым.
+	log.add("интерфейс на %s", url)
+	if urlFile != "" {
+		_ = os.WriteFile(urlFile, []byte(url), 0o600)
+	}
 
 	// Что бы ни случилось дальше — маршруты снимутся. Человек закроет окно
 	// крестиком, а не кнопкой, и это нормально: убирать за собой должна
