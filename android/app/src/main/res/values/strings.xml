@@ -25,6 +25,15 @@
     <string name="consent_denied">Без разрешения системы туннель поднять нельзя</string>
     <string name="error_no_interface">Система не выдала сетевой интерфейс</string>
 
+    <!--
+        Фразы под виды неудач из ядра. Задача каждой — сказать человеку, что
+        делать дальше, а не что именно сломалось внутри.
+    -->
+    <string name="fail_account">Ключ доступа не подошёл. Возьми новый у продавца</string>
+    <string name="fail_panel">Не получается получить список серверов. Проверь, есть ли интернет</string>
+    <string name="fail_nodes">Ни один сервер сейчас не отвечает. Попробуй позже или напиши продавцу</string>
+    <string name="fail_system">Телефон не дал создать подключение. Попробуй ещё раз</string>
+
     <string name="notification_channel">Туннель</string>
     <string name="notification_channel_desc">Показывает, работает ли туннель</string>
     <string name="notification_stop">Отключить</string>

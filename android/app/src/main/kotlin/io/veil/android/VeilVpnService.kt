@@ -72,7 +72,7 @@ class VeilVpnService : VpnService() {
 
         val link = Store(this).accountLink
         if (link.isBlank()) {
-            shutdown(TunnelState.Failed(getString(R.string.detail_no_key)))
+            shutdown(TunnelState.Failed(Mobile.FailAccount, getString(R.string.detail_no_key)))
             return
         }
 
@@ -82,7 +82,8 @@ class VeilVpnService : VpnService() {
             val descriptor = try {
                 openInterface()
             } catch (t: Throwable) {
-                shutdown(TunnelState.Failed(reasonOf(t)))
+                // Вид здесь известен без ядра: до ядра мы ещё не дошли.
+                shutdown(TunnelState.Failed(Mobile.FailSystem, reasonOf(t)))
                 return@launch
             }
 
@@ -95,7 +96,7 @@ class VeilVpnService : VpnService() {
             val started = try {
                 Mobile.start(link, fd.toLong(), Mobile.DefaultDNS)
             } catch (t: Throwable) {
-                shutdown(TunnelState.Failed(reasonOf(t)))
+                shutdown(failureOf(t))
                 return@launch
             }
 
@@ -173,7 +174,7 @@ class VeilVpnService : VpnService() {
         if (state is TunnelState.Failed) {
             // В журнал — чтобы причину можно было достать с чужого телефона,
             // где экран уже закрыли и пересказывают по памяти.
-            Log.w(TAG, "туннель не поднялся: ${state.reason}")
+            Log.w(TAG, "туннель не поднялся (${state.kind}): ${state.detail}")
         }
 
         worker?.cancel()
@@ -278,6 +279,23 @@ class VeilVpnService : VpnService() {
         fun reasonOf(t: Throwable): String {
             val message = t.message
             return if (message.isNullOrBlank()) t.toString() else message
+        }
+
+        /**
+         * failureOf разбирает ошибку ядра на вид и подробности.
+         *
+         * Ядро складывает их в одно сообщение — иначе не получится: наружу
+         * gomobile отдаёт обычное исключение, и приложить к нему что-то ещё,
+         * кроме текста, некуда. Вид едет первой строкой.
+         */
+        fun failureOf(t: Throwable): TunnelState.Failed {
+            val raw = reasonOf(t)
+            val cut = raw.indexOf('\n')
+            if (cut <= 0) {
+                // Вида нет — покажем как есть, это лучше, чем выдумывать.
+                return TunnelState.Failed("", raw)
+            }
+            return TunnelState.Failed(raw.substring(0, cut), raw.substring(cut + 1).trim())
         }
     }
 }

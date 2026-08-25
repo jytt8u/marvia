@@ -31,6 +31,41 @@ import (
 // может.
 const DefaultDNS = "1.1.1.1:53"
 
+// Виды неудач.
+//
+// Текст ошибки из ядра точен и подробен, но покупателю он не говорит ничего:
+// «dial tcp: lookup panel.example: no such host» — язык не для человека,
+// который заплатил за интернет. Поэтому ядро сообщает вместе с подробностями
+// ещё и вид неудачи, а человеческую фразу под него подбирает приложение.
+//
+// Разделение именно такое, а не «пусть ядро сразу пишет по-человечески»,
+// потому что тогда русский текст интерфейса расползся бы по ядру. А он нужен
+// будет ещё на фарси и на китайском — это те же страны, ради которых всё и
+// затевалось.
+//
+// Вид едет первой строкой сообщения, подробности — следующими.
+const (
+	// FailAccount — ссылка доступа не та: испорчена при пересылке, обрезана,
+	// выдана не нами.
+	FailAccount = "account"
+
+	// FailPanel — до панели продавца не достучались. Обычно это просто
+	// отсутствие интернета, но может быть и блокировка самой панели.
+	FailPanel = "panel"
+
+	// FailNodes — панель ответила, но подключиться не вышло ни к одной ноде.
+	FailNodes = "nodes"
+
+	// FailSystem — не сложилось на стороне телефона: система не дала
+	// интерфейс, не поднялся сетевой мост.
+	FailSystem = "system"
+)
+
+// fail помечает ошибку видом: первая строка — вид, остальное — подробности.
+func fail(kind string, err error) error {
+	return fmt.Errorf("%s\n%w", kind, err)
+}
+
 // Tunnel — работающее подключение.
 type Tunnel struct {
 	mu sync.Mutex
@@ -50,7 +85,7 @@ type Tunnel struct {
 // dns — адрес для запросов имён; пусто означает значение по умолчанию.
 func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
 	if tunFD <= 0 {
-		return nil, errors.New("не передан дескриптор сетевого интерфейса")
+		return nil, fail(FailSystem, errors.New("не передан дескриптор сетевого интерфейса"))
 	}
 
 	// Дескриптор нам отдали насовсем: приложение вызвало detachFd и само его
@@ -66,19 +101,49 @@ func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
 		dns = DefaultDNS
 	}
 
+	dialer, err := connect(accountLink)
+	if err != nil {
+		return nil, err
+	}
+
+	t := &Tunnel{dialer: dialer, nodeName: dialer.Node().Name, running: true}
+
+	bridgeOwnsFD = true
+	bridge, err := tunbridge.Start(tunbridge.Config{
+		FD:      tunFD,
+		Dialer:  dialer,
+		DNS:     dns,
+		OnError: t.note,
+	})
+	if err != nil {
+		_ = dialer.Close()
+		return nil, fail(FailSystem, fmt.Errorf("сетевой мост: %w", err))
+	}
+	t.bridge = bridge
+
+	return t, nil
+}
+
+// connect делает всё, что не касается сетевого интерфейса: разбирает ссылку,
+// забирает список нод и выбирает лучшую.
+//
+// Вынесено отдельно не ради красоты: так эту часть можно проверить тестом, не
+// выдумывая дескриптор интерфейса. Выдуманный дескриптор в тесте — это номер,
+// который на Linux принадлежит чему-то настоящему.
+func connect(accountLink string) (*client.Dialer, error) {
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
-		return nil, fmt.Errorf("ссылка доступа: %w", err)
+		return nil, fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))
 	}
 
 	key, err := vp1.KeyPairFromPrivate(account.PrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("личный ключ: %w", err)
+		return nil, fail(FailAccount, fmt.Errorf("личный ключ: %w", err))
 	}
 
 	sub, err := client.FetchSubscription(context.Background(), account.SubscriptionURL)
 	if err != nil {
-		return nil, fmt.Errorf("список нод: %w", err)
+		return nil, fail(FailPanel, fmt.Errorf("список нод: %w", err))
 	}
 
 	// Ноду выбираем замерами с самого устройства, а не берём первую из
@@ -97,25 +162,9 @@ func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
 	}()
 
 	if err != nil {
-		return nil, err
+		return nil, fail(FailNodes, err)
 	}
-
-	t := &Tunnel{dialer: dialer, nodeName: dialer.Node().Name, running: true}
-
-	bridgeOwnsFD = true
-	bridge, err := tunbridge.Start(tunbridge.Config{
-		FD:      tunFD,
-		Dialer:  dialer,
-		DNS:     dns,
-		OnError: t.note,
-	})
-	if err != nil {
-		_ = dialer.Close()
-		return nil, fmt.Errorf("сетевой мост: %w", err)
-	}
-	t.bridge = bridge
-
-	return t, nil
+	return dialer, nil
 }
 
 // note запоминает последнюю ошибку, чтобы приложение могло её показать.

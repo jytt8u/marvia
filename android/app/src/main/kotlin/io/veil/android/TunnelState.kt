@@ -22,8 +22,18 @@ sealed interface TunnelState {
      */
     data class On(val node: String, val warning: String = "") : TunnelState
 
-    /** Подняться не удалось. reason — то, что сказало ядро. */
-    data class Failed(val reason: String) : TunnelState
+    /**
+     * Подняться не удалось.
+     *
+     * kind — вид неудачи, названный ядром. По нему подбирается фраза, которую
+     * покупатель поймёт. Пустой вид означает, что причину сформулировало само
+     * приложение и подбирать под неё нечего.
+     *
+     * detail — подробности из ядра как есть. Покупателю они не говорят ничего,
+     * но именно они нужны продавцу, когда покупатель присылает ему снимок
+     * экрана со словами «не работает».
+     */
+    data class Failed(val kind: String, val detail: String) : TunnelState
 }
 
 /**
