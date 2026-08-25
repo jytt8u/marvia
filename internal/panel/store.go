@@ -8,6 +8,7 @@ package panel
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -44,7 +45,16 @@ type User struct {
 	MaxIPs       int        `json:"max_ips"`
 	MaxConns     int        `json:"max_conns"`
 	SubToken     string     `json:"sub_token"`
-	CreatedAt    time.Time  `json:"created_at"`
+
+	// ExternalID — ключ покупателя в системе продавца, обычно telegram id.
+	//
+	// Нужен затем, чтобы бот не держал вторую базу соответствий. Панель
+	// считает его уникальным: повторная продажа тому же ключу не заводит
+	// второго подписчика, а возвращает существующего. Платёжные системы
+	// повторяют уведомление при сбое, и без этого одна оплата давала бы два
+	// доступа.
+	ExternalID string    `json:"external_id,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
 
 	// Used — суммарный расход по всем нодам, заполняется при чтении.
 	Used int64 `json:"used"`
@@ -103,8 +113,11 @@ CREATE TABLE IF NOT EXISTS users (
     max_ips       INTEGER NOT NULL DEFAULT 0,
     max_conns     INTEGER NOT NULL DEFAULT 0,
     sub_token     TEXT    NOT NULL UNIQUE,
+    external_id   TEXT,
     created_at    TEXT    NOT NULL
 );
+
+
 
 CREATE TABLE IF NOT EXISTS credentials (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -194,6 +207,13 @@ func migrate(db *sql.DB) error {
 		`ALTER TABLE nodes ADD COLUMN reality_public_key TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN reality_short_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN ws_path TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE users ADD COLUMN external_id TEXT`,
+		// Индекс живёт только здесь, а не в схеме. Схема выполняется первой, и
+		// на уже существующей базе CREATE TABLE IF NOT EXISTS столбца не
+		// добавляет — индекс по нему упал бы раньше, чем миграция успела бы
+		// этот столбец завести. Панель не поднялась бы вовсе, и не у меня, а у
+		// каждого продавца при обновлении.
+		`CREATE UNIQUE INDEX IF NOT EXISTS users_external ON users(external_id) WHERE external_id IS NOT NULL`,
 	}
 
 	for _, step := range steps {
@@ -212,11 +232,11 @@ func (s *Store) Close() error { return s.db.Close() }
 
 // CreateUserParams — что нужно, чтобы завести подписчика.
 type CreateUserParams struct {
-	Label        string     `json:"label"`
-	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
-	TrafficLimit int64      `json:"traffic_limit"`
-	MaxIPs       int        `json:"max_ips"`
-	MaxConns     int        `json:"max_conns"`
+	Label        string  `json:"label"`
+	ExpiresAt    *Expiry `json:"expires_at,omitempty"`
+	TrafficLimit int64   `json:"traffic_limit"`
+	MaxIPs       int     `json:"max_ips"`
+	MaxConns     int     `json:"max_conns"`
 
 	// Kinds — какие наборы доступа выдать сразу: vp1, vless, trojan.
 	// Пусто означает только vp1.
@@ -225,6 +245,11 @@ type CreateUserParams struct {
 	// три: vless и trojan работают в приложениях, которые у людей уже стоят,
 	// а vp1 — в нашем клиенте, когда они до него дойдут.
 	Kinds []string `json:"kinds,omitempty"`
+
+	// ExternalID — ключ покупателя в системе продавца, обычно telegram id.
+	// Задан — повторная продажа тому же ключу вернёт существующего подписчика
+	// вместо второго доступа за ту же оплату.
+	ExternalID string `json:"external_id,omitempty"`
 }
 
 // Issued — выданный набор доступа. Поле Secret показывается ровно один раз.
@@ -246,6 +271,22 @@ func (s *Store) CreateUser(ctx context.Context, p CreateUserParams) (User, []Iss
 		}
 	}
 
+	// Повторная продажа тому же ключу ничего не создаёт.
+	//
+	// Платёжные системы повторяют уведомление, когда бот не ответил, а бот мог
+	// упасть ровно между вызовом панели и записью у себя. Без этой проверки
+	// одна оплата давала бы два доступа: покупатель получил бы два ключа, а
+	// продавец потерял бы месяц выручки и заметил бы это нескоро.
+	if p.ExternalID != "" {
+		existing, err := s.UserByExternalID(ctx, p.ExternalID)
+		switch {
+		case err == nil:
+			return existing, nil, ErrAlreadyExists
+		case !errors.Is(err, ErrNotFound):
+			return User{}, nil, err
+		}
+	}
+
 	subToken, err := NewToken()
 	if err != nil {
 		return User{}, nil, err
@@ -259,9 +300,10 @@ func (s *Store) CreateUser(ctx context.Context, p CreateUserParams) (User, []Iss
 	defer func() { _ = tx.Rollback() }()
 
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO users (label, enabled, expires_at, traffic_limit, max_ips, max_conns, sub_token, created_at)
-		 VALUES (?, 1, ?, ?, ?, ?, ?, ?)`,
-		p.Label, nullTime(p.ExpiresAt), p.TrafficLimit, p.MaxIPs, p.MaxConns, subToken, format(now))
+		`INSERT INTO users (label, enabled, expires_at, traffic_limit, max_ips, max_conns, sub_token, created_at, external_id)
+		 VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?)`,
+		p.Label, nullTime(p.ExpiresAt.at()), p.TrafficLimit, p.MaxIPs, p.MaxConns, subToken, format(now),
+		nullString(p.ExternalID))
 	if err != nil {
 		return User{}, nil, fmt.Errorf("создание пользователя: %w", err)
 	}
@@ -300,7 +342,7 @@ func (s *Store) CreateUser(ctx context.Context, p CreateUserParams) (User, []Iss
 	}
 
 	user := User{
-		ID: id, Label: p.Label, Enabled: true, ExpiresAt: p.ExpiresAt,
+		ID: id, Label: p.Label, Enabled: true, ExpiresAt: p.ExpiresAt.at(),
 		TrafficLimit: p.TrafficLimit, MaxIPs: p.MaxIPs, MaxConns: p.MaxConns,
 		SubToken: subToken, CreatedAt: now, Credentials: creds,
 	}
@@ -309,12 +351,12 @@ func (s *Store) CreateUser(ctx context.Context, p CreateUserParams) (User, []Iss
 
 // UpdateUserParams — изменяемые поля. nil означает «не трогать».
 type UpdateUserParams struct {
-	Label        *string    `json:"label,omitempty"`
-	Enabled      *bool      `json:"enabled,omitempty"`
-	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
-	TrafficLimit *int64     `json:"traffic_limit,omitempty"`
-	MaxIPs       *int       `json:"max_ips,omitempty"`
-	MaxConns     *int       `json:"max_conns,omitempty"`
+	Label        *string `json:"label,omitempty"`
+	Enabled      *bool   `json:"enabled,omitempty"`
+	ExpiresAt    *Expiry `json:"expires_at,omitempty"`
+	TrafficLimit *int64  `json:"traffic_limit,omitempty"`
+	MaxIPs       *int    `json:"max_ips,omitempty"`
+	MaxConns     *int    `json:"max_conns,omitempty"`
 }
 
 // UpdateUser меняет заданные поля подписчика.
@@ -332,7 +374,7 @@ func (s *Store) UpdateUser(ctx context.Context, id int64, p UpdateUserParams) (U
 	}
 	if p.ExpiresAt != nil {
 		sets = append(sets, "expires_at = ?")
-		args = append(args, format(p.ExpiresAt.UTC()))
+		args = append(args, format(p.ExpiresAt.Time.UTC()))
 	}
 	if p.TrafficLimit != nil {
 		sets = append(sets, "traffic_limit = ?")
@@ -406,7 +448,7 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 func (s *Store) queryUsers(ctx context.Context, where string, args ...any) ([]User, error) {
 	query := `
 		SELECT u.id, u.label, u.enabled, u.expires_at, u.traffic_limit, u.max_ips,
-		       u.max_conns, u.sub_token, u.created_at,
+		       u.max_conns, u.sub_token, u.created_at, u.external_id,
 		       COALESCE((SELECT SUM(up + down) FROM usage WHERE user_id = u.id), 0)
 		FROM users u ` + where
 
@@ -423,14 +465,16 @@ func (s *Store) queryUsers(ctx context.Context, where string, args ...any) ([]Us
 			enabled   int
 			expires   sql.NullString
 			createdAt string
+			external  sql.NullString
 		)
 		if err := rows.Scan(&u.ID, &u.Label, &enabled, &expires, &u.TrafficLimit,
-			&u.MaxIPs, &u.MaxConns, &u.SubToken, &createdAt, &u.Used); err != nil {
+			&u.MaxIPs, &u.MaxConns, &u.SubToken, &createdAt, &external, &u.Used); err != nil {
 			return nil, err
 		}
 		u.Enabled = enabled != 0
 		u.ExpiresAt = parseNullTime(expires)
 		u.CreatedAt = parse(createdAt)
+		u.ExternalID = external.String
 		list = append(list, u)
 	}
 	if err := rows.Err(); err != nil {
@@ -743,4 +787,130 @@ func join(parts []string, sep string) string {
 		out += p
 	}
 	return out
+}
+
+// ErrAlreadyExists — подписчик с таким ключом продавца уже заведён.
+var ErrAlreadyExists = errors.New("подписчик с таким external_id уже есть")
+
+// nullString превращает пустую строку в NULL.
+//
+// Для уникального индекса это принципиально: NULL в SQLite повторяться может,
+// а пустая строка нет. Иначе второй подписчик без ключа продавца упёрся бы в
+// уникальность на пустом месте.
+func nullString(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+// UserByExternalID находит подписчика по ключу продавца.
+func (s *Store) UserByExternalID(ctx context.Context, externalID string) (User, error) {
+	list, err := s.queryUsers(ctx, `WHERE u.external_id = ?`, externalID)
+	if err != nil {
+		return User{}, err
+	}
+	if len(list) == 0 {
+		return User{}, ErrNotFound
+	}
+	return list[0], nil
+}
+
+// ExtendUser продлевает подписку на заданный срок.
+//
+// Считается от текущего окончания, а не от «сейчас»: покупатель, продливший за
+// неделю до конца, не должен терять эту неделю. Если срок уже вышел или его не
+// было вовсе — считаем от текущего момента.
+//
+// Чтение и запись идут одной транзакцией, и это не украшательство. Продление
+// в три раздельных шага «прочитать, посчитать, записать» ломается на двух
+// одновременных платежах: оба прочитали бы один и тот же срок, оба записали бы
+// одно и то же значение, и один оплаченный месяц пропал бы бесследно.
+func (s *Store) ExtendUser(ctx context.Context, id int64, d time.Duration) (User, error) {
+	if d <= 0 {
+		return User{}, errors.New("срок продления должен быть положительным")
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return User{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var current sql.NullString
+	err = tx.QueryRowContext(ctx, `SELECT expires_at FROM users WHERE id = ?`, id).Scan(&current)
+	if errors.Is(err, sql.ErrNoRows) {
+		return User{}, ErrNotFound
+	}
+	if err != nil {
+		return User{}, err
+	}
+
+	// Считаем от большего из двух: текущего окончания и «сейчас». Первое —
+	// чтобы не съесть остаток у того, кто продлевает заранее. Второе — чтобы
+	// вернувшийся через полгода не купил месяц, истёкший пять месяцев назад.
+	base := time.Now().UTC()
+	if current.Valid {
+		if t := parse(current.String); t.After(base) {
+			base = t
+		}
+	}
+
+	res, err := tx.ExecContext(ctx,
+		`UPDATE users SET expires_at = ? WHERE id = ?`, format(base.Add(d)), id)
+	if err != nil {
+		return User{}, fmt.Errorf("продление подписки: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return User{}, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return User{}, ErrNotFound
+	}
+
+	list, err := s.queryUsers(ctx, `WHERE u.id = ?`, id)
+	if err != nil {
+		return User{}, err
+	}
+	if len(list) == 0 {
+		return User{}, ErrNotFound
+	}
+	return list[0], nil
+}
+
+// Expiry — срок подписки в запросах к API.
+//
+// Принимает и дату в RFC3339, и «через сколько»: 30d, 12h. Второе — то, чем
+// думает бот: он продаёт месяц, а не «до двадцать третьего сентября». Обратно
+// всегда уезжает дата — «через месяц» в ответе было бы неправдой уже к моменту,
+// когда бот его прочитает.
+type Expiry struct{ time.Time }
+
+// UnmarshalJSON разбирает обе записи срока.
+func (e *Expiry) UnmarshalJSON(raw []byte) error {
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return errors.New("срок подписки: нужна строка вида 30d либо дата RFC3339")
+	}
+	t, err := ParseExpiry(s)
+	if err != nil {
+		return err
+	}
+	if t == nil {
+		return errors.New("срок подписки: пустая строка")
+	}
+	e.Time = *t
+	return nil
+}
+
+// MarshalJSON отдаёт срок датой.
+func (e Expiry) MarshalJSON() ([]byte, error) { return json.Marshal(e.Time) }
+
+// at превращает срок в указатель на время, понимая отсутствие срока.
+func (e *Expiry) at() *time.Time {
+	if e == nil {
+		return nil
+	}
+	t := e.Time.UTC()
+	return &t
 }
