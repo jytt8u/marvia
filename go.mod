@@ -12,6 +12,7 @@ require (
 	golang.org/x/crypto v0.55.0
 	golang.org/x/mobile v0.0.0-20260821190718-4776eadac327
 	golang.org/x/sys v0.47.0
+	golang.zx2c4.com/wireguard/windows v1.0.1
 	gvisor.dev/gvisor v0.0.0-20260701204157-69c2d17aea96
 	modernc.org/sqlite v1.57.0
 )
@@ -36,6 +37,8 @@ require (
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
+	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
+	golang.zx2c4.com/wireguard v0.0.0-20260522210424-ecfc5a8d5446 // indirect
 	modernc.org/libc v1.74.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

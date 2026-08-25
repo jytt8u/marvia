@@ -23,3 +23,6 @@ config.local.*
 *.jks
 *.keystore
 veil-release.properties
+
+# драйвер сетевого адаптера: подписанный чужой бинарник, в репозитории ему не место
+*.dll
