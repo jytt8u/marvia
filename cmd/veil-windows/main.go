@@ -4,31 +4,28 @@
 //
 // В отличие от veil-client, который поднимает SOCKS5 и требует настроить
 // каждое приложение отдельно, этот забирает весь трафик компьютера целиком —
-// так же, как приложение на телефоне. Ядро под ними одно и то же.
+// так же, как приложение на телефоне. Ядро под ними одно и то же, включая
+// выбор ноды по замерам с самой машины.
 //
-// Требует прав администратора: без них Windows не даёт ни создать сетевой
-// адаптер, ни трогать таблицу маршрутов.
+// Показывает окно. Внутри окна обычная страница, которую отдаёт сама
+// программа: так не нужен ни сторонний набор виджетов, ни компилятор C, а
+// выглядит она одинаково на любой машине.
 package main
 
 import (
-	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"net/netip"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	"golang.org/x/sys/windows"
 
-	"github.com/veilproject/veil/internal/client"
 	"github.com/veilproject/veil/internal/tunbridge"
-	"github.com/veilproject/veil/internal/vp1"
-	"github.com/veilproject/veil/internal/wintun"
 )
 
 const (
@@ -43,116 +40,94 @@ const (
 )
 
 func main() {
-	account := flag.String("account", "", "ссылка доступа veil-account:// (по умолчанию — из VEIL_ACCOUNT)")
 	dns := flag.String("dns", defaultDNS, "адрес для запросов имён внутри туннеля")
 	mtu := flag.Uint("mtu", tunbridge.DefaultMTU, "MTU интерфейса")
+	noElevate := flag.Bool("no-elevate", false, "не просить прав администратора (окно откроется, туннель не поднимется)")
 	flag.Parse()
 
-	if err := run(*account, *dns, uint32(*mtu)); err != nil {
+	// Без прав администратора Windows не даст ни создать адаптер, ни трогать
+	// маршруты. Просим их сразу и обычным путём — через то самое окно, которое
+	// человек видит при установке любой программы. Запускать что-то из
+	// командной строки от администратора он не обязан.
+	if !elevated() && !*noElevate {
+		if err := relaunchElevated(); err != nil {
+			fmt.Fprintf(os.Stderr, "не получилось запросить права администратора: %v\n", err)
+			fmt.Fprintf(os.Stderr, "запусти программу из PowerShell от имени администратора\n")
+			os.Exit(1)
+		}
+		return
+	}
+
+	if err := run(*dns, uint32(*mtu)); err != nil {
 		fmt.Fprintf(os.Stderr, "\nошибка: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(accountLink, dns string, mtu uint32) error {
-	if accountLink == "" {
-		accountLink = os.Getenv("VEIL_ACCOUNT")
-	}
-	if strings.TrimSpace(accountLink) == "" {
-		return errors.New("не задана ссылка доступа: укажи -account veil-account://… или переменную VEIL_ACCOUNT")
-	}
+func run(dns string, mtu uint32) error {
+	log := newJournal()
+	ctl := NewController(dns, mtu, log)
 
-	if !windows.GetCurrentProcessToken().IsElevated() {
-		return errors.New("нужны права администратора: без них Windows не даст создать сетевой адаптер.\n" +
-			"Запусти PowerShell от имени администратора и повтори команду")
+	if !elevated() {
+		log.add("прав администратора нет: туннель поднять не выйдет")
 	}
+	log.add("готов к работе")
 
-	address, err := netip.ParsePrefix(tunnelAddress)
-	if err != nil {
-		return err
-	}
-	dnsAddr, err := dnsAddress(dns)
-	if err != nil {
-		return err
-	}
-
-	account, err := client.ParseAccountLink(accountLink)
-	if err != nil {
-		return fmt.Errorf("ссылка доступа: %w", err)
-	}
-	key, err := vp1.KeyPairFromPrivate(account.PrivateKey)
-	if err != nil {
-		return fmt.Errorf("личный ключ: %w", err)
-	}
-
-	log.Printf("забираю список нод у %s", account.SubscriptionURL)
-	sub, err := client.FetchSubscription(context.Background(), account.SubscriptionURL)
-	if err != nil {
-		return fmt.Errorf("список нод: %w", err)
-	}
-
-	log.Printf("замеряю ноды, их %d", len(sub.Nodes))
-	dialer, measurements, err := client.SelectBest(context.Background(), sub.Nodes, key, client.Options{})
-
-	// Отчёт уходит в любом случае, в том числе когда не подключилось никуда:
-	// продавцу важнее всего узнать именно про такой случай.
-	go func() {
-		_ = client.SendReports(context.Background(), account.SubscriptionURL, client.ReportsFrom(measurements))
-	}()
-
-	if err != nil {
-		return err
-	}
-	defer dialer.Close()
-
-	node := dialer.Node()
-	log.Printf("нода %s, адрес %s", node.Name, node.Address)
-
-	// Адреса ноды выясняем до того, как заберём себе трафик: после этого
-	// запросы имён пойдут в туннель, которого ещё нет.
-	bypass, err := nodeAddresses(node.Address)
-	if err != nil {
-		return err
-	}
-
-	adapter, err := wintun.Open(wintun.Config{
-		Name:    adapterName,
-		MTU:     mtu,
-		Address: address,
-		DNS:     dnsAddr,
-		Bypass:  bypass,
-	})
+	url, server, err := serveUI(ctl, log)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		log.Printf("снимаю маршруты и убираю адаптер")
-		if err := adapter.Close(); err != nil {
-			log.Printf("при уборке: %v", err)
-		}
+		_ = server.Close()
 	}()
 
-	bridge, err := tunbridge.Start(tunbridge.Config{
-		Endpoint: adapter.Endpoint(),
-		MTU:      mtu,
-		Dialer:   dialer,
-		DNS:      dns,
-		OnError:  func(err error) { log.Printf("соединение: %v", err) },
-	})
+	// Адрес печатаем всегда, даже когда открылось своё окно. Если окно
+	// почему-то оказалось пустым или закрылось, человеку есть куда ткнуться,
+	// не выясняя номер порта самостоятельно.
+	fmt.Printf("Veil работает. Если окно не открылось, страница здесь:\n  %s\n\n", url)
+
+	// Что бы ни случилось дальше — маршруты снимутся. Человек закроет окно
+	// крестиком, а не кнопкой, и это нормально: убирать за собой должна
+	// программа, а не он.
+	defer ctl.Disconnect()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-stop
+		ctl.Disconnect()
+		os.Exit(0)
+	}()
+
+	return showWindow(url)
+}
+
+// elevated сообщает, запущены ли мы с правами администратора.
+func elevated() bool { return windows.GetCurrentProcessToken().IsElevated() }
+
+// relaunchElevated перезапускает программу с запросом прав.
+//
+// Windows не умеет повышать права работающему процессу — можно только
+// запустить новый. Поэтому мы просим права, запускаем себя заново и тихо
+// выходим: человек видит привычное окно согласия, а не совет открыть
+// PowerShell.
+func relaunchElevated() error {
+	exe, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("сетевой мост: %w", err)
+		return err
 	}
-	defer bridge.Close()
+	args := strings.Join(os.Args[1:], " ")
 
-	log.Printf("туннель поднят: весь трафик идёт через %s", node.Name)
-	log.Printf("для выхода нажми Ctrl+C — маршруты снимутся сами")
+	verb, _ := syscall.UTF16PtrFromString("runas")
+	file, _ := syscall.UTF16PtrFromString(exe)
+	dir, _ := syscall.UTF16PtrFromString(filepath.Dir(exe))
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-	<-ctx.Done()
+	var params *uint16
+	if args != "" {
+		params, _ = syscall.UTF16PtrFromString(args)
+	}
 
-	log.Printf("выключаюсь")
-	return nil
+	return windows.ShellExecute(0, verb, file, params, dir, windows.SW_NORMAL)
 }
 
 // nodeAddresses выясняет, какие адреса надо вывести мимо туннеля.

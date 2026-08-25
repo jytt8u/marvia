@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veil</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #121a30;
+    --line: #1e2942;
+    --text: #e8ecf6;
+    --muted: #7f8db0;
+    --accent: #3b6ef3;
+    --live: #17a673;
+    --fail: #d1495b;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
+    user-select: none;
+    overflow: hidden;
+  }
+
+  .app { display: flex; height: 100%; }
+
+  /* ---------------------------------------------------------- боковая */
+
+  aside {
+    width: 190px;
+    flex: 0 0 190px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 10px 18px;
+    font-weight: 700; letter-spacing: .28em; font-size: 13px;
+  }
+  .brand svg { flex: 0 0 22px; }
+
+  .tab {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 9px;
+    color: var(--muted); cursor: pointer;
+    border: none; background: none; width: 100%;
+    font: inherit; text-align: left;
+  }
+  .tab:hover { background: #16203a; color: var(--text); }
+  .tab[aria-selected="true"] { background: #1b2745; color: var(--text); }
+  .tab svg { flex: 0 0 17px; opacity: .85; }
+
+  .spacer { flex: 1; }
+
+  .meter { padding: 10px 12px; border-top: 1px solid var(--line); }
+  .meter div { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .meter b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ------------------------------------------------------------ центр */
+
+  main { flex: 1; display: flex; flex-direction: column; padding: 22px 26px; min-width: 0; }
+  .page { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .page[data-open] { display: flex; }
+
+  .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+
+  .power {
+    width: 168px; height: 168px; border-radius: 50%;
+    border: none; cursor: pointer;
+    background: #1b2745;
+    display: grid; place-items: center;
+    transition: box-shadow .25s, background .25s;
+    margin-bottom: 14px;
+  }
+  .power svg { width: 58px; height: 58px; }
+  .power:disabled { cursor: default; }
+  .power[data-state="connected"] { background: var(--live); box-shadow: 0 0 0 12px rgba(23,166,115,.14); }
+  .power[data-state="connecting"] { background: #263354; }
+  .power[data-state="failed"] { background: var(--fail); box-shadow: 0 0 0 12px rgba(209,73,91,.14); }
+
+  .status { font-size: 24px; font-weight: 700; }
+  .detail { color: var(--muted); text-align: center; max-width: 460px; }
+  .detail.bad { color: var(--fail); }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .card .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: 0 0 10px; }
+  .card[data-live] .dot { background: var(--live); }
+  .card .name { font-weight: 600; }
+  .card .sub { color: var(--muted); font-size: 12px; }
+  .card .ping { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ------------------------------------------------------------- ключ */
+
+  label.field { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; }
+  textarea, input {
+    width: 100%; background: #0e1425; color: var(--text);
+    border: 1px solid var(--line); border-radius: 9px;
+    padding: 10px 12px; font: 13px/1.45 ui-monospace, Consolas, monospace;
+    resize: vertical; user-select: text;
+  }
+  textarea:focus, input:focus { outline: none; border-color: var(--accent); }
+
+  button.primary {
+    background: var(--accent); color: #fff; border: none;
+    padding: 10px 18px; border-radius: 9px; cursor: pointer;
+    font: inherit; font-weight: 600;
+  }
+  button.primary:disabled { opacity: .5; cursor: default; }
+
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .bad { color: var(--fail); }
+
+  pre.log {
+    flex: 1; margin: 0; overflow: auto; user-select: text;
+    background: #0e1425; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px; font: 12px/1.6 ui-monospace, Consolas, monospace;
+    color: var(--muted); white-space: pre-wrap;
+  }
+
+  h2 { margin: 0 0 14px; font-size: 16px; }
+  p.about { color: var(--muted); max-width: 560px; }
+  .warn {
+    background: rgba(209,73,91,.12); border: 1px solid rgba(209,73,91,.35);
+    color: #f0b8c0; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 20 5.2V11.5C20 16.6 16.6 20.9 12 22.2 7.4 20.9 4 16.6 4 11.5V5.2Z" fill="#3b6ef3"/><path d="M8.3 9.4 12 16.6 15.7 9.4" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      VEIL
+    </div>
+
+    <button class="tab" data-tab="home" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v9M6.5 6.5a8 8 0 1 0 11 0"/></svg>
+      Главная
+    </button>
+    <button class="tab" data-tab="key">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M17 12v4M20 12v3"/></svg>
+      Ключ доступа
+    </button>
+    <button class="tab" data-tab="log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>
+      Журнал
+    </button>
+    <button class="tab" data-tab="about">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+      О программе
+    </button>
+
+    <div class="spacer"></div>
+
+    <div class="meter">
+      <div>Принято <b id="m-down">0 Б</b></div>
+      <div>Отправлено <b id="m-up">0 Б</b></div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- ------------------------------------------------------ главная -->
+    <section class="page" data-tab="home" data-open>
+      <div id="elev-warn" class="warn" hidden>
+        Программа запущена без прав администратора. Windows не даст создать
+        сетевой адаптер — закрой окно и запусти из PowerShell от имени
+        администратора.
+      </div>
+
+      <div class="center">
+        <button class="power" id="power" data-state="idle" title="Подключиться">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+            <path d="M12 3v9"/><path d="M6.8 6.8a8 8 0 1 0 10.4 0"/>
+          </svg>
+        </button>
+        <div class="status" id="status">Отключено</div>
+        <div class="detail" id="detail">Трафик идёт напрямую</div>
+      </div>
+
+      <div class="card" id="node-card">
+        <span class="dot"></span>
+        <div>
+          <div class="name" id="node-name">Нода не выбрана</div>
+          <div class="sub" id="node-addr">подключись — она выберется сама, по замерам</div>
+        </div>
+        <div class="ping" id="node-ping"></div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- ключ -->
+    <section class="page" data-tab="key">
+      <h2>Ключ доступа</h2>
+      <label class="field" for="account">Ссылка вида veil-account://… — её выдаёт бот при оплате</label>
+      <textarea id="account" rows="3" spellcheck="false" placeholder="veil-account://…"></textarea>
+      <div class="row">
+        <button class="primary" id="save">Сохранить</button>
+        <span id="save-msg" class="hint"></span>
+      </div>
+      <p class="hint">
+        В ссылке личный ключ. Она хранится в профиле пользователя и никуда не
+        отправляется, кроме адреса подписки, который в ней же и записан.
+      </p>
+    </section>
+
+    <!-- -------------------------------------------------------- журнал -->
+    <section class="page" data-tab="log">
+      <h2>Журнал</h2>
+      <pre class="log" id="log">пусто</pre>
+    </section>
+
+    <!-- ---------------------------------------------------- о программе -->
+    <section class="page" data-tab="about">
+      <h2>О программе</h2>
+      <p class="about">
+        Veil забирает весь трафик компьютера и уводит его через ноду,
+        замаскированную под обычный сайт. Ноду программа выбирает сама — по
+        замерам с этой машины, а не по мнению панели.
+      </p>
+      <p class="about">
+        Соединение до самой ноды идёт мимо туннеля отдельным маршрутом. Иначе
+        получился бы круг: пакеты, которыми программа разговаривает с нодой,
+        попадали бы в тот самый туннель, который к этой ноде и ведёт.
+      </p>
+      <p class="about">
+        При выходе маршруты снимаются сами. Если закрыть окно, не отключившись,
+        программа всё равно уберёт за собой.
+      </p>
+    </section>
+  </main>
+</div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+
+/* --------------------------------------------------------------- вкладки */
+
+document.querySelectorAll(".tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+    document.querySelectorAll(".page").forEach((p) => {
+      if (p.dataset.tab === tab.dataset.tab) p.setAttribute("data-open", "");
+      else p.removeAttribute("data-open");
+    });
+  });
+});
+
+/* ----------------------------------------------------------------- обмен */
+
+// Всё лежит под одноразовым ключом в адресе: /<ключ>/. Запросы поэтому
+// относительные — они сами попадают куда надо, а ключ нигде не дублируется.
+const base = location.pathname.endsWith("/") ? location.pathname : location.pathname + "/";
+
+async function api(method, path, body) {
+  const res = await fetch(base + path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!res.ok) throw new Error(data.error || ("ошибка " + res.status));
+  return data;
+}
+
+/* -------------------------------------------------------------- величины */
+
+function bytes(n) {
+  const units = ["Б", "КБ", "МБ", "ГБ", "ТБ"];
+  let i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return (i === 0 ? n : n.toFixed(1)) + " " + units[i];
+}
+
+/* ------------------------------------------------------------ отрисовка */
+
+const titles = {
+  idle: "Отключено",
+  connecting: "Подключаюсь…",
+  connected: "Подключено",
+  failed: "Не подключилось",
+};
+
+function render(s) {
+  $("status").textContent = titles[s.state] || s.state;
+  $("power").dataset.state = s.state;
+  $("power").disabled = s.state === "connecting" || !s.elevated;
+  $("power").title = s.state === "connected" ? "Отключиться" : "Подключиться";
+  $("elev-warn").hidden = s.elevated;
+
+  const detail = $("detail");
+  detail.classList.toggle("bad", s.state === "failed");
+  if (s.state === "failed") detail.textContent = s.reason || "причина неизвестна";
+  else if (s.state === "connecting") detail.textContent = "выбираю самую быструю ноду";
+  else if (s.state === "connected") detail.textContent = "весь трафик компьютера идёт через туннель";
+  else if (!s.has_account) detail.textContent = "вставь ключ доступа на вкладке слева";
+  else detail.textContent = "Трафик идёт напрямую";
+
+  const card = $("node-card");
+  if (s.node) {
+    card.setAttribute("data-live", "");
+    $("node-name").textContent = s.node;
+    $("node-addr").textContent = s.address;
+    $("node-ping").textContent = s.ping_ms ? s.ping_ms + " мс" : "";
+  } else {
+    card.removeAttribute("data-live");
+    $("node-name").textContent = "Нода не выбрана";
+    $("node-addr").textContent = "подключись — она выберется сама, по замерам";
+    $("node-ping").textContent = "";
+  }
+
+  $("m-down").textContent = bytes(s.down || 0);
+  $("m-up").textContent = bytes(s.up || 0);
+}
+
+/* ------------------------------------------------------------- действия */
+
+let busy = false;
+
+$("power").addEventListener("click", async () => {
+  if (busy) return;
+  busy = true;
+  try {
+    const s = await api("GET", "api/state");
+    if (s.state === "connected" || s.state === "connecting") await api("POST", "api/disconnect");
+    else await api("POST", "api/connect");
+    await tick();
+  } catch (err) {
+    $("detail").textContent = err.message;
+    $("detail").classList.add("bad");
+  } finally {
+    busy = false;
+  }
+});
+
+$("save").addEventListener("click", async () => {
+  const msg = $("save-msg");
+  msg.className = "hint";
+  try {
+    await api("POST", "api/account", { link: $("account").value });
+    msg.textContent = "Сохранено";
+    await tick();
+  } catch (err) {
+    msg.className = "hint bad";
+    msg.textContent = err.message;
+  }
+});
+
+/* -------------------------------------------------------------- опрос */
+
+async function tick() {
+  try {
+    render(await api("GET", "api/state"));
+    const log = await api("GET", "api/log");
+    $("log").textContent = (log.lines || []).join("\n") || "пусто";
+  } catch (err) {
+    $("status").textContent = "Нет связи с программой";
+  }
+}
+
+api("GET", "api/account").then((a) => { $("account").value = a.link || ""; }).catch(() => {});
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
