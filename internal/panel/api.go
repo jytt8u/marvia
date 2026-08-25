@@ -118,6 +118,18 @@ func (a *API) node(next nodeHandler) http.HandlerFunc {
 }
 
 func (a *API) listUsers(w http.ResponseWriter, r *http.Request) {
+	// Поиск по ключу продавца: боту надо по telegram id понять, кто перед ним,
+	// и не держать ради этого вторую базу соответствий.
+	if external := strings.TrimSpace(r.URL.Query().Get("external_id")); external != "" {
+		user, err := a.store.UserByExternalID(r.Context(), external)
+		if err != nil {
+			respondStoreErr(w, err)
+			return
+		}
+		ok(w, map[string]any{"users": []User{user}})
+		return
+	}
+
 	list, err := a.store.ListUsers(r.Context())
 	if err != nil {
 		fail(w, http.StatusInternalServerError, err.Error())
@@ -133,6 +145,19 @@ func (a *API) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, issued, err := a.store.CreateUser(r.Context(), p)
+
+	// Такой покупатель уже заведён — значит уведомление об оплате пришло
+	// повторно. Отвечаем успехом и говорим, что ничего не создали: бот на
+	// повторе не должен ни падать, ни выдавать второй доступ за ту же оплату.
+	if errors.Is(err, ErrAlreadyExists) {
+		ok(w, map[string]any{
+			"user":    user,
+			"created": false,
+			"issued":  []Issued{},
+			"links":   a.links(r.Context(), user, nil),
+		})
+		return
+	}
 	if err != nil {
 		if errors.Is(err, ErrUnknownKind) {
 			fail(w, http.StatusBadRequest, err.Error())
@@ -143,7 +168,8 @@ func (a *API) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ok(w, map[string]any{
-		"user": user,
+		"user":    user,
+		"created": true,
 		// Секреты отдаются ровно здесь и больше нигде. Для vp1 панель не
 		// хранит приватную часть вовсе; для vless и trojan хранит, но
 		// повторно через API не отдаёт. Бот обязан сразу переслать ссылки
@@ -215,11 +241,34 @@ func (a *API) updateUser(w http.ResponseWriter, r *http.Request) {
 	if !okID {
 		return
 	}
-	var p UpdateUserParams
+	// ExtendBy отдельно от остальных полей: это не «поставить срок», а
+	// «добавить к тому, что есть». Разница видна на покупателе, который
+	// продлевает за неделю до конца: с абсолютным сроком он эту неделю теряет.
+	var p struct {
+		UpdateUserParams
+		ExtendBy string `json:"extend_by,omitempty"`
+	}
 	if !decode(w, r, &p) {
 		return
 	}
-	user, err := a.store.UpdateUser(r.Context(), id, p)
+	if p.ExtendBy != "" && p.ExpiresAt != nil {
+		fail(w, http.StatusBadRequest, "extend_by и expires_at вместе не работают: либо продлить, либо назначить срок")
+		return
+	}
+
+	if p.ExtendBy != "" {
+		d, err := ParseDuration(p.ExtendBy)
+		if err != nil {
+			fail(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if _, err := a.store.ExtendUser(r.Context(), id, d); err != nil {
+			respondStoreErr(w, err)
+			return
+		}
+	}
+
+	user, err := a.store.UpdateUser(r.Context(), id, p.UpdateUserParams)
 	if err != nil {
 		respondStoreErr(w, err)
 		return
@@ -621,4 +670,24 @@ func ParseExpiry(s string) (*time.Time, error) {
 	}
 	utc := t.UTC()
 	return &utc, nil
+}
+
+// ParseDuration разбирает срок продления: «30d», «12h», «90m».
+//
+// time.ParseDuration дней не знает, а бот продаёт именно месяцы и дни, а не
+// семьсот двадцать часов.
+func ParseDuration(s string) (time.Duration, error) {
+	s = strings.TrimSpace(s)
+	if days, ok := strings.CutSuffix(s, "d"); ok {
+		n, err := strconv.Atoi(days)
+		if err != nil || n <= 0 {
+			return 0, fmt.Errorf("не понял срок %q: нужно число дней, например 30d", s)
+		}
+		return time.Duration(n) * 24 * time.Hour, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil || d <= 0 {
+		return 0, fmt.Errorf("не понял срок %q: нужно 30d, 12h или 90m", s)
+	}
+	return d, nil
 }
