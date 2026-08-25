@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
@@ -24,12 +25,26 @@ import (
 
 const shutdownGrace = 10 * time.Second
 
+type options struct {
+	listen     string
+	dbPath     string
+	adminToken string
+	subBase    string
+	certFile   string
+	keyFile    string
+}
+
 func main() {
-	listen := flag.String("listen", "127.0.0.1:8080", "адрес HTTP-интерфейса")
-	dbPath := flag.String("db", "veil-panel.db", "файл базы данных")
-	adminToken := flag.String("admin-token", "", "админский токен (по умолчанию — из VEIL_ADMIN_TOKEN)")
-	subBase := flag.String("sub-base", "", "внешний адрес панели для ссылок подписки, например https://sub.example.com")
+	var opts options
+
+	flag.StringVar(&opts.listen, "listen", "127.0.0.1:8080", "адрес HTTP-интерфейса")
+	flag.StringVar(&opts.dbPath, "db", "veil-panel.db", "файл базы данных")
+	flag.StringVar(&opts.adminToken, "admin-token", "", "админский токен (по умолчанию — из VEIL_ADMIN_TOKEN)")
+	flag.StringVar(&opts.subBase, "sub-base", "", "внешний адрес панели для ссылок подписки, например https://sub.example.com")
+	flag.StringVar(&opts.certFile, "tls-cert", "", "файл сертификата PEM (без него — голый HTTP за обратным прокси)")
+	flag.StringVar(&opts.keyFile, "tls-key", "", "файл приватного ключа сертификата PEM")
 	newToken := flag.Bool("new-token", false, "выпустить админский токен и выйти")
+
 	flag.Parse()
 
 	if *newToken {
@@ -42,34 +57,38 @@ func main() {
 		return
 	}
 
-	if err := run(*listen, *dbPath, *adminToken, *subBase); err != nil {
+	if err := run(opts); err != nil {
 		fmt.Fprintf(os.Stderr, "ошибка: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(listen, dbPath, adminToken, subBase string) error {
-	if adminToken == "" {
-		adminToken = os.Getenv("VEIL_ADMIN_TOKEN")
+func run(opts options) error {
+	if opts.adminToken == "" {
+		opts.adminToken = os.Getenv("VEIL_ADMIN_TOKEN")
 	}
-	if adminToken == "" {
+	if opts.adminToken == "" {
 		return errors.New("не задан админский токен: укажи -admin-token или VEIL_ADMIN_TOKEN (выпустить: veil-panel -new-token)")
 	}
-	if len(strings.TrimSpace(adminToken)) < 16 {
+	if len(strings.TrimSpace(opts.adminToken)) < 16 {
 		return errors.New("админский токен слишком короткий: нужен хотя бы 16 символов, лучше выпустить через -new-token")
 	}
+	if (opts.certFile == "") != (opts.keyFile == "") {
+		return errors.New("-tls-cert и -tls-key задаются только вместе")
+	}
 
-	store, err := panel.Open(dbPath)
+	store, err := panel.Open(opts.dbPath)
 	if err != nil {
 		return err
 	}
 	defer store.Close()
 
-	api := panel.NewAPI(store, adminToken, subBase)
+	api := panel.NewAPI(store, opts.adminToken, opts.subBase)
 	server := &http.Server{
-		Addr:              listen,
+		Addr:              opts.listen,
 		Handler:           api.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -83,17 +102,30 @@ func run(listen, dbPath, adminToken, subBase string) error {
 		_ = server.Shutdown(shutdownCtx)
 	}()
 
-	log.Printf("veil-panel слушает %s, база %s", listen, dbPath)
-	if subBase == "" {
+	log.Printf("veil-panel слушает %s, база %s", opts.listen, opts.dbPath)
+	if opts.subBase == "" {
 		log.Printf("ВНИМАНИЕ: не задан -sub-base, ссылки подписки будут с заглушкой вместо адреса")
 	}
-	// Панель обязана стоять за HTTPS: по её API ходят токены, а в ответах
-	// уезжают приватные ключи подписчиков. Собственного TLS у неё нет
-	// намеренно — сертификатами занимается обратный прокси перед ней.
-	log.Printf("панель отдаёт голый HTTP: ставь её только за обратным прокси с TLS")
 
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("HTTP-сервер: %w", err)
+	// Панель обязана стоять за HTTPS: по её API ходят токены, а в ответах
+	// уезжают приватные ключи подписчиков. Клиент это и не обсуждает — адрес
+	// подписки в ссылке доступа он всегда читает как https.
+	//
+	// Сертификат можно отдать панели напрямую, а можно оставить обратному
+	// прокси. Своё TLS появилось не от недоверия к прокси, а потому что
+	// продавец, поднявший панель на отдельной машине, не должен ради одной
+	// подписки осваивать ещё и nginx.
+	if opts.certFile == "" {
+		log.Printf("панель отдаёт голый HTTP: ставь её только за обратным прокси с TLS")
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("HTTP-сервер: %w", err)
+		}
+		return nil
+	}
+
+	log.Printf("панель отдаёт HTTPS, сертификат %s", opts.certFile)
+	if err := server.ListenAndServeTLS(opts.certFile, opts.keyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("HTTPS-сервер: %w", err)
 	}
 	return nil
 }
