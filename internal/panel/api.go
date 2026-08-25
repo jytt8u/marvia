@@ -25,11 +25,12 @@ type API struct {
 	store      *Store
 	adminToken string
 	subBase    string // базовый адрес подписок, например https://sub.example.com
+	distDir    string // где лежат бинарники для раздачи новым нодам
 }
 
 // NewAPI собирает обработчики панели.
-func NewAPI(store *Store, adminToken, subBase string) *API {
-	return &API{store: store, adminToken: adminToken, subBase: strings.TrimRight(subBase, "/")}
+func NewAPI(store *Store, adminToken, subBase, distDir string) *API {
+	return &API{store: store, adminToken: adminToken, subBase: strings.TrimRight(subBase, "/"), distDir: distDir}
 }
 
 // Handler возвращает готовый маршрутизатор.
@@ -50,6 +51,13 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/nodes", a.admin(a.listNodes))
 	mux.HandleFunc("POST /api/v1/nodes", a.admin(a.createNode))
 	mux.HandleFunc("DELETE /api/v1/nodes/{id}", a.admin(a.deleteNode))
+	mux.HandleFunc("POST /api/v1/nodes/invite", a.admin(a.createNodeInvite))
+
+	// Установка ноды одной командой. Приглашение стоит в адресе, потому что
+	// команду продавец вставляет целиком, не разбираясь в заголовках.
+	mux.HandleFunc("GET /install/{token}", a.installScript)
+	mux.HandleFunc("GET /install/{token}/{name}", a.installBinary)
+	mux.HandleFunc("POST /api/v1/nodes/register", a.registerNode)
 
 	// Ноды забирают свой список и сдают статистику.
 	mux.HandleFunc("GET /api/v1/node/users", a.node(a.nodeUsers))

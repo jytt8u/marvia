@@ -133,6 +133,17 @@ CREATE TABLE IF NOT EXISTS nodes (
     created_at TEXT    NOT NULL
 );
 
+
+CREATE TABLE IF NOT EXISTS node_invites (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_hash TEXT    NOT NULL UNIQUE,
+    label      TEXT    NOT NULL DEFAULT '',
+    expires_at TEXT    NOT NULL,
+    used_at    TEXT,
+    node_id    INTEGER REFERENCES nodes(id) ON DELETE SET NULL,
+    created_at TEXT    NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS node_reports (
     node_id     INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

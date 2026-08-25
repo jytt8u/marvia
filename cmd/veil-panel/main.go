@@ -31,6 +31,7 @@ type options struct {
 	adminToken string
 	subBase    string
 	certFile   string
+	distDir    string
 	keyFile    string
 }
 
@@ -43,6 +44,7 @@ func main() {
 	flag.StringVar(&opts.subBase, "sub-base", "", "внешний адрес панели для ссылок подписки, например https://sub.example.com")
 	flag.StringVar(&opts.certFile, "tls-cert", "", "файл сертификата PEM (без него — голый HTTP за обратным прокси)")
 	flag.StringVar(&opts.keyFile, "tls-key", "", "файл приватного ключа сертификата PEM")
+	flag.StringVar(&opts.distDir, "dist", "dist", "каталог с бинарниками ноды: панель раздаёт их установщику")
 	newToken := flag.Bool("new-token", false, "выпустить админский токен и выйти")
 
 	flag.Parse()
@@ -83,7 +85,7 @@ func run(opts options) error {
 	}
 	defer store.Close()
 
-	api := panel.NewAPI(store, opts.adminToken, opts.subBase)
+	api := panel.NewAPI(store, opts.adminToken, opts.subBase, opts.distDir)
 	server := &http.Server{
 		Addr:              opts.listen,
 		Handler:           api.Handler(),
