@@ -134,7 +134,7 @@ func TestFetchSubscription(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	sub, err := client.FetchSubscription(context.Background(), srv.URL+"/sub/token")
+	sub, err := client.FetchSubscription(context.Background(), srv.URL+"/sub/token", nil)
 	if err != nil {
 		t.Fatalf("подписка: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestEmptySubscriptionIsAnError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	if _, err := client.FetchSubscription(context.Background(), srv.URL+"/sub/token"); err == nil {
+	if _, err := client.FetchSubscription(context.Background(), srv.URL+"/sub/token", nil); err == nil {
 		t.Fatal("пустая подписка принята молча")
 	}
 }

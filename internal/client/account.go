@@ -10,6 +10,7 @@ package client
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"net/url"
 	"strings"
 
@@ -31,6 +32,19 @@ type Account struct {
 
 	// SubscriptionURL — откуда брать список нод.
 	SubscriptionURL string
+
+	// PanelIPs — адреса панели, вписанные прямо в ссылку параметром ip.
+	//
+	// Нужны, чтобы не спрашивать имя домена подписки у резолвера провайдера.
+	// С августа 2026 это перестало быть безобидным: после блокировки DoH у
+	// Google и DoT у Cloudflare запросы имён откатились на открытый резолвер
+	// провайдера. Домен, к которому ходят тысячи покупателей одного продавца,
+	// стал виден как на ладони — а такой домен признают средством обхода и
+	// блокируют целиком.
+	//
+	// Имя при этом никуда не девается: оно уходит в SNI, и по нему проверяется
+	// сертификат. Меняется только то, откуда мы узнали адрес.
+	PanelIPs []netip.Addr
 
 	// Label — человекочитаемая пометка из ссылки. На работу не влияет.
 	Label string
@@ -70,7 +84,39 @@ func ParseAccountLink(link string) (Account, error) {
 	// отдавать его открытым текстом нельзя даже ради удобства отладки.
 	sub := (&url.URL{Scheme: "https", Host: parsed.Host, Path: parsed.Path}).String()
 
+	ips, err := parsePanelIPs(parsed.Query().Get("ip"))
+	if err != nil {
+		return Account{}, err
+	}
+
 	label, _ := url.PathUnescape(parsed.Fragment)
 
-	return Account{PrivateKey: key, SubscriptionURL: sub, Label: label}, nil
+	return Account{PrivateKey: key, SubscriptionURL: sub, PanelIPs: ips, Label: label}, nil
+}
+
+// parsePanelIPs разбирает список адресов панели, перечисленных через запятую.
+//
+// Несколько адресов не для красоты: у панели за CDN их всегда несколько, и
+// первый может не отвечать. Порядок сохраняем — продавец ставит первым тот,
+// что ближе к его покупателям.
+func parsePanelIPs(raw string) ([]netip.Addr, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+
+	parts := strings.Split(raw, ",")
+	out := make([]netip.Addr, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		addr, err := netip.ParseAddr(part)
+		if err != nil {
+			return nil, fmt.Errorf("адрес панели %q в ссылке: нужен IP, а не имя", part)
+		}
+		out = append(out, addr)
+	}
+	return out, nil
 }

@@ -70,7 +70,8 @@ class VeilVpnService : VpnService() {
             return
         }
 
-        val link = Store(this).accountLink
+        val store = Store(this)
+        val link = store.accountLink
         if (link.isBlank()) {
             // Вид пустой намеренно. С видом account сюда подставилась бы фраза
             // «ключ не подошёл», а ключа просто нет — это разные вещи, и
@@ -97,7 +98,9 @@ class VeilVpnService : VpnService() {
             val fd = descriptor.detachFd()
 
             val started = try {
-                Mobile.start(link, fd.toLong(), Mobile.DefaultDNS)
+                // Каталог под кэш списка нод. Путь к своим файлам знает только
+                // Context — ядру его взять неоткуда, поэтому передаём руками.
+                Mobile.start(link, fd.toLong(), Mobile.DefaultDNS, store.cacheDir())
             } catch (t: Throwable) {
                 shutdown(failureOf(t))
                 return@launch

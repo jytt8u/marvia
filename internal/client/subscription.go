@@ -6,12 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/netip"
 	"time"
 )
 
 const (
 	subscriptionTimeout = 20 * time.Second
+
+	// pinnedDialTimeout — сколько ждём один адрес панели из подсказки, прежде
+	// чем взяться за следующий.
+	pinnedDialTimeout = 5 * time.Second
 
 	// maxSubscription — верхняя граница ответа. Список на сотню нод занимает
 	// десятки килобайт; мегабайт — уже повод не доверять источнику.
@@ -79,7 +85,12 @@ func (s Subscription) Remaining() int64 {
 }
 
 // FetchSubscription забирает список нод у панели.
-func FetchSubscription(ctx context.Context, subURL string) (Subscription, error) {
+//
+// pinned — адреса панели из ссылки доступа. Когда они заданы, имя домена у
+// резолвера не спрашивается вовсе: соединение идёт прямо по адресу, а имя
+// уходит в SNI и по нему проверяется сертификат. Пусто — обычный путь через
+// системный резолвер.
+func FetchSubscription(ctx context.Context, subURL string, pinned []netip.Addr) (Subscription, error) {
 	ctx, cancel := context.WithTimeout(ctx, subscriptionTimeout)
 	defer cancel()
 
@@ -88,7 +99,7 @@ func FetchSubscription(ctx context.Context, subURL string) (Subscription, error)
 		return Subscription{}, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := subscriptionClient(pinned).Do(req)
 	if err != nil {
 		return Subscription{}, fmt.Errorf("запрос подписки: %w", err)
 	}
@@ -106,4 +117,57 @@ func FetchSubscription(ctx context.Context, subURL string) (Subscription, error)
 		return Subscription{}, errors.New("в подписке нет ни одной ноды")
 	}
 	return sub, nil
+}
+
+// subscriptionClient собирает клиента, который ходит по заданным адресам.
+//
+// Подменяется только адрес соединения. Имя из ссылки остаётся в запросе, и
+// стандартный транспорт сам подставляет его в SNI и в проверку сертификата —
+// поэтому подменить панель, зная лишь адрес, всё равно не выйдет.
+func subscriptionClient(pinned []netip.Addr) *http.Client {
+	if len(pinned) == 0 {
+		return http.DefaultClient
+	}
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	// Прокси из настроек системы отключаем намеренно. Он разрешил бы имя сам
+	// и увидел бы его — то есть подсказка перестала бы что-либо значить.
+	// Продавец, вписавший адреса в ссылку, рассчитывает на прямое соединение.
+	transport.Proxy = nil
+
+	transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		_, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, err
+		}
+
+		// Срок на каждую попытку отдельно. Без него первый же неотвечающий
+		// адрес съедал бы весь срок запроса, и до живого мы бы не дошли — а у
+		// панели за CDN мёртвый адрес в списке дело обычное.
+		dialer := net.Dialer{Timeout: pinnedDialTimeout}
+
+		for _, ip := range pinned {
+			conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+			if err == nil {
+				return conn, nil
+			}
+		}
+
+		// Все подсказанные адреса молчат — спрашиваем имя как обычно.
+		//
+		// Подсказку вписывают один раз и живёт она годами, а адреса панели за
+		// это время меняются: продавец переехал, CDN сменил диапазон. Упереться
+		// в устаревшую подсказку и оставить покупателя без списка нод — хуже,
+		// чем один запрос имени в редком случае. Ради этого запроса всё и
+		// затевалось, но затевалось ради обычного дня, а не ради поломки.
+		var plain net.Dialer
+		conn, err := plain.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, fmt.Errorf("адреса панели из ссылки не отвечают, и по имени тоже не вышло: %w", err)
+		}
+		return conn, nil
+	}
+
+	return &http.Client{Transport: transport}
 }

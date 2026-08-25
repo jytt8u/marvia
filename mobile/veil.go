@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -30,6 +31,12 @@ import (
 // весь список посещённых сайтов, даже когда сам трафик он расшифровать не
 // может.
 const DefaultDNS = "1.1.1.1:53"
+
+// CacheName — имя файла с кэшем подписки внутри каталога приложения.
+//
+// Наружу вынесено не ради красоты: приложению это имя нужно, чтобы стереть
+// кэш вместе со ссылкой доступа, когда человек удаляет ключ.
+const CacheName = "subscription.json"
 
 // Виды неудач.
 //
@@ -83,7 +90,12 @@ type Tunnel struct {
 // accountLink — ссылка, которую покупатель получил от бота.
 // tunFD — дескриптор от VpnService.
 // dns — адрес для запросов имён; пусто означает значение по умолчанию.
-func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
+// cacheDir — каталог приложения под кэш подписки; пусто означает работу без
+// кэша, как было раньше.
+//
+// Каталог передаёт приложение, а не выясняет ядро: на Android путь к своим
+// файлам знает только Context, и достать его из Go неоткуда.
+func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel, error) {
 	if tunFD <= 0 {
 		return nil, fail(FailSystem, errors.New("не передан дескриптор сетевого интерфейса"))
 	}
@@ -101,7 +113,7 @@ func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
 		dns = DefaultDNS
 	}
 
-	dialer, err := connect(accountLink)
+	dialer, err := connect(accountLink, cacheDir)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +142,7 @@ func Start(accountLink string, tunFD int, dns string) (*Tunnel, error) {
 // Вынесено отдельно не ради красоты: так эту часть можно проверить тестом, не
 // выдумывая дескриптор интерфейса. Выдуманный дескриптор в тесте — это номер,
 // который на Linux принадлежит чему-то настоящему.
-func connect(accountLink string) (*client.Dialer, error) {
+func connect(accountLink, cacheDir string) (*client.Dialer, error) {
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
 		return nil, fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))
@@ -141,15 +153,18 @@ func connect(accountLink string) (*client.Dialer, error) {
 		return nil, fail(FailAccount, fmt.Errorf("личный ключ: %w", err))
 	}
 
-	sub, err := client.FetchSubscription(context.Background(), account.SubscriptionURL)
-	if err != nil {
-		return nil, fail(FailPanel, fmt.Errorf("список нод: %w", err))
-	}
-
 	// Ноду выбираем замерами с самого устройства, а не берём первую из
 	// списка: панель стоит за границей и видит ноду живой ровно тогда, когда
 	// для телефона в Иркутске она уже мертва.
-	dialer, measurements, err := client.SelectBest(context.Background(), sub.Nodes, key, client.Options{})
+	//
+	// Список нод при этом по возможности берём из кэша: каждый поход в панель
+	// — это запрос имени её домена, а он с недавних пор уходит провайдеру
+	// открытым текстом. Подробности в internal/client/cache.go.
+	dialer, measurements, err := client.Connect(context.Background(), client.ConnectConfig{
+		Account:   account,
+		Key:       key,
+		CachePath: cachePath(cacheDir),
+	})
 
 	// Отчёт уходит в любом случае, в том числе когда не подключилось ни к
 	// одной ноде: продавцу важнее всего узнать именно про такой случай.
@@ -162,9 +177,25 @@ func connect(accountLink string) (*client.Dialer, error) {
 	}()
 
 	if err != nil {
+		// Вид неудачи человека ведёт в разные стороны: до панели не
+		// достучались — проверь интернет, ноды молчат — пиши продавцу.
+		if errors.Is(err, client.ErrPanel) {
+			// Без «список нод:» сверху: ошибка и так начинается с «панель
+			// недоступна», а три слоя пояснений подряд читать невозможно.
+			return nil, fail(FailPanel, err)
+		}
 		return nil, fail(FailNodes, err)
 	}
 	return dialer, nil
+}
+
+// cachePath — где лежит кэш подписки. Пустой каталог означает работу без кэша.
+func cachePath(dir string) string {
+	dir = strings.TrimSpace(dir)
+	if dir == "" {
+		return ""
+	}
+	return filepath.Join(dir, CacheName)
 }
 
 // note запоминает последнюю ошибку, чтобы приложение могло её показать.

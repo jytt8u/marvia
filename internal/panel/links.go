@@ -145,17 +145,30 @@ func StockLinks(nodes []Node, creds []Credential, label string) []string {
 //
 // В ссылке личный ключ и адрес подписки: клиент импортирует её один раз, а
 // список нод потом обновляет сам. Ноды меняются часто, ключ — почти никогда.
-func AccountLink(base, privateKey, subToken, label string) string {
+// ips — адреса самой панели. Когда они заданы, клиент идёт прямо по ним и не
+// спрашивает имя домена подписки у резолвера провайдера. После блокировки DoH
+// в августе 2026 такой запрос виден провайдеру открытым текстом, а домен, к
+// которому ходят все покупатели одного продавца, на этом и попадается.
+//
+// Имя при этом остаётся в ссылке и проверяется в сертификате: подсказка
+// говорит, куда идти, а не кому верить.
+func AccountLink(base, privateKey, subToken, label string, ips []string) string {
 	host := strings.TrimPrefix(strings.TrimPrefix(strings.TrimRight(base, "/"), "https://"), "http://")
 	if host == "" {
 		host = "ПОДСТАВЬ-АДРЕС-ПАНЕЛИ"
 	}
 
-	return (&url.URL{
+	link := &url.URL{
 		Scheme:   "veil-account",
 		User:     url.User(privateKey),
 		Host:     host,
 		Path:     "/sub/" + subToken,
 		Fragment: label,
-	}).String()
+	}
+
+	if len(ips) > 0 {
+		link.RawQuery = "ip=" + strings.Join(ips, ",")
+	}
+
+	return link.String()
 }

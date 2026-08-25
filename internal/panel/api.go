@@ -26,6 +26,10 @@ type API struct {
 	adminToken string
 	subBase    string // базовый адрес подписок, например https://sub.example.com
 	distDir    string // где лежат бинарники для раздачи новым нодам
+
+	// panelIPs вписываются в ссылку доступа, чтобы клиент не спрашивал имя
+	// домена подписки у резолвера провайдера. Подробности — в links.go.
+	panelIPs []string
 }
 
 // NewAPI собирает обработчики панели.
@@ -191,7 +195,7 @@ func (a *API) links(ctx context.Context, user User, issued []Issued) map[string]
 	for _, i := range issued {
 		switch i.Kind {
 		case CredVP1:
-			out["account"] = AccountLink(a.subBase, i.Secret, user.SubToken, user.Label)
+			out["account"] = AccountLink(a.subBase, i.Secret, user.SubToken, user.Label, a.panelIPs)
 		default:
 			stock = append(stock, Credential{Kind: i.Kind, Secret: i.Secret})
 		}
@@ -690,4 +694,13 @@ func ParseDuration(s string) (time.Duration, error) {
 		return 0, fmt.Errorf("не понял срок %q: нужно 30d, 12h или 90m", s)
 	}
 	return d, nil
+}
+
+// WithPanelIPs вписывает адреса панели в выдаваемые ссылки доступа.
+//
+// Отдельным вызовом, а не ещё одним доводом конструктора: адреса не нужны для
+// работы панели и появляются позже остального — их выясняет команда запуска.
+func (a *API) WithPanelIPs(ips []string) *API {
+	a.panelIPs = ips
+	return a
 }

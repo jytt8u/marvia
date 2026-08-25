@@ -172,14 +172,15 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 		return fmt.Errorf("личный ключ: %w", err)
 	}
 
-	c.log.add("забираю список нод")
-	sub, err := client.FetchSubscription(ctx, account.SubscriptionURL)
-	if err != nil {
-		return fmt.Errorf("список нод: %w", err)
-	}
-
-	c.log.add("замеряю ноды, их %d", len(sub.Nodes))
-	dialer, measurements, err := client.SelectBest(ctx, sub.Nodes, key, client.Options{})
+	// Список нод по возможности берём из кэша: каждый поход в панель — это
+	// запрос имени её домена, а он с недавних пор уходит провайдеру открытым
+	// текстом. Подробности в internal/client/cache.go.
+	dialer, measurements, err := client.Connect(ctx, client.ConnectConfig{
+		Account:   account,
+		Key:       key,
+		CachePath: cachePath(),
+		Log:       c.log.add,
+	})
 
 	go func() {
 		_ = client.SendReports(context.Background(), account.SubscriptionURL, client.ReportsFrom(measurements))
@@ -333,13 +334,34 @@ func latencyOf(measurements []client.Measurement, node client.Node) time.Duratio
 	return 0
 }
 
-// accountPath — где лежит сохранённая ссылка доступа.
-func accountPath() (string, error) {
+// settingsDir — каталог настроек: %APPDATA%\Veil.
+func settingsDir() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "Veil", "account"), nil
+	return filepath.Join(dir, "Veil"), nil
+}
+
+// accountPath — где лежит сохранённая ссылка доступа.
+func accountPath() (string, error) {
+	dir, err := settingsDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "account"), nil
+}
+
+// cachePath — кэш подписки, рядом со ссылкой доступа.
+//
+// Пустая строка означает, что каталога настроек нет: тогда подключаемся без
+// кэша, как раньше, — это медленнее и заметнее, но работает.
+func cachePath() string {
+	dir, err := settingsDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "subscription.json")
 }
 
 func readAccount() string {

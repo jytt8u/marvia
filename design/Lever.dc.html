@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #ffb347; } a:hover { color: #ffc978; }
+  </style>
+</helmet>
+
+<div style="width: 900px; height: 580px; background: #08090c; color: #e6e4de; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+
+  <div style="position: absolute; inset: 0; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 4px); pointer-events: none;"></div>
+
+  <div style="position: relative; display: flex; align-items: center; gap: 13px; padding: 16px 26px; border-bottom: 1px solid rgba(255,255,255,.07);">
+    <svg viewBox="0 0 24 24" fill="none" style="width: 19px; height: 19px;"><path d="M12 2 20 5.2V11.5C20 16.6 16.6 20.9 12 22.2 7.4 20.9 4 16.6 4 11.5V5.2Z" fill="#ffb347"></path><path d="M8.3 9.4 12 16.6 15.7 9.4" stroke="#08090c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600; letter-spacing: .3em; font-size: 11px; color: #8e897c;">VEIL</span>
+    <div style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #5f5b52; letter-spacing: .06em;">СЕАНС 02:14:08</div>
+  </div>
+
+  <div style="position: relative; flex: 1; display: flex; min-height: 0;">
+
+    <div style="width: 250px; flex: 0 0 250px; border-right: 1px solid rgba(255,255,255,.07); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: rgba(255,255,255,.012);">
+
+      <svg viewBox="0 0 120 190" style="width: 118px; height: 186px;">
+        <rect x="24" y="8" width="72" height="174" rx="10" fill="#0e1014" stroke="rgba(255,255,255,.09)"></rect>
+        <rect x="34" y="18" width="52" height="154" rx="6" fill="#0a0b0e"></rect>
+
+        <circle cx="60" cy="42" r="6" fill="#1c9c62"></circle>
+        <circle cx="60" cy="42" r="12" fill="none" stroke="rgba(28,156,98,.3)" stroke-width="2"></circle>
+        <circle cx="60" cy="148" r="6" fill="#2a2c33"></circle>
+
+        <line x1="60" y1="42" x2="60" y2="96" stroke="#c9c4b6" stroke-width="9" stroke-linecap="round"></line>
+        <circle cx="60" cy="100" r="15" fill="#e8e3d6" stroke="#a8a294" stroke-width="1.5"></circle>
+        <circle cx="60" cy="100" r="6" fill="#8e897c"></circle>
+
+        <text x="60" y="176" font-family="IBM Plex Mono, monospace" font-size="9" fill="#1c9c62" text-anchor="middle" letter-spacing="1.5">ВКЛ</text>
+      </svg>
+
+      <div style="text-align: center;">
+        <div style="font-size: 19px; font-weight: 600; letter-spacing: -.01em;">Включено</div>
+        <div style="font-size: 12px; color: #6f6a60; margin-top: 4px;">дёрни вниз, чтобы выключить</div>
+      </div>
+    </div>
+
+    <div style="flex: 1; padding: 26px 30px; display: flex; flex-direction: column; min-width: 0;">
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.07);">
+        <div style="background: #0b0c10; padding: 14px 16px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; color: #5f5b52;">ПРИЁМ</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 25px; margin-top: 6px; color: #6ee7b7;">3.2</div>
+        </div>
+        <div style="background: #0b0c10; padding: 14px 16px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; color: #5f5b52;">ОТДАЧА</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 25px; margin-top: 6px; color: #ffb347;">0.18</div>
+        </div>
+        <div style="background: #0b0c10; padding: 14px 16px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; color: #5f5b52;">ЗАДЕРЖКА</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 25px; margin-top: 6px;">112</div>
+        </div>
+      </div>
+
+      <svg viewBox="0 0 560 130" preserveAspectRatio="none" style="width: 100%; height: 130px; margin-top: 20px;">
+        <line x1="0" y1="32" x2="560" y2="32" stroke="rgba(255,255,255,.05)"></line>
+        <line x1="0" y1="65" x2="560" y2="65" stroke="rgba(255,255,255,.05)"></line>
+        <line x1="0" y1="98" x2="560" y2="98" stroke="rgba(255,255,255,.05)"></line>
+        <path d="M0 104 L40 92 L80 98 L120 60 L160 70 L200 34 L240 52 L280 20 L320 44 L360 30 L400 66 L440 48 L480 82 L520 62 L560 74" fill="none" stroke="#6ee7b7" stroke-width="1.8" stroke-linejoin="round"></path>
+        <path d="M0 120 L40 116 L80 118 L120 110 L160 113 L200 104 L240 110 L280 100 L320 108 L360 103 L400 112 L440 107 L480 116 L520 110 L560 114" fill="none" stroke="#ffb347" stroke-width="1.8" stroke-linejoin="round"></path>
+      </svg>
+
+      <div style="flex: 1;"></div>
+
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #6f6a60; line-height: 2;">
+        <div><span style="color: #4f4b44;">нода&#160;&#160;&#160;&#160;&#160;&#160;</span> ae-1 · Фуджейра, ОАЭ</div>
+        <div><span style="color: #4f4b44;">адрес&#160;&#160;&#160;&#160;&#160;</span> 77.74.201.167:443</div>
+        <div><span style="color: #4f4b44;">прикрытие&#160;</span> www.samsung.com</div>
+        <div><span style="color: #4f4b44;">подписка&#160;&#160;</span> 8.6 ГБ из 10 ГБ, до 24 сентября</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
