@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -44,7 +45,8 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode == RESULT_OK) {
             launchService()
         } else {
-            VeilState.set(TunnelState.Failed(getString(R.string.consent_denied)))
+            // Вид пустой: фразу мы уже написали сами, переводить нечего.
+            VeilState.set(TunnelState.Failed("", getString(R.string.consent_denied)))
         }
     }
 
@@ -97,6 +99,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun render(state: TunnelState) {
         val hasKey = store.accountLink.isNotBlank()
+        ui.techText.isVisible = false
 
         when (state) {
             TunnelState.Off -> {
@@ -131,11 +134,38 @@ class MainActivity : AppCompatActivity() {
             is TunnelState.Failed -> {
                 ui.statusText.setText(R.string.status_failed)
                 ui.statusText.setTextColor(ContextCompat.getColor(this, R.color.veil_fail))
-                ui.detailText.text = state.reason
                 ui.connectButton.setText(R.string.action_connect)
                 ui.connectButton.isEnabled = true
+
+                val human = humanReasonFor(state.kind)
+                if (human == null) {
+                    // Вида нет — значит фраза уже человеческая, показываем её.
+                    ui.detailText.text = state.detail
+                } else {
+                    ui.detailText.setText(human)
+                    ui.techText.text = state.detail
+                    ui.techText.isVisible = state.detail.isNotBlank()
+                }
             }
         }
+    }
+
+    /**
+     * humanReasonFor подбирает фразу под вид неудачи, названный ядром.
+     *
+     * Ядро говорит точно: «dial tcp: lookup panel.example: no such host». Для
+     * разбора это незаменимо, для покупателя — пустой звук. Поэтому наверху
+     * стоит фраза с указанием, что делать, а точный текст остаётся ниже
+     * мелким: его покупатель и снимет вместе с экраном для продавца.
+     *
+     * null означает, что вида нет и подбирать нечего.
+     */
+    private fun humanReasonFor(kind: String): Int? = when (kind) {
+        Mobile.FailAccount -> R.string.fail_account
+        Mobile.FailPanel -> R.string.fail_panel
+        Mobile.FailNodes -> R.string.fail_nodes
+        Mobile.FailSystem -> R.string.fail_system
+        else -> null
     }
 
     private fun toggle() {
