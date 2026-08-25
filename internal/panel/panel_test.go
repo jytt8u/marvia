@@ -33,7 +33,7 @@ func newHarness(t *testing.T) *harness {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	api := panel.NewAPI(store, adminToken, "https://sub.example.com")
+	api := panel.NewAPI(store, adminToken, "https://sub.example.com", t.TempDir())
 	server := httptest.NewServer(api.Handler())
 	t.Cleanup(server.Close)
 
