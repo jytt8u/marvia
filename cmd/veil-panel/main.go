@@ -106,6 +106,11 @@ func run(opts options) error {
 	}
 	defer store.Close()
 
+	// Ключи идемпотентности нужны сутки, а копятся со скоростью продаж.
+	if err := store.ForgetStaleIdempotency(context.Background()); err != nil {
+		log.Printf("не вышло убрать старые ключи идемпотентности: %v", err)
+	}
+
 	api := panel.NewAPI(store, opts.adminToken, opts.subBase, opts.distDir).WithPanelIPs(panelAddresses(opts))
 	server := &http.Server{
 		Addr:              opts.listen,
