@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><style>@keyframes v7spin{to{transform:rotate(360deg)}}@keyframes v7draw{from{stroke-dashoffset:452}to{stroke-dashoffset:0}}@keyframes v7panel{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}</style></helmet>
+<div style="position:relative;width:980px;height:640px;display:flex;flex-direction:column;background:{{ bg }};border:1px solid rgba(255,255,255,.09);border-radius:8px;overflow:hidden;box-shadow:0 28px 64px rgba(0,0,0,.62);font-family:'Segoe UI Variable Text','Segoe UI Variable Display','Segoe UI','Noto Sans',sans-serif;color:rgba(255,255,255,.9);font-size:14px;line-height:1.45">
+  <div style="height:32px;flex:none;display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:8px;padding-left:12px">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 2.8 4.7 5v4.6c0 3.5 2.2 6.1 5.3 7.1 3.1-1 5.3-3.6 5.3-7.1V5z" stroke="{{ glow }}" stroke-width="1.5" stroke-linejoin="round"></path><path d="m7.5 10 1.9 1.9 3.3-3.6" stroke="{{ glow }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="font-size:12px;color:rgba(255,255,255,.72)">Marvia</span>
+    </div>
+    <div style="display:flex;align-items:stretch;height:32px">
+      <div style="width:46px;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(255,255,255,.06)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M0 5h10" stroke="rgba(255,255,255,.75)" stroke-width="1"></path></svg></div>
+      <div style="width:46px;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(255,255,255,.06)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x=".5" y=".5" width="9" height="9" stroke="rgba(255,255,255,.75)" stroke-width="1"></rect></svg></div>
+      <div style="width:46px;display:flex;align-items:center;justify-content:center" style-hover="background:#c42b1c"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M0 0l10 10M10 0L0 10" stroke="rgba(255,255,255,.75)" stroke-width="1"></path></svg></div>
+    </div>
+  </div>
+
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="width:64px;flex:none;border-right:1px solid rgba(255,255,255,.06);padding:4px 0 12px;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="position:relative;width:48px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:4px;background:{{ homeBg }}">
+        <div style="position:absolute;left:0;top:14px;width:3px;height:16px;border-radius:4px;background:{{ homeBar }}"></div>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.3 9.6 10 3.7l6.7 5.9v6.2a1 1 0 0 1-1 1h-3.3v-4.6H7.6v4.6H4.3a1 1 0 0 1-1-1z" stroke="rgba(255,255,255,.9)" stroke-width="1.5" stroke-linejoin="round"></path></svg>
+      </div>
+      <div style="width:48px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:4px" style-hover="background:rgba(255,255,255,.04)">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="13" r="3.2" stroke="rgba(255,255,255,.6)" stroke-width="1.5"></circle><path d="m9.4 10.6 7.3-7.3M13.9 6.1l1.9 1.9" stroke="rgba(255,255,255,.6)" stroke-width="1.5" stroke-linecap="round"></path></svg>
+      </div>
+      <div style="width:48px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:4px" style-hover="background:rgba(255,255,255,.04)">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5.6 3h6.1l3.3 3.3v10.4a.9.9 0 0 1-.9.9H5.6a.9.9 0 0 1-.9-.9V3.9a.9.9 0 0 1 .9-.9z" stroke="rgba(255,255,255,.6)" stroke-width="1.5" stroke-linejoin="round"></path><path d="M11.6 3v3.4H15M7.4 10.2h5.2M7.4 13.4h3.4" stroke="rgba(255,255,255,.6)" stroke-width="1.5" stroke-linecap="round"></path></svg>
+      </div>
+
+      <!-- Значок вида. Раскрывает панель слева от сцены, а не окно поверх:
+           цвет выбирают глядя на то, что он красит. -->
+      <div onClick="{{ toggleLook }}" style="position:relative;width:48px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:4px;margin-top:auto;background:{{ lookBg }}" style-hover="background:rgba(255,255,255,.04)">
+        <div style="position:absolute;left:0;top:14px;width:3px;height:16px;border-radius:4px;background:{{ lookBar }}"></div>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="{{ lookFg }}" stroke-width="1.5"></circle><path d="M10 3a7 7 0 0 1 0 14z" fill="{{ lookFg }}"></path></svg>
+      </div>
+    </div>
+
+    <sc-if value="{{ lookOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="width:244px;flex:none;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;min-height:0;animation:v7panel .2s cubic-bezier(.2,.8,.3,1) both">
+        <div style="flex:none;height:36px;padding:16px 12px 10px;display:flex;align-items:center">
+          <span style="font-size:13px;font-weight:600">Вид</span>
+          <div onClick="{{ toggleLook }}" style="margin-left:auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:4px" style-hover="background:rgba(255,255,255,.06)">
+            <svg width="11" height="11" viewBox="0 0 10 10" fill="none"><path d="M0 0l10 10M10 0L0 10" stroke="rgba(255,255,255,.55)" stroke-width="1.2"></path></svg>
+          </div>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;padding:8px 12px 16px;display:flex;flex-direction:column;gap:18px">
+
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <span style="font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.4)">ЦВЕТ ПРИЛОЖЕНИЯ</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ accents }}" as="sw" hint-placeholder-count="7">
+                <div onClick="{{ sw.pick }}" style="width:24px;height:24px;border-radius:4px;background:{{ sw.color }};box-shadow:{{ sw.mark }}"></div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <span style="font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.4)">ЦВЕТ КНОПКИ</span>
+              <span onClick="{{ matchGlow }}" style="margin-left:auto;font-size:11.5px;color:{{ matchFg }}">{{ matchLabel }}</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ glows }}" as="sw" hint-placeholder-count="7">
+                <div onClick="{{ sw.pick }}" style="width:24px;height:24px;border-radius:4px;background:{{ sw.color }};box-shadow:{{ sw.mark }}"></div>
+              </sc-for>
+            </div>
+            <span style="font-size:11.5px;color:rgba(255,255,255,.3);line-height:1.5">Кольцо, знак и надпись «Подключено» горят этим цветом. Остальное — цветом приложения.</span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <span style="font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.4)">ОСНОВА</span>
+            <div style="display:flex;gap:6px">
+              <sc-for list="{{ surfaces }}" as="su" hint-placeholder-count="4">
+                <div onClick="{{ su.pick }}" style="flex:1;height:34px;border-radius:4px;background:{{ su.color }};box-shadow:{{ su.mark }};display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px">
+                  <span style="font-size:10px;color:rgba(255,255,255,.45)">{{ su.name }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <span style="font-size:11.5px;color:rgba(255,255,255,.28);line-height:1.5">Вид ни на что не влияет, кроме вида. Туннель, ноды и учёт трафика от него не зависят.</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;padding:0 40px 24px">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px">
+        <div onClick="{{ tap }}" style="position:relative;width:164px;height:164px;cursor:default;user-select:none">
+          <svg width="164" height="164" viewBox="0 0 164 164" fill="none" style="position:absolute;inset:0"><circle cx="82" cy="82" r="72" stroke="rgba(255,255,255,.11)" stroke-width="1.5"></circle></svg>
+          <sc-if value="{{ isConnecting }}" hint-placeholder-val="{{ false }}">
+            <svg width="164" height="164" viewBox="0 0 164 164" fill="none" style="position:absolute;inset:0;animation:v7spin 1.4s linear infinite"><circle cx="82" cy="82" r="72" stroke="{{ glow }}" stroke-width="1.5" stroke-dasharray="78 374" stroke-linecap="round"></circle></svg>
+          </sc-if>
+          <sc-if value="{{ isOn }}" hint-placeholder-val="{{ true }}">
+            <svg width="164" height="164" viewBox="0 0 164 164" fill="none" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="82" cy="82" r="72" stroke="{{ glow }}" stroke-width="1.5" stroke-dasharray="452" style="animation:v7draw .7s cubic-bezier(.2,.8,.3,1) both"></circle></svg>
+          </sc-if>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+            <svg width="46" height="46" viewBox="0 0 20 20" fill="none"><path d="M10 3.2v6.2" stroke="{{ markColor }}" stroke-width="1.3" stroke-linecap="round"></path><path d="M14.1 5.6a5.4 5.4 0 1 1-8.2 0" stroke="{{ markColor }}" stroke-width="1.3" stroke-linecap="round"></path></svg>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+          <div style="font-size:24px;font-weight:600;letter-spacing:-.01em;line-height:1.15;color:{{ headColor }}">{{ headline }}</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.5);text-align:center">{{ sub }}</div>
+        </div>
+
+        <sc-if value="{{ isStrip }}" hint-placeholder-val="{{ false }}">
+          <div style="width:100%;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <span style="font-size:12px;letter-spacing:.06em;color:rgba(255,255,255,.42)">ЧАСТО ИСПОЛЬЗУЕШЬ</span>
+              <span style="font-size:12px;color:{{ a }}">Все серверы (37)</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ favs }}" as="row" hint-placeholder-count="5">
+                <div onClick="{{ row.pick }}" style="display:flex;align-items:center;gap:9px;height:44px;padding:0 14px 0 12px;border-radius:4px;border:1px solid {{ row.chipBorder }};background:{{ row.chipBg }}" style-hover="background:rgba(255,255,255,.06)">
+                  <sc-if value="{{ row.isAuto }}" hint-placeholder-val="{{ false }}"><div style="width:24px;height:16px;border-radius:2px;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:none"><svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M11.4 2.6 5.6 11h3.6l-.8 6.4L14.4 9h-3.6z" stroke="{{ a }}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"></path></svg></div></sc-if><sc-if value="{{ row.notAuto }}" hint-placeholder-val="{{ true }}"><img src="{{ row.flag }}" alt="" style="width:24px;height:16px;border-radius:2px;border:1px solid rgba(255,255,255,.18);object-fit:cover;flex:none" /></sc-if>
+                  <span style="font-size:13px">{{ row.name }}</span>
+                  <span style="font-size:12px;font-variant-numeric:tabular-nums;color:{{ row.pingFg }}">{{ row.ping }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isSheet }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ openSheet }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 16px;border-radius:4px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);cursor:default;user-select:none" style-hover="background:rgba(255,255,255,.07)">
+            <sc-if value="{{ sel.isAuto }}" hint-placeholder-val="{{ false }}"><div style="width:26px;height:17px;border-radius:2px;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:none"><svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M11.4 2.6 5.6 11h3.6l-.8 6.4L14.4 9h-3.6z" stroke="{{ a }}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"></path></svg></div></sc-if><sc-if value="{{ sel.notAuto }}" hint-placeholder-val="{{ true }}"><img src="{{ sel.flag }}" alt="" style="width:26px;height:17px;border-radius:2px;border:1px solid rgba(255,255,255,.18);object-fit:cover;flex:none" /></sc-if>
+            <span style="font-size:13px">{{ sel.name }} · {{ sel.node }}</span>
+            <span style="width:1px;height:18px;background:rgba(255,255,255,.12)"></span>
+            <span style="font-size:13px;color:{{ a }}">Сменить сервер</span>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:14px;display:flex;justify-content:space-between;gap:24px;font-size:13px">
+        <span style="color:rgba(255,255,255,.5)">{{ footLeftLabel }}</span>
+        <span style="font-variant-numeric:tabular-nums">{{ footLeft }}</span>
+        <span style="flex:1"></span>
+        <span style="color:rgba(255,255,255,.5)">Подписка</span>
+        <span style="font-variant-numeric:tabular-nums">8.6 ГБ из 10 ГБ</span>
+      </div>
+    </div>
+
+    <sc-if value="{{ showList }}" hint-placeholder-val="{{ true }}">
+      <div style="width:296px;flex:none;border-left:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;min-height:0">
+        <div style="padding:16px 14px 10px;display:flex;align-items:center;gap:8px;height:36px">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.6" stroke="rgba(255,255,255,.45)" stroke-width="1.5"></circle><path d="m13.4 13.4 3.1 3.1" stroke="rgba(255,255,255,.45)" stroke-width="1.5" stroke-linecap="round"></path></svg>
+          <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Поиск сервера" style="flex:1;background:transparent;border:0;outline:0;color:rgba(255,255,255,.9);font:400 13px 'Segoe UI Variable Text','Segoe UI',sans-serif" />
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:6px 8px 14px">
+          <sc-for list="{{ list }}" as="row" hint-placeholder-count="8">
+            <div onClick="{{ row.pick }}" style="position:relative;display:flex;align-items:center;gap:11px;height:46px;padding:0 10px;border-radius:4px;background:{{ row.bg }}" style-hover="background:rgba(255,255,255,.06)">
+              <div style="position:absolute;left:0;top:13px;width:3px;height:20px;border-radius:4px;background:{{ row.bar }}"></div>
+              <sc-if value="{{ row.isAuto }}" hint-placeholder-val="{{ false }}"><div style="width:26px;height:17px;border-radius:2px;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:none"><svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M11.4 2.6 5.6 11h3.6l-.8 6.4L14.4 9h-3.6z" stroke="{{ a }}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"></path></svg></div></sc-if><sc-if value="{{ row.notAuto }}" hint-placeholder-val="{{ true }}"><img src="{{ row.flag }}" alt="" style="width:26px;height:17px;border-radius:2px;border:1px solid rgba(255,255,255,.18);object-fit:cover;flex:none" /></sc-if>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+                <span style="font-size:13px">{{ row.name }}</span>
+                <span style="font-size:11px;color:rgba(255,255,255,.4)">{{ row.node }}</span>
+              </div>
+              <span style="font-size:12px;font-variant-numeric:tabular-nums;color:{{ row.pingFg }}">{{ row.ping }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:64px;right:0;top:32px;bottom:0;background:{{ sheetBg }};display:flex;flex-direction:column;padding:22px 28px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:18px;font-weight:600">Выбор сервера</span>
+        <div onClick="{{ closeSheet }}" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:4px" style-hover="background:rgba(255,255,255,.06)">
+          <svg width="14" height="14" viewBox="0 0 10 10" fill="none"><path d="M0 0l10 10M10 0L0 10" stroke="rgba(255,255,255,.7)" stroke-width="1.2"></path></svg>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:9px;height:36px;padding:0 12px;border:1px solid rgba(255,255,255,.12);border-radius:4px;background:rgba(255,255,255,.04)">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.6" stroke="rgba(255,255,255,.45)" stroke-width="1.5"></circle><path d="m13.4 13.4 3.1 3.1" stroke="rgba(255,255,255,.45)" stroke-width="1.5" stroke-linecap="round"></path></svg>
+        <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Страна, город или нода" style="flex:1;background:transparent;border:0;outline:0;color:rgba(255,255,255,.9);font:400 13px 'Segoe UI Variable Text','Segoe UI',sans-serif" />
+      </div>
+      <div style="margin-top:14px;flex:1;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;align-content:start">
+        <sc-for list="{{ list }}" as="row" hint-placeholder-count="9">
+          <div onClick="{{ row.pickClose }}" style="position:relative;display:flex;align-items:center;gap:11px;height:48px;padding:0 12px;border-radius:4px;background:{{ row.bg }}" style-hover="background:rgba(255,255,255,.06)">
+            <div style="position:absolute;left:0;top:14px;width:3px;height:20px;border-radius:4px;background:{{ row.bar }}"></div>
+            <sc-if value="{{ row.isAuto }}" hint-placeholder-val="{{ false }}"><div style="width:28px;height:18px;border-radius:2px;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:none"><svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M11.4 2.6 5.6 11h3.6l-.8 6.4L14.4 9h-3.6z" stroke="{{ a }}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"></path></svg></div></sc-if><sc-if value="{{ row.notAuto }}" hint-placeholder-val="{{ true }}"><img src="{{ row.flag }}" alt="" style="width:28px;height:18px;border-radius:2px;border:1px solid rgba(255,255,255,.18);object-fit:cover;flex:none" /></sc-if>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+              <span style="font-size:13px">{{ row.name }}</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.4)">{{ row.node }} · {{ row.addr }}</span>
+            </div>
+            <span style="font-size:12px;font-variant-numeric:tabular-nums;color:{{ row.pingFg }}">{{ row.ping }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;980&quot;,&quot;height&quot;:&quot;640&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;rail&quot;,&quot;strip&quot;,&quot;sheet&quot;],&quot;default&quot;:&quot;rail&quot;,&quot;tsType&quot;:&quot;'rail' | 'strip' | 'sheet'&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;off&quot;,&quot;connecting&quot;,&quot;on&quot;,&quot;error&quot;],&quot;default&quot;:&quot;on&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;look&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#7C9CFF&quot;,&quot;options&quot;:[&quot;#7C9CFF&quot;,&quot;#5BD69A&quot;,&quot;#9B8CFF&quot;,&quot;#FFFFFF&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;glow&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#5BD69A&quot;,&quot;options&quot;:[&quot;#5BD69A&quot;,&quot;#7C9CFF&quot;,&quot;#F0B429&quot;,&quot;#FFFFFF&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;surface&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#16181A&quot;,&quot;options&quot;:[&quot;#16181A&quot;,&quot;#141720&quot;,&quot;#0D0D0D&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+const SRV = [
+  { id: 'auto', code: 'АВТО', name: 'Самая быстрая', node: 'выберу сам', addr: '—', ping: 0, fav: true },
+  { id: 'ae1', code: 'ОАЭ', name: 'Фуджейра', node: 'ae-1', addr: '77.74.201.167:443', ping: 112, fav: true },
+  { id: 'nl3', code: 'NL', name: 'Амстердам', node: 'nl-3', addr: '45.83.91.12:443', ping: 64, fav: true },
+  { id: 'de2', code: 'DE', name: 'Франкфурт', node: 'de-2', addr: '193.32.248.7:443', ping: 58, fav: true },
+  { id: 'fi1', code: 'FI', name: 'Хельсинки', node: 'fi-1', addr: '95.216.14.99:443', ping: 41, fav: true },
+  { id: 'se2', code: 'SE', name: 'Стокгольм', node: 'se-2', addr: '141.98.252.6:443', ping: 47, fav: false },
+  { id: 'tr1', code: 'TR', name: 'Истанбул', node: 'tr-1', addr: '185.125.9.31:443', ping: 138, fav: false },
+  { id: 'jp1', code: 'JP', name: 'Токио', node: 'jp-1', addr: '203.104.209.7:443', ping: 226, fav: false },
+  { id: 'us4', code: 'US', name: 'Эшбёрн', node: 'us-4', addr: '52.44.117.203:443', ping: 174, fav: false }
+];
+
+const FLAGS = {
+  auto: 'flags/xx.svg', ae1: 'flags/ae.svg', nl3: 'flags/nl.svg', de2: 'flags/de.svg', fi1: 'flags/fi.svg',
+  se2: 'flags/se.svg', tr1: 'flags/tr.svg', jp1: 'flags/jp.svg', us4: 'flags/us.svg'
+};
+
+const SWATCHES = ['#7C9CFF', '#5BD69A', '#9B8CFF', '#56CCF2', '#F0B429', '#FF8A5B', '#FFFFFF'];
+const SURFACES = [['#16181A', 'уголь'], ['#141720', 'ночь'], ['#0D0D0D', 'смоль'], ['#191517', 'сепия']];
+
+class Component extends DCLogic {
+  state = { st: null, secs: 8048, sel: 'ae1', query: '', sheet: false, accent: null, glow: null, surface: null, look: null };
+  get st() { return this.state.st ?? this.props.state ?? 'on'; }
+  get look() { return this.state.look ?? this.props.look ?? true; }
+  componentDidMount() { this.tick = setInterval(() => { if (this.st === 'on') this.setState(s => ({ secs: s.secs + 1 })); }, 1000); }
+  componentWillUnmount() { clearInterval(this.tick); clearTimeout(this.t); }
+  tap = () => {
+    if (this.st === 'connecting') return;
+    if (this.st === 'on') { this.setState({ st: 'off' }); return; }
+    this.setState({ st: 'connecting' });
+    clearTimeout(this.t);
+    this.t = setTimeout(() => this.setState({ st: 'on', secs: 8048 }), 1600);
+  };
+  pick = (id, close) => {
+    this.setState({ sel: id, query: '', sheet: close ? false : this.state.sheet });
+    if (this.st === 'on') {
+      this.setState({ st: 'connecting' });
+      clearTimeout(this.t);
+      this.t = setTimeout(() => this.setState({ st: 'on', secs: 0 }), 1200);
+    }
+  };
+  pingFg(p) { return p === 0 ? 'rgba(255,255,255,.5)' : (p < 80 ? '#34D399' : (p < 150 ? '#F0B429' : '#FB7185')); }
+  renderVals() {
+    const s = this.state, st = this.st;
+
+    // Три цвета, и каждый живёт отдельно. Цвет приложения красит рельс,
+    // ссылки и выбранную строку; цвет кнопки — только кольцо, знак и надпись
+    // о подключении; основа — фон. Раньше кольцо красилось цветом выбранного
+    // сервера, и окно становилось оранжевым при синем акценте.
+    const a = s.accent ?? this.props.accent ?? '#7C9CFF';
+    const glow = s.glow ?? this.props.glow ?? '#5BD69A';
+    const surface = s.surface ?? this.props.surface ?? '#16181A';
+    const same = glow.toUpperCase() === a.toUpperCase();
+
+    const v = this.props.variant ?? 'rail';
+    const look = this.look;
+    const q = s.query.trim().toLowerCase();
+    const raw = SRV.find(x => x.id === s.sel) || SRV[1];
+    const fmt = (x) => ({ ...x, flag: FLAGS[x.id], isAuto: x.id === 'auto', notAuto: x.id !== 'auto', ping: x.ping === 0 ? 'авто' : x.ping + ' мс', pingFg: this.pingFg(x.ping) });
+    const deco = (x) => ({
+      ...fmt(x),
+      bg: x.id === s.sel ? 'rgba(255,255,255,.07)' : 'transparent',
+      bar: x.id === s.sel ? a : 'transparent',
+      chipBg: x.id === s.sel ? 'rgba(255,255,255,.08)' : 'transparent',
+      chipBorder: x.id === s.sel ? a : 'rgba(255,255,255,.12)',
+      pick: () => this.pick(x.id, false),
+      pickClose: () => this.pick(x.id, true)
+    });
+    const two = (n) => String(n).padStart(2, '0');
+    const heads = {
+      off: ['Отключено', 'Трафик идёт напрямую, без прикрытия'],
+      connecting: ['Подключаюсь', 'Проверяю ' + raw.node + ', ' + raw.name],
+      on: ['Подключено', raw.node + ' · прикрытие www.samsung.com'],
+      error: ['Не подключилось', 'Соединение с ' + raw.node + ' не установлено']
+    };
+    const chosen = (c, cur) => c.toUpperCase() === cur.toUpperCase()
+      ? '0 0 0 2px ' + surface + ', 0 0 0 4px rgba(255,255,255,.85)'
+      : '0 0 0 1px rgba(255,255,255,.12)';
+    const tint = 'linear-gradient(158deg, color-mix(in srgb, ' + a + ' 5%, transparent), transparent 55%), ' + surface;
+
+    return {
+      a, glow,
+      bg: tint, sheetBg: tint,
+
+      isRail: v === 'rail', isStrip: v === 'strip', isSheet: v === 'sheet',
+
+      // Список серверов уступает место панели вида. Втиснуть обе колонки
+      // разом можно, но сцене осталось бы триста пикселей, и кнопка с
+      // надписью встали бы враспор.
+      showList: v === 'rail' && !look,
+      lookOpen: look,
+      toggleLook: () => this.setState({ look: !look }),
+      lookBg: look ? 'rgba(255,255,255,.06)' : 'transparent',
+      lookBar: look ? a : 'transparent',
+      lookFg: look ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.6)',
+      homeBg: look ? 'transparent' : 'rgba(255,255,255,.06)',
+      homeBar: look ? 'transparent' : a,
+
+      isOn: st === 'on', isConnecting: st === 'connecting',
+      headline: heads[st][0], sub: heads[st][1],
+      headColor: st === 'on' ? glow : 'rgba(255,255,255,.89)',
+      markColor: st === 'off' ? 'rgba(255,255,255,.55)' : glow,
+      sel: fmt(raw),
+      list: SRV.filter(x => !q || (x.name + ' ' + x.node + ' ' + x.code).toLowerCase().includes(q)).map(deco),
+      favs: SRV.filter(x => x.fav).map(deco),
+      query: s.query, onQuery: (e) => this.setState({ query: e.target.value }),
+
+      accents: SWATCHES.map(c => ({ color: c, mark: chosen(c, a), pick: () => this.setState({ accent: c }) })),
+      glows: SWATCHES.map(c => ({ color: c, mark: chosen(c, glow), pick: () => this.setState({ glow: c }) })),
+      surfaces: SURFACES.map(([c, name]) => ({ color: c, name, mark: chosen(c, surface), pick: () => this.setState({ surface: c }) })),
+
+      matchLabel: same ? 'совпадает' : 'как у приложения',
+      matchFg: same ? 'rgba(255,255,255,.3)' : a,
+      matchGlow: () => this.setState({ glow: a }),
+
+      sheetOpen: s.sheet, openSheet: () => this.setState({ sheet: true }), closeSheet: () => this.setState({ sheet: false }),
+      footLeftLabel: st === 'on' ? 'Сеанс' : 'Нода',
+      footLeft: st === 'on'
+        ? Math.floor(s.secs / 3600) + ':' + two(Math.floor(s.secs / 60) % 60) + ':' + two(s.secs % 60) + ' · 3.2 МБ/с · 184 КБ/с'
+        : raw.node + ', ' + raw.name,
+      tap: this.tap
+    };
+  }
+}
+</script>
+</body>
+</html>

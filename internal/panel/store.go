@@ -174,6 +174,13 @@ CREATE TABLE IF NOT EXISTS usage (
     updated_at TEXT    NOT NULL,
     PRIMARY KEY (user_id, node_id)
 );
+
+CREATE TABLE IF NOT EXISTS idempotency (
+    key        TEXT NOT NULL PRIMARY KEY,
+    scope      TEXT NOT NULL,
+    response   TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
 `
 
 // Open открывает или создаёт базу панели.
@@ -214,6 +221,7 @@ func migrate(db *sql.DB) error {
 		// этот столбец завести. Панель не поднялась бы вовсе, и не у меня, а у
 		// каждого продавца при обновлении.
 		`CREATE UNIQUE INDEX IF NOT EXISTS users_external ON users(external_id) WHERE external_id IS NOT NULL`,
+		`CREATE TABLE IF NOT EXISTS idempotency (key TEXT NOT NULL PRIMARY KEY, scope TEXT NOT NULL, response TEXT NOT NULL, created_at TEXT NOT NULL)`,
 	}
 
 	for _, step := range steps {

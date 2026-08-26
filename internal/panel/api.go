@@ -260,6 +260,13 @@ func (a *API) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ключ идемпотентности защищает продление: повтор уведомления от платёжной
+	// системы иначе добавит срок дважды. Подробности в idempotency.go.
+	scope := fmt.Sprintf("extend:%d", id)
+	if handled := a.replayed(w, r, scope); handled {
+		return
+	}
+
 	if p.ExtendBy != "" {
 		d, err := ParseDuration(p.ExtendBy)
 		if err != nil {
@@ -277,7 +284,59 @@ func (a *API) updateUser(w http.ResponseWriter, r *http.Request) {
 		respondStoreErr(w, err)
 		return
 	}
+
+	a.remember(r, scope, map[string]any{"user": user})
 	ok(w, map[string]any{"user": user})
+}
+
+// replayed отдаёт сохранённый ответ, если запрос с этим ключом уже проходил.
+//
+// true означает, что ответ уже отправлен и обработчику делать нечего: либо это
+// повтор, либо ключ занят другой операцией, либо он негоден.
+func (a *API) replayed(w http.ResponseWriter, r *http.Request, scope string) bool {
+	key := strings.TrimSpace(r.Header.Get(idempotencyHeader))
+	if key == "" {
+		return false
+	}
+	if len(key) > maxIdempotencyKey {
+		fail(w, http.StatusBadRequest, "ключ идемпотентности длиннее допустимого")
+		return true
+	}
+
+	stored, found, err := a.store.RememberedResponse(r.Context(), key, scope)
+	if errors.Is(err, ErrIdempotencyScope) {
+		fail(w, http.StatusConflict, err.Error())
+		return true
+	}
+	if err != nil {
+		fail(w, http.StatusInternalServerError, err.Error())
+		return true
+	}
+	if !found {
+		return false
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Idempotent-Replay", "true")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(stored))
+	return true
+}
+
+// remember запоминает ответ под ключом идемпотентности, если он был задан.
+func (a *API) remember(r *http.Request, scope string, payload any) {
+	key := strings.TrimSpace(r.Header.Get(idempotencyHeader))
+	if key == "" {
+		return
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	// Неудачу записи глотаем намеренно: операция уже прошла, и отвечать
+	// продавцу ошибкой из-за незапомненного ответа хуже, чем рискнуть
+	// повтором. Худший случай здесь — ровно то поведение, что было раньше.
+	_ = a.store.RememberResponse(r.Context(), key, scope, string(body))
 }
 
 func (a *API) deleteUser(w http.ResponseWriter, r *http.Request) {
