@@ -33,6 +33,11 @@ type API struct {
 	// panelIPs вписываются в ссылку доступа, чтобы клиент не спрашивал имя
 	// домена подписки у резолвера провайдера. Подробности — в links.go.
 	panelIPs []string
+
+	// version — версия сборки. Отдаётся только с авторизацией: в /healthz,
+	// который открыт всему интернету, точная версия говорит сканеру, какие
+	// дыры пробовать, и заодно опознаёт панель как нашу.
+	version string
 }
 
 // NewAPI собирает обработчики панели.
@@ -88,6 +93,16 @@ func (a *API) Handler() http.Handler {
 	// Веб-интерфейс. Только по точному корню: всё остальное — 404, чтобы
 	// панель не отвечала страницей на случайные пути сканеров.
 	mux.HandleFunc("GET /{$}", a.ServeApp)
+
+	// Версия — с авторизацией. Продавцу она нужна, когда он пишет в поддержку;
+	// постороннему сканеру знать её незачем.
+	mux.HandleFunc("GET /api/v1/version", a.scoped(ScopeRead, func(w http.ResponseWriter, _ *http.Request) {
+		version := a.version
+		if version == "" {
+			version = "неизвестна"
+		}
+		ok(w, map[string]any{"version": version})
+	}))
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -836,6 +851,12 @@ func ParseDuration(s string) (time.Duration, error) {
 // работы панели и появляются позже остального — их выясняет команда запуска.
 func (a *API) WithPanelIPs(ips []string) *API {
 	a.panelIPs = ips
+	return a
+}
+
+// WithVersion сообщает панели её версию сборки.
+func (a *API) WithVersion(v string) *API {
+	a.version = v
 	return a
 }
 

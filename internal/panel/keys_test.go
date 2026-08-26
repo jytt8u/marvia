@@ -182,3 +182,38 @@ func between(t *testing.T, s, from, to string) string {
 	}
 	return rest[:j]
 }
+
+// TestVersionNeedsAuth — версия не отдаётся мимо авторизации.
+//
+// Точная версия сборки говорит сканеру, какие дыры пробовать, и опознаёт
+// панель как нашу. Поэтому в открытом /healthz её нет, а за токеном — есть:
+// продавцу она нужна ровно в тот момент, когда он пишет в поддержку.
+func TestVersionNeedsAuth(t *testing.T) {
+	store, err := panel.Open(filepath.Join(t.TempDir(), "panel.db"))
+	if err != nil {
+		t.Fatalf("база: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+
+	admin, err := panel.NewToken()
+	if err != nil {
+		t.Fatalf("токен: %v", err)
+	}
+
+	api := panel.NewAPI(store, admin, "https://panel.example.test", t.TempDir()).WithVersion("v9.9.9")
+	srv := httptest.NewServer(api.Handler())
+	t.Cleanup(srv.Close)
+
+	if code, body := do(t, srv, "GET", "/healthz", "", ""); strings.Contains(body, "9.9.9") {
+		t.Errorf("версия видна без авторизации: %d %s", code, body)
+	}
+
+	if code, _ := do(t, srv, "GET", "/api/v1/version", "", ""); code != http.StatusUnauthorized {
+		t.Errorf("версия отдалась без токена: %d", code)
+	}
+
+	code, body := do(t, srv, "GET", "/api/v1/version", admin, "")
+	if code != http.StatusOK || !strings.Contains(body, "v9.9.9") {
+		t.Errorf("под админским токеном версии нет: %d %s", code, body)
+	}
+}

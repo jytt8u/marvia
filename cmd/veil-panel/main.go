@@ -28,6 +28,13 @@ import (
 
 const shutdownGrace = 10 * time.Second
 
+// version подставляется при сборке: -ldflags "-X main.version=v0.1.0".
+//
+// Без неё на вопрос «что у тебя стоит» продавец ответить не может, а поддержка
+// не может понять, чинили ли уже его беду. Поэтому версия и в -version, и в
+// первой строке журнала: в обращения обычно попадает именно журнал.
+var version = "dev"
+
 type options struct {
 	listen     string
 	dbPath     string
@@ -64,8 +71,14 @@ func main() {
 	flag.StringVar(&opts.panelIPs, "panel-ip", "", "адреса панели через запятую для ссылок доступа (пусто — выяснить по домену)")
 
 	newToken := flag.Bool("new-token", false, "выпустить админский токен и выйти")
+	showVersion := flag.Bool("version", false, "показать версию и выйти")
 
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println("veil-panel", version)
+		return
+	}
 
 	if *newToken {
 		token, err := panel.NewToken()
@@ -111,7 +124,9 @@ func run(opts options) error {
 		log.Printf("не вышло убрать старые ключи идемпотентности: %v", err)
 	}
 
-	api := panel.NewAPI(store, opts.adminToken, opts.subBase, opts.distDir).WithPanelIPs(panelAddresses(opts))
+	api := panel.NewAPI(store, opts.adminToken, opts.subBase, opts.distDir).
+		WithPanelIPs(panelAddresses(opts)).
+		WithVersion(version)
 	server := &http.Server{
 		Addr:              opts.listen,
 		Handler:           api.Handler(),
@@ -130,7 +145,7 @@ func run(opts options) error {
 		_ = server.Shutdown(shutdownCtx)
 	}()
 
-	log.Printf("veil-panel слушает %s, база %s", opts.listen, opts.dbPath)
+	log.Printf("veil-panel %s слушает %s, база %s", version, opts.listen, opts.dbPath)
 	if opts.subBase == "" {
 		log.Printf("ВНИМАНИЕ: не задан -sub-base, ссылки подписки будут с заглушкой вместо адреса")
 	}
