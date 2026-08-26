@@ -17,8 +17,11 @@ import (
 
 // API — HTTP-интерфейс панели.
 //
-// Три круга доступа:
-//   - админский токен — полный доступ; его получает бот продавца;
+// Четыре круга доступа:
+//   - админский токен — полный доступ и выпуск ключей. Им продавец входит в
+//     панель, и больше он не должен попадать никуда;
+//   - ключ доступа — права из числа users, nodes, read. Это то, что получает
+//     бот продавца: отзывается отдельно и не даёт трогать ноды;
 //   - токен ноды — только свой список пользователей и отправка статистики;
 //   - подписка по токену — без авторизации, токен и есть секрет.
 type API struct {
@@ -41,21 +44,28 @@ func NewAPI(store *Store, adminToken, subBase, distDir string) *API {
 func (a *API) Handler() http.Handler {
 	mux := http.NewServeMux()
 
-	// Управление: пользователи.
-	mux.HandleFunc("GET /api/v1/users", a.admin(a.listUsers))
-	mux.HandleFunc("POST /api/v1/users", a.admin(a.createUser))
-	mux.HandleFunc("GET /api/v1/users/{id}", a.admin(a.getUser))
-	mux.HandleFunc("PATCH /api/v1/users/{id}", a.admin(a.updateUser))
-	mux.HandleFunc("DELETE /api/v1/users/{id}", a.admin(a.deleteUser))
-	mux.HandleFunc("GET /api/v1/users/{id}/links", a.admin(a.userLinks))
-	mux.HandleFunc("POST /api/v1/users/{id}/credentials", a.admin(a.addCredential))
-	mux.HandleFunc("DELETE /api/v1/credentials/{id}", a.admin(a.deleteCredential))
+	// Управление: пользователи. Это всё, что нужно боту продавца, и ровно
+	// столько прав ему и достаётся.
+	mux.HandleFunc("GET /api/v1/users", a.scoped(ScopeRead, a.listUsers))
+	mux.HandleFunc("POST /api/v1/users", a.scoped(ScopeUsers, a.createUser))
+	mux.HandleFunc("GET /api/v1/users/{id}", a.scoped(ScopeRead, a.getUser))
+	mux.HandleFunc("PATCH /api/v1/users/{id}", a.scoped(ScopeUsers, a.updateUser))
+	mux.HandleFunc("DELETE /api/v1/users/{id}", a.scoped(ScopeUsers, a.deleteUser))
+	mux.HandleFunc("GET /api/v1/users/{id}/links", a.scoped(ScopeUsers, a.userLinks))
+	mux.HandleFunc("POST /api/v1/users/{id}/credentials", a.scoped(ScopeUsers, a.addCredential))
+	mux.HandleFunc("DELETE /api/v1/credentials/{id}", a.scoped(ScopeUsers, a.deleteCredential))
 
-	// Управление: ноды.
-	mux.HandleFunc("GET /api/v1/nodes", a.admin(a.listNodes))
-	mux.HandleFunc("POST /api/v1/nodes", a.admin(a.createNode))
-	mux.HandleFunc("DELETE /api/v1/nodes/{id}", a.admin(a.deleteNode))
-	mux.HandleFunc("POST /api/v1/nodes/invite", a.admin(a.createNodeInvite))
+	// Управление: ноды. Боту сюда не надо.
+	mux.HandleFunc("GET /api/v1/nodes", a.scoped(ScopeRead, a.listNodes))
+	mux.HandleFunc("POST /api/v1/nodes", a.scoped(ScopeNodes, a.createNode))
+	mux.HandleFunc("DELETE /api/v1/nodes/{id}", a.scoped(ScopeNodes, a.deleteNode))
+	mux.HandleFunc("POST /api/v1/nodes/invite", a.scoped(ScopeNodes, a.createNodeInvite))
+
+	// Ключи доступа. Только по админскому токену: ключ, умеющий выпускать
+	// ключи, ничем не отличается от админского — и разделение теряет смысл.
+	mux.HandleFunc("GET /api/v1/keys", a.admin(a.listKeys))
+	mux.HandleFunc("POST /api/v1/keys", a.admin(a.createKey))
+	mux.HandleFunc("DELETE /api/v1/keys/{id}", a.admin(a.revokeKey))
 
 	// Установка ноды одной командой. Приглашение стоит в адресе, потому что
 	// команду продавец вставляет целиком, не разбираясь в заголовках.
@@ -84,6 +94,39 @@ func (a *API) Handler() http.Handler {
 	})
 
 	return mux
+}
+
+// scoped пускает по админскому токену или по ключу с нужным правом.
+//
+// Админский токен проверяется первым и за постоянное время: он лежит в памяти,
+// и поход в базу за ним не нужен. Ключ ищется по хешу, и база заодно отмечает,
+// что им воспользовались.
+func (a *API) scoped(scope string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := bearer(r)
+		if token == "" {
+			fail(w, http.StatusUnauthorized, "нужен токен: админский или ключ доступа")
+			return
+		}
+		if TokensEqual(token, a.adminToken) {
+			next(w, r)
+			return
+		}
+
+		key, err := a.store.AuthenticateAPIKey(r.Context(), token)
+		if err != nil {
+			fail(w, http.StatusUnauthorized, "неизвестный токен")
+			return
+		}
+		if !key.Allows(scope) {
+			// Говорим, чего именно не хватает. «Доступ запрещён» без объяснения
+			// заставляет выпустить ключ со всеми правами — и разделение, ради
+			// которого всё затевалось, пропадает.
+			fail(w, http.StatusForbidden, "ключу «"+key.Name+"» не хватает права "+scope)
+			return
+		}
+		next(w, r)
+	}
 }
 
 // admin проверяет админский токен.
@@ -762,4 +805,55 @@ func ParseDuration(s string) (time.Duration, error) {
 func (a *API) WithPanelIPs(ips []string) *API {
 	a.panelIPs = ips
 	return a
+}
+
+// listKeys перечисляет живые ключи доступа.
+func (a *API) listKeys(w http.ResponseWriter, r *http.Request) {
+	keys, err := a.store.ListAPIKeys(r.Context())
+	if err != nil {
+		fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ok(w, map[string]any{"keys": keys})
+}
+
+// createKey выпускает ключ. Секрет уходит в ответ один раз и больше нигде не
+// появляется — в базе от него только хеш.
+func (a *API) createKey(w http.ResponseWriter, r *http.Request) {
+	var p struct {
+		Name   string   `json:"name"`
+		Scopes []string `json:"scopes"`
+	}
+	if !decode(w, r, &p) {
+		return
+	}
+
+	key, secret, err := a.store.CreateAPIKey(r.Context(), p.Name, p.Scopes)
+	if err != nil {
+		fail(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ok(w, map[string]any{
+		"key":    key,
+		"secret": secret,
+		"note":   "секрет показывается один раз: в базе лежит только его хеш",
+	})
+}
+
+// revokeKey отзывает ключ.
+func (a *API) revokeKey(w http.ResponseWriter, r *http.Request) {
+	id, okID := pathID(w, r)
+	if !okID {
+		return
+	}
+	if err := a.store.RevokeAPIKey(r.Context(), id); err != nil {
+		if errors.Is(err, ErrKeyNotFound) {
+			fail(w, http.StatusNotFound, "ключа с таким номером нет или он уже отозван")
+			return
+		}
+		fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
