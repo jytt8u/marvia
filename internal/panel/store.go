@@ -147,6 +147,16 @@ CREATE TABLE IF NOT EXISTS nodes (
 );
 
 
+CREATE TABLE IF NOT EXISTS api_keys (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    name         TEXT    NOT NULL,
+    token_hash   TEXT    NOT NULL UNIQUE,
+    scopes       TEXT    NOT NULL,
+    created_at   TEXT    NOT NULL,
+    last_used_at TEXT,
+    revoked_at   TEXT
+);
+
 CREATE TABLE IF NOT EXISTS node_invites (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     token_hash TEXT    NOT NULL UNIQUE,
@@ -215,6 +225,7 @@ func migrate(db *sql.DB) error {
 		`ALTER TABLE nodes ADD COLUMN reality_short_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN ws_path TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE users ADD COLUMN external_id TEXT`,
+		`CREATE TABLE IF NOT EXISTS api_keys (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, scopes TEXT NOT NULL, created_at TEXT NOT NULL, last_used_at TEXT, revoked_at TEXT)`,
 		// Индекс живёт только здесь, а не в схеме. Схема выполняется первой, и
 		// на уже существующей базе CREATE TABLE IF NOT EXISTS столбца не
 		// добавляет — индекс по нему упал бы раньше, чем миграция успела бы
