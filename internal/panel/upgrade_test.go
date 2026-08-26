@@ -51,6 +51,8 @@ func TestUpgradeFromOlderSchema(t *testing.T) {
 			last_seen  TEXT,
 			created_at TEXT    NOT NULL)`,
 		`INSERT INTO users (label, sub_token, created_at) VALUES ('старый покупатель', 'токен-из-прошлой-версии', '2026-01-01T00:00:00Z')`,
+		`INSERT INTO nodes (name, address, public_key, token_hash, created_at)
+			VALUES ('vm-4823917', '1.2.3.4:443', '', 'хеш-токена-старой-ноды', '2026-01-01T00:00:00Z')`,
 	}
 	for _, step := range old {
 		if _, err := db.Exec(step); err != nil {
@@ -92,5 +94,27 @@ func TestUpgradeFromOlderSchema(t *testing.T) {
 	}
 	if found.Label != "новый" {
 		t.Errorf("нашёлся не тот подписчик: %+v", found)
+	}
+
+	// Нода из старой базы тоже на месте, и у неё появилась страна — пустая,
+	// пока продавец её не написал.
+	nodes, err := store.ListNodes(ctx)
+	if err != nil {
+		t.Fatalf("чтение нод после обновления: %v", err)
+	}
+	if len(nodes) != 1 || nodes[0].Name != "vm-4823917" {
+		t.Fatalf("после обновления ноды не те: %+v", nodes)
+	}
+	if nodes[0].Country != "" {
+		t.Errorf("страна взялась из ниоткуда: %q", nodes[0].Country)
+	}
+
+	country := "Нидерланды"
+	updated, err := store.UpdateNode(ctx, nodes[0].ID, panel.UpdateNodeParams{Country: &country})
+	if err != nil {
+		t.Fatalf("страна не проставилась на ноде из старой базы: %v", err)
+	}
+	if updated.Country != country {
+		t.Errorf("страна не сохранилась: %+v", updated)
 	}
 }

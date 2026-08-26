@@ -75,8 +75,16 @@ type Credential struct {
 
 // Node — точка входа.
 type Node struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+
+	// Country — страна и город словами, как их написал продавец.
+	//
+	// Определять по адресу нельзя: у хостеров адреса числятся то в
+	// Нидерландах, то в США, и покупатель, выбравший «Финляндию», попадает в
+	// Германию. Пишет человек, а флаг клиент подбирает по написанному — так же
+	// делают Happ и Hiddify, там страну тоже задаёт продавец.
+	Country   string `json:"country,omitempty"`
 	Address   string `json:"address"`
 	SNI       string `json:"sni"`
 	PublicKey string `json:"public_key"`
@@ -134,6 +142,7 @@ CREATE INDEX IF NOT EXISTS credentials_user ON credentials(user_id);
 CREATE TABLE IF NOT EXISTS nodes (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT    NOT NULL,
+    country    TEXT    NOT NULL DEFAULT '',
     address    TEXT    NOT NULL,
     sni        TEXT    NOT NULL DEFAULT '',
     public_key TEXT    NOT NULL,
@@ -224,6 +233,7 @@ func migrate(db *sql.DB) error {
 		`ALTER TABLE nodes ADD COLUMN reality_public_key TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN reality_short_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN ws_path TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE nodes ADD COLUMN country TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE users ADD COLUMN external_id TEXT`,
 		`CREATE TABLE IF NOT EXISTS api_keys (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, scopes TEXT NOT NULL, created_at TEXT NOT NULL, last_used_at TEXT, revoked_at TEXT)`,
 		// Индекс живёт только здесь, а не в схеме. Схема выполняется первой, и
@@ -536,6 +546,7 @@ func (s *Store) credentials(ctx context.Context, userID int64) ([]Credential, er
 // CreateNodeParams — что нужно, чтобы завести ноду.
 type CreateNodeParams struct {
 	Name      string `json:"name"`
+	Country   string `json:"country"`
 	Address   string `json:"address"`
 	SNI       string `json:"sni"`
 	PublicKey string `json:"public_key"`
@@ -561,9 +572,9 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 	now := time.Now().UTC()
 
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO nodes (name, address, sni, public_key, reality_public_key, reality_short_id, ws_path, token_hash, enabled, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
-		p.Name, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, p.WSPath, HashToken(token), format(now))
+		`INSERT INTO nodes (name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, token_hash, enabled, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+		p.Name, p.Country, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, p.WSPath, HashToken(token), format(now))
 	if err != nil {
 		return Node{}, "", fmt.Errorf("создание ноды: %w", err)
 	}
@@ -572,15 +583,32 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 		return Node{}, "", err
 	}
 
-	return Node{ID: id, Name: p.Name, Address: p.Address, SNI: p.SNI,
+	return Node{ID: id, Name: p.Name, Country: p.Country, Address: p.Address, SNI: p.SNI,
 		PublicKey: p.PublicKey, RealityPublicKey: p.RealityPublicKey, RealityShortID: p.RealityShortID,
 		WSPath: p.WSPath, Enabled: true, CreatedAt: now}, token, nil
 }
 
 // ListNodes возвращает все ноды.
 func (s *Store) ListNodes(ctx context.Context) ([]Node, error) {
+	return s.queryNodes(ctx, "")
+}
+
+// GetNode возвращает одну ноду.
+func (s *Store) GetNode(ctx context.Context, id int64) (Node, error) {
+	list, err := s.queryNodes(ctx, "WHERE id = ?", id)
+	if err != nil {
+		return Node{}, err
+	}
+	if len(list) == 0 {
+		return Node{}, ErrNotFound
+	}
+	return list[0], nil
+}
+
+func (s *Store) queryNodes(ctx context.Context, where string, args ...any) ([]Node, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, address, sni, public_key, reality_public_key, reality_short_id, ws_path, enabled, last_seen, created_at FROM nodes ORDER BY id`)
+		`SELECT id, name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, enabled, last_seen, created_at
+		 FROM nodes `+where+` ORDER BY id`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("чтение нод: %w", err)
 	}
@@ -594,7 +622,7 @@ func (s *Store) ListNodes(ctx context.Context) ([]Node, error) {
 			lastSeen  sql.NullString
 			createdAt string
 		)
-		if err := rows.Scan(&n.ID, &n.Name, &n.Address, &n.SNI, &n.PublicKey,
+		if err := rows.Scan(&n.ID, &n.Name, &n.Country, &n.Address, &n.SNI, &n.PublicKey,
 			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &enabled, &lastSeen, &createdAt); err != nil {
 			return nil, err
 		}
@@ -604,6 +632,58 @@ func (s *Store) ListNodes(ctx context.Context) ([]Node, error) {
 		list = append(list, n)
 	}
 	return list, rows.Err()
+}
+
+// UpdateNodeParams — изменяемые поля ноды. nil означает «не трогать».
+//
+// Адрес и ключи здесь не меняются: они приходят от самой ноды при регистрации,
+// и правка их руками означала бы ссылки, ведущие в никуда. Продавцу нужно
+// другое — назвать сервер по-человечески и вывести его из работы.
+type UpdateNodeParams struct {
+	Name    *string `json:"name,omitempty"`
+	Country *string `json:"country,omitempty"`
+	Enabled *bool   `json:"enabled,omitempty"`
+}
+
+// UpdateNode меняет заданные поля ноды.
+//
+// Выключенная нода остаётся в базе: её расход по-прежнему виден, а из подписок
+// покупателей она исчезает. Так подозрительный сервер выводится из работы одним
+// переключателем, и решение можно отменить — в отличие от удаления, которое
+// уносит с собой всю статистику.
+func (s *Store) UpdateNode(ctx context.Context, id int64, p UpdateNodeParams) (Node, error) {
+	sets := make([]string, 0, 3)
+	args := make([]any, 0, 4)
+
+	if p.Name != nil {
+		name := strings.TrimSpace(*p.Name)
+		if name == "" {
+			return Node{}, errors.New("имя ноды не может быть пустым")
+		}
+		sets = append(sets, "name = ?")
+		args = append(args, name)
+	}
+	if p.Country != nil {
+		sets = append(sets, "country = ?")
+		args = append(args, strings.TrimSpace(*p.Country))
+	}
+	if p.Enabled != nil {
+		sets = append(sets, "enabled = ?")
+		args = append(args, boolInt(*p.Enabled))
+	}
+	if len(sets) == 0 {
+		return s.GetNode(ctx, id)
+	}
+
+	args = append(args, id)
+	res, err := s.db.ExecContext(ctx, "UPDATE nodes SET "+join(sets, ", ")+" WHERE id = ?", args...)
+	if err != nil {
+		return Node{}, fmt.Errorf("обновление ноды: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return Node{}, ErrNotFound
+	}
+	return s.GetNode(ctx, id)
 }
 
 // DeleteNode удаляет ноду вместе с её статистикой.
@@ -627,9 +707,9 @@ func (s *Store) AuthenticateNode(ctx context.Context, token string) (Node, error
 		createdAt string
 	)
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, name, address, sni, public_key, reality_public_key, reality_short_id, ws_path, enabled, last_seen, created_at
+		`SELECT id, name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, enabled, last_seen, created_at
 		 FROM nodes WHERE token_hash = ?`, HashToken(token)).
-		Scan(&n.ID, &n.Name, &n.Address, &n.SNI, &n.PublicKey,
+		Scan(&n.ID, &n.Name, &n.Country, &n.Address, &n.SNI, &n.PublicKey,
 			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &enabled, &lastSeen, &createdAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Node{}, ErrNotFound

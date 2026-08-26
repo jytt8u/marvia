@@ -108,7 +108,11 @@ func (a *API) registerNode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p struct {
-		Name             string `json:"name"`
+		Name string `json:"name"`
+
+		// Country — то, что продавец передал установщику в COUNTRY. Пусто —
+		// нормально: страну можно проставить потом через PATCH.
+		Country          string `json:"country"`
 		Port             int    `json:"port"`
 		SNI              string `json:"sni"`
 		PublicKey        string `json:"public_key"`
@@ -135,6 +139,7 @@ func (a *API) registerNode(w http.ResponseWriter, r *http.Request) {
 
 	node, nodeToken, err := a.store.RedeemInvite(r.Context(), token, CreateNodeParams{
 		Name:             p.Name,
+		Country:          p.Country,
 		Address:          net.JoinHostPort(host, strconv.Itoa(p.Port)),
 		SNI:              p.SNI,
 		PublicKey:        p.PublicKey,

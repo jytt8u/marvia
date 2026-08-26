@@ -107,8 +107,25 @@ func VeilNodeLink(n Node) string {
 		User:     url.User(n.PublicKey),
 		Host:     n.Address,
 		RawQuery: q.Encode(),
-		Fragment: n.Name,
+		Fragment: NodeTitle(n),
 	}).String()
+}
+
+// NodeTitle — как нода подписана в клиенте.
+//
+// Страна идёт первой, потому что чужие клиенты — Happ, Hiddify, v2rayNG —
+// подбирают флажок по тексту названия, передать его отдельно им нельзя. Имя
+// сервера от хостера покупателю не говорит ничего, а «Нидерланды» говорит.
+// Пустая страна ничего не портит: остаётся одно имя, как было.
+func NodeTitle(n Node) string {
+	switch {
+	case n.Country == "":
+		return n.Name
+	case n.Name == "":
+		return n.Country
+	default:
+		return n.Country + " · " + n.Name
+	}
 }
 
 // StockLinks собирает ссылки для приложений, которые уже стоят у покупателя.
@@ -124,9 +141,9 @@ func StockLinks(nodes []Node, creds []Credential, label string) []string {
 		if !n.Enabled {
 			continue
 		}
-		name := n.Name
+		name := NodeTitle(n)
 		if label != "" {
-			name = n.Name + " · " + label
+			name += " · " + label
 		}
 
 		for _, c := range creds {

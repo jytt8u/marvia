@@ -58,6 +58,7 @@ func (a *API) Handler() http.Handler {
 	// Управление: ноды. Боту сюда не надо.
 	mux.HandleFunc("GET /api/v1/nodes", a.scoped(ScopeRead, a.listNodes))
 	mux.HandleFunc("POST /api/v1/nodes", a.scoped(ScopeNodes, a.createNode))
+	mux.HandleFunc("PATCH /api/v1/nodes/{id}", a.scoped(ScopeNodes, a.updateNode))
 	mux.HandleFunc("DELETE /api/v1/nodes/{id}", a.scoped(ScopeNodes, a.deleteNode))
 	mux.HandleFunc("POST /api/v1/nodes/invite", a.scoped(ScopeNodes, a.createNodeInvite))
 
@@ -557,6 +558,33 @@ func (a *API) createNode(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// updateNode переименовывает ноду, проставляет ей страну и выключает её.
+//
+// Выключение — это то, что делают в первую очередь при подозрении на
+// блокировку: нода уходит из подписок, но её статистика остаётся, и решение
+// отменяется обратным запросом.
+func (a *API) updateNode(w http.ResponseWriter, r *http.Request) {
+	id, okID := pathID(w, r)
+	if !okID {
+		return
+	}
+	var p UpdateNodeParams
+	if !decode(w, r, &p) {
+		return
+	}
+	if p.Name != nil && strings.TrimSpace(*p.Name) == "" {
+		fail(w, http.StatusBadRequest, "имя ноды не может быть пустым")
+		return
+	}
+
+	node, err := a.store.UpdateNode(r.Context(), id, p)
+	if err != nil {
+		respondStoreErr(w, err)
+		return
+	}
+	ok(w, map[string]any{"node": node})
+}
+
 func (a *API) deleteNode(w http.ResponseWriter, r *http.Request) {
 	id, okID := pathID(w, r)
 	if !okID {
@@ -653,8 +681,12 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 	// подключаться, а разбирать это из ссылки — лишний источник расхождений
 	// между тем, что собрала панель, и тем, что понял клиент.
 	type nodeView struct {
-		ID        int64  `json:"id"`
-		Name      string `json:"name"`
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+
+		// Country — то, что продавец написал руками. Флаг клиент подбирает
+		// сам: держать картинки на стороне панели незачем.
+		Country   string `json:"country,omitempty"`
 		Address   string `json:"address"`
 		SNI       string `json:"sni,omitempty"`
 		PublicKey string `json:"public_key"`
@@ -671,7 +703,7 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 			continue
 		}
 		views = append(views, nodeView{
-			ID: n.ID, Name: n.Name, Address: n.Address, SNI: n.SNI,
+			ID: n.ID, Name: n.Name, Country: n.Country, Address: n.Address, SNI: n.SNI,
 			PublicKey: n.PublicKey, Link: VeilNodeLink(n),
 			WSPath:           n.WSPath,
 			RealityPublicKey: n.RealityPublicKey,
