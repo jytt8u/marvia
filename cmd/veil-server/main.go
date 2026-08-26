@@ -59,6 +59,9 @@ const (
 	panelFirstFetchTimeout = 30 * time.Second
 )
 
+// version подставляется при сборке: -ldflags "-X main.version=v0.1.0".
+var version = "dev"
+
 // deps — всё, что нужно обработчику одного соединения.
 type deps struct {
 	static   vp1.KeyPair
@@ -114,7 +117,14 @@ func main() {
 	flag.StringVar(&opts.coverSite, "cover", "", "адрес настоящего сайта для неопознанных гостей, например https://example.org")
 	flag.StringVar(&opts.coverTitle, "cover-title", "", "если сайт-прикрытие не задан, отдавать заглушку с таким заголовком")
 
+	showVersion := flag.Bool("version", false, "показать версию и выйти")
+
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println("veil-server", version)
+		return
+	}
 
 	if err := run(opts); err != nil {
 		fmt.Fprintf(os.Stderr, "ошибка: %v\n", err)
@@ -169,7 +179,7 @@ func run(opts serverOptions) error {
 		ln = transport.Listen(ln, transport.ServerConfig{Certificate: cert})
 	}
 
-	log.Printf("veil-server слушает %s", addr)
+	log.Printf("veil-server %s слушает %s", version, addr)
 	log.Printf("публичный ключ ноды: %s", vp1.EncodeKey(static.Public))
 	if opts.plain {
 		log.Printf("ВНИМАНИЕ: режим -plain, маскировки нет — трафик опознаётся DPI")

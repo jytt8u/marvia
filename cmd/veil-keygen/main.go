@@ -12,10 +12,19 @@ import (
 	"github.com/veilproject/veil/internal/vp1"
 )
 
+// version подставляется при сборке: -ldflags "-X main.version=v0.1.0".
+var version = "dev"
+
 func main() {
 	quiet := flag.Bool("quiet", false, "печатать только две строки: приватный и публичный ключ")
 	forReality := flag.Bool("reality", false, "пояснения под ключ REALITY")
+	showVersion := flag.Bool("version", false, "показать версию и выйти")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println("veil-keygen", version)
+		return
+	}
 
 	pair, err := vp1.GenerateKeyPair()
 	if err != nil {
