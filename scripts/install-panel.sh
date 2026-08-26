@@ -4,12 +4,16 @@
 #
 #   ./install-panel.sh --domain panel.example.com [--port 443] [--email ты@example.com]
 #
-# Рядом со скриптом должны лежать veil-panel, veil-server и veil-keygen.
-# Первый — сама панель, остальные два она будет раздавать новым нодам.
+# Бинарники берутся сами: скрипт определяет разрядность сервера, скачивает
+# архив, сверяет контрольную сумму и ставит. Компилятор не нужен — в этом весь
+# смысл: продавец покупает сервер и продаёт доступ, не касаясь кода.
 #
-# Ноды ставятся иначе: панель выдаёт готовую строку, и ей ничего скачивать
-# заранее не надо. Панель — единственное место, куда бинарники приезжают
-# руками, потому что раздавать их ей пока некому.
+# Откуда качать, можно задать:
+#   --from https://…/veil_linux_amd64.tar.gz   готовый архив
+#   --bin-dir /путь                            уже распакованные бинарники
+#
+# Ноды ставятся иначе: панель выдаёт готовую строку, и ей скачивать заранее
+# ничего не надо. Панель — единственное место, куда бинарники приезжают сами.
 
 set -eu
 
@@ -17,7 +21,9 @@ DOMAIN=''
 PORT=443
 EMAIL=''
 DIR=/opt/veil
-BIN_DIR=$(cd "$(dirname "$0")" && pwd)
+BIN_DIR=''
+FROM=''
+REPO='jytt8u/veil'
 
 say() { printf '%s\n' "$*"; }
 die() { printf '\nустановка прервана: %s\n' "$*" >&2; exit 1; }
@@ -28,6 +34,8 @@ while [ $# -gt 0 ]; do
 	--port) PORT="${2:-}"; shift 2 ;;
 	--email) EMAIL="${2:-}"; shift 2 ;;
 	--bin-dir) BIN_DIR="${2:-}"; shift 2 ;;
+	--from) FROM="${2:-}"; shift 2 ;;
+	--repo) REPO="${2:-}"; shift 2 ;;
 	*) die "непонятный ключ $1" ;;
 	esac
 done
@@ -37,16 +45,13 @@ done
 [ "$(id -u)" = 0 ] || die 'нужны права root'
 command -v systemctl >/dev/null 2>&1 || die 'на этой системе нет systemd, автозапуск настроить нечем'
 command -v curl >/dev/null 2>&1 || die 'нет curl. Поставь: apt-get install -y curl'
+command -v tar >/dev/null 2>&1 || die 'нет tar. Поставь: apt-get install -y tar'
 
 [ -n "$DOMAIN" ] || die 'не задан домен: --domain panel.example.com'
 
 if [ -d "$DIR" ]; then
 	die "$DIR уже существует. Здесь, похоже, уже стоит панель. Внутри база с подписчиками — снеси её осознанно: systemctl disable --now veil-panel && rm -rf $DIR"
 fi
-
-for f in veil-panel veil-server veil-keygen; do
-	[ -f "$BIN_DIR/$f" ] || die "рядом со скриптом нет $f. Положи все три бинарника в $BIN_DIR"
-done
 
 # Домен обязан вести сюда. Проверяем до всего остального: Let's Encrypt
 # ограничивает число неудачных проверок, и упереться в этот предел из-за
@@ -67,12 +72,73 @@ if command -v ss >/dev/null 2>&1; then
 	for p in 80 "$PORT"; do
 		if ss -tln 2>/dev/null | awk '{print $4}' | sed 's/.*://' | grep -qx "$p"; then
 			if [ "$p" = 80 ]; then
-				die 'порт 80 занят. Он нужен, чтобы Let\'"'"'s Encrypt проверил владение доменом. Освободи его: ss -tlnp | grep :80'
+				die 'порт 80 занят. Он нужен, чтобы Let'"'"'s Encrypt проверил владение доменом. Освободи его: ss -tlnp | grep :80'
 			fi
 			die "порт $p занят. Возьми другой: --port 8443"
 		fi
 	done
 fi
+
+# ---------------------------------------------------------- откуда бинарники
+
+WORK=''
+cleanup() { [ -n "$WORK" ] && rm -rf "$WORK"; }
+trap cleanup EXIT
+
+if [ -z "$BIN_DIR" ]; then
+	# Рядом со скриптом уже лежат? Так бывает, когда человек скачал архив и
+	# распаковал его руками — тогда качать второй раз незачем.
+	HERE=$(cd "$(dirname "$0")" && pwd)
+	if [ -f "$HERE/veil-panel" ]; then
+		BIN_DIR="$HERE"
+	fi
+fi
+
+if [ -z "$BIN_DIR" ]; then
+	case "$(uname -m)" in
+	x86_64 | amd64) ARCH=amd64 ;;
+	aarch64 | arm64) ARCH=arm64 ;;
+	*) die "разрядность $(uname -m) не поддерживается: собери бинарники сам и укажи --bin-dir" ;;
+	esac
+
+	[ -n "$FROM" ] || FROM="https://github.com/$REPO/releases/latest/download/veil_linux_$ARCH.tar.gz"
+
+	WORK=$(mktemp -d)
+	say "скачиваю ядро для $ARCH"
+
+	if ! curl -fsSL --max-time 300 "$FROM" -o "$WORK/veil.tar.gz"; then
+		say ''
+		say "не скачалось: $FROM"
+		say ''
+		say 'Если репозиторий закрытый, готовые сборки по ссылке недоступны.'
+		say 'Скачай архив со страницы релизов вручную, распакуй и запусти оттуда,'
+		say 'либо укажи прямой адрес: --from https://…/veil_linux_'"$ARCH"'.tar.gz'
+		die 'нет откуда взять бинарники'
+	fi
+
+	# Сумму сверяем, когда есть с чем: подменённый архив на сервере с правами
+	# root — это не «неудобство», а чужой доступ ко всем покупателям.
+	SUMS="${FROM%/*}/SHA256SUMS"
+	if curl -fsSL --max-time 60 "$SUMS" -o "$WORK/SHA256SUMS" 2>/dev/null &&
+		command -v sha256sum >/dev/null 2>&1; then
+		WANT=$(awk -v f="veil_linux_$ARCH.tar.gz" '$2 == f || $2 == "*"f {print $1}' "$WORK/SHA256SUMS" | head -1)
+		if [ -n "$WANT" ]; then
+			GOT=$(sha256sum "$WORK/veil.tar.gz" | awk '{print $1}')
+			[ "$WANT" = "$GOT" ] || die "контрольная сумма архива не сошлась. Ожидалась $WANT, получена $GOT"
+			say 'контрольная сумма сошлась'
+		fi
+	else
+		say 'ВНИМАНИЕ: контрольную сумму сверить не с чем, ставлю как есть'
+	fi
+
+	mkdir -p "$WORK/bin"
+	tar -xzf "$WORK/veil.tar.gz" -C "$WORK/bin"
+	BIN_DIR="$WORK/bin"
+fi
+
+for f in veil-panel veil-server veil-keygen; do
+	[ -f "$BIN_DIR/$f" ] || die "в $BIN_DIR нет $f"
+done
 
 # ---------------------------------------------------------------- установка
 
@@ -161,23 +227,25 @@ if [ "$OK" != yes ]; then
 	die 'сертификат не получен'
 fi
 
+# Токен показывается один раз, поэтому отдельно и с воздухом вокруг: в конце
+# длинной простыни вывода его проглядывают.
 say ''
-say '════════════════════════════════════════════'
-say ' панель работает'
 say ''
-say " адрес         $BASE"
-say " админский токен (показывается один раз):"
-say ""
-say "   $ADMIN_TOKEN"
+say '  ┌──────────────────────────────────────────────'
+say '  │  АДМИНСКИЙ ТОКЕН — сохрани сейчас'
+say '  │'
+say "  │  $ADMIN_TOKEN"
+say '  │'
+say '  │  Им ты входишь в панель. Больше он показан не будет,'
+say "  │  но лежит в $DIR/env"
+say '  └──────────────────────────────────────────────'
 say ''
-say ' добавить первую ноду — выполни здесь:'
+say "  панель      $BASE"
 say ''
-say "   curl -sS -X POST $BASE/api/v1/nodes/invite \\"
-say "     -H \"Authorization: Bearer \$(grep -oP 'VEIL_ADMIN_TOKEN=\\K.*' $DIR/env)\""
+say '  Добавить первую ноду: открой панель, вкладка «Ноды» → «Добавить ноду».'
+say '  Панель выдаст готовую строку для нового сервера.'
 say ''
-say ' в ответе поле command — это готовая строка для нового сервера.'
+say "  журнал      journalctl -u veil-panel -f"
+say "  снести      systemctl disable --now veil-panel && rm -rf $DIR"
+say "              внимание: в $DIR лежит база со всеми подписчиками"
 say ''
-say " журнал        journalctl -u veil-panel -f"
-say " снести        systemctl disable --now veil-panel && rm -rf $DIR"
-say "               внимание: в $DIR лежит база со всеми подписчиками"
-say '════════════════════════════════════════════'

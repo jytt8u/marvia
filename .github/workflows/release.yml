@@ -1,0 +1,92 @@
+# Сборка готовых бинарников.
+#
+# Без неё продавец не может начать: установщик панели требует три бинарника
+# рядом с собой, а взять их можно только собрав из исходников. Человек, который
+# «не касается кода», на этом и останавливается — на нулевом шаге.
+#
+# Собираем на метку вида v0.1.0 и на кнопку «запустить» — второе нужно, чтобы
+# проверить сборку, не выпуская релиз.
+
+name: Сборка
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Собрать и выложить
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # Версию берём из go.mod, чтобы она не разъехалась с той, на которой
+          # проект собирают руками.
+          go-version-file: go.mod
+          cache: true
+
+      - name: Тесты
+        run: go test ./...
+
+      - name: Собрать
+        run: |
+          set -eu
+
+          # Версия попадает внутрь бинарника: без неё на вопрос «что у тебя
+          # стоит» продавец ответить не сможет, а поддержка — тем более.
+          VERSION="${GITHUB_REF_NAME}"
+          case "$VERSION" in v*) ;; *) VERSION="dev-${GITHUB_SHA::7}" ;; esac
+          echo "Версия: $VERSION"
+
+          mkdir -p dist
+
+          # Пути к панели, ноде и генератору ключей — то, что нужно на сервере.
+          # Клиенты собираются отдельно: у них своя история с подписью.
+          for os_arch in linux/amd64 linux/arm64; do
+            os="${os_arch%/*}"
+            arch="${os_arch#*/}"
+            out="build/${os}_${arch}"
+            mkdir -p "$out"
+
+            for cmd in veil-panel veil-server veil-keygen; do
+              CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
+                go build -trimpath \
+                  -ldflags "-s -w -X main.version=${VERSION}" \
+                  -o "$out/$cmd" "./cmd/$cmd"
+            done
+
+            # Установщик кладём в тот же архив: распаковал — и всё на месте,
+            # ничего больше качать не надо.
+            cp scripts/install-panel.sh "$out/install-panel.sh"
+            chmod +x "$out/install-panel.sh"
+
+            tar -czf "dist/veil_${os}_${arch}.tar.gz" -C "$out" .
+          done
+
+          cd dist && sha256sum *.tar.gz > SHA256SUMS && cat SHA256SUMS
+
+      - name: Выложить в релиз
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/veil_linux_amd64.tar.gz
+            dist/veil_linux_arm64.tar.gz
+            dist/SHA256SUMS
+          generate_release_notes: true
+
+      - name: Сохранить сборку
+        if: "!startsWith(github.ref, 'refs/tags/v')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: veil-dist
+          path: dist/
+          retention-days: 14
