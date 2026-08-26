@@ -112,9 +112,9 @@ func (s *Store) RedeemInvite(ctx context.Context, token string, p CreateNodePara
 	}
 
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO nodes (name, address, sni, public_key, reality_public_key, reality_short_id, ws_path, token_hash, enabled, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
-		p.Name, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, p.WSPath,
+		`INSERT INTO nodes (name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, token_hash, enabled, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+		p.Name, p.Country, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, p.WSPath,
 		HashToken(nodeToken), format(now))
 	if err != nil {
 		return Node{}, "", fmt.Errorf("создание ноды: %w", err)
@@ -135,7 +135,7 @@ func (s *Store) RedeemInvite(ctx context.Context, token string, p CreateNodePara
 	}
 
 	return Node{
-		ID: nodeID, Name: p.Name, Address: p.Address, SNI: p.SNI,
+		ID: nodeID, Name: p.Name, Country: p.Country, Address: p.Address, SNI: p.SNI,
 		PublicKey: p.PublicKey, RealityPublicKey: p.RealityPublicKey,
 		RealityShortID: p.RealityShortID, WSPath: p.WSPath,
 		Enabled: true, CreatedAt: now,

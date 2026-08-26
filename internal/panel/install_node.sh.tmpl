@@ -9,6 +9,7 @@
 #   PORT=8443 — если 443 занят (в бою так лучше не делать, см. ниже)
 #   DEST=www.icloud.com:443 — другой сайт прикрытия
 #   NAME=amsterdam-1 — как нода будет называться в панели
+#   COUNTRY=Нидерланды — страна, которую увидит покупатель (можно указать потом)
 
 set -eu
 
@@ -17,6 +18,7 @@ INVITE='{{.Token}}'
 PORT="${PORT:-443}"
 DEST="${DEST:-www.samsung.com:443}"
 NAME="${NAME:-$(hostname 2>/dev/null || echo нода)}"
+COUNTRY="${COUNTRY:-}"
 DIR=/opt/veil-node
 
 say() { printf '%s\n' "$*"; }
@@ -91,8 +93,8 @@ say "записываюсь в панель"
 
 # Адрес не отправляем: за NAT нода видит свой внутренний, а панель видит
 # настоящий, с которого пришло соединение.
-BODY=$(printf '{"name":"%s","port":%s,"sni":"%s","public_key":"%s","reality_public_key":"%s","reality_short_id":"%s"}' \
-	"$NAME" "$PORT" "$DEST_HOST" "$NODE_PUB" "$REALITY_PUB" "$SHORT_ID")
+BODY=$(printf '{"name":"%s","country":"%s","port":%s,"sni":"%s","public_key":"%s","reality_public_key":"%s","reality_short_id":"%s"}' \
+	"$NAME" "$COUNTRY" "$PORT" "$DEST_HOST" "$NODE_PUB" "$REALITY_PUB" "$SHORT_ID")
 
 RESP=$(curl -fsS -X POST "$PANEL/api/v1/nodes/register" \
 	-H "Authorization: Bearer $INVITE" \

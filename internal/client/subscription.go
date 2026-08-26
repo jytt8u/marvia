@@ -30,7 +30,13 @@ type Node struct {
 	// имени, которое продавец может переименовать.
 	ID int64 `json:"id"`
 
-	Name      string `json:"name"`
+	Name string `json:"name"`
+
+	// Country — страна словами, как её написал продавец. По ней клиент
+	// подбирает флажок и группирует список: имя сервера покупателю ни о чём не
+	// говорит, страна говорит. Пока продавец поле не заполнил, оно пустое, и
+	// показывается одно имя.
+	Country   string `json:"country,omitempty"`
 	Address   string `json:"address"`
 	SNI       string `json:"sni,omitempty"`
 	PublicKey string `json:"public_key"`

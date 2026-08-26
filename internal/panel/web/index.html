@@ -211,6 +211,7 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
       </p>
       <div class="grid">
         <label class="field"><span>Имя</span><input id="nn-name" placeholder="msk-1"></label>
+        <label class="field"><span>Страна — как её увидит покупатель</span><input id="nn-country" placeholder="Нидерланды"></label>
         <label class="field"><span>Адрес и порт</span><input id="nn-address" placeholder="msk.example.com:443"></label>
         <label class="field"><span>SNI — домен ноды или сайта прикрытия</span><input id="nn-sni" placeholder="www.samsung.com"></label>
         <label class="field"><span>Публичный ключ ноды</span><input id="nn-key" placeholder="из журнала veil-server"></label>
@@ -575,6 +576,7 @@ function renderNodes() {
     return el("tr", {},
       el("td", {},
         el("div", { text: node.name || "без имени" }),
+        el("div", { class: "muted", text: node.country || "страна не указана" }),
         el("div", { class: "muted mono", text: node.address })
       ),
       el("td", {},
@@ -589,6 +591,9 @@ function renderNodes() {
         ? el("span", { class: "tag ok", text: "включена" })
         : el("span", { class: "tag bad", text: "выключена" })),
       el("td", { class: "actions" },
+        el("button", { class: "tiny", onclick: () => editNode(node) }, "Изменить"),
+        el("button", { class: "tiny", onclick: () => toggleNode(node) },
+          node.enabled ? "Выключить" : "Включить"),
         el("button", { class: "tiny danger", onclick: () => removeNode(node) }, "Удалить")
       )
     );
@@ -620,7 +625,8 @@ async function inviteNode() {
     modalBody.append(linkRow("Вставь на сервере от root", res.command));
     modalBody.append(el("p", { class: "muted", text:
       "Если 443 занят — поставь PORT=8443 перед sh. Другой сайт прикрытия — " +
-      "DEST=www.icloud.com:443. Своё имя ноды — NAME=amsterdam-1." }));
+      "DEST=www.icloud.com:443. Своё имя ноды — NAME=amsterdam-1, страна — " +
+      "COUNTRY=Нидерланды. Имя и страну можно поправить и потом, здесь же." }));
     $("modal").showModal();
   } catch (err) { toast(err.message, true); }
 }
@@ -628,6 +634,7 @@ async function inviteNode() {
 async function createNode() {
   const body = {
     name: $("nn-name").value.trim(),
+    country: $("nn-country").value.trim(),
     address: $("nn-address").value.trim(),
     sni: $("nn-sni").value.trim(),
     public_key: $("nn-key").value.trim(),
@@ -639,7 +646,7 @@ async function createNode() {
 
   try {
     const res = await api("POST", "/api/v1/nodes", body);
-    ["nn-name", "nn-address", "nn-sni", "nn-key", "nn-pbk", "nn-sid", "nn-wspath"].forEach((id) => { $(id).value = ""; });
+    ["nn-name", "nn-country", "nn-address", "nn-sni", "nn-key", "nn-pbk", "nn-sid", "nn-wspath"].forEach((id) => { $(id).value = ""; });
     await load();
 
     const modalBody = $("modal-body");
@@ -655,6 +662,53 @@ async function createNode() {
         " -key-file node.key -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org")
     );
     $("modal").showModal();
+  } catch (err) { toast(err.message, true); }
+}
+
+// editNode — имя и страна ноды.
+//
+// Хостер называет машину vm-4823917-ubuntu, и ровно это видит покупатель в
+// списке серверов. Страну пишет продавец: по адресу она определяется неверно —
+// у хостеров адреса числятся то в Нидерландах, то в США.
+function editNode(node) {
+  const name = el("input", { value: node.name || "", placeholder: "Амстердам-1" });
+  const country = el("input", { value: node.country || "", placeholder: "Нидерланды" });
+
+  const save = el("button", { class: "primary", onclick: async () => {
+    const body = { name: name.value.trim(), country: country.value.trim() };
+    if (!body.name) { toast("Имя не может быть пустым", true); return; }
+    try {
+      await api("PATCH", "/api/v1/nodes/" + node.id, body);
+      $("modal").close();
+      await load();
+      toast("Сохранено");
+    } catch (err) { toast(err.message, true); }
+  } }, "Сохранить");
+
+  const body = $("modal-body");
+  body.replaceChildren();
+  body.append(
+    el("h2", { text: "Нода " + node.address }),
+    el("label", { class: "field" }, el("span", { text: "Имя" }), name),
+    el("label", { class: "field" }, el("span", { text: "Страна и город — как их увидит покупатель" }), country),
+    el("div", { class: "note", text:
+      "Страна встаёт первой в названии сервера: чужие приложения — Happ, " +
+      "Hiddify, v2rayNG — подбирают флажок по тексту названия, больше им её " +
+      "передать нечем." }),
+    el("div", { class: "row", style: "margin-top:1rem" }, save)
+  );
+  $("modal").showModal();
+}
+
+// toggleNode выводит ноду из работы, не теряя её статистику.
+//
+// При подозрении на блокировку это первое действие: нода исчезает из подписок
+// покупателей, но остаётся в панели, и решение отменяется тем же нажатием.
+async function toggleNode(node) {
+  try {
+    await api("PATCH", "/api/v1/nodes/" + node.id, { enabled: !node.enabled });
+    await load();
+    toast(node.enabled ? "Нода выключена: из подписок ушла" : "Нода включена");
   } catch (err) { toast(err.message, true); }
 }
 
