@@ -71,17 +71,40 @@ jobs:
             tar -czf "dist/veil_${os}_${arch}.tar.gz" -C "$out" .
           done
 
-          cd dist && sha256sum *.tar.gz > SHA256SUMS && cat SHA256SUMS
+          # Установщик выкладываем и отдельным файлом: с него всё начинается,
+          # а качать ради него архив — лишний шаг на самом первом шаге.
+          cp scripts/install-panel.sh dist/install-panel.sh
 
-      - name: Выложить в релиз
+          cd dist && sha256sum *.tar.gz install-panel.sh > SHA256SUMS && cat SHA256SUMS
+
+      # Релиз уезжает в отдельный публичный репозиторий.
+      #
+      # Исходники закрыты, а установщик панели должен работать у любого
+      # продавца без токенов и логинов: у закрытого репозитория файлы релиза по
+      # ссылке не отдаются, и `curl … | sh` там не живёт в принципе. Токен нужен
+      # свой: GITHUB_TOKEN действует только на текущий репозиторий.
+      - name: Выложить в публичный репозиторий сборок
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          repository: jytt8u/marvia-releases
+          token: ${{ secrets.RELEASES_TOKEN }}
           files: |
             dist/veil_linux_amd64.tar.gz
             dist/veil_linux_arm64.tar.gz
+            dist/install-panel.sh
             dist/SHA256SUMS
-          generate_release_notes: true
+          body: |
+            Установка панели на чистый сервер:
+
+            ```
+            curl -fsSL https://github.com/jytt8u/marvia-releases/releases/latest/download/install-panel.sh -o install-panel.sh
+            sh install-panel.sh --domain панель.твой-домен --email ты@почта
+            ```
+
+            Ноды скачивать не надо: панель выдаёт для них готовую строку.
+
+            Контрольные суммы — в `SHA256SUMS`, установщик сверяет их сам.
 
       - name: Сохранить сборку
         if: "!startsWith(github.ref, 'refs/tags/v')"
