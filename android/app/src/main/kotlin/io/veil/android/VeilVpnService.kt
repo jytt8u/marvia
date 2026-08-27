@@ -108,10 +108,15 @@ class VeilVpnService : VpnService() {
 
             core = started
             val node = started.nodeName()
-            VeilState.set(TunnelState.On(node))
+            val subscription = TunnelState.Subscription(
+                until = started.until(),
+                limitBytes = started.trafficLimit(),
+                leftBytes = started.trafficLeft(),
+            )
+            VeilState.set(TunnelState.On(node, subscription = subscription))
             goForeground(getString(R.string.status_on), getString(R.string.detail_node, node))
 
-            watch(started, node)
+            watch(started, node, subscription)
         }
     }
 
@@ -149,14 +154,14 @@ class VeilVpnService : VpnService() {
      * Разница между «ничего не работает» и «не открывается один сайт» для
      * человека огромна, а изнутри ядра она видна сразу.
      */
-    private suspend fun watch(started: Core, node: String) {
+    private suspend fun watch(started: Core, node: String, subscription: TunnelState.Subscription) {
         var shown = ""
         while (scope.isActive && started.running()) {
             delay(POLL_INTERVAL_MS)
             val last = started.lastError()
             if (last != shown) {
                 shown = last
-                VeilState.set(TunnelState.On(node, last))
+                VeilState.set(TunnelState.On(node, last, subscription))
             }
         }
     }

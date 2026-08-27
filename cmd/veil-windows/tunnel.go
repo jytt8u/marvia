@@ -33,13 +33,20 @@ const (
 
 // Status — всё, что показывает окно.
 type Status struct {
-	State      State  `json:"state"`
-	Node       string `json:"node"`
-	Address    string `json:"address"`
-	PingMS     int64  `json:"ping_ms"`
-	Up         int64  `json:"up"`
-	Down       int64  `json:"down"`
-	Reason     string `json:"reason,omitempty"`
+	State   State  `json:"state"`
+	Node    string `json:"node"`
+	Address string `json:"address"`
+	PingMS  int64  `json:"ping_ms"`
+	Up      int64  `json:"up"`
+	Down    int64  `json:"down"`
+	Reason  string `json:"reason,omitempty"`
+
+	// Подписка: до какого числа и сколько трафика осталось. Пустые значения
+	// означают, что продавец не поставил ни срока, ни квоты, — врать про
+	// «безлимит» в этом случае нельзя.
+	Until      string `json:"until,omitempty"`
+	LimitBytes int64  `json:"limit_bytes,omitempty"`
+	LeftBytes  int64  `json:"left_bytes,omitempty"`
 	HasAccount bool   `json:"has_account"`
 	Elevated   bool   `json:"elevated"`
 }
@@ -51,12 +58,17 @@ type Status struct {
 // когда захочет, в том числе посреди подключения, — и тогда две половины
 // состояния начали бы расходиться.
 type Controller struct {
-	mu      sync.Mutex
-	state   State
-	node    client.Node
-	ping    time.Duration
-	reason  string
-	account string
+	mu     sync.Mutex
+	state  State
+	node   client.Node
+	ping   time.Duration
+	reason string
+
+	// Подписка, с которой выбрана нода: её показывает окно.
+	until      string
+	limitBytes int64
+	leftBytes  int64
+	account    string
 
 	dialer  *client.Dialer
 	adapter *wintun.Adapter
@@ -84,12 +96,15 @@ func (c *Controller) Status() Status {
 
 	return Status{
 		State:      c.state,
-		Node:       c.node.Name,
+		Node:       c.node.Title(),
 		Address:    c.node.Address,
 		PingMS:     c.ping.Milliseconds(),
 		Up:         c.up.Load(),
 		Down:       c.down.Load(),
 		Reason:     c.reason,
+		Until:      c.until,
+		LimitBytes: c.limitBytes,
+		LeftBytes:  c.leftBytes,
 		HasAccount: c.account != "",
 		Elevated:   elevated(),
 	}
@@ -242,6 +257,7 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 	c.mu.Lock()
 	c.dialer, c.adapter, c.bridge = dialer, adapter, bridge
 	c.node, c.ping = node, ping
+	c.until, c.limitBytes, c.leftBytes = subscriptionOf(dialer)
 	c.state = StateConnected
 	c.reason = ""
 	c.mu.Unlock()
@@ -262,6 +278,7 @@ func (c *Controller) Disconnect() {
 	c.state = StateIdle
 	c.reason = ""
 	c.node = client.Node{}
+	c.until, c.limitBytes, c.leftBytes = "", 0, 0
 	c.mu.Unlock()
 
 	// Порядок обратный сборке: сначала перестаём разбирать пакеты, потом
@@ -390,4 +407,20 @@ func writeAccount(link string) error {
 		return err
 	}
 	return os.WriteFile(path, []byte(link), 0o600)
+}
+
+// subscriptionOf достаёт из дозвона то, что показывает окно: до какого числа
+// оплачено и сколько трафика осталось.
+//
+// Человек заплатил и вправе это видеть, не спрашивая продавца. А продавец
+// вправе не отвечать на такое вручную каждому.
+func subscriptionOf(dialer *client.Dialer) (until string, limit, left int64) {
+	if dialer == nil {
+		return "", 0, 0
+	}
+	sub := dialer.Subscription()
+	if at, set := sub.Until(); set {
+		until = at.Local().Format("02.01.2006")
+	}
+	return until, sub.TrafficLimit, sub.Remaining()
 }

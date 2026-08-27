@@ -44,6 +44,21 @@
         android:textSize="14sp" />
 
     <!--
+        Подписка: до какого числа и сколько трафика осталось. Человек заплатил
+        и вправе это видеть, не спрашивая продавца, — а продавец вправе не
+        отвечать на такое вручную каждому.
+    -->
+    <TextView
+        android:id="@+id/subText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:alpha="0.45"
+        android:gravity="center"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <!--
         Подробности из ядра. Покупателю они не говорят ничего, поэтому мелко и
         бледно, — но именно их он снимет вместе с экраном и пришлёт продавцу.
         Текст можно выделить и скопировать: пересказывать такое по памяти

@@ -16,6 +16,13 @@ import (
 type Dialer struct {
 	node Node
 	pool *tunnel.Pool
+
+	// sub — подписка, с которой выбрана эта нода: срок и остаток трафика.
+	//
+	// Нужна не дозвону, а тому, кто рисует окно: приложение обязано уметь
+	// ответить «до какого числа и сколько осталось», не спрашивая продавца.
+	// Второй раз ходить за подпиской ради этого незачем — она уже в руках.
+	sub Subscription
 }
 
 // Options — необязательные настройки дозвона.
@@ -137,3 +144,14 @@ func (d *Dialer) Node() Node { return d.node }
 
 // Close закрывает все соединения до ноды.
 func (d *Dialer) Close() error { return d.pool.Close() }
+
+// Subscription — срок и квота, с которыми выбрана нода.
+func (d *Dialer) Subscription() Subscription { return d.sub }
+
+// withSubscription запоминает подписку в дозвоне.
+func (d *Dialer) withSubscription(s Subscription) *Dialer {
+	if d != nil {
+		d.sub = s
+	}
+	return d
+}

@@ -13,6 +13,14 @@
     <string name="detail_node">Нода: %1$s</string>
     <string name="detail_node_warning">Нода: %1$s · %2$s</string>
 
+    <!-- Подписка: до какого числа и сколько трафика осталось. -->
+    <string name="sub_until">До %1$s</string>
+    <string name="sub_until_left">До %1$s · осталось %2$s</string>
+    <string name="sub_left">Осталось %1$s</string>
+    <string name="sub_unlimited">Без ограничений</string>
+    <string name="size_gb">%1$s ГБ</string>
+    <string name="size_mb">%1$d МБ</string>
+
     <string name="action_connect">Подключиться</string>
     <string name="action_disconnect">Отключиться</string>
     <string name="action_save">Сохранить ключ</string>
@@ -40,6 +48,15 @@
         Фразы под виды неудач из ядра. Задача каждой — сказать человеку, что
         делать дальше, а не что именно сломалось внутри.
     -->
+    <!--
+        Кончившаяся подписка — самая частая беда и единственная, где человеку
+        надо не чинить, а заплатить. Раньше он читал «ни один сервер не
+        отвечает», шёл к продавцу с «у вас всё сломалось», и продавец
+        разбирался с каждым таким вручную.
+    -->
+    <string name="fail_expired">Подписка кончилась. Продли её у продавца — доступ включится сразу</string>
+    <string name="fail_quota">Кончился оплаченный трафик. Напиши продавцу, чтобы добавил</string>
+
     <string name="fail_account">Ключ доступа не подошёл. Возьми новый у продавца</string>
     <string name="fail_panel">Не получается получить список серверов. Проверь, есть ли интернет</string>
     <string name="fail_nodes">Ни один сервер сейчас не отвечает. Попробуй позже или напиши продавцу</string>

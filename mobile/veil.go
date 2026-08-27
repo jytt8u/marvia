@@ -66,6 +66,16 @@ const (
 	// FailSystem — не сложилось на стороне телефона: система не дала
 	// интерфейс, не поднялся сетевой мост.
 	FailSystem = "system"
+
+	// FailExpired — кончился срок подписки.
+	// FailQuota — кончился оплаченный трафик.
+	//
+	// Отдельно от FailNodes, и это главное: раньше кончившаяся подписка
+	// показывалась как «ни один сервер не отвечает». Человек читал, что
+	// сломались мы, шёл к продавцу с «у вас всё лежит», и продавец разбирался
+	// с каждым таким вручную — хотя надо было одно слово «продли».
+	FailExpired = "expired"
+	FailQuota   = "quota"
 )
 
 // fail помечает ошибку видом: первая строка — вид, остальное — подробности.
@@ -118,7 +128,7 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 		return nil, err
 	}
 
-	t := &Tunnel{dialer: dialer, nodeName: dialer.Node().Name, running: true}
+	t := &Tunnel{dialer: dialer, nodeName: dialer.Node().Title(), running: true}
 
 	bridgeOwnsFD = true
 	bridge, err := tunbridge.Start(tunbridge.Config{
@@ -178,8 +188,14 @@ func connect(accountLink, cacheDir string) (*client.Dialer, error) {
 
 	if err != nil {
 		// Вид неудачи человека ведёт в разные стороны: до панели не
-		// достучались — проверь интернет, ноды молчат — пиши продавцу.
-		if errors.Is(err, client.ErrPanel) {
+		// достучались — проверь интернет, ноды молчат — пиши продавцу,
+		// подписка кончилась — продли, и никуда писать не надо.
+		switch {
+		case errors.Is(err, client.ErrExpired):
+			return nil, fail(FailExpired, err)
+		case errors.Is(err, client.ErrQuota):
+			return nil, fail(FailQuota, err)
+		case errors.Is(err, client.ErrPanel):
 			// Без «список нод:» сверху: ошибка и так начинается с «панель
 			// недоступна», а три слоя пояснений подряд читать невозможно.
 			return nil, fail(FailPanel, err)
@@ -265,4 +281,49 @@ func (t *Tunnel) LastError() string {
 func CheckAccountLink(accountLink string) error {
 	_, err := client.ParseAccountLink(accountLink)
 	return err
+}
+
+// Until — до какого числа оплачена подписка, в виде «2026-09-27».
+// Пустая строка означает «без ограничения по сроку».
+//
+// Приложение обязано уметь ответить на «сколько у меня осталось» само.
+// Иначе на этот вопрос отвечает продавец — каждому и вручную.
+func (t *Tunnel) Until() string {
+	t.mu.Lock()
+	dialer := t.dialer
+	t.mu.Unlock()
+
+	if dialer == nil {
+		return ""
+	}
+	until, set := dialer.Subscription().Until()
+	if !set {
+		return ""
+	}
+	return until.Local().Format("2006-01-02")
+}
+
+// TrafficLimit — сколько байт оплачено. Ноль означает «без ограничения».
+func (t *Tunnel) TrafficLimit() int64 {
+	t.mu.Lock()
+	dialer := t.dialer
+	t.mu.Unlock()
+
+	if dialer == nil {
+		return 0
+	}
+	return dialer.Subscription().TrafficLimit
+}
+
+// TrafficLeft — сколько байт осталось. Ноль означает либо «без ограничения»,
+// либо «всё выбрано»; отличать по TrafficLimit.
+func (t *Tunnel) TrafficLeft() int64 {
+	t.mu.Lock()
+	dialer := t.dialer
+	t.mu.Unlock()
+
+	if dialer == nil {
+		return 0
+	}
+	return dialer.Subscription().Remaining()
 }

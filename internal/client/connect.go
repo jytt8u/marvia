@@ -16,6 +16,17 @@ import (
 // проверить интернет, во втором — писать продавцу.
 var ErrPanel = errors.New("панель недоступна")
 
+// ErrExpired и ErrQuota — подписка кончилась.
+//
+// Отдельно от остальных, потому что это самая частая беда и единственная, где
+// человеку надо не чинить, а заплатить. Нода про это знает, но сказать не
+// может: она отказывает молча, иначе по её ответам перебирали бы чужие ключи.
+// Зато знает панель — и знает заранее, до первого гудка.
+var (
+	ErrExpired = errors.New("подписка кончилась")
+	ErrQuota   = errors.New("кончился трафик по подписке")
+)
+
 // ConnectConfig — всё, что нужно, чтобы поднять дозвон до лучшей ноды.
 type ConnectConfig struct {
 	// Account — разобранная ссылка доступа.
@@ -73,7 +84,10 @@ func Connect(ctx context.Context, cfg ConnectConfig) (*Dialer, []Measurement, er
 		logf("замеряю ноды из кэша, их %d", len(cached.Nodes()))
 		dialer, m, err := SelectBest(ctx, cached.Nodes(), cfg.Key, cfg.Dial)
 		if err == nil {
-			return dialer, m, nil
+			// Срок и остаток берём из кэша: он вчерашний, но показать
+			// «осталось 12 ГБ» вчерашней точности лучше, чем не показать
+			// ничего и погнать человека спрашивать у продавца.
+			return dialer.withSubscription(cached.Subscription), m, nil
 		}
 		measurements = m
 		if ctx.Err() != nil {
@@ -105,8 +119,16 @@ func Connect(ctx context.Context, cfg ConnectConfig) (*Dialer, []Measurement, er
 		}
 	}
 
+	// Кончившуюся подписку видно здесь, и звонить нодам уже незачем: они
+	// откажут, а человек прочитает «серверы не отвечают» и пойдёт к продавцу
+	// чинить то, что не сломано.
+	if err := sub.Allows(); err != nil {
+		return nil, measurements, err
+	}
+
 	logf("замеряю ноды, их %d", len(sub.Nodes))
-	return SelectBest(ctx, sub.Nodes, cfg.Key, cfg.Dial)
+	dialer, m, err := SelectBest(ctx, sub.Nodes, cfg.Key, cfg.Dial)
+	return dialer.withSubscription(sub), m, err
 }
 
 // lastHope пробует протухший кэш, когда панель не ответила.
@@ -124,5 +146,5 @@ func lastHope(ctx context.Context, cached CachedSubscription, cfg ConnectConfig,
 	if err != nil {
 		return nil, m, false
 	}
-	return dialer, m, true
+	return dialer.withSubscription(cached.Subscription), m, true
 }
