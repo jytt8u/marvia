@@ -134,6 +134,9 @@
 
   /* ------------------------------------------------------------ карточка */
 
+  .first-key { margin-top: 26px; width: 100%; max-width: 430px; }
+  .first-key textarea { margin-bottom: 10px; }
+
   .node {
     margin-top: 34px; width: 100%; max-width: 430px;
     background: var(--raise); border: 1px solid var(--line);
@@ -266,6 +269,29 @@
         <div class="status" id="status">Отключено</div>
         <div class="detail" id="detail">Трафик идёт напрямую</div>
 
+        <!--
+          Подписка: до какого числа и сколько трафика осталось. Человек
+          заплатил и вправе это видеть, не спрашивая продавца, — а продавец
+          вправе не отвечать на такое вручную каждому.
+        -->
+        <div class="detail" id="subscription" hidden></div>
+
+        <!--
+          Поле ключа прямо на первом экране, пока ключа нет.
+
+          Раньше на первом экране была только кнопка, а поле пряталось на
+          вкладке: человек жал кнопку, получал отказ и только потом шёл
+          искать, куда вставлять ссылку. Когда ключ уже сохранён, поле здесь
+          не нужно — оно остаётся на своей вкладке.
+        -->
+        <div class="first-key" id="first-key" hidden>
+          <textarea id="first-account" rows="2" spellcheck="false" placeholder="veil-account://…"></textarea>
+          <div class="row">
+            <button class="primary" id="first-save">Сохранить ключ</button>
+            <span id="first-msg" class="hint" style="margin:0"></span>
+          </div>
+        </div>
+
         <div class="node" id="node-card">
           <div class="mark">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2.5 19.5 5.5v6C19.5 16 16.3 19.9 12 21.2 7.7 19.9 4.5 16 4.5 11.5v-6z"/></svg>
@@ -392,8 +418,19 @@ function render(s) {
   if (s.state === "failed") detail.textContent = s.reason || "причина неизвестна";
   else if (s.state === "connecting") detail.textContent = "выбираю самую быструю ноду";
   else if (s.state === "connected") detail.textContent = "весь трафик компьютера идёт через туннель";
-  else if (!s.has_account) detail.textContent = "вставь ключ доступа на вкладке слева";
+  else if (!s.has_account) detail.textContent = "вставь ключ доступа, его присылает бот после оплаты";
   else detail.textContent = "трафик идёт напрямую";
+
+  // Поле ключа на первом экране — только пока ключа нет.
+  $("first-key").hidden = s.has_account;
+
+  // Подписка: до какого числа и сколько осталось.
+  const sub = $("subscription");
+  const parts = [];
+  if (s.until) parts.push("до " + s.until);
+  if (s.limit_bytes > 0) parts.push("осталось " + bytes(s.left_bytes || 0));
+  sub.hidden = parts.length === 0;
+  sub.textContent = parts.join(" · ");
 
   if (s.node) {
     $("node-name").textContent = s.node;
@@ -450,6 +487,25 @@ $("save").addEventListener("click", async () => {
   } catch (err) {
     msg.className = "hint bad";
     msg.style.margin = "0";
+    msg.textContent = err.message;
+  }
+});
+
+// Тот же обработчик для поля на первом экране.
+//
+// Оно там ровно до первого сохранённого ключа: дальше человек про него
+// забудет, а место на главном экране дорогое.
+$("first-save").addEventListener("click", async () => {
+  const msg = $("first-msg");
+  msg.className = "hint";
+  try {
+    const link = $("first-account").value;
+    await api("POST", "api/account", { link });
+    $("account").value = link;
+    msg.textContent = "Сохранено";
+    await tick();
+  } catch (err) {
+    msg.className = "hint bad";
     msg.textContent = err.message;
   }
 });

@@ -20,7 +20,27 @@ sealed interface TunnelState {
      * падает: одна недоступная цель это норма. Но показать её стоит, иначе
      * человек видит только «подключено» при наполовину живой ноде.
      */
-    data class On(val node: String, val warning: String = "") : TunnelState
+    data class On(
+        val node: String,
+        val warning: String = "",
+        /** Подписка: до какого числа и сколько трафика осталось. */
+        val subscription: Subscription = Subscription(),
+    ) : TunnelState
+
+    /**
+     * Subscription — то, за что человек заплатил.
+     *
+     * Без этого на вопрос «сколько у меня осталось» отвечает продавец —
+     * каждому и вручную. Пустые значения означают «без ограничения»: так
+     * бывает, когда продавец не поставил ни срока, ни квоты.
+     */
+    data class Subscription(
+        val until: String = "",
+        val limitBytes: Long = 0,
+        val leftBytes: Long = 0,
+    ) {
+        val known: Boolean get() = until.isNotEmpty() || limitBytes > 0
+    }
 
     /**
      * Подняться не удалось.

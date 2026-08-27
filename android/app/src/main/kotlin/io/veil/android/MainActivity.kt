@@ -23,6 +23,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import io.veil.android.databinding.ActivityMainBinding
 import io.veil.mobile.Mobile
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * MainActivity — единственный экран.
@@ -151,6 +152,7 @@ class MainActivity : AppCompatActivity() {
     private fun render(state: TunnelState) {
         val hasKey = store.accountLink.isNotBlank()
         ui.techText.isVisible = false
+        ui.subText.isVisible = false
 
         when (state) {
             TunnelState.Off -> {
@@ -180,6 +182,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 ui.connectButton.setText(R.string.action_disconnect)
                 ui.connectButton.isEnabled = true
+
+                val sub = subscriptionText(state.subscription)
+                ui.subText.text = sub
+                ui.subText.isVisible = sub.isNotEmpty()
             }
 
             is TunnelState.Failed -> {
@@ -216,7 +222,49 @@ class MainActivity : AppCompatActivity() {
         Mobile.FailPanel -> R.string.fail_panel
         Mobile.FailNodes -> R.string.fail_nodes
         Mobile.FailSystem -> R.string.fail_system
+        Mobile.FailExpired -> R.string.fail_expired
+        Mobile.FailQuota -> R.string.fail_quota
         else -> null
+    }
+
+    /**
+     * subscriptionText — строка под состоянием: до какого числа и сколько
+     * осталось.
+     *
+     * Пустая строка означает, что показывать нечего: продавец не поставил ни
+     * срока, ни квоты. Врать «безлимит» в этом случае нельзя — он мог просто
+     * не заполнить поля.
+     */
+    private fun subscriptionText(sub: TunnelState.Subscription): String {
+        if (!sub.known) {
+            return ""
+        }
+
+        val left = if (sub.limitBytes > 0) sizeText(sub.leftBytes) else ""
+        return when {
+            sub.until.isNotEmpty() && left.isNotEmpty() ->
+                getString(R.string.sub_until_left, dateText(sub.until), left)
+            sub.until.isNotEmpty() -> getString(R.string.sub_until, dateText(sub.until))
+            left.isNotEmpty() -> getString(R.string.sub_left, left)
+            else -> ""
+        }
+    }
+
+    /** dateText превращает 2026-09-27 в 27.09.2026 — так читают дату здесь. */
+    private fun dateText(iso: String): String {
+        val parts = iso.split("-")
+        if (parts.size != 3) {
+            return iso
+        }
+        return parts[2] + "." + parts[1] + "." + parts[0]
+    }
+
+    private fun sizeText(bytes: Long): String {
+        val gb = 1024.0 * 1024 * 1024
+        if (bytes >= gb) {
+            return getString(R.string.size_gb, String.format(Locale.getDefault(), "%.1f", bytes / gb))
+        }
+        return getString(R.string.size_mb, bytes / (1024 * 1024))
     }
 
     private fun toggle() {

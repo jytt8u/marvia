@@ -72,6 +72,18 @@ func run(dns string, mtu uint32, urlFile string) error {
 	if !elevated() {
 		log.add("прав администратора нет: туннель поднять не выйдет")
 	}
+
+	// Схему регистрируем на каждом запуске, а ссылку из аргументов принимаем
+	// сразу: покупатель нажал её в телеграме, и это первое, что он делает
+	// после оплаты. Подробности в scheme_windows.go.
+	if link := setupScheme(log); link != "" {
+		if err := ctl.SetAccount(link); err != nil {
+			log.add("ссылка из телеграма не подошла: %v", err)
+		} else {
+			log.add("ключ доступа взят из ссылки")
+		}
+	}
+
 	log.add("готов к работе")
 
 	url, server, err := serveUI(ctl, log)

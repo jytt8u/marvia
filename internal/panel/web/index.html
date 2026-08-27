@@ -165,12 +165,18 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
     <button id="logout">Выйти</button>
   </header>
 
+  <!--
+    Порядок вкладок — это порядок работы. Ноды первыми: пока их нет, продавать
+    нечего, ссылки у покупателей будут пустые. «Хозяйство» последним: туда
+    заходят раз в жизни, когда заводят бота, и раз в месяц за копией базы.
+  -->
   <nav class="tabs">
-    <button data-tab="users" class="active">Подписчики</button>
-    <button data-tab="nodes">Ноды</button>
+    <button data-tab="nodes" class="active">Ноды</button>
+    <button data-tab="users">Подписчики</button>
+    <button data-tab="keys">Хозяйство</button>
   </nav>
 
-  <section id="tab-users">
+  <section id="tab-users" hidden>
     <div class="card">
       <h2>Выдать доступ</h2>
       <div class="grid">
@@ -189,11 +195,16 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
 
     <div class="card">
       <h2>Подписчики <span class="muted" id="users-count"></span></h2>
+      <!--
+        Поиск: покупатель, который написал, называет себя как угодно, но не
+        «подписчик №147». Ищем по метке, по номеру и по ключу из телеграма.
+      -->
+      <input id="users-search" placeholder="поиск по метке, номеру или tg:…" style="margin-bottom:.8rem">
       <div id="users-body"></div>
     </div>
   </section>
 
-  <section id="tab-nodes" hidden>
+  <section id="tab-nodes">
     <div class="card">
       <h2>Добавить ноду</h2>
       <p class="muted" style="margin:0 0 .9rem">
@@ -233,6 +244,59 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
     <div class="card">
       <h2>Ноды <span class="muted" id="nodes-count"></span></h2>
       <div id="nodes-body"></div>
+    </div>
+  </section>
+
+  <!--
+    Хозяйство: ключи для ботов, копия базы, приложения покупателям.
+
+    Всё это до сих пор делалось только curl'ом. С ключами это было хуже всего:
+    мы пишем в документации «боту — отдельный ключ, админский не давать», а
+    выпустить его в панели было нечем — и продавец, который не касается кода,
+    отдавал боту админский токен, потому что кнопки не было.
+  -->
+  <section id="tab-keys" hidden>
+    <div class="card">
+      <h2>Ключи для ботов</h2>
+      <p class="muted" style="margin:0 0 .9rem">
+        Боту нужен свой ключ, а не админский токен. Админским ты входишь сюда;
+        отдать его боту — значит дать право снести все ноды со статистикой и
+        увести секреты покупателей, а при утечке отозвать его нельзя, не
+        выкинув из панели себя.
+      </p>
+      <div class="grid">
+        <label class="field"><span>Название — по нему потом отзывать</span><input id="nk-name" placeholder="телеграм-бот"></label>
+      </div>
+      <div class="kinds" style="margin:.8rem 0">
+        <label><input type="checkbox" value="users" checked> users — покупатели</label>
+        <label><input type="checkbox" value="nodes"> nodes — ноды</label>
+        <label><input type="checkbox" value="read"> read — только смотреть</label>
+      </div>
+      <button class="primary" id="nk-create">Выпустить ключ</button>
+      <div id="keys-body" style="margin-top:1rem"></div>
+    </div>
+
+    <div class="card">
+      <h2>Копия базы</h2>
+      <p class="muted" style="margin:0 0 .9rem">
+        В базе все покупатели и все оплаченные ими месяцы. Панель делает копию
+        сама раз в сутки, но она лежит на этом же сервере — а теряют сервер
+        целиком, вместе с хостером. Забери копию к себе.
+      </p>
+      <button id="backup-get">Скачать копию базы</button>
+      <p class="muted" style="margin:.6rem 0 0">
+        В файле секреты покупателей: храни его так же, как админский токен.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Приложения покупателям</h2>
+      <p class="muted" style="margin:0 0 .9rem">
+        Их раздаёт сама панель, с твоего домена: магазины приложений и
+        международные CDN в России отваливаются первыми, и покупатель
+        застревает на шаге «скачай» — уже заплатив.
+      </p>
+      <div id="apps-body"></div>
     </div>
   </section>
 </div>
@@ -427,6 +491,23 @@ function kindTags(user) {
   return el("div", { class: "row" }, seen.map((k) => el("span", { class: "tag", text: k })));
 }
 
+// found отбирает подписчиков по строке поиска.
+//
+// Искать надо по всему, чем продавец может помнить человека: по метке, по
+// номеру и по ключу из телеграма — покупатель, который написал, называет себя
+// как угодно, но не «подписчик №147».
+function found() {
+  const query = ($("users-search").value || "").trim().toLowerCase();
+  if (!query) {
+    return state.users;
+  }
+  return state.users.filter((u) =>
+    (u.label || "").toLowerCase().includes(query) ||
+    (u.external_id || "").toLowerCase().includes(query) ||
+    String(u.id) === query.replace("#", "")
+  );
+}
+
 function renderUsers() {
   const host = $("users-body");
   host.replaceChildren();
@@ -437,7 +518,13 @@ function renderUsers() {
     return;
   }
 
-  const rows = state.users.map((user) => {
+  const shown = found();
+  if (!shown.length) {
+    host.append(el("div", { class: "empty", text: "Никого не нашлось" }));
+    return;
+  }
+
+  const rows = shown.map((user) => {
     const until = untilText(user.expires_at);
     return el("tr", {},
       el("td", {},
@@ -458,6 +545,8 @@ function renderUsers() {
         el("button", { class: "tiny", onclick: () => toggle(user) }, user.enabled ? "Отключить" : "Включить"),
         " ",
         el("button", { class: "tiny", onclick: () => addKind(user) }, "Ещё доступ"),
+        " ",
+        el("button", { class: "tiny", onclick: () => rotateSub(user) }, "Сменить подписку"),
         " ",
         el("button", { class: "tiny danger", onclick: () => removeUser(user) }, "Удалить")
       )
@@ -525,6 +614,27 @@ async function extend(user, days) {
   try {
     await api("PATCH", "/api/v1/users/" + user.id, { extend_by: days + "d", enabled: true });
     toast("Продлено на " + days + " " + plural(days, "день", "дня", "дней"));
+    await load();
+  } catch (err) { toast(err.message, true); }
+}
+
+// rotateSub меняет адрес подписки, когда ссылку раздали знакомым.
+//
+// Отзывать за это весь доступ — терять покупателя. Но и бесплатным это не
+// бывает: в прежней ссылке покупателя зашит путь /sub/<токен>, и приложение
+// по нему больше не достучится. Поэтому сразу выдаём новый набор и показываем
+// ссылку — её надо переслать человеку.
+async function rotateSub(user) {
+  if (!confirm(
+    "Сменить адрес подписки у " + (user.label || ("#" + user.id)) + "?\n\n" +
+    "Старая ссылка перестанет работать сразу — вместе со ссылкой доступа, " +
+    "которая у покупателя на устройстве. Панель выдаст новую, её надо ему переслать."
+  )) return;
+
+  try {
+    await api("POST", "/api/v1/users/" + user.id + "/sub-token");
+    const res = await api("POST", "/api/v1/users/" + user.id + "/credentials", { kind: "vp1", label: "" });
+    showLinks("Новый доступ для " + (user.label || ("#" + user.id)), res.links, res.issued, true);
     await load();
   } catch (err) { toast(err.message, true); }
 }
@@ -778,11 +888,146 @@ $("nu-create").addEventListener("click", createUser);
 $("nn-invite").addEventListener("click", inviteNode);
 $("nn-create").addEventListener("click", createNode);
 
+/* ---------- хозяйство: ключи, копия базы, приложения ---------- */
+
+// loadHousehold подтягивает всё для вкладки разом.
+//
+// Отдельно от общего обновления: на этой вкладке продавец бывает раз в
+// месяц, а ходить за списком ключей на каждом обновлении незачем.
+async function loadHousehold() {
+  await Promise.all([loadKeys(), loadApps()]);
+}
+
+async function loadKeys() {
+  const host = $("keys-body");
+  try {
+    const res = await api("GET", "/api/v1/keys");
+    const keys = res.keys || [];
+    host.replaceChildren();
+
+    if (!keys.length) {
+      host.append(el("div", { class: "empty", text: "Ключей нет. Боту нужен свой — выпусти его здесь." }));
+      return;
+    }
+
+    const rows = keys.map((key) => el("tr", {},
+      el("td", {}, el("div", { text: key.name }),
+        el("div", { class: "muted", text: (key.scopes || []).join(", ") })),
+      el("td", { class: "muted", text: key.last_used_at ? "пользовались " + agoText(key.last_used_at).text : "ни разу не пользовались" }),
+      el("td", { class: "actions" },
+        el("button", { class: "tiny danger", onclick: () => revokeKey(key) }, "Отозвать"))
+    ));
+
+    host.append(el("table", {},
+      el("thead", {}, el("tr", {},
+        el("th", { text: "Ключ" }), el("th", { text: "Когда пользовались" }), el("th", {}))),
+      el("tbody", {}, ...rows)));
+  } catch (err) {
+    host.replaceChildren(el("div", { class: "empty", text: err.message }));
+  }
+}
+
+async function createKey() {
+  const name = $("nk-name").value.trim();
+  if (!name) { toast("Дай ключу название — по нему его потом отзывать", true); return; }
+
+  const scopes = Array.from(document.querySelectorAll("#tab-keys .kinds input:checked")).map((i) => i.value);
+  if (!scopes.length) { toast("Выбери хотя бы одно право", true); return; }
+
+  try {
+    const res = await api("POST", "/api/v1/keys", { name, scopes });
+    $("nk-name").value = "";
+    // Секрет показывается один раз: в базе остаётся только хеш.
+    showKeySecret(res.key, res.secret);
+    await loadKeys();
+  } catch (err) { toast(err.message, true); }
+}
+
+function showKeySecret(key, secret) {
+  const body = $("modal-body");
+  body.replaceChildren(
+    el("h2", { text: "Ключ «" + (key ? key.name : "") + "» выпущен" }),
+    el("p", { class: "muted", text: "Секрет показывается один раз — в базе остаётся только хеш. Вставь его боту сейчас." }),
+    linkRow("Ключ", secret),
+    el("p", { class: "muted", text: "Все запросы бота идут с заголовком Authorization: Bearer " + secret.slice(0, 6) + "…" })
+  );
+  $("modal").showModal();
+}
+
+async function revokeKey(key) {
+  if (!confirm("Отозвать ключ «" + key.name + "»? Бот, который им пользуется, сразу перестанет работать.")) return;
+  try {
+    await api("DELETE", "/api/v1/keys/" + key.id);
+    toast("Ключ отозван");
+    await loadKeys();
+  } catch (err) { toast(err.message, true); }
+}
+
+async function loadApps() {
+  const host = $("apps-body");
+  try {
+    const res = await api("GET", "/api/v1/apps");
+    const apps = res.apps || [];
+    host.replaceChildren();
+
+    if (!apps.length) {
+      host.append(el("div", { class: "empty", text: res.hint || "Приложений нет" }));
+      return;
+    }
+
+    const rows = apps.map((app) => el("tr", {},
+      el("td", {}, el("div", { text: app.name === "android" ? "Android" : "Windows" }),
+        el("div", { class: "muted mono", text: app.file })),
+      el("td", { class: "muted", text: bytes(app.size) }),
+      el("td", { class: "muted mono", text: (app.sha256 || "").slice(0, 16) + "…" })
+    ));
+
+    host.append(el("table", {},
+      el("thead", {}, el("tr", {},
+        el("th", { text: "Приложение" }), el("th", { text: "Размер" }), el("th", { text: "sha256" }))),
+      el("tbody", {}, ...rows)));
+  } catch (err) {
+    host.replaceChildren(el("div", { class: "empty", text: err.message }));
+  }
+}
+
+// Копию скачиваем через fetch, а не ссылкой: токен живёт в заголовке, и в
+// адресе ему делать нечего — адреса попадают в журналы прокси и в историю.
+async function downloadBackup() {
+  const btn = $("backup-get");
+  btn.disabled = true;
+  btn.textContent = "Снимаю копию…";
+  try {
+    const res = await fetch("/api/v1/backup", { headers: { "Authorization": "Bearer " + state.token } });
+    if (!res.ok) throw new Error("код " + res.status);
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = el("a", { href: url, download: "panel-" + new Date().toISOString().slice(0, 10) + ".db" });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast("Копия скачана");
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Скачать копию базы";
+  }
+}
+
+$("nk-create").addEventListener("click", createKey);
+$("users-search").addEventListener("input", renderUsers);
+$("backup-get").addEventListener("click", downloadBackup);
+
 document.querySelectorAll(".tabs button").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b === btn));
-    $("tab-users").hidden = btn.dataset.tab !== "users";
-    $("tab-nodes").hidden = btn.dataset.tab !== "nodes";
+    ["users", "nodes", "keys"].forEach((name) => {
+      $("tab-" + name).hidden = btn.dataset.tab !== name;
+    });
+    if (btn.dataset.tab === "keys") loadHousehold();
   });
 });
 

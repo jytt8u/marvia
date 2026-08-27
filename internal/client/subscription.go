@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"strings"
 	"time"
 )
 
@@ -176,4 +177,50 @@ func subscriptionClient(pinned []netip.Addr) *http.Client {
 	}
 
 	return &http.Client{Transport: transport}
+}
+
+// Until — до какого момента оплачена подписка.
+//
+// false означает «без ограничения по сроку»: так панель отвечает, когда
+// продавец не поставил срок вовсе.
+func (s Subscription) Until() (time.Time, bool) {
+	if strings.TrimSpace(s.ExpiresAt) == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, s.ExpiresAt)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
+// Allows проверяет, есть ли смысл вообще звонить нодам.
+//
+// Без этой проверки кончившаяся подписка выглядит как «ни один сервер не
+// отвечает»: ноды честно отказывают, а человек читает, что сломались мы. Он
+// идёт к продавцу с «у вас всё лежит» вместо «продли», и платит за это
+// продавец — своим временем на каждого такого.
+func (s Subscription) Allows() error {
+	if until, set := s.Until(); set && time.Now().After(until) {
+		return fmt.Errorf("%w: %s", ErrExpired, until.Local().Format("02.01.2006"))
+	}
+	if s.TrafficLimit > 0 && s.Used >= s.TrafficLimit {
+		return ErrQuota
+	}
+	return nil
+}
+
+// Title — как ноду называть человеку.
+//
+// Страна первой: покупателю «Нидерланды» говорит всё, а vm-4823917-ubuntu от
+// хостера — ничего. Пустая страна ничего не портит, остаётся одно имя.
+func (n Node) Title() string {
+	switch {
+	case n.Country == "":
+		return n.Name
+	case n.Name == "":
+		return n.Country
+	default:
+		return n.Country + " · " + n.Name
+	}
 }
