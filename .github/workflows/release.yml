@@ -48,15 +48,17 @@ jobs:
 
           mkdir -p dist
 
-          # Пути к панели, ноде и генератору ключей — то, что нужно на сервере.
-          # Клиенты собираются отдельно: у них своя история с подписью.
+          # Панель, нода, генератор ключей и бот — всё, что стоит на сервере
+          # продавца. Бот здесь же: без него продавцу нечем продавать, а
+          # заставлять его собирать Go на своём сервере — тот же тупик, из-за
+          # которого появились эти сборки.
           for os_arch in linux/amd64 linux/arm64; do
             os="${os_arch%/*}"
             arch="${os_arch#*/}"
             out="build/${os}_${arch}"
             mkdir -p "$out"
 
-            for cmd in veil-panel veil-server veil-keygen; do
+            for cmd in veil-panel veil-server veil-keygen veil-bot; do
               CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
                 go build -trimpath \
                   -ldflags "-s -w -X main.version=${VERSION}" \
@@ -71,11 +73,21 @@ jobs:
             tar -czf "dist/veil_${os}_${arch}.tar.gz" -C "$out" .
           done
 
+          # Клиент под Windows. Отдельным файлом, а не в архиве: ссылку на него
+          # продавец вставляет в бота, а покупатель нажимает на телефоне или на
+          # компьютере — распаковывать он ничего не будет.
+          #
+          # -H windowsgui убирает чёрное окно консоли за окном приложения.
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+            go build -trimpath \
+              -ldflags "-H windowsgui -s -w -X main.version=${VERSION}" \
+              -o dist/veil-windows.exe ./cmd/veil-windows
+
           # Установщик выкладываем и отдельным файлом: с него всё начинается,
           # а качать ради него архив — лишний шаг на самом первом шаге.
           cp scripts/install-panel.sh dist/install-panel.sh
 
-          cd dist && sha256sum *.tar.gz install-panel.sh > SHA256SUMS && cat SHA256SUMS
+          cd dist && sha256sum *.tar.gz install-panel.sh veil-windows.exe > SHA256SUMS && cat SHA256SUMS
 
       # Релиз уезжает в отдельный публичный репозиторий.
       #
@@ -93,6 +105,7 @@ jobs:
             dist/veil_linux_amd64.tar.gz
             dist/veil_linux_arm64.tar.gz
             dist/install-panel.sh
+            dist/veil-windows.exe
             dist/SHA256SUMS
           body: |
             Установка панели на чистый сервер:
@@ -103,6 +116,12 @@ jobs:
             ```
 
             Ноды скачивать не надо: панель выдаёт для них готовую строку.
+
+            **Продавцу.** В архиве рядом с панелью лежит `veil-bot` — телеграм-бот,
+            который продаёт доступ. Образец настроек: `veil-bot -example`.
+
+            **Покупателю.** Приложения — `veil-android.apk` и `veil-windows.exe`
+            в этом же списке. Ссылки на них вставляются в настройки бота.
 
             Контрольные суммы — в `SHA256SUMS`, установщик сверяет их сам.
 
