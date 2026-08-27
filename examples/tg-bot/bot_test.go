@@ -1,4 +1,4 @@
-package bot
+package main
 
 import (
 	"context"
@@ -306,7 +306,7 @@ func TestReminderOncePerTerm(t *testing.T) {
 	ctx := context.Background()
 
 	// Покупатель, у которого срок кончается завтра.
-	sale, err := b.panel.Sell(ctx, "tg:107", "кончается", Tariff{Days: 1})
+	sale, err := b.panel.Sell(ctx, "tg:107", "кончается", Tariff{Days: 1}, "")
 	if err != nil {
 		t.Fatalf("продажа: %v", err)
 	}
@@ -332,7 +332,7 @@ func TestReminderSkipsStrangers(t *testing.T) {
 	b, tg := testBot(t, PayStars)
 	ctx := context.Background()
 
-	if _, err := b.panel.Sell(ctx, "продавец завёл руками", "не из телеграма", Tariff{Days: 1}); err != nil {
+	if _, err := b.panel.Sell(ctx, "продавец завёл руками", "не из телеграма", Tariff{Days: 1}, ""); err != nil {
 		t.Fatalf("продажа: %v", err)
 	}
 

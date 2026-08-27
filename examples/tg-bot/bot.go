@@ -1,4 +1,4 @@
-package bot
+package main
 
 import (
 	"context"
@@ -304,19 +304,12 @@ func (b *Bot) grant(ctx context.Context, chat int64, from *TGUser, arg string) {
 
 // deliver заводит или продлевает подписку и отправляет всё покупателю.
 //
-// key — номер платежа. Один и тот же платёж выдаёт доступ ровно один раз:
-// телеграм повторяет уведомление, пока бот не ответил, а бот может упасть
-// ровно между выдачей и ответом. Продление от повтора защищает панель ключом
-// идемпотентности, но первую продажу — нет: про платежи она не знает вовсе,
-// поэтому повтор той самой оплаты, которая завела покупателя, добавил бы ему
-// второй срок бесплатно.
+// key — номер платежа, он же ключ идемпотентности. Своей памяти о платежах бот
+// не держит: повтор гасит панель — и на продлении, и на первой продаже. Это
+// важно понимать, если пишешь своего бота: телеграм повторяет уведомление,
+// пока бот не ответил, а бот может упасть ровно между выдачей и ответом.
 func (b *Bot) deliver(ctx context.Context, chat int64, from *TGUser, t Tariff, key string) {
 	ext := external(from.ID)
-
-	if b.state.counted(key) {
-		b.alreadyCounted(ctx, chat, ext)
-		return
-	}
 
 	user, err := b.panel.ByExternalID(ctx, ext)
 	switch {
@@ -335,23 +328,8 @@ func (b *Bot) deliver(ctx context.Context, chat int64, from *TGUser, t Tariff, k
 		b.failed(ctx, chat)
 		return
 	}
-	b.state.count(key)
 
 	b.say(ctx, chat, "Подписка продлена до <b>"+until(fresh.ExpiresAt)+"</b>.\n\nНичего менять не нужно — доступ уже работает.",
-		[]Button{{Text: "Моя подписка", Data: "status"}})
-}
-
-// alreadyCounted отвечает на повтор уже учтённого платежа.
-//
-// Новых ссылок здесь не выдаём: покупатель их уже получил, а лишний набор
-// доступа на каждое повторное уведомление — мусор в панели.
-func (b *Bot) alreadyCounted(ctx context.Context, chat int64, ext string) {
-	user, err := b.panel.ByExternalID(ctx, ext)
-	if err != nil {
-		b.say(ctx, chat, "Эта оплата уже учтена.")
-		return
-	}
-	b.say(ctx, chat, "Эта оплата уже учтена — доступ работает до <b>"+until(user.ExpiresAt)+"</b>.",
 		[]Button{{Text: "Моя подписка", Data: "status"}})
 }
 
@@ -364,13 +342,20 @@ func (b *Bot) sell(ctx context.Context, chat int64, from *TGUser, t Tariff, key 
 		label = "покупатель " + strconv.FormatInt(from.ID, 10)
 	}
 
-	sale, err := b.panel.Sell(ctx, external(from.ID), label, t)
+	sale, err := b.panel.Sell(ctx, external(from.ID), label, t, key)
 	if err != nil {
 		log.Printf("продажа %d: %v", from.ID, err)
 		b.failed(ctx, chat)
 		return
 	}
-	b.state.count(key)
+
+	// created=false означает повтор той же оплаты: доступ уже выдан, секретов
+	// в ответе нет и быть не должно. Слать нечего — покупатель их получил.
+	if !sale.Created {
+		b.say(ctx, chat, "Эта оплата уже учтена — доступ работает до <b>"+until(sale.User.ExpiresAt)+"</b>.",
+			[]Button{{Text: "Моя подписка", Data: "status"}})
+		return
+	}
 
 	b.sendAccess(ctx, chat, sale.Links, sale.User.ExpiresAt)
 }

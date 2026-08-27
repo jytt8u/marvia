@@ -1,4 +1,4 @@
-package bot
+package main
 
 import (
 	"bytes"
@@ -68,7 +68,7 @@ type Sale struct {
 // Повтор с тем же externalID ничего не создаёт: панель возвращает уже
 // заведённого подписчика и created=false. Поэтому бот, упавший между списанием
 // денег и ответом покупателю, при следующем запуске не выдаст второй доступ.
-func (p *Panel) Sell(ctx context.Context, externalID, label string, t Tariff) (Sale, error) {
+func (p *Panel) Sell(ctx context.Context, externalID, label string, t Tariff, key string) (Sale, error) {
 	body := map[string]any{
 		"external_id":   externalID,
 		"label":         label,
@@ -80,8 +80,12 @@ func (p *Panel) Sell(ctx context.Context, externalID, label string, t Tariff) (S
 		"kinds": []string{"vp1", "vless", "trojan"},
 	}
 
+	// key — номер платежа в Idempotency-Key. По нему панель отличает повтор
+	// уведомления от второй покупки, и своей памяти о платежах боту держать не
+	// нужно. Повтор вернёт того же покупателя с created=false и без секретов:
+	// доступ выдан один раз, и потерянную ссылку выдают новым набором.
 	var out Sale
-	if err := p.do(ctx, http.MethodPost, "/api/v1/users", "", body, &out); err != nil {
+	if err := p.do(ctx, http.MethodPost, "/api/v1/users", key, body, &out); err != nil {
 		return Sale{}, err
 	}
 	return out, nil

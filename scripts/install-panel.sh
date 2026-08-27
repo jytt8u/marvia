@@ -156,6 +156,34 @@ cp "$BIN_DIR/veil-server" "$DIR/dist/veil-server"
 cp "$BIN_DIR/veil-keygen" "$DIR/dist/veil-keygen"
 chmod 755 "$DIR/veil-panel" "$DIR/dist/veil-server" "$DIR/dist/veil-keygen"
 
+# Приложения покупателей кладём рядом: раздавать их будет сама панель, с
+# домена продавца.
+#
+# Иначе покупатель идёт за приложением в магазин или на github, а в России
+# рубят и то, и другое: загрузка из Google Play и App Store ломается вместе с
+# международными CDN, через которые раздаётся и github. Ссылка «скачай
+# приложение» отваливается первой — когда человек уже заплатил.
+#
+# Не скачалось — не беда: панель просто не покажет ссылку, а продавец положит
+# файлы руками позже.
+for app in veil-android.apk veil-windows.exe; do
+	if [ -f "$BIN_DIR/$app" ]; then
+		cp "$BIN_DIR/$app" "$DIR/dist/$app"
+	else
+		curl -fsSL --max-time 300 \
+			"https://github.com/$REPO/releases/latest/download/$app" \
+			-o "$DIR/dist/$app" 2>/dev/null || rm -f "$DIR/dist/$app"
+	fi
+	[ -f "$DIR/dist/$app" ] && chmod 644 "$DIR/dist/$app"
+done
+
+if [ -f "$DIR/dist/veil-android.apk" ]; then
+	say 'приложения на месте: панель раздаёт их покупателям сама'
+else
+	say 'ВНИМАНИЕ: приложений нет — покупателям их скачивать неоткуда.'
+	say "Положи veil-android.apk и veil-windows.exe в $DIR/dist"
+fi
+
 ADMIN_TOKEN=$("$DIR/veil-panel" -new-token)
 [ -n "$ADMIN_TOKEN" ] || die 'не выпустился админский токен'
 

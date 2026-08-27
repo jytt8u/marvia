@@ -1,4 +1,4 @@
-package bot
+package main
 
 // ExampleConfig — образец файла настроек.
 //
