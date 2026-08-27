@@ -74,6 +74,9 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /api/v1/keys", a.admin(a.createKey))
 	mux.HandleFunc("DELETE /api/v1/keys/{id}", a.admin(a.revokeKey))
 
+	// Копия базы. Тоже только админским: в ней лежит вся панель целиком.
+	mux.HandleFunc("GET /api/v1/backup", a.admin(a.downloadBackup))
+
 	// Установка ноды одной командой. Приглашение стоит в адресе, потому что
 	// команду продавец вставляет целиком, не разбираясь в заголовках.
 	mux.HandleFunc("GET /install/{token}", a.installScript)
