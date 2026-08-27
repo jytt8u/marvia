@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/user"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -49,9 +50,25 @@ func (s *Store) Backup(ctx context.Context, path string) error {
 	if _, err := os.Stat(path); err == nil {
 		return fmt.Errorf("копия %s уже есть", filepath.Base(path))
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("каталог копий: %w", err)
 	}
+
+	// Проверяем право записи заранее и своими словами.
+	//
+	// SQLite на чужой каталог отвечает «unable to open database file (14)», и
+	// продавец, у которого каталог остался от root после ручной возни, будет
+	// искать поломку в базе, а не в правах. А узнает он о ней вообще только
+	// тогда, когда копия понадобится.
+	probe, err := os.CreateTemp(dir, ".проба-*")
+	if err != nil {
+		return fmt.Errorf("в каталог копий %s нельзя писать (панель работает от %s): %w",
+			dir, whoami(), err)
+	}
+	probeName := probe.Name()
+	_ = probe.Close()
+	_ = os.Remove(probeName)
 
 	// Путь подставляется в запрос строкой: параметры в VACUUM INTO SQLite не
 	// принимает. Апостроф удваиваем — иначе каталог с кавычкой в имени
@@ -187,4 +204,16 @@ func (a *API) downloadBackup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
 	http.ServeContent(w, r, name, info.ModTime(), f)
+}
+
+// whoami — от кого работает панель, для внятного сообщения о правах.
+func whoami() string {
+	u, err := user.Current()
+	if err != nil {
+		return "неизвестного пользователя"
+	}
+	if u.Username != "" {
+		return u.Username
+	}
+	return "uid " + u.Uid
 }
