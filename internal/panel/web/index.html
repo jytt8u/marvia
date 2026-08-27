@@ -514,11 +514,16 @@ async function addKind(user) {
   } catch (err) { toast(err.message, true); }
 }
 
+// extend продлевает силами панели, а не браузера.
+//
+// Считать новый срок здесь нельзя — ровно это мы запрещаем ботам в
+// документации. Страница знает срок на момент последнего обновления: если
+// минуту назад покупатель продлился через бота, вычисленная в браузере дата
+// окажется старее настоящей, и клик «+30 дней» молча отберёт у человека
+// оплаченный месяц. extend_by прибавляет к тому, что в базе прямо сейчас.
 async function extend(user, days) {
-  const from = user.expires_at && new Date(user.expires_at) > new Date() ? new Date(user.expires_at) : new Date();
-  const next = new Date(from.getTime() + days * 86400000).toISOString();
   try {
-    await api("PATCH", "/api/v1/users/" + user.id, { expires_at: next, enabled: true });
+    await api("PATCH", "/api/v1/users/" + user.id, { extend_by: days + "d", enabled: true });
     toast("Продлено на " + days + " " + plural(days, "день", "дня", "дней"));
     await load();
   } catch (err) { toast(err.message, true); }
