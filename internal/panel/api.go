@@ -90,6 +90,11 @@ func (a *API) Handler() http.Handler {
 	// устройстве покупателя быть не должно ни при каких обстоятельствах.
 	mux.HandleFunc("POST /sub/{token}/report", a.report)
 
+	// Приложения покупателям раздаёт сама панель — с домена продавца.
+	// Подробности и причина в apps.go.
+	mux.HandleFunc("GET /sub/{token}/app/{name}", a.appDownload)
+	mux.HandleFunc("GET /api/v1/apps", a.scoped(ScopeRead, a.listApps))
+
 	// Веб-интерфейс. Только по точному корню: всё остальное — 404, чтобы
 	// панель не отвечала страницей на случайные пути сканеров.
 	mux.HandleFunc("GET /{$}", a.ServeApp)
@@ -207,6 +212,21 @@ func (a *API) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ключ идемпотентности защищает и первую продажу, не только продление.
+	//
+	// Платёжные системы и телеграм повторяют уведомление, пока бот не ответил,
+	// а бот может упасть ровно между выдачей доступа и ответом. Повтор той
+	// оплаты, которая завела покупателя, без этого выдавал бы второй срок за
+	// одни деньги: ErrAlreadyExists ловит только повтор по external_id, а
+	// продавец, продающий без него, не защищён ничем.
+	//
+	// Область — вместе с покупателем: тот же ключ, пришедший на другого,
+	// означает ошибку в боте, и лучше ответить 409, чем молча выдать первому.
+	scope := "create:" + strings.TrimSpace(p.ExternalID)
+	if handled := a.replayed(w, r, scope); handled {
+		return
+	}
+
 	user, issued, err := a.store.CreateUser(r.Context(), p)
 
 	// Такой покупатель уже заведён — значит уведомление об оплате пришло
@@ -230,6 +250,21 @@ func (a *API) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Запоминаем ответ без секретов, хотя отдаём с ними.
+	//
+	// Приватную часть vp1 панель не хранит нигде — в этом весь смысл: утечка
+	// её базы не даёт доступа ни к одному покупателю нашего протокола. Сложить
+	// секрет в таблицу повторов ради удобства бота значило бы разменять это
+	// свойство на сутки хранения. Поэтому повтор получает того же покупателя,
+	// created=false и ссылки без ключа: доступ выдан один раз, и если бот его
+	// потерял, выдаётся новый набор, а не старый.
+	a.remember(r, scope, map[string]any{
+		"user":    user,
+		"created": false,
+		"issued":  []Issued{},
+		"links":   a.links(r.Context(), user, nil),
+	})
+
 	ok(w, map[string]any{
 		"user":    user,
 		"created": true,
@@ -249,6 +284,13 @@ func (a *API) createUser(w http.ResponseWriter, r *http.Request) {
 // в чём дело.
 func (a *API) links(ctx context.Context, user User, issued []Issued) map[string]any {
 	out := map[string]any{"subscription": a.subURL(user.SubToken)}
+
+	// Ссылки на приложения — с домена панели. Магазины приложений и чужие
+	// файлохостинги отваливаются первыми, и покупатель застревает на шаге
+	// «скачай», уже заплатив.
+	if apps := a.appLinks(user.SubToken); apps != nil {
+		out["apps"] = apps
+	}
 
 	stock := make([]Credential, 0, len(issued))
 	for _, i := range issued {
@@ -433,10 +475,14 @@ func (a *API) userLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok(w, map[string]any{
+	answer := map[string]any{
 		"subscription": a.subURL(user.SubToken),
 		"stock":        StockLinks(nodes, user.Credentials, user.Label),
-	})
+	}
+	if apps := a.appLinks(user.SubToken); apps != nil {
+		answer["apps"] = apps
+	}
+	ok(w, answer)
 }
 
 func (a *API) addCredential(w http.ResponseWriter, r *http.Request) {

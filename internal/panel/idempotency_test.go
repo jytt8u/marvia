@@ -159,3 +159,95 @@ func TestIdempotencyKeyIsBoundToOperation(t *testing.T) {
 	}
 }
 func itoa(v int64) string { return strconv.FormatInt(v, 10) }
+
+// TestFirstSaleIsIdempotent — повтор оплаты не выдаёт второй доступ.
+//
+// Продление ключ защищал давно, а первую продажу — нет: панель про платежи не
+// знает, а ErrAlreadyExists ловит только повтор по external_id. Продавец,
+// который его не заполняет, не был защищён ничем, и повтор уведомления от
+// платёжной системы заводил второго подписчика за те же деньги.
+func TestFirstSaleIsIdempotent(t *testing.T) {
+	h := newHarness(t)
+
+	body := map[string]any{"label": "покупатель", "expires_at": "30d"}
+	const payment = "charge-777"
+
+	var first userView
+	if code := h.withKey(http.MethodPost, "/api/v1/users", payment, body, &first); code != http.StatusOK {
+		t.Fatalf("продажа не прошла: код %d", code)
+	}
+
+	var second userView
+	if code := h.withKey(http.MethodPost, "/api/v1/users", payment, body, &second); code != http.StatusOK {
+		t.Fatalf("повтор ответил кодом %d", code)
+	}
+	if second.User.ID != first.User.ID {
+		t.Fatalf("повтор завёл второго подписчика: %d и %d", first.User.ID, second.User.ID)
+	}
+
+	var list struct {
+		Users []struct {
+			ID int64 `json:"id"`
+		} `json:"users"`
+	}
+	h.do(http.MethodGet, "/api/v1/users", adminToken, nil, &list)
+	if len(list.Users) != 1 {
+		t.Fatalf("в панели %d подписчиков вместо одного", len(list.Users))
+	}
+}
+
+// TestReplayedSaleHasNoSecrets — повтор не отдаёт ключ доступа заново.
+//
+// Приватную часть vp1 панель не хранит нигде — утечка её базы не даёт доступа
+// ни к одному покупателю нашего протокола. Сложить секрет в таблицу повторов
+// ради удобства бота значило бы разменять это свойство на сутки хранения.
+func TestReplayedSaleHasNoSecrets(t *testing.T) {
+	h := newHarness(t)
+
+	body := map[string]any{"label": "покупатель"}
+	const payment = "charge-778"
+
+	var first struct {
+		Created bool `json:"created"`
+		Links   struct {
+			Account string `json:"account"`
+		} `json:"links"`
+	}
+	h.withKey(http.MethodPost, "/api/v1/users", payment, body, &first)
+	if !first.Created || first.Links.Account == "" {
+		t.Fatalf("первая продажа не выдала доступ: %+v", first)
+	}
+
+	var second struct {
+		Created bool `json:"created"`
+		Links   struct {
+			Account string `json:"account"`
+		} `json:"links"`
+	}
+	h.withKey(http.MethodPost, "/api/v1/users", payment, body, &second)
+
+	if second.Created {
+		t.Error("повтор объявил, что завёл покупателя заново")
+	}
+	if second.Links.Account != "" {
+		t.Errorf("повтор отдал ключ доступа из хранилища повторов: %q", second.Links.Account)
+	}
+}
+
+// TestSaleKeyIsBoundToBuyer — один ключ на двух покупателей это ошибка бота.
+//
+// Молча вернуть ответ первого — значит оставить второго без доступа, за
+// который он заплатил, и продавец узнает об этом от него же.
+func TestSaleKeyIsBoundToBuyer(t *testing.T) {
+	h := newHarness(t)
+
+	const payment = "charge-779"
+	h.withKey(http.MethodPost, "/api/v1/users", payment,
+		map[string]any{"external_id": "tg:1", "label": "первый"}, nil)
+
+	code := h.withKey(http.MethodPost, "/api/v1/users", payment,
+		map[string]any{"external_id": "tg:2", "label": "второй"}, nil)
+	if code != http.StatusConflict {
+		t.Fatalf("тот же ключ на другого покупателя прошёл с кодом %d", code)
+	}
+}

@@ -1,4 +1,4 @@
-package bot
+package main
 
 import (
 	"encoding/json"
@@ -6,14 +6,16 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // State — что бот помнит между запусками.
 //
 // Своей базы у бота нет: покупатели, сроки и расход живут в панели. Здесь
-// только две вещи, которых панели знать неоткуда, — кому уже напомнили об
-// окончании срока и какие платежи уже учтены.
+// только одно, чего панели знать неоткуда, — кому уже напомнили об окончании
+// срока.
+//
+// Про платежи бот тоже ничего не помнит: повтор уведомления гасит панель по
+// заголовку Idempotency-Key, и на продлении, и на первой продаже.
 type State struct {
 	path string
 	data stateFile
@@ -22,29 +24,11 @@ type State struct {
 type stateFile struct {
 	// Reminders: внешний ключ покупателя -> срок, о котором ему уже написали.
 	Reminders map[string]string `json:"reminders"`
-
-	// Charges: номер платежа -> когда учли.
-	//
-	// Телеграм повторяет уведомление об оплате, пока бот не ответит, а бот
-	// может упасть ровно между выдачей доступа и ответом. Продление от повтора
-	// защищает панель ключом идемпотентности, но первую продажу — нет: платежа
-	// она не видит вовсе. Без этой отметки покупатель получал бы два месяца за
-	// одни деньги.
-	Charges map[string]time.Time `json:"charges"`
 }
-
-// chargeMemory — сколько помним платежи.
-//
-// Телеграм повторяет уведомление считанные часы; месяц с запасом закрывает
-// любую задержку и не даёт файлу расти вечно.
-const chargeMemory = 30 * 24 * time.Hour
 
 // OpenState читает файл состояния, создавая его при необходимости.
 func OpenState(path string) (*State, error) {
-	s := &State{path: path, data: stateFile{
-		Reminders: map[string]string{},
-		Charges:   map[string]time.Time{},
-	}}
+	s := &State{path: path, data: stateFile{Reminders: map[string]string{}}}
 
 	raw, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -63,11 +47,6 @@ func OpenState(path string) (*State, error) {
 	if s.data.Reminders == nil {
 		s.data.Reminders = map[string]string{}
 	}
-	if s.data.Charges == nil {
-		s.data.Charges = map[string]time.Time{}
-	}
-
-	s.forgetOldCharges()
 	return s, nil
 }
 
@@ -91,34 +70,6 @@ func (s *State) forget(alive map[string]bool) {
 	}
 	if changed {
 		s.save()
-	}
-}
-
-// counted — учитывали ли уже этот платёж.
-func (s *State) counted(charge string) bool {
-	if charge == "" {
-		return false
-	}
-	_, seen := s.data.Charges[charge]
-	return seen
-}
-
-// count отмечает платёж учтённым.
-func (s *State) count(charge string) {
-	if charge == "" {
-		return
-	}
-	s.data.Charges[charge] = time.Now().UTC()
-	s.forgetOldCharges()
-	s.save()
-}
-
-func (s *State) forgetOldCharges() {
-	edge := time.Now().Add(-chargeMemory)
-	for id, when := range s.data.Charges {
-		if when.Before(edge) {
-			delete(s.data.Charges, id)
-		}
 	}
 }
 
