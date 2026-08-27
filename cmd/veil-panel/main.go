@@ -124,8 +124,17 @@ func run(opts options) error {
 		log.Printf("не вышло убрать старые ключи идемпотентности: %v", err)
 	}
 
+	// Адреса выясняются один раз, при запуске, и уезжают в ссылки доступа.
+	// Печатаем их вслух: продавец, поставивший панель за Cloudflare, должен
+	// видеть, что в ссылки попал Cloudflare, а не прежний адрес сервера —
+	// иначе он узнает об этом в тот день, когда сервер заблокируют.
+	addresses := panelAddresses(opts)
+	if len(addresses) > 0 {
+		log.Printf("ссылки доступа подсказывают адреса панели: %s", strings.Join(addresses, ", "))
+	}
+
 	api := panel.NewAPI(store, opts.adminToken, opts.subBase, opts.distDir).
-		WithPanelIPs(panelAddresses(opts)).
+		WithPanelIPs(addresses).
 		WithVersion(version)
 	server := &http.Server{
 		Addr:              opts.listen,
