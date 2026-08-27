@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -50,6 +51,10 @@ type options struct {
 	acmeCache  string
 	acmeHTTP   string
 	panelIPs   string
+
+	backupDir   string
+	backupKeep  int
+	backupEvery time.Duration
 }
 
 func main() {
@@ -69,6 +74,10 @@ func main() {
 	flag.StringVar(&opts.acmeCache, "acme-cache", "acme", "каталог для полученных сертификатов")
 	flag.StringVar(&opts.acmeHTTP, "acme-http", ":80", "адрес для ответов на проверку ACME (пусто — не поднимать)")
 	flag.StringVar(&opts.panelIPs, "panel-ip", "", "адреса панели через запятую для ссылок доступа (пусто — выяснить по домену)")
+
+	flag.StringVar(&opts.backupDir, "backup-dir", "", "каталог для копий базы (по умолчанию — backup рядом с базой)")
+	flag.IntVar(&opts.backupKeep, "backup-keep", panel.BackupKeep, "сколько копий держать")
+	flag.DurationVar(&opts.backupEvery, "backup-every", panel.BackupEvery, "как часто снимать копию (0 — не снимать)")
 
 	newToken := flag.Bool("new-token", false, "выпустить админский токен и выйти")
 	showVersion := flag.Bool("version", false, "показать версию и выйти")
@@ -145,6 +154,25 @@ func run(opts options) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// Копии базы снимает сама панель. Продавец, которому надо помнить про
+	// cron, однажды про него не вспомнит — а panel.db это все его покупатели
+	// и все оплаченные ими месяцы.
+	backupDir := opts.backupDir
+	if backupDir == "" {
+		backupDir = filepath.Join(filepath.Dir(opts.dbPath), "backup")
+	}
+	if opts.backupEvery > 0 {
+		log.Printf("копии базы: каждые %s в %s, храним %d",
+			opts.backupEvery, backupDir, opts.backupKeep)
+		go store.KeepBackups(ctx, backupDir, opts.backupKeep, opts.backupEvery, func(path string, err error) {
+			if err != nil {
+				log.Printf("копия базы не снялась: %v", err)
+				return
+			}
+			log.Printf("копия базы: %s", path)
+		})
+	}
 
 	go func() {
 		<-ctx.Done()
