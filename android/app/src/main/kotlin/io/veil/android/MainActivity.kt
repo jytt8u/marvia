@@ -11,6 +11,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -77,6 +78,56 @@ class MainActivity : AppCompatActivity() {
         }
 
         askForNotifications()
+        acceptLinkFrom(intent)
+    }
+
+    /**
+     * onNewIntent ловит ссылку, когда приложение уже открыто.
+     *
+     * У активности launchMode=singleTask, и второй раз onCreate не позовут: без
+     * этого нажатие на ссылку при открытом приложении не делало бы ничего, и
+     * человек решил бы, что ссылка нерабочая.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        acceptLinkFrom(intent)
+    }
+
+    /**
+     * acceptLinkFrom подставляет ключ из нажатой ссылки veil-account://.
+     *
+     * Отправить её может любое приложение — телеграм, браузер, что угодно.
+     * Поэтому замена уже стоящего ключа спрашивается: подменённая ссылка увела
+     * бы весь трафик покупателя на серверы того, кто её подсунул, а заметить
+     * это ему нечем. Когда ключа ещё нет, спрашивать не о чем — это обычная
+     * первая настройка, ради которой ссылка и придумана.
+     */
+    private fun acceptLinkFrom(intent: Intent) {
+        val link = intent.data?.toString()?.trim().orEmpty()
+        if (link.isEmpty()) {
+            return
+        }
+
+        // Ссылку из намерения убираем сразу: иначе возврат из системного окна
+        // разрешения или смена темы подставит её заново.
+        intent.data = null
+
+        if (store.accountLink.isBlank() || store.accountLink == link) {
+            ui.keyInput.setText(link)
+            saveKey()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.key_replace_title)
+            .setMessage(R.string.key_replace_body)
+            .setPositiveButton(R.string.key_replace_yes) { _, _ ->
+                ui.keyInput.setText(link)
+                saveKey()
+            }
+            .setNegativeButton(R.string.key_replace_no, null)
+            .show()
     }
 
     /**

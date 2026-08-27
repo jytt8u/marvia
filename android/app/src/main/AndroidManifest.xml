@@ -28,6 +28,22 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+                Ссылку из телеграма покупатель просто нажимает. Без этого он
+                держит её в буфере обмена, ищет приложение и вставляет вручную —
+                и именно здесь теряется тот, ради кого всё делается.
+
+                Своя схема, а не https: у покупателя не должно быть шага, на
+                котором ссылка уходит в браузер, а с ней и адрес панели
+                продавца — в историю, синхронизацию и подсказки поиска.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="veil-account" />
+            </intent-filter>
         </activity>
 
         <!--
