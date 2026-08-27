@@ -457,6 +457,31 @@ func (s *Store) GetUser(ctx context.Context, id int64) (User, error) {
 	return list[0], nil
 }
 
+// RotateSubToken выдаёт подписчику новый токен подписки.
+//
+// Нужно, когда старый утёк: ссылку подписки покупатели раздают знакомым, она
+// попадает в переписки и на форумы, а по ней отдаются и список нод, и секреты
+// vless с trojan. Отзывать ради этого весь доступ — терять покупателя.
+//
+// Старая ссылка перестаёт работать сразу, новую надо переслать покупателю:
+// приложение обновляет список нод по адресу, который у него сохранён, и само
+// про смену не узнает.
+func (s *Store) RotateSubToken(ctx context.Context, id int64) (User, error) {
+	token, err := NewToken()
+	if err != nil {
+		return User{}, err
+	}
+
+	res, err := s.db.ExecContext(ctx, `UPDATE users SET sub_token = ? WHERE id = ?`, token, id)
+	if err != nil {
+		return User{}, fmt.Errorf("смена токена подписки: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return User{}, ErrNotFound
+	}
+	return s.GetUser(ctx, id)
+}
+
 // UserBySubToken находит подписчика по токену подписки.
 func (s *Store) UserBySubToken(ctx context.Context, token string) (User, error) {
 	list, err := s.queryUsers(ctx, `WHERE u.sub_token = ?`, token)

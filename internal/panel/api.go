@@ -58,6 +58,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/v1/users/{id}", a.scoped(ScopeUsers, a.deleteUser))
 	mux.HandleFunc("GET /api/v1/users/{id}/links", a.scoped(ScopeUsers, a.userLinks))
 	mux.HandleFunc("POST /api/v1/users/{id}/credentials", a.scoped(ScopeUsers, a.addCredential))
+	mux.HandleFunc("POST /api/v1/users/{id}/sub-token", a.scoped(ScopeUsers, a.rotateSubToken))
 	mux.HandleFunc("DELETE /api/v1/credentials/{id}", a.scoped(ScopeUsers, a.deleteCredential))
 
 	// Управление: ноды. Боту сюда не надо.
@@ -955,4 +956,39 @@ func (a *API) revokeKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// rotateSubToken меняет ссылку подписки, не трогая доступ.
+//
+// Ссылку подписки покупатели раздают знакомым: она попадает в переписки, на
+// форумы и в чужие приложения, а по ней отдаются список нод и секреты vless с
+// trojan. Продавцу нужен ответ мягче, чем отзыв всего доступа, — иначе за одну
+// утёкшую ссылку он теряет покупателя.
+//
+// Старая ссылка умирает сразу — вместе с ней перестаёт работать и ссылка
+// доступа покупателя: в ней зашит путь /sub/<токен>, по которому приложение
+// забирает список нод. Поэтому смена адреса подписки всегда идёт в паре с
+// выдачей нового набора доступа: POST /users/{id}/credentials.
+//
+// И это не отменяет отзыва утёкших наборов. Тот, кто успел прочитать старую
+// подписку, унёс из неё секреты vless и trojan, и они действуют, пока их не
+// отозвали: смена адреса закрывает будущие чтения, а не прошлые.
+func (a *API) rotateSubToken(w http.ResponseWriter, r *http.Request) {
+	id, okID := pathID(w, r)
+	if !okID {
+		return
+	}
+
+	user, err := a.store.RotateSubToken(r.Context(), id)
+	if err != nil {
+		respondStoreErr(w, err)
+		return
+	}
+
+	ok(w, map[string]any{
+		"user": user,
+		// Секретов здесь нет: меняется только адрес подписки, наборы доступа
+		// остаются прежними, и заново их панель не выдаёт.
+		"links": a.links(r.Context(), user, nil),
+	})
 }

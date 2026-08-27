@@ -152,3 +152,40 @@ func TestListAppsTellsWhatIsLaidOut(t *testing.T) {
 		t.Errorf("список приложений отдался без токена: %d", code)
 	}
 }
+
+// TestSubTokenRotates — утёкшую ссылку подписки можно сменить, не отзывая доступ.
+//
+// Ссылку покупатели раздают знакомым, а по ней отдаются список нод и секреты
+// vless с trojan. Отзывать за это весь доступ — терять покупателя.
+func TestSubTokenRotates(t *testing.T) {
+	srv, admin := appPanel(t, map[string]string{"veil-android.apk": fakeAPK})
+	old, _ := buySubscription(t, srv, admin)
+
+	if code, _ := do(t, srv, "GET", "/sub/"+old, "", ""); code != http.StatusOK {
+		t.Fatalf("подписка не работает до смены: %d", code)
+	}
+
+	code, body := do(t, srv, "POST", "/api/v1/users/1/sub-token", admin, "")
+	if code != http.StatusOK {
+		t.Fatalf("токен не сменился: %d %s", code, body)
+	}
+	fresh := between(t, body, `"sub_token":"`, `"`)
+	if fresh == old {
+		t.Fatal("токен остался прежним")
+	}
+	if strings.Contains(body, "veil-account://") {
+		t.Errorf("смена адреса подписки выдала ключ доступа заново: %s", body)
+	}
+
+	if code, _ := do(t, srv, "GET", "/sub/"+old, "", ""); code != http.StatusNotFound {
+		t.Errorf("старая ссылка всё ещё работает: %d", code)
+	}
+	if code, _ := do(t, srv, "GET", "/sub/"+fresh, "", ""); code != http.StatusOK {
+		t.Errorf("новая ссылка не работает: %d", code)
+	}
+
+	// И приложение по старой ссылке больше не качается.
+	if code, _ := do(t, srv, "GET", "/sub/"+old+"/app/android", "", ""); code == http.StatusOK {
+		t.Error("приложение отдаётся по старой ссылке подписки")
+	}
+}
