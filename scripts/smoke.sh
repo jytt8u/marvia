@@ -34,13 +34,13 @@ cd "$ROOT" || exit 1
 echo "== сборка =="
 go build -o bin/ ./... || exit 1
 
-KEYS="$(./bin/veil-keygen -quiet)" || KEYS="$(./bin/veil-keygen.exe -quiet)" || exit 1
+KEYS="$(./bin/marvia-keygen -quiet)" || KEYS="$(./bin/marvia-keygen.exe -quiet)" || exit 1
 PRIV="$(printf '%s\n' "$KEYS" | sed -n 1p)"
 PUB="$(printf '%s\n' "$KEYS" | sed -n 2p)"
 
 # Бинарники на Windows называются с .exe — берём то, что собралось.
-SERVER_BIN="./bin/veil-server"; [ -x "$SERVER_BIN" ] || SERVER_BIN="./bin/veil-server.exe"
-CLIENT_BIN="./bin/veil-client"; [ -x "$CLIENT_BIN" ] || CLIENT_BIN="./bin/veil-client.exe"
+SERVER_BIN="./bin/marvia-node"; [ -x "$SERVER_BIN" ] || SERVER_BIN="./bin/marvia-node.exe"
+CLIENT_BIN="./bin/marvia-client"; [ -x "$CLIENT_BIN" ] || CLIENT_BIN="./bin/marvia-client.exe"
 
 echo "== запуск ноды =="
 "$SERVER_BIN" -listen "$NODE_ADDR" -key "$PRIV" \

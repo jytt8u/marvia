@@ -42,7 +42,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Println("veil-bot", version)
+		fmt.Println("marvia-bot", version)
 		return
 	}
 	if *example {
@@ -73,7 +73,7 @@ func run(configPath, statePath string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	log.Printf("veil-bot %s работает: панель %s, тарифов %d, оплата %s",
+	log.Printf("marvia-bot %s работает: панель %s, тарифов %d, оплата %s",
 		version, cfg.Panel, len(cfg.Tariffs), cfg.Payment)
 
 	return New(cfg, state).Run(ctx)

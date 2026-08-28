@@ -57,7 +57,7 @@ jobs:
             out="build/${os}_${arch}"
             mkdir -p "$out"
 
-            for cmd in veil-panel veil-server veil-keygen; do
+            for cmd in marvia-panel marvia-node marvia-keygen; do
               CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
                 go build -trimpath \
                   -ldflags "-s -w -X main.version=${VERSION}" \
@@ -69,7 +69,7 @@ jobs:
             cp scripts/install-panel.sh "$out/install-panel.sh"
             chmod +x "$out/install-panel.sh"
 
-            tar -czf "dist/veil_${os}_${arch}.tar.gz" -C "$out" .
+            tar -czf "dist/marvia_${os}_${arch}.tar.gz" -C "$out" .
           done
 
           # Клиент под Windows. Отдельным файлом, а не в архиве: ссылку на него
@@ -80,13 +80,13 @@ jobs:
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
             go build -trimpath \
               -ldflags "-H windowsgui -s -w -X main.version=${VERSION}" \
-              -o dist/veil-windows.exe ./cmd/veil-windows
+              -o dist/marvia-windows.exe ./cmd/marvia-windows
 
           # Установщик выкладываем и отдельным файлом: с него всё начинается,
           # а качать ради него архив — лишний шаг на самом первом шаге.
           cp scripts/install-panel.sh dist/install-panel.sh
 
-          cd dist && sha256sum *.tar.gz install-panel.sh veil-windows.exe > SHA256SUMS && cat SHA256SUMS
+          cd dist && sha256sum *.tar.gz install-panel.sh marvia-windows.exe > SHA256SUMS && cat SHA256SUMS
 
       # Релиз уезжает в отдельный публичный репозиторий.
       #
@@ -101,10 +101,10 @@ jobs:
           repository: jytt8u/marvia-releases
           token: ${{ secrets.RELEASES_TOKEN }}
           files: |
-            dist/veil_linux_amd64.tar.gz
-            dist/veil_linux_arm64.tar.gz
+            dist/marvia_linux_amd64.tar.gz
+            dist/marvia_linux_arm64.tar.gz
             dist/install-panel.sh
-            dist/veil-windows.exe
+            dist/marvia-windows.exe
             dist/SHA256SUMS
           body: |
             Установка панели на чистый сервер:
@@ -130,6 +130,6 @@ jobs:
         if: "!startsWith(github.ref, 'refs/tags/v')"
         uses: actions/upload-artifact@v4
         with:
-          name: veil-dist
+          name: marvia-dist
           path: dist/
           retention-days: 14

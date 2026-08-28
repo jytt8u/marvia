@@ -30,8 +30,8 @@ var appFiles = map[string]struct {
 	file string
 	mime string
 }{
-	"android": {"veil-android.apk", "application/vnd.android.package-archive"},
-	"windows": {"veil-windows.exe", "application/octet-stream"},
+	"android": {"marvia-android.apk", "application/vnd.android.package-archive"},
+	"windows": {"marvia-windows.exe", "application/octet-stream"},
 }
 
 // appDownload отдаёт приложение по токену подписки.

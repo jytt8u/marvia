@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Veil — панель</title>
+<title>Marvia — панель</title>
 <style>
 :root {
   color-scheme: light dark;
@@ -143,7 +143,7 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
 <body>
 
 <div class="wrap gate" id="gate">
-  <h1>Veil — панель</h1>
+  <h1>Marvia — панель</h1>
   <div class="card">
     <p class="muted">Введи админский токен. Он останется в этом браузере и не уйдёт никуда, кроме самой панели.</p>
     <label class="field"><span>Админский токен</span>
@@ -151,14 +151,14 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
     </label>
     <div class="row" style="margin-top:.7rem">
       <button class="primary" id="tokenSubmit">Войти</button>
-      <span class="muted">выпустить: <code class="mono">veil-panel -new-token</code></span>
+      <span class="muted">выпустить: <code class="mono">marvia-panel -new-token</code></span>
     </div>
   </div>
 </div>
 
 <div class="wrap" id="app" hidden>
   <header class="top">
-    <span class="brand">Veil</span>
+    <span class="brand">Marvia</span>
     <span class="muted" id="summary"></span>
     <span class="spacer"></span>
     <button id="refresh">Обновить</button>
@@ -218,14 +218,14 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
       <p class="muted">
         Нужно в двух случаях: нода стоит за CDN — таких установщик пока не умеет, —
         либо её ставили руками. Тогда ключи придётся взять из журнала
-        <code class="mono">veil-server</code>.
+        <code class="mono">marvia-node</code>.
       </p>
       <div class="grid">
         <label class="field"><span>Имя</span><input id="nn-name" placeholder="msk-1"></label>
         <label class="field"><span>Страна — как её увидит покупатель</span><input id="nn-country" placeholder="Нидерланды"></label>
         <label class="field"><span>Адрес и порт</span><input id="nn-address" placeholder="msk.example.com:443"></label>
         <label class="field"><span>SNI — домен ноды или сайта прикрытия</span><input id="nn-sni" placeholder="www.samsung.com"></label>
-        <label class="field"><span>Публичный ключ ноды</span><input id="nn-key" placeholder="из журнала veil-server"></label>
+        <label class="field"><span>Публичный ключ ноды</span><input id="nn-key" placeholder="из журнала marvia-node"></label>
         <label class="field"><span>Публичный ключ REALITY (pbk)</span><input id="nn-pbk" placeholder="пусто — обычный TLS"></label>
         <label class="field"><span>Короткий идентификатор (sid)</span><input id="nn-sid" placeholder="необязательно"></label>
         <label class="field"><span>Путь WebSocket (за CDN)</span><input id="nn-wspath" placeholder="пусто — прямое подключение"></label>
@@ -773,7 +773,7 @@ async function createNode() {
         "переменную VEIL_NODE_TOKEN, а не в строку запуска — в строке его видит " +
         "любой пользователь системы через ps." }),
       linkRow("Токен ноды", res.token),
-      linkRow("Запусти на сервере", "veil-server -panel " + location.origin +
+      linkRow("Запусти на сервере", "marvia-node -panel " + location.origin +
         " -key-file node.key -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org")
     );
     $("modal").showModal();

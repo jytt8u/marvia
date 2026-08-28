@@ -61,7 +61,7 @@ func buySubscription(t *testing.T, srv *httptest.Server, admin string) (token, b
 
 // TestAppComesFromPanel — покупатель качает приложение с домена продавца.
 func TestAppComesFromPanel(t *testing.T) {
-	srv, admin := appPanel(t, map[string]string{"veil-android.apk": fakeAPK})
+	srv, admin := appPanel(t, map[string]string{"marvia-android.apk": fakeAPK})
 	token, body := buySubscription(t, srv, admin)
 
 	// Ссылка приходит вместе с доступом: отдельно её искать негде.
@@ -84,7 +84,7 @@ func TestAppComesFromPanel(t *testing.T) {
 // блокировок, на первом же запросе. У покупателя токен есть — он пришёл в той
 // же ссылке, что и доступ.
 func TestAppNeedsSubToken(t *testing.T) {
-	srv, admin := appPanel(t, map[string]string{"veil-android.apk": fakeAPK})
+	srv, admin := appPanel(t, map[string]string{"marvia-android.apk": fakeAPK})
 	buySubscription(t, srv, admin)
 
 	for _, token := range []string{"чужой", "", "../../etc/passwd"} {
@@ -97,7 +97,7 @@ func TestAppNeedsSubToken(t *testing.T) {
 
 // TestUnknownAppIsNotAPath — имя приложения не превращается в путь на диске.
 func TestUnknownAppIsNotAPath(t *testing.T) {
-	srv, admin := appPanel(t, map[string]string{"veil-android.apk": fakeAPK})
+	srv, admin := appPanel(t, map[string]string{"marvia-android.apk": fakeAPK})
 	token, _ := buySubscription(t, srv, admin)
 
 	for _, name := range []string{"linux", "panel.db", "..%2Fpanel.db"} {
@@ -124,14 +124,14 @@ func TestNoAppNoLink(t *testing.T) {
 	if code != http.StatusServiceUnavailable {
 		t.Fatalf("ожидался внятный отказ, пришло %d %s", code, got)
 	}
-	if !strings.Contains(got, "veil-android.apk") {
+	if !strings.Contains(got, "marvia-android.apk") {
 		t.Errorf("в отказе не сказано, какой файл положить: %s", got)
 	}
 }
 
 // TestListAppsTellsWhatIsLaidOut — продавец видит, что у него выложено.
 func TestListAppsTellsWhatIsLaidOut(t *testing.T) {
-	srv, admin := appPanel(t, map[string]string{"veil-android.apk": fakeAPK})
+	srv, admin := appPanel(t, map[string]string{"marvia-android.apk": fakeAPK})
 
 	code, body := do(t, srv, "GET", "/api/v1/apps", admin, "")
 	if code != http.StatusOK {
@@ -142,7 +142,7 @@ func TestListAppsTellsWhatIsLaidOut(t *testing.T) {
 	if !strings.Contains(body, hex.EncodeToString(sum[:])) {
 		t.Errorf("сумма не сошлась или её нет: %s", body)
 	}
-	if strings.Contains(body, "veil-windows.exe") {
+	if strings.Contains(body, "marvia-windows.exe") {
 		t.Errorf("панель обещает то, чего не выложено: %s", body)
 	}
 
@@ -158,7 +158,7 @@ func TestListAppsTellsWhatIsLaidOut(t *testing.T) {
 // Ссылку покупатели раздают знакомым, а по ней отдаются список нод и секреты
 // vless с trojan. Отзывать за это весь доступ — терять покупателя.
 func TestSubTokenRotates(t *testing.T) {
-	srv, admin := appPanel(t, map[string]string{"veil-android.apk": fakeAPK})
+	srv, admin := appPanel(t, map[string]string{"marvia-android.apk": fakeAPK})
 	old, _ := buySubscription(t, srv, admin)
 
 	if code, _ := do(t, srv, "GET", "/sub/"+old, "", ""); code != http.StatusOK {

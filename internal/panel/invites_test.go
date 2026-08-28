@@ -173,7 +173,7 @@ func TestInstallScriptCarriesPanelAndInvite(t *testing.T) {
 		invite.Token,
 		"https://sub.example.com",
 		"/api/v1/nodes/register",
-		"veil-node.service",
+		"marvia-node.service",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("в установщике нет %q", want)

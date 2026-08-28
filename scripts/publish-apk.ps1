@@ -63,7 +63,7 @@ finally {
 }
 
 $apk = 'android\app\build\outputs\apk\release\app-release.apk'
-$out = Join-Path ([System.IO.Path]::GetTempPath()) 'veil-android.apk'
+$out = Join-Path ([System.IO.Path]::GetTempPath()) 'marvia-android.apk'
 Copy-Item $apk $out -Force
 
 # Подпись проверяем до выкладки: неподписанный или подписанный отладочным
@@ -73,11 +73,11 @@ if ($LASTEXITCODE -ne 0) { throw 'APK не подписан' }
 Write-Host $signature[1]
 
 $sum = (Get-FileHash $out -Algorithm SHA256).Hash.ToLower()
-"$sum  veil-android.apk" | Out-File -FilePath "$out.sha256" -Encoding ascii -NoNewline
+"$sum  marvia-android.apk" | Out-File -FilePath "$out.sha256" -Encoding ascii -NoNewline
 
 Write-Host "== выкладываю в $Repo, метка $Tag"
 gh release upload $Tag $out "$out.sha256" --repo $Repo --clobber
 if ($LASTEXITCODE -ne 0) { throw 'не выложилось' }
 
 Write-Host ''
-Write-Host "готово: veil-android.apk, sha256 $sum"
+Write-Host "готово: marvia-android.apk, sha256 $sum"

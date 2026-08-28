@@ -1,4 +1,4 @@
-# Veil
+# Marvia
 
 Инфраструктура для обхода сетевой цензуры: собственный протокол, ядро, ноды,
 управление и клиенты.
@@ -22,7 +22,7 @@
 go build -o bin/ ./...
 ```
 
-Четыре бинарника: `veil-keygen`, `veil-server`, `veil-client`, `veil-panel`.
+Четыре бинарника: `marvia-keygen`, `marvia-node`, `marvia-client`, `marvia-panel`.
 
 Для Linux-ноды из-под Windows:
 
@@ -35,7 +35,7 @@ GOOS=linux GOARCH=amd64 go build -o bin/linux/ ./...
 **1. Ключи**
 
 ```bash
-./bin/veil-keygen
+./bin/marvia-keygen
 ```
 
 Приватный остаётся на ноде, публичный нужен клиенту.
@@ -43,7 +43,7 @@ GOOS=linux GOARCH=amd64 go build -o bin/linux/ ./...
 **2. Нода**
 
 ```bash
-VEIL_SERVER_KEY=<приватный ключ> ./bin/veil-server -listen :443 -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org
+VEIL_SERVER_KEY=<приватный ключ> ./bin/marvia-node -listen :443 -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org
 ```
 
 Ключ передавай переменной окружения или `-key-file`: значение флага `-key`
@@ -59,11 +59,11 @@ VEIL_SERVER_KEY=<приватный ключ> ./bin/veil-server -listen :443 -tl
 сайтом. Тогда свой домен и сертификат не нужны вовсе.
 
 ```bash
-./bin/veil-keygen -reality
+./bin/marvia-keygen -reality
 ```
 
 ```bash
-VEIL_REALITY_KEY=<приватный ключ> ./bin/veil-server -listen :443 \
+VEIL_REALITY_KEY=<приватный ключ> ./bin/marvia-node -listen :443 \
   -reality-dest www.samsung.com:443 -reality-sni www.samsung.com \
   -panel https://panel.example.com -panel-token <токен ноды>
 ```
@@ -104,7 +104,7 @@ VEIL_REALITY_KEY=<приватный ключ> ./bin/veil-server -listen :443 \
 целиком неразумно.
 
 ```bash
-./bin/veil-client -server <адрес ноды>:443 -sni www.samsung.com \
+./bin/marvia-client -server <адрес ноды>:443 -sni www.samsung.com \
   -reality-pbk <публичный ключ REALITY> -reality-sid <идентификатор> -pubkey <ключ ноды>
 ```
 
@@ -131,7 +131,7 @@ REALITY прячет трафик, но не адрес. Под ковровую
 диапазон целиком означает уронить пол-интернета.
 
 ```bash
-./bin/veil-server -listen :443 -ws-path /assets/app.js \
+./bin/marvia-node -listen :443 -ws-path /assets/app.js \
   -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org
 ```
 
@@ -139,7 +139,7 @@ REALITY прячет трафик, но не адрес. Под ковровую
 не адрес сервера.
 
 ```bash
-./bin/veil-client -server <адрес CDN>:443 -ws-host <домен> -ws-path /assets/app.js -pubkey <ключ>
+./bin/marvia-client -server <адрес CDN>:443 -ws-host <домен> -ws-path /assets/app.js -pubkey <ключ>
 ```
 
 Проверено вживую: 11 запросов пользователя прошли через одно соединение до
@@ -174,7 +174,7 @@ REALITY прячет трафик, но не адрес. Под ковровую
 **3. Клиент**
 
 ```bash
-./bin/veil-client -server <домен>:443 -sni <домен> -pubkey <публичный ключ>
+./bin/marvia-client -server <домен>:443 -sni <домен> -pubkey <публичный ключ>
 ```
 
 **4. Проверка**
@@ -214,8 +214,8 @@ bash scripts/smoke.sh
 ### Отладка вручную
 
 ```bash
-./bin/veil-server -key <приватный> -tls-self-signed cover.local -cover https://example.com
-./bin/veil-client -server 127.0.0.1:8443 -sni cover.local -insecure -pubkey <публичный>
+./bin/marvia-node -key <приватный> -tls-self-signed cover.local -cover https://example.com
+./bin/marvia-client -server 127.0.0.1:8443 -sni cover.local -insecure -pubkey <публичный>
 ```
 
 Флаг `-plain` с обеих сторон отключает маскировку целиком — удобно, когда
@@ -224,7 +224,7 @@ bash scripts/smoke.sh
 ## Клиент для Windows
 
 ```bash
-go build -o veil-windows.exe ./cmd/veil-windows
+go build -o marvia-windows.exe ./cmd/marvia-windows
 ```
 
 Рядом с получившимся файлом нужен `wintun.dll` — драйвер сетевого адаптера от
@@ -250,7 +250,7 @@ Get-AuthenticodeSignature .\wintun.dll | Format-List Status, SignerCertificate
 
 ### Окно, а не командная строка
 
-Двойной щелчок по `veil-windows.exe` — Windows спросит разрешение, откроется
+Двойной щелчок по `marvia-windows.exe` — Windows спросит разрешение, откроется
 окно с большой кнопкой. Ничего запускать из PowerShell не нужно: программа
 видит, что прав нет, и просит их сама, обычным системным окном согласия.
 
@@ -274,10 +274,10 @@ Get-AuthenticodeSignature .\wintun.dll | Format-List Status, SignerCertificate
 покупателя, а на компьютере может работать что угодно, в том числе чужое.
 Ключ рождается при запуске и живёт до выхода.
 
-### Чем отличается от veil-client
+### Чем отличается от marvia-client
 
-`veil-client` поднимает SOCKS5, и каждое приложение надо настраивать отдельно.
-`veil-windows` забирает весь трафик компьютера, как приложение на телефоне.
+`marvia-client` поднимает SOCKS5, и каждое приложение надо настраивать отдельно.
+`marvia-windows` забирает весь трафик компьютера, как приложение на телефоне.
 Ядро под ними одно и то же — включая выбор ноды по замерам с самой машины.
 
 ### Маршрут в обход туннеля
@@ -579,7 +579,7 @@ Encrypt**. В конце печатает админский токен — од
 
 | Ключ | Когда нужен |
 |---|---|
-| `--from https://…/veil_linux_amd64.tar.gz` | своё зеркало |
+| `--from https://…/marvia_linux_amd64.tar.gz` | своё зеркало |
 | `--bin-dir /путь` | бинарники уже распакованы или собраны руками |
 
 **Контрольная сумма сверяется, когда рядом с архивом лежит `SHA256SUMS`.**
@@ -597,10 +597,10 @@ Encrypt**. В конце печатает админский токен — од
 Версия впечатывается в бинарник при сборке. Спросить можно у каждого:
 
 ```bash
-veil-panel -version
+marvia-panel -version
 ```
 
-Панель пишет её и первой строкой в журнал (`journalctl -u veil-panel`) — в
+Панель пишет её и первой строкой в журнал (`journalctl -u marvia-panel`) — в
 обращения в поддержку обычно попадает именно журнал.
 
 По сети версия отдаётся **только с авторизацией**:
@@ -656,7 +656,7 @@ curl https://panel.example.com/api/v1/version -H "Authorization: Bearer $VEIL_AD
 выбором там, где он уже стоит: `-tls-cert` и `-tls-key` работают как прежде.
 
 Хранилище сертификатов обязано переживать перезапуск, и установщик кладёт его
-в `/opt/veil/acme`. Без постоянного хранилища каждый рестарт заказывал бы новый
+в `/opt/marvia/acme`. Без постоянного хранилища каждый рестарт заказывал бы новый
 сертификат, а у Let's Encrypt на домен всего пять штук в неделю: после пятого
 перезапуска панель осталась бы без сертификата на неделю — а вместе с ней все
 покупатели без обновления списка нод.
@@ -941,7 +941,7 @@ curl -X PATCH https://panel.example.com/api/v1/nodes/3 \
 `secret` при `kind: vp1`.
 
 ```bash
-./bin/veil-server -users users.json
+./bin/marvia-node -users users.json
 ```
 
 | Поле | Что делает |
@@ -983,8 +983,8 @@ curl -X PATCH https://panel.example.com/api/v1/nodes/3 \
 подписки.
 
 ```bash
-./bin/veil-panel -new-token                  # выпустить админский токен
-VEIL_ADMIN_TOKEN=<токен> ./bin/veil-panel -db veil.db -sub-base https://sub.example.com
+./bin/marvia-panel -new-token                  # выпустить админский токен
+VEIL_ADMIN_TOKEN=<токен> ./bin/marvia-panel -db veil.db -sub-base https://sub.example.com
 ```
 
 Панель отдаёт голый HTTP и **обязана стоять за обратным прокси с TLS**: по её
@@ -1024,7 +1024,7 @@ Store, объясняя это блокировкой международных
 через такой же CDN. Ссылка «скачай приложение» отваливается первой, и продавец
 теряет человека, который уже заплатил.
 
-Установщик кладёт `veil-android.apk` и `veil-windows.exe` в `dist` рядом с
+Установщик кладёт `marvia-android.apk` и `marvia-windows.exe` в `dist` рядом с
 панелью. Дальше ссылки приходят сами — вместе с доступом:
 
 ```json
@@ -1181,7 +1181,7 @@ curl -X POST https://panel.example.com/api/v1/users \
 ### Ноды и панель
 
 ```bash
-./bin/veil-server -panel https://panel.example.com -panel-token <токен ноды> ...
+./bin/marvia-node -panel https://panel.example.com -panel-token <токен ноды> ...
 ```
 
 Нода раз в 15 секунд сдаёт расход и забирает свежий список. Если панель
@@ -1221,10 +1221,10 @@ curl -X POST https://panel.example.com/api/v1/users \
 ## Структура
 
 ```
-cmd/veil-keygen     генерация ключей
-cmd/veil-server     нода
-cmd/veil-panel      панель: API, подписки, учёт
-cmd/veil-client     клиент с локальным SOCKS5
+cmd/marvia-keygen     генерация ключей
+cmd/marvia-node     нода
+cmd/marvia-panel      панель: API, подписки, учёт
+cmd/marvia-client     клиент с локальным SOCKS5
 examples/tg-bot     пример бота продавца: тарифы, оплата, выдача доступа
 internal/vp1        протокол: хендшейк, кадры, добивка, защита от повтора
 internal/transport  транспорты: uTLS, TLS, REALITY, WebSocket за CDN
