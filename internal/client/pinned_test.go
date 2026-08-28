@@ -17,7 +17,7 @@ const testKey = "YH3odubQhSmWQfCRwteeGN6pehcHq3DDcX_uGCvfl_Q"
 // TestAccountLinkCarriesPanelAddresses проверяет разбор подсказки адресов.
 func TestAccountLinkCarriesPanelAddresses(t *testing.T) {
 	account, err := client.ParseAccountLink(
-		"veil-account://" + testKey + "@panel.example.test/sub/token?ip=203.0.113.7,%20198.51.100.2")
+		"marvia://" + testKey + "@panel.example.test/sub/token?ip=203.0.113.7,%20198.51.100.2")
 	if err != nil {
 		t.Fatalf("ссылка не разобралась: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestAccountLinkCarriesPanelAddresses(t *testing.T) {
 // уверен, что защитил покупателей, а он не защитил.
 func TestAccountLinkRejectsHostnameAsAddress(t *testing.T) {
 	_, err := client.ParseAccountLink(
-		"veil-account://" + testKey + "@panel.example.test/sub/token?ip=panel.example.test")
+		"marvia://" + testKey + "@panel.example.test/sub/token?ip=panel.example.test")
 	if err == nil {
 		t.Fatal("имя в подсказке принято, а должно быть отвергнуто")
 	}

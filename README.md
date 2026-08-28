@@ -455,7 +455,7 @@ Samsung Galaxy A51, Android 13, arm64:
 - приложение ставится и запускается, экран рисуется, отступы под вырез камеры
   и панель навигации считаются верно, клавиатура не закрывает кнопку;
 - вызов в ядро работает: неверная ссылка отвергается, и на экран приходит
-  текст ошибки, написанный в Go, — «ожидалась схема veil-account://»;
+  текст ошибки, написанный в Go, — «ожидалась схема marvia://»;
 - система принимает нашу службу как VPN: показывает своё окно согласия и
   переключает на нас активный VPN;
 - при неудаче служба честно останавливается и не остаётся висеть в памяти;
@@ -1030,7 +1030,7 @@ Store, объясняя это блокировкой международных
 ```json
 {
   "links": {
-    "account": "veil-account://…",
+    "account": "marvia://…",
     "subscription": "https://panel.example.com/sub/…",
     "apps": {
       "android": "https://panel.example.com/sub/…/app/android",
@@ -1156,7 +1156,7 @@ curl -X POST https://panel.example.com/api/v1/users \
 ```json
 {
   "links": {
-    "account": "veil-account://...",
+    "account": "marvia://...",
     "subscription": "https://sub.example.com/sub/<токен>",
     "stock": [
       "vless://<uuid>@msk.example.com:443?encryption=none&fp=chrome&security=tls&sni=msk.example.com&type=tcp#msk",

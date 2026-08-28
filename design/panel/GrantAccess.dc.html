@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; font-size: 15px; line-height: 1.5; }
+    a { color: #2f6fed; } a:hover { color: #1d55c9; }
+  </style>
+</helmet>
+
+<div style="display: flex; align-items: center; justify-content: center; width: 860px; height: 720px; background: rgba(27, 31, 36, .55); color: #1b1f24;">
+
+  <div style="width: 620px; background: #ffffff; border: 1px solid #dfe3e8; border-radius: 12px; padding: 22px; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 18px 48px rgba(0,0,0,.22);">
+
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="font-size: 18px; font-weight: 700;">Выдать доступ</div>
+      <div style="font-size: 13px; color: #6b7480;">Обычно это делает бот. Руками — когда покупатель пришёл мимо него.</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 12.5px; color: #6b7480;">Метка — по ней ты его найдёшь</span>
+        <div style="display: flex; align-items: center; height: 38px; padding: 0 12px; background: #f0f2f5; border: 1px solid #2f6fed; border-radius: 8px;">заказ 1043</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 12.5px; color: #6b7480;">Телеграм покупателя — необязательно</span>
+        <div style="display: flex; align-items: center; height: 38px; padding: 0 12px; background: #f0f2f5; border: 1px solid #dfe3e8; border-radius: 8px; color: #6b7480;">tg:584930221</div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------- срок -->
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 12.5px; color: #6b7480;">Срок</span>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">7 дней</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #1b1f24; border: 1px solid #1b1f24; color: #ffffff; font-weight: 600;">30 дней</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">90 дней</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Год</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Своё число</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Без срока</span>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------- трафик, в том числе без края -->
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 12.5px; color: #6b7480;">Трафик</span>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 9px;">
+          <span style="font-size: 13px; color: #1b1f24; font-weight: 600;">Без ограничения</span>
+          <span style="width: 34px; height: 20px; border-radius: 999px; background: #2f6fed; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; padding: 0 2px; box-sizing: border-box;">
+            <span style="width: 16px; height: 16px; border-radius: 50%; background: #ffffff;"></span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Переключатель включён — набор гаснет целиком, а не «ноль в поле». -->
+      <div style="display: flex; align-items: center; gap: 8px; opacity: .4;">
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">50 ГБ</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">100 ГБ</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">300 ГБ</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">1 ТБ</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Своё число</span>
+      </div>
+
+      <div style="font-size: 12.5px; color: #6b7480;">
+        Счётчик всё равно считает, просто никого не отрезает. Так видно, кто раздаёт свой доступ дальше.
+      </div>
+    </div>
+
+    <!-- ----------------------------------------------------------- устройства -->
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 12.5px; color: #6b7480;">Устройств одновременно</span>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 9px;">
+          <span style="font-size: 13px; color: #414954;">Без ограничения</span>
+          <span style="width: 34px; height: 20px; border-radius: 999px; background: #dfe3e8; flex-shrink: 0; display: flex; align-items: center; padding: 0 2px; box-sizing: border-box;">
+            <span style="width: 16px; height: 16px; border-radius: 50%; background: #ffffff;"></span>
+          </span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">1</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">2</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #1b1f24; border: 1px solid #1b1f24; color: #ffffff; font-weight: 600;">3</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">5</span>
+        <span style="padding: 7px 14px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Своё число</span>
+      </div>
+
+      <div style="font-size: 12.5px; color: #6b7480;">
+        Считается по адресам, а не по устройствам: домашний и мобильный интернет у одного человека — это уже два.
+      </div>
+    </div>
+
+    <!--
+      Выбора протоколов здесь нет намеренно.
+
+      Выдаются все, что включены на нодах: покупателю нужен работающий доступ,
+      а не решение, какой протокол ему больше подходит, — и продавцу это решение
+      принимать не за что. Обычно всю выдачу делает бот, а это окно нужно на
+      случай, когда человек пришёл мимо него.
+    -->
+    <div style="display: flex; gap: 9px; padding: 11px 13px; background: #f6f7f9; border: 1px solid #dfe3e8; border-radius: 9px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7480" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M12 11v5.5"/><path d="M12 7.5h.01"/><circle cx="12" cy="12" r="9"/></svg>
+      <div style="font-size: 12.5px; color: #414954;">
+        Доступы выдаются сами — все, что включены на нодах: сейчас это <b>vp1</b> и <b>vless</b>.
+        Покупатель получит одну ссылку для приложения и одну для чужих клиентов.
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; padding-top: 14px; border-top: 1px solid #dfe3e8;">
+      <button style="margin-left: auto; font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 9px 14px;">Отмена</button>
+      <button style="font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #2f6fed; background: #2f6fed; color: #ffffff; padding: 9px 18px; font-weight: 600;">Выдать и показать ссылки</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

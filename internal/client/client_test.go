@@ -21,7 +21,7 @@ func TestParseAccountLink(t *testing.T) {
 	pair, _ := vp1.GenerateKeyPair()
 	priv := vp1.EncodeKey(pair.Private)
 
-	link := "veil-account://" + priv + "@panel.example.com/sub/abc123#%D0%B7%D0%B0%D0%BA%D0%B0%D0%B7%201043"
+	link := "marvia://" + priv + "@panel.example.com/sub/abc123#%D0%B7%D0%B0%D0%BA%D0%B0%D0%B7%201043"
 
 	account, err := client.ParseAccountLink(link)
 	if err != nil {
@@ -47,12 +47,12 @@ func TestParseAccountLinkRejectsGarbage(t *testing.T) {
 	cases := map[string]string{
 		"пусто":             "",
 		"чужая схема":       "vless://" + priv + "@panel.example.com/sub/abc",
-		"без ключа":         "veil-account://panel.example.com/sub/abc",
-		"без пути подписки": "veil-account://" + priv + "@panel.example.com",
-		"ключ не разбирает": "veil-account://не-ключ@panel.example.com/sub/abc",
-		"ключ не той длины": "veil-account://YWJj@panel.example.com/sub/abc",
+		"без ключа":         "marvia://panel.example.com/sub/abc",
+		"без пути подписки": "marvia://" + priv + "@panel.example.com",
+		"ключ не разбирает": "marvia://не-ключ@panel.example.com/sub/abc",
+		"ключ не той длины": "marvia://YWJj@panel.example.com/sub/abc",
 		"вообще не ссылка":  "просто текст",
-		"схема без адреса":  "veil-account://",
+		"схема без адреса":  "marvia://",
 	}
 
 	for name, link := range cases {

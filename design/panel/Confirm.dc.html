@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; font-size: 15px; line-height: 1.5; }
+    a { color: #2f6fed; } a:hover { color: #1d55c9; }
+  </style>
+</helmet>
+
+<!--
+  Подтверждение необратимого.
+
+  Три действия в панели нельзя отыграть: удалить ноду со статистикой, удалить
+  покупателя, отозвать ключ бота. Окно не спрашивает «вы уверены» — оно
+  называет последствие и предлагает то, что почти всегда нужно на самом деле.
+-->
+<div style="display: flex; align-items: center; justify-content: center; width: 820px; height: 520px; background: rgba(27, 31, 36, .55); color: #1b1f24;">
+
+  <div style="width: 520px; background: #ffffff; border: 1px solid #dfe3e8; border-radius: 12px; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 18px 48px rgba(0,0,0,.22);">
+
+    <div style="display: flex; gap: 13px;">
+      <div style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 9px; background: #fdf3f2; display: flex; align-items: center; justify-content: center;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round"><path d="M12 8.5v5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="font-size: 17px; font-weight: 700;">Удалить ноду «Германия · Франкфурт»?</div>
+        <div style="font-size: 13px; color: #6b7480;">Вместе с ней уйдёт весь её учёт трафика — 82 ГБ за месяц. Отменить это нельзя.</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; background: #f6f7f9; border: 1px solid #dfe3e8; border-radius: 9px;">
+      <span style="font-size: 13px; font-weight: 600;">Скорее всего, тебе нужно другое</span>
+      <span style="font-size: 12.5px; color: #6b7480;">
+        Выключенная нода тоже уходит из подписок — сразу и у всех 41 человека, кто через неё ходит. Но она остаётся в панели вместе со статистикой, и это отменяется одним нажатием.
+      </span>
+      <button style="align-self: flex-start; margin-top: 4px; font: inherit; font-size: 13.5px; cursor: pointer; border-radius: 8px; border: 1px solid #dfe3e8; background: #ffffff; color: #1b1f24; padding: 8px 14px; font-weight: 600;">Выключить вместо удаления</button>
+    </div>
+
+    <!--
+      Спрашиваем то имя, которое стоит в заголовке, и не пишем ответ в самом
+      поле: подсказка с правильным ответом превращает проверку в списывание.
+    -->
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12.5px; color: #6b7480;">Чтобы удалить, впиши <b style="color: #1b1f24;">Германия · Франкфурт</b></span>
+      <div style="display: flex; align-items: center; height: 38px; padding: 0 12px; background: #ffffff; border: 1px solid #2f6fed; border-radius: 8px; font-size: 13.5px;">Германия · Франкфурт</div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid #dfe3e8;">
+      <button style="margin-left: auto; font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 9px 16px; font-weight: 600;">Отмена</button>
+      <button style="font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #c0392b; background: #ffffff; color: #c0392b; padding: 9px 16px; display: flex; align-items: center; gap: 8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"/><path d="M9 7V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M7 7l1 12.5h8L17 7"/></svg>
+        Удалить навсегда
+      </button>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

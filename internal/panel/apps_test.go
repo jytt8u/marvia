@@ -173,7 +173,7 @@ func TestSubTokenRotates(t *testing.T) {
 	if fresh == old {
 		t.Fatal("токен остался прежним")
 	}
-	if strings.Contains(body, "veil-account://") {
+	if strings.Contains(body, "marvia://") {
 		t.Errorf("смена адреса подписки выдала ключ доступа заново: %s", body)
 	}
 

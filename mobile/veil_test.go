@@ -30,19 +30,19 @@ func TestConnectNamesFailureKind(t *testing.T) {
 		},
 		{
 			name: "нет ключа",
-			link: "veil-account://panel.example.test/sub/token",
+			link: "marvia://panel.example.test/sub/token",
 			want: FailAccount,
 		},
 		{
 			name: "ключ не разбирается",
-			link: "veil-account://не-base64@panel.example.test/sub/token",
+			link: "marvia://не-base64@panel.example.test/sub/token",
 			want: FailAccount,
 		},
 		{
 			name: "панель недостижима",
 			// .invalid не резолвится никогда и нигде — это записано в
 			// стандарте, поэтому тест не ходит в сеть по-настоящему.
-			link: "veil-account://YH3odubQhSmWQfCRwteeGN6pehcHq3DDcX_uGCvfl_Q@panel.example.invalid/sub/token",
+			link: "marvia://YH3odubQhSmWQfCRwteeGN6pehcHq3DDcX_uGCvfl_Q@panel.example.invalid/sub/token",
 			want: FailPanel,
 		},
 	}

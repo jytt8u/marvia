@@ -1,0 +1,106 @@
+  <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+
+    <div style="display: flex; align-items: flex-start; gap: 20px; padding: 26px 32px 18px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="font-size: 21px; font-weight: 700; letter-spacing: -.01em;">Люди</div>
+        <div style="font-size: 13.5px; color: #6b7480;">147 человек · у 139 доступ работает · у шестерых кончается на неделе</div>
+      </div>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1px solid #dfe3e8; border-radius: 8px; padding: 7px 11px; width: 290px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7480" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+          <span style="font-size: 14px; color: #6b7480;">метка, номер или tg:…</span>
+        </div>
+        <button style="font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #2f6fed; background: #2f6fed; color: #ffffff; padding: 8px 15px; font-weight: 600;">Выдать доступ</button>
+      </div>
+    </div>
+
+    <div style="padding: 0 32px 28px; display: flex; flex-direction: column; gap: 14px;">
+
+      <!-- Полоска фильтров: продавцу нужны ровно три среза, а не конструктор запросов. -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="padding: 5px 12px; border-radius: 999px; font-size: 13px; background: #1b1f24; color: #ffffff;">Все</span>
+        <span style="padding: 5px 12px; border-radius: 999px; font-size: 13px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Кончаются · 6</span>
+        <span style="padding: 5px 12px; border-radius: 999px; font-size: 13px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Отключённые · 8</span>
+      </div>
+
+      <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; overflow: hidden;">
+        <div style="display: grid; grid-template-columns: 1.9fr 1.4fr 1.2fr 1.1fr 200px; gap: 12px; padding: 11px 16px; border-bottom: 1px solid #dfe3e8; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: #6b7480; font-weight: 600;">
+          <div>Человек</div><div>Трафик</div><div>Доступ до</div><div>Был на связи</div><div></div>
+        </div>
+
+        <!-- обычный живой покупатель -->
+        <div style="display: grid; grid-template-columns: 1.9fr 1.4fr 1.2fr 1.1fr 200px; gap: 12px; padding: 13px 16px; border-bottom: 1px solid #dfe3e8; align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-weight: 600;">@mikhail_p</div>
+            <div style="font-size: 12px; color: #6b7480;">#147 · tg:584930221</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="font-size: 13px;">37 из 100 ГБ</div>
+            <div style="height: 5px; background: #f0f2f5; border-radius: 999px; overflow: hidden;"><i style="display: block; height: 100%; width: 37%; background: #2f6fed;"></i></div>
+          </div>
+          <div style="font-size: 13.5px;">до 27 сентября</div>
+          <div style="font-size: 13px;">4 минуты назад</div>
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 10px;">Ссылки</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 10px;">+30 дней</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 8px;">⋯</button>
+          </div>
+        </div>
+
+        <!-- у кого срок на исходе: главное состояние, ради которого продавец сюда заходит -->
+        <div style="display: grid; grid-template-columns: 1.9fr 1.4fr 1.2fr 1.1fr 200px; gap: 12px; padding: 13px 16px; border-bottom: 1px solid #dfe3e8; align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-weight: 600;">заказ 1043</div>
+            <div style="font-size: 12px; color: #6b7480;">#146 · tg:410882337</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="font-size: 13px; color: #a86400;">94 из 100 ГБ</div>
+            <div style="height: 5px; background: #f0f2f5; border-radius: 999px; overflow: hidden;"><i style="display: block; height: 100%; width: 94%; background: #a86400;"></i></div>
+          </div>
+          <div style="font-size: 13.5px; color: #a86400;">осталось 2 дня</div>
+          <div style="font-size: 13px;">вчера в 21:40</div>
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 10px;">Ссылки</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #2f6fed; background: #2f6fed; color: #ffffff; padding: 4px 10px; font-weight: 600;">+30 дней</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 8px;">⋯</button>
+          </div>
+        </div>
+
+        <!-- отключённый -->
+        <div style="display: grid; grid-template-columns: 1.9fr 1.4fr 1.2fr 1.1fr 200px; gap: 12px; padding: 13px 16px; border-bottom: 1px solid #dfe3e8; align-items: center; background: #fafbfc;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 600; color: #6b7480;">@anna_k</span>
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #c0392b; color: #c0392b;">отключён</span>
+            </div>
+            <div style="font-size: 12px; color: #6b7480;">#131 · tg:772014588</div>
+          </div>
+          <div style="font-size: 13px; color: #6b7480;">израсходовано 12 ГБ</div>
+          <div style="font-size: 13.5px; color: #c0392b;">вышла 14 августа</div>
+          <div style="font-size: 13px; color: #6b7480;">14 августа</div>
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 10px;">Ссылки</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #2f6fed; background: #ffffff; color: #2f6fed; padding: 4px 10px; font-weight: 600;">Включить</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 8px;">⋯</button>
+          </div>
+        </div>
+
+        <!-- ещё один живой, чтобы список читался как список -->
+        <div style="display: grid; grid-template-columns: 1.9fr 1.4fr 1.2fr 1.1fr 200px; gap: 12px; padding: 13px 16px; align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-weight: 600;">@dmitry</div>
+            <div style="font-size: 12px; color: #6b7480;">#145 · tg:203771904</div>
+          </div>
+          <div style="font-size: 13px; color: #6b7480;">израсходовано 240 ГБ · без лимита</div>
+          <div style="font-size: 13.5px;">до 3 марта</div>
+          <div style="font-size: 13px;">сейчас · 2 устройства</div>
+        </div>
+      </div>
+
+      <!-- Что прячется под ⋯: редкое и опасное не должно стоять в ряду с ежедневным. -->
+      <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #6b7480;">
+        <span style="border: 1px solid #dfe3e8; border-radius: 7px; padding: 2px 7px; color: #1b1f24;">⋯</span>
+        <span>Ещё доступ на устройство · Сменить адрес подписки · Отключить · Удалить</span>
+      </div>
+    </div>
+  </div>

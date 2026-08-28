@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"golang.org/x/sys/windows/registry"
+
+	"github.com/veilproject/veil/internal/client"
 )
 
-// Ссылка veil-account:// из телеграма должна открывать программу.
+// Ссылка marvia:// из телеграма должна открывать программу.
 //
 // На телефоне это уже работает: покупатель нажимает ссылку, приложение
 // подхватывает ключ, ему остаётся нажать одну кнопку. На компьютере он до сих
@@ -22,21 +24,37 @@ import (
 // не быть, а в своей ветке реестра пользователь хозяин. Побочный плюс — при
 // удалении программы чужим пользователям ничего не остаётся.
 
-const schemeKey = `Software\Classes\veil-account`
+// schemes — какие схемы забираем на себя.
+//
+// Первая своя, вторая осталась от прежнего имени: ключи с ней лежат в
+// переписках покупателей, и нажатие на такую ссылку должно работать
+// по-прежнему. Выдаём при этом только новую.
+var schemes = []string{client.AccountScheme, client.LegacyAccountScheme}
 
-// registerScheme прописывает схему на себя.
+// registerScheme прописывает схемы на себя.
 //
 // Вызывается при каждом запуске: путь к программе меняется, когда её
 // перекладывают из «Загрузок» на рабочий стол, а человек об этом программе не
 // сообщит.
 func registerScheme(exe string) error {
+	for _, scheme := range schemes {
+		if err := registerOne(exe, scheme); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func registerOne(exe, scheme string) error {
+	schemeKey := `Software\Classes\` + scheme
+
 	key, _, err := registry.CreateKey(registry.CURRENT_USER, schemeKey, registry.SET_VALUE)
 	if err != nil {
 		return fmt.Errorf("ветка реестра: %w", err)
 	}
 	defer key.Close()
 
-	if err := key.SetStringValue("", "URL:Veil Account"); err != nil {
+	if err := key.SetStringValue("", "URL:Marvia"); err != nil {
 		return err
 	}
 	if err := key.SetStringValue("URL Protocol", ""); err != nil {
@@ -61,8 +79,10 @@ func registerScheme(exe string) error {
 // трогаем остальные: программу запускают и руками, с ключами.
 func accountFromArgs(args []string) string {
 	for _, arg := range args {
-		if strings.HasPrefix(strings.ToLower(arg), "veil-account://") {
-			return arg
+		for _, scheme := range schemes {
+			if strings.HasPrefix(strings.ToLower(arg), scheme+"://") {
+				return arg
+			}
 		}
 	}
 	return ""
@@ -75,7 +95,7 @@ func setupScheme(log *journal) string {
 		if err := registerScheme(exe); err != nil {
 			// Не смертельно: ссылки просто не будут открываться, ключ можно
 			// вставить руками. Ронять из-за этого программу нельзя.
-			log.add("схема veil-account не зарегистрирована: %v", err)
+			log.add("схема %s не зарегистрирована: %v", client.AccountScheme, err)
 		}
 	}
 	return accountFromArgs(os.Args[1:])

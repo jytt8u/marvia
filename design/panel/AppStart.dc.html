@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; font-size: 15px; line-height: 1.5; }
+    a { color: #6ea0ff; } a:hover { color: #9dbcff; }
+  </style>
+</helmet>
+<div style="display: flex; flex-direction: column; width: 390px; height: 844px; background: #0f1218; color: #f2f5f9; overflow: hidden; position: relative;">
+  <div style="padding: 87px 22px 0; display: flex; flex-direction: column; align-items: center; flex-grow: 1;">
+
+    <div style="width: 62px; height: 62px; border-radius: 17px; background: #2f6fed; display: flex; align-items: center; justify-content: center;">
+      <svg width="36" height="36" viewBox="0 0 32 32" fill="none" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 25 10 7l5.1 10.2"/><path d="M16.9 17.2 22 7l4 18"/></svg>
+    </div>
+
+    <div style="margin-top: 22px; font-size: 25px; font-weight: 700; letter-spacing: -.02em; text-align: center;">Вставь ключ доступа</div>
+    <div style="margin-top: 8px; font-size: 14.5px; color: #8b94a3; text-align: center; line-height: 1.5;">
+      Продавец прислал его в чате — ссылку вида <span style="color: #f2f5f9;">marvia://…</span>
+      Нажми её прямо в переписке, и приложение настроится само.
+    </div>
+
+    <div style="margin-top: 26px; width: 100%; background: #191d24; border: 1px solid #272d36; border-radius: 14px; padding: 15px 16px; display: flex; align-items: center; gap: 12px; min-height: 56px; box-sizing: border-box;">
+      <span style="font-size: 15px; color: #8b94a3;">marvia://…</span>
+      <span style="margin-left: auto; font-size: 14px; color: #6ea0ff; flex-shrink: 0;">Вставить</span>
+    </div>
+
+    <div style="margin-top: 12px; width: 100%; display: flex; gap: 10px;">
+      <button style="flex-grow: 1; font: inherit; font-size: 15px; cursor: pointer; border-radius: 12px; border: 1px solid #272d36; background: #191d24; color: #f2f5f9; padding: 14px 12px; min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 9px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.4"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.4"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.4"/><path d="M13.5 13.5h3v3M20.5 20.5h-3v-3"/></svg>
+        Сканировать код
+      </button>
+    </div>
+
+    <div style="margin-top: auto; margin-bottom: 48px; width: 100%; display: flex; flex-direction: column; gap: 12px;">
+      <button style="font: inherit; font-size: 16.5px; cursor: pointer; border-radius: 13px; border: 1px solid #2f6fed; background: #2f6fed; color: #ffffff; padding: 16px; font-weight: 600; width: 100%; min-height: 54px;">Подключиться</button>
+      <span style="font-size: 12.5px; color: #8b94a3; text-align: center; line-height: 1.5;">
+        Ключ хранится только на этом телефоне. Мы его не видим и восстановить не сможем — если потеряешь, попроси у продавца новый.
+      </span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

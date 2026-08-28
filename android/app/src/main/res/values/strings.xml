@@ -26,7 +26,7 @@
     <string name="action_save">Сохранить ключ</string>
 
     <string name="key_hint">Ключ доступа</string>
-    <string name="key_helper">Ссылка вида veil-account://… — её выдаёт бот при оплате</string>
+    <string name="key_helper">Ссылка вида marvia://… — её выдаёт бот при оплате</string>
     <string name="key_saved">Ключ сохранён</string>
     <string name="key_empty">Поле пустое</string>
 
