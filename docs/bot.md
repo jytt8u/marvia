@@ -73,7 +73,7 @@ curl -X POST https://panel.example.com/api/v1/users \
   "created": true,
   "user": { "id": 17, "external_id": "tg:584930221", "expires_at": "..." },
   "links": {
-    "account":      "veil-account://…",
+    "account":      "marvia://…",
     "subscription": "https://panel.example.com/sub/…",
     "stock":        ["vless://…", "trojan://…"]
   }

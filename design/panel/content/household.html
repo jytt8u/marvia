@@ -1,0 +1,97 @@
+  <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+
+    <div style="display: flex; align-items: flex-start; gap: 20px; padding: 26px 32px 18px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="font-size: 21px; font-weight: 700; letter-spacing: -.01em;">Обслуживание</div>
+        <div style="font-size: 13.5px; color: #6b7480;">Ключи для ботов, копия базы, приложения покупателям. Сюда заходят редко — и в плохой день.</div>
+      </div>
+    </div>
+
+    <div style="padding: 0 32px 28px; display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; align-items: start;">
+
+      <!-- ------------------------------------------------------- ключи для ботов -->
+      <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 18px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+          <div style="font-size: 16px; font-weight: 700;">Ключи для ботов</div>
+          <button style="margin-left: auto; font: inherit; font-size: 13.5px; cursor: pointer; border-radius: 8px; border: 1px solid #2f6fed; background: #2f6fed; color: #ffffff; padding: 6px 13px; font-weight: 600;">Выпустить ключ</button>
+        </div>
+        <div style="font-size: 13px; color: #6b7480; margin-bottom: 14px;">
+          Боту нужен свой ключ. Админским ты входишь сюда: отдать его боту — значит дать право снести ноды и увести секреты покупателей, а отозвать потом нельзя, не выкинув из панели себя.
+        </div>
+
+        <div style="border: 1px solid #dfe3e8; border-radius: 9px; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: 1.5fr 1.3fr 110px; gap: 12px; padding: 9px 14px; background: #f6f7f9; border-bottom: 1px solid #dfe3e8; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: #6b7480; font-weight: 600;">
+            <div>Ключ</div><div>Когда пользовались</div><div></div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1.5fr 1.3fr 110px; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #dfe3e8; align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <div style="font-weight: 600;">телеграм-бот</div>
+              <div style="display: flex; gap: 5px;">
+                <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #414954;">users</span>
+              </div>
+            </div>
+            <div style="font-size: 13px; color: #6b7480;">4 минуты назад</div>
+            <div style="display: flex; justify-content: flex-end;">
+              <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #c0392b; padding: 4px 10px;">Отозвать</button>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1.5fr 1.3fr 110px; gap: 12px; padding: 12px 14px; align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <div style="font-weight: 600;">напоминалка</div>
+              <div style="display: flex; gap: 5px;">
+                <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #414954;">read</span>
+              </div>
+            </div>
+            <div style="font-size: 13px; color: #a86400;">ни разу не пользовались</div>
+            <div style="display: flex; justify-content: flex-end;">
+              <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #c0392b; padding: 4px 10px;">Отозвать</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------------------------------------------------- копия базы -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 18px;">
+          <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Копия базы</div>
+          <div style="font-size: 13px; color: #6b7480; margin-bottom: 14px;">
+            В базе все покупатели и все оплаченные ими месяцы. Панель снимает копию сама, но она лежит на этом же сервере — а сервер теряют целиком, вместе с хостером.
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 13px; background: #f6f7f9; border: 1px solid #dfe3e8; border-radius: 9px; margin-bottom: 12px;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: #1a7f45; flex-shrink: 0;"></span>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 13.5px;">Последняя копия — вчера в 03:00</span>
+              <span style="font-size: 12.5px; color: #6b7480;">хранится 7 штук · 80 КБ</span>
+            </div>
+          </div>
+          <button style="font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 8px 14px; width: 100%; font-weight: 600;">Скачать копию к себе</button>
+          <div style="font-size: 12.5px; color: #6b7480; margin-top: 10px;">В файле секреты покупателей: храни его как админский токен.</div>
+        </div>
+
+        <!-- --------------------------------------------------------- приложения -->
+        <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 18px;">
+          <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Приложения покупателям</div>
+          <div style="font-size: 13px; color: #6b7480; margin-bottom: 14px;">
+            Их раздаёт сама панель, с твоего домена: магазины приложений и чужие CDN отваливаются первыми, и покупатель застревает на «скачай» — уже заплатив.
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 11px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #1a7f45; flex-shrink: 0;"></span>
+              <div style="display: flex; flex-direction: column; min-width: 0;">
+                <span style="font-size: 13.5px;">Android · 13,8 МБ</span>
+                <span style="font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; color: #6b7480;">e3f64a05836…</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 11px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #1a7f45; flex-shrink: 0;"></span>
+              <div style="display: flex; flex-direction: column; min-width: 0;">
+                <span style="font-size: 13.5px;">Windows · 12,6 МБ</span>
+                <span style="font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; color: #6b7480;">67cb6b12530…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

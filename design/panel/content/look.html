@@ -1,0 +1,159 @@
+  <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+
+    <div style="display: flex; align-items: flex-start; gap: 20px; padding: 26px 32px 18px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="font-size: 21px; font-weight: 700; letter-spacing: -.01em;">Кастомизация</div>
+        <div style="font-size: 13.5px; color: #6b7480;">Как выглядит панель у тебя и как выглядит сервис у твоих покупателей.</div>
+      </div>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+        <button style="font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #2f6fed; background: #2f6fed; color: #ffffff; padding: 8px 15px; font-weight: 600;">Сохранить</button>
+      </div>
+    </div>
+
+    <div style="padding: 0 32px 28px; display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; align-items: start;">
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+
+        <!--
+          Язык стоит первым.
+
+          Панель ставят там, где блокировки: Иран, Россия, Китай, Турция. От
+          языка зависит, поймёт ли человек всё остальное на этом экране, —
+          поэтому он не прячется в конец списка настроек.
+        -->
+        <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 18px;">
+          <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Язык панели</div>
+          <div style="font-size: 13px; color: #6b7480; margin-bottom: 13px;">У покупателя в приложении язык свой: оно берёт его из телефона и ничего не спрашивает.</div>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #1b1f24; border: 1px solid #1b1f24; color: #ffffff; font-weight: 600;">Русский</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">English</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">فارسی</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">中文</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Türkçe</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Українська</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">العربية</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Қазақша</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">O‘zbekcha</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">Español</span>
+            <span style="padding: 7px 13px; border-radius: 8px; font-size: 13.5px; background: #ffffff; border: 1px solid #dfe3e8; color: #414954;">မြန်မာ</span>
+          </div>
+
+          <div style="display: flex; gap: 9px; margin-top: 13px; padding: 10px 12px; background: #f6f7f9; border: 1px solid #dfe3e8; border-radius: 8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7480" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M12 11v5.5"/><path d="M12 7.5h.01"/><circle cx="12" cy="12" r="9"/></svg>
+            <span style="font-size: 12.5px; color: #414954;">
+              فارسی и العربية читаются справа налево: на них панель разворачивается зеркально целиком — колонка уезжает вправо, а адреса и числа остаются как есть.
+            </span>
+          </div>
+        </div>
+
+        <!-- ------------------------------------------------------------ тема -->
+        <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 18px;">
+          <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Тема</div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="height: 92px; border: 2px solid #2f6fed; border-radius: 9px; background: #f6f7f9; padding: 8px; display: flex; gap: 6px;">
+                <div style="width: 26px; background: #ffffff; border: 1px solid #dfe3e8; border-radius: 5px;"></div>
+                <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px;">
+                  <div style="height: 9px; background: #ffffff; border: 1px solid #dfe3e8; border-radius: 3px;"></div>
+                  <div style="flex-grow: 1; background: #ffffff; border: 1px solid #dfe3e8; border-radius: 3px;"></div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600;">
+                <span style="width: 15px; height: 15px; border-radius: 50%; border: 5px solid #2f6fed; box-sizing: border-box;"></span>
+                Светлая
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="height: 92px; border: 1px solid #dfe3e8; border-radius: 9px; background: #14171c; padding: 8px; display: flex; gap: 6px;">
+                <div style="width: 26px; background: #1c2027; border: 1px solid #2f3641; border-radius: 5px;"></div>
+                <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px;">
+                  <div style="height: 9px; background: #1c2027; border: 1px solid #2f3641; border-radius: 3px;"></div>
+                  <div style="flex-grow: 1; background: #1c2027; border: 1px solid #2f3641; border-radius: 3px;"></div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 7px; font-size: 13.5px; color: #414954;">
+                <span style="width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #b9c2cd; box-sizing: border-box;"></span>
+                Тёмная
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="height: 92px; border: 1px solid #dfe3e8; border-radius: 9px; background: linear-gradient(105deg, #f6f7f9 50%, #14171c 50%); padding: 8px; display: flex; gap: 6px;">
+                <div style="width: 26px; background: #ffffff; border: 1px solid #dfe3e8; border-radius: 5px;"></div>
+                <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px;">
+                  <div style="height: 9px; background: rgba(255,255,255,.55); border-radius: 3px;"></div>
+                  <div style="flex-grow: 1; background: rgba(255,255,255,.35); border-radius: 3px;"></div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 7px; font-size: 13.5px; color: #414954;">
+                <span style="width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #b9c2cd; box-sizing: border-box;"></span>
+                Как в системе
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------------------------------------------------------- акцент -->
+        <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 18px;">
+          <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Акцент</div>
+          <div style="font-size: 13px; color: #6b7480; margin-bottom: 13px;">Цвет главных кнопок и выделений. Красного здесь нет намеренно: им в панели помечено опасное, и акцент того же цвета стёр бы единственный сигнал тревоги.</div>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <span style="width: 34px; height: 34px; border-radius: 9px; background: #2f6fed; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #2f6fed;"></span>
+            <span style="width: 34px; height: 34px; border-radius: 9px; background: #1a7f45;"></span>
+            <span style="width: 34px; height: 34px; border-radius: 9px; background: #9333ea;"></span>
+            <span style="width: 34px; height: 34px; border-radius: 9px; background: #a86400;"></span>
+            <span style="width: 34px; height: 34px; border-radius: 9px; background: #1b1f24;"></span>
+            <span style="width: 34px; height: 34px; border-radius: 9px; border: 1px dashed #b9c2cd; display: flex; align-items: center; justify-content: center; color: #6b7480; font-size: 18px;">+</span>
+          </div>
+        </div>
+
+        <!-- --------------------------------------------------------- плотность -->
+        <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 18px;">
+          <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Плотность списков</div>
+          <div style="font-size: 13px; color: #6b7480; margin-bottom: 13px;">На двух сотнях покупателей разница между «просторно» и «плотно» — это половина прокрутки.</div>
+
+          <div style="display: flex; align-items: center; gap: 6px; background: #f0f2f5; border: 1px solid #dfe3e8; border-radius: 8px; padding: 3px; width: fit-content;">
+            <span style="padding: 5px 14px; border-radius: 6px; font-size: 13.5px; background: #1b1f24; color: #ffffff; font-weight: 600;">Просторно</span>
+            <span style="padding: 5px 14px; border-radius: 6px; font-size: 13.5px; color: #414954;">Плотно</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ------------------------------------------- как тебя видит покупатель -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 18px;">
+          <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Как тебя видит покупатель</div>
+          <div style="font-size: 13px; color: #6b7480; margin-bottom: 14px;">
+            Это имя стоит в приложении и в письмах бота. Покупатель платит тебе, а не нам — и видеть должен тебя.
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <span style="font-size: 12.5px; color: #6b7480;">Название сервиса</span>
+              <div style="display: flex; align-items: center; height: 38px; padding: 0 12px; background: #f0f2f5; border: 1px solid #dfe3e8; border-radius: 8px;">Быстрый интернет</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <span style="font-size: 12.5px; color: #6b7480;">Куда писать при беде</span>
+              <div style="display: flex; align-items: center; height: 38px; padding: 0 12px; background: #f0f2f5; border: 1px solid #dfe3e8; border-radius: 8px;">@bystry_support</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #dfe3e8;">
+            <div style="font-size: 12.5px; color: #6b7480; margin-bottom: 9px;">Так это выглядит на телефоне покупателя:</div>
+            <div style="background: #0f1218; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+              <div style="font-size: 11px; letter-spacing: .22em; color: #6b7480;">БЫСТРЫЙ ИНТЕРНЕТ</div>
+              <div style="font-size: 21px; font-weight: 700; color: #4ec27f; margin-top: 12px;">Подключено</div>
+              <div style="font-size: 12.5px; color: #949daa;">ОАЭ · Дубай</div>
+              <div style="font-size: 12px; color: #6b7480;">до 27.09.2026 · осталось 63 ГБ</div>
+              <div style="margin-top: 14px; width: 100%; height: 34px; border-radius: 999px; background: #2f6fed; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: 600;">Отключиться</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

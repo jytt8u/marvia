@@ -145,7 +145,7 @@ func TestPaymentGivesAccess(t *testing.T) {
 	})
 
 	all := tg.texts()
-	if !strings.Contains(all, "veil-account://") {
+	if !strings.Contains(all, "marvia://") {
 		t.Fatalf("после оплаты не пришла ссылка доступа:\n%s", all)
 	}
 	if !strings.Contains(all, "/sub/") {

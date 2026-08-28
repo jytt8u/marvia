@@ -1,0 +1,69 @@
+  <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+
+    <div style="display: flex; align-items: flex-start; gap: 20px; padding: 26px 32px 18px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="font-size: 21px; font-weight: 700; letter-spacing: -.01em;">Статистика</div>
+        <div style="font-size: 13.5px; color: #6b7480;">Кто пользуется, со скольких устройств и сколько прошло трафика.</div>
+      </div>
+    </div>
+
+    <!--
+      Первый запуск.
+
+      Панель без нод показывать нечего, а новый человек в этот момент не знает
+      ни одного следующего шага. Поэтому вместо пустых осей — три шага по
+      порядку, и первый уже готов к нажатию.
+    -->
+    <div style="padding: 0 32px 28px; display: flex; flex-direction: column; gap: 14px;">
+
+      <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 26px 28px; display: flex; flex-direction: column; gap: 20px;">
+
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 18px; font-weight: 700;">Панель работает. Осталось три шага.</div>
+          <div style="font-size: 13.5px; color: #6b7480;">Пока нет ни одной ноды, выдавать доступ некуда: ссылки у покупателей будут пустыми.</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+
+          <div style="display: flex; align-items: center; gap: 14px; padding: 15px 16px; border: 1px solid #2f6fed; border-radius: 10px;">
+            <span style="width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: #2f6fed; color: #ffffff; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">1</span>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <span style="font-weight: 600;">Завести первую ноду</span>
+              <span style="font-size: 12.5px; color: #6b7480;">Любой сервер с чистой Ubuntu. Панель выдаст одну команду — вставить и подождать полторы минуты.</span>
+            </div>
+            <button style="margin-left: auto; flex-shrink: 0; font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #2f6fed; background: #2f6fed; color: #ffffff; padding: 9px 16px; font-weight: 600;">Добавить ноду</button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 14px; padding: 15px 16px; border: 1px solid #dfe3e8; border-radius: 10px;">
+            <span style="width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: #f0f2f5; color: #6b7480; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">2</span>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <span style="font-weight: 600; color: #414954;">Выложить приложения</span>
+              <span style="font-size: 12.5px; color: #6b7480;">Их раздаёт сама панель, с твоего домена. Магазины приложений отваливаются первыми — а покупатель уже заплатил.</span>
+            </div>
+            <button style="margin-left: auto; flex-shrink: 0; font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 9px 16px;">Как выложить</button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 14px; padding: 15px 16px; border: 1px solid #dfe3e8; border-radius: 10px;">
+            <span style="width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: #f0f2f5; color: #6b7480; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">3</span>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <span style="font-weight: 600; color: #414954;">Выпустить ключ боту</span>
+              <span style="font-size: 12.5px; color: #6b7480;">Если продаёшь — бот выдаёт доступ сам. Если делаешь для себя и близких, этот шаг можно пропустить.</span>
+            </div>
+            <button style="margin-left: auto; flex-shrink: 0; font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 9px 16px;">Выпустить ключ</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Пустые графики не прячем: пусть видно, что тут появится. -->
+      <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px;">
+        <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 16px 18px; height: 168px; display: flex; flex-direction: column;">
+          <div style="font-size: 15px; font-weight: 600;">Трафик по дням</div>
+          <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #b9c2cd;">появится, когда пойдёт первый трафик</div>
+        </div>
+        <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; padding: 16px 18px; height: 168px; display: flex; flex-direction: column;">
+          <div style="font-size: 15px; font-weight: 600;">Устройств онлайн</div>
+          <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #b9c2cd;">пока никто не подключался</div>
+        </div>
+      </div>
+    </div>
+  </div>

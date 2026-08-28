@@ -11,7 +11,7 @@ import (
 // Hiddify, NekoBox и почти всё остальное, что уже стоит у людей. Именно
 // поэтому мы их и выдаём: покупателю не нужно ничего переставлять.
 //
-// Ссылка veil-account:// наша: в ней личный ключ и адрес, откуда брать список
+// Ссылка marvia:// наша: в ней личный ключ и адрес, откуда брать список
 // нод. Её понимает только наш клиент.
 
 // nodeQuery собирает общие для чужих протоколов параметры.
@@ -176,7 +176,7 @@ func AccountLink(base, privateKey, subToken, label string, ips []string) string 
 	}
 
 	link := &url.URL{
-		Scheme:   "veil-account",
+		Scheme:   accountScheme,
 		User:     url.User(privateKey),
 		Host:     host,
 		Path:     "/sub/" + subToken,
@@ -189,3 +189,10 @@ func AccountLink(base, privateKey, subToken, label string, ips []string) string 
 
 	return link.String()
 }
+
+// accountScheme — схема ссылки доступа.
+//
+// Держим литералом, а не берём из internal/client: панель не должна тащить в
+// свой бинарник весь клиентский транспорт ради одной строки. Значение обязано
+// совпадать с client.AccountScheme, и это проверяется тестом.
+const accountScheme = "marvia"

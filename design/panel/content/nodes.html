@@ -1,0 +1,142 @@
+  <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+
+    <div style="display: flex; align-items: flex-start; gap: 20px; padding: 26px 32px 18px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="font-size: 21px; font-weight: 700; letter-spacing: -.01em;">Ноды</div>
+        <div style="font-size: 13.5px; color: #6b7480;">Точки входа. Их блокируют и теряют — это норма работы, а не поломка.</div>
+      </div>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+        <button style="font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 8px 13px; display: flex; align-items: center; gap: 7px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5A8 8 0 1 0 18.6 16"/><path d="M20 5v6h-6"/></svg>
+          Обновить
+        </button>
+        <button style="font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #2f6fed; background: #2f6fed; color: #ffffff; padding: 8px 15px; font-weight: 600;">Добавить ноду</button>
+      </div>
+    </div>
+
+    <div style="padding: 0 32px 28px; display: flex; flex-direction: column; gap: 14px; min-height: 0;">
+
+      <div style="background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; overflow: hidden;">
+        <div style="display: grid; grid-template-columns: 2fr 1.5fr 1.2fr 1fr 150px; gap: 12px; padding: 11px 16px; border-bottom: 1px solid #dfe3e8; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: #6b7480; font-weight: 600;">
+          <div>Нода</div><div>Что на ней работает</div><div>Доходимость</div><div>Связь</div><div></div>
+        </div>
+
+        <!-- рабочая нода: три протокола на одном сервере -->
+        <div style="display: grid; grid-template-columns: 2fr 1.5fr 1.2fr 1fr 150px; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #dfe3e8; align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 600;">ОАЭ · Дубай</span>
+              <span style="font-size: 11.5px; color: #6b7480;">ae-1</span>
+            </div>
+            <div style="font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #6b7480;">77.74.201.167:443</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #414954;">vp1</span>
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #414954;">vless</span>
+              </div>
+            <div style="font-size: 12px; color: #6b7480;">под REALITY · www.samsung.com</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="font-size: 13px;">доходят все · 42 мс</div>
+            <div style="height: 5px; background: #f0f2f5; border-radius: 999px; overflow: hidden;"><i style="display: block; height: 100%; width: 100%; background: #1a7f45;"></i></div>
+          </div>
+          <div style="font-size: 13px; color: #6b7480;">8 секунд назад</div>
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 10px;">Настроить</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 8px;">⋯</button>
+          </div>
+        </div>
+
+        <!-- нода за CDN: там REALITY невозможен, и это видно -->
+        <div style="display: grid; grid-template-columns: 2fr 1.5fr 1.2fr 1fr 150px; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #dfe3e8; align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 600;">Нидерланды · Амстердам-1</span>
+              <span style="font-size: 11.5px; color: #6b7480;">nl-1</span>
+            </div>
+            <div style="font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #6b7480;">cdn.example.com:443</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #414954;">vp1</span>
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #414954;">vless</span>
+            </div>
+            <div style="font-size: 12px; color: #6b7480;">за CDN · /assets/app.js</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="font-size: 13px; color: #a86400;">12 из 87 не доходят</div>
+            <div style="height: 5px; background: #f0f2f5; border-radius: 999px; overflow: hidden;"><i style="display: block; height: 100%; width: 86%; background: #a86400;"></i></div>
+          </div>
+          <div style="font-size: 13px; color: #6b7480;">минуту назад</div>
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 10px;">Настроить</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 8px;">⋯</button>
+          </div>
+        </div>
+
+        <!--
+          Молчит, но включена — самое опасное состояние и отдельное от
+          «выключена»: нода по-прежнему раздаётся покупателям в подписке, а
+          сервера за ней может уже не быть. Ради этой строки продавец экран и
+          открывает.
+        -->
+        <div style="display: grid; grid-template-columns: 2fr 1.5fr 1.2fr 1fr 150px; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #dfe3e8; align-items: center; background: #fdf3f2;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 600;">Германия · Франкфурт</span>
+              <span style="font-size: 11.5px; color: #6b7480;">de-1</span>
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #c0392b; color: #c0392b;">молчит</span>
+            </div>
+            <div style="font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #6b7480;">88.210.11.4:443</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #414954;">vp1</span>
+            </div>
+            <div style="font-size: 12px; color: #6b7480;">под REALITY · www.bing.com</div>
+          </div>
+          <div style="font-size: 13px; color: #c0392b;">но покупателям её всё ещё выдают</div>
+          <div style="font-size: 13px; color: #c0392b;">3 часа назад</div>
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #c0392b; background: #ffffff; color: #c0392b; padding: 4px 10px; font-weight: 600;">Выключить</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 8px;">⋯</button>
+          </div>
+        </div>
+
+        <!-- выключена самим продавцом: спокойное состояние, не тревожное -->
+        <div style="display: grid; grid-template-columns: 2fr 1.5fr 1.2fr 1fr 150px; gap: 12px; padding: 14px 16px; align-items: center; background: #fafbfc;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 600; color: #6b7480;">Финляндия · Хельсинки</span>
+              <span style="font-size: 11.5px; color: #6b7480;">fi-1</span>
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #6b7480;">выключена</span>
+            </div>
+            <div style="font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #6b7480;">95.217.44.10:443</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #6b7480;">vp1</span>
+              <span style="padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid #dfe3e8; color: #6b7480;">vless</span>
+            </div>
+            <div style="font-size: 12px; color: #6b7480;">под REALITY · www.bing.com</div>
+          </div>
+          <div style="font-size: 13px; color: #6b7480;">из подписок убрана</div>
+          <div style="font-size: 13px; color: #6b7480;">была вчера</div>
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #2f6fed; background: #ffffff; color: #2f6fed; padding: 4px 10px; font-weight: 600;">Включить</button>
+            <button style="font: inherit; font-size: 13px; cursor: pointer; border-radius: 7px; border: 1px solid #dfe3e8; background: #f0f2f5; color: #1b1f24; padding: 4px 8px;">⋯</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #6b7480;">
+        <span style="border: 1px solid #dfe3e8; border-radius: 7px; padding: 2px 7px; color: #1b1f24;">⋯</span>
+        <span>Выключить · Показать команду установки · Удалить вместе со статистикой</span>
+      </div>
+
+      <div style="font-size: 12.5px; color: #6b7480;">
+        Выключенная нода остаётся в панели: расход по ней виден, а покупатели её больше не получают. Удаление уносит статистику и обратно не отыгрывается.
+      </div>
+    </div>
+  </div>

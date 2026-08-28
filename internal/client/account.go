@@ -18,7 +18,16 @@ import (
 )
 
 // AccountScheme — схема ссылки, которую бот отправляет покупателю.
-const AccountScheme = "veil-account"
+const AccountScheme = "marvia"
+
+// LegacyAccountScheme — как схема называлась раньше.
+//
+// Понимать её мы будем, скорее всего, всегда. Ссылка живёт не в нашей базе, а
+// в переписке покупателя и в памяти его телефона: перестать её принимать —
+// значит в один день выключить доступ всем, кто получил ключ до
+// переименования, молча и без возможности что-то поправить на их стороне.
+// Выдаём при этом только новую.
+const LegacyAccountScheme = "veil-account"
 
 // Account — то, что покупатель импортирует один раз.
 //
@@ -51,7 +60,7 @@ type Account struct {
 }
 
 // ParseAccountLink разбирает ссылку вида
-// veil-account://<приватный ключ>@<хост>/sub/<токен>#<метка>
+// marvia://<приватный ключ>@<хост>/sub/<токен>#<метка>
 func ParseAccountLink(link string) (Account, error) {
 	link = strings.TrimSpace(link)
 	if link == "" {
@@ -62,7 +71,7 @@ func ParseAccountLink(link string) (Account, error) {
 	if err != nil {
 		return Account{}, fmt.Errorf("ссылка не разбирается: %w", err)
 	}
-	if parsed.Scheme != AccountScheme {
+	if parsed.Scheme != AccountScheme && parsed.Scheme != LegacyAccountScheme {
 		return Account{}, fmt.Errorf("ожидалась схема %s://, получено %q", AccountScheme, parsed.Scheme)
 	}
 	if parsed.User == nil || parsed.User.Username() == "" {

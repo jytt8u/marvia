@@ -24,7 +24,7 @@ class Store(context: Context) {
 
     private val prefs = app.getSharedPreferences("veil", Context.MODE_PRIVATE)
 
-    /** Ссылка вида veil-account://… — её выдаёт бот продавца при оплате. */
+    /** Ссылка вида marvia://… — её выдаёт бот продавца при оплате. */
     var accountLink: String
         get() = prefs.getString(KEY_ACCOUNT_LINK, "").orEmpty()
         set(value) {
