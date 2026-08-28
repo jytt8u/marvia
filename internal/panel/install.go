@@ -75,7 +75,7 @@ func (a *API) installBinary(w http.ResponseWriter, r *http.Request) {
 	}
 	// Имя приходит из адреса, поэтому берём только то, что сами раздаём.
 	// Иначе сюда пролезло бы «../../etc/shadow».
-	if name != "veil-server" && name != "veil-keygen" {
+	if name != "marvia-node" && name != "marvia-keygen" {
 		http.NotFound(w, r)
 		return
 	}

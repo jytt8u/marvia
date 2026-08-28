@@ -1,4 +1,4 @@
-// Команда veil-keygen печатает новую пару статических ключей.
+// Команда marvia-keygen печатает новую пару статических ключей.
 //
 // Приватный ключ никуда не отправляется и нигде не сохраняется — он только
 // выводится на экран. Что с ним делать дальше, решаешь ты.
@@ -22,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Println("veil-keygen", version)
+		fmt.Println("marvia-keygen", version)
 		return
 	}
 

@@ -42,12 +42,12 @@ try {
     go build -o bin/ ./...
     if ($LASTEXITCODE -ne 0) { throw "сборка не прошла" }
 
-    $keys = & .\bin\veil-keygen.exe -quiet
+    $keys = & .\bin\marvia-keygen.exe -quiet
     $priv = $keys[0]
     $pub  = $keys[1]
 
     Write-Host "== запуск ноды ==" -ForegroundColor Cyan
-    $node = Start-Process -FilePath .\bin\veil-server.exe `
+    $node = Start-Process -FilePath .\bin\marvia-node.exe `
         -ArgumentList @("-listen", $nodeAddr, "-key", $priv, "-tls-self-signed", $sni, "-cover", $cover) `
         -RedirectStandardOutput $nodeLog -RedirectStandardError $nodeErr `
         -NoNewWindow -PassThru
@@ -60,7 +60,7 @@ try {
     }
 
     Write-Host "== запуск клиента ==" -ForegroundColor Cyan
-    $client = Start-Process -FilePath .\bin\veil-client.exe `
+    $client = Start-Process -FilePath .\bin\marvia-client.exe `
         -ArgumentList @("-listen", $socksAddr, "-server", $nodeAddr, "-pubkey", $pub, "-sni", $sni, "-insecure") `
         -RedirectStandardOutput $clientLog -RedirectStandardError $clientErr `
         -NoNewWindow -PassThru

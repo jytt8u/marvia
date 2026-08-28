@@ -1,4 +1,4 @@
-// Команда veil-client — клиентская сторона туннеля.
+// Команда marvia-client — клиентская сторона туннеля.
 //
 // Поднимает локальный SOCKS5 и на каждое входящее соединение открывает
 // туннель до сервера, маскируя его под обычный HTTPS с отпечатком Chrome.
@@ -169,7 +169,7 @@ func run(opts clientOptions) error {
 	}
 	defer ln.Close()
 
-	log.Printf("veil-client: SOCKS5 на %s, сервер %s", ln.Addr(), opts.serverAddr)
+	log.Printf("marvia-client: SOCKS5 на %s, сервер %s", ln.Addr(), opts.serverAddr)
 	log.Printf("публичный ключ клиента: %s", vp1.EncodeKey(static.Public))
 	if ephemeral {
 		log.Printf("(ключ временный — при перезапуске сменится; для постоянного укажи -key)")

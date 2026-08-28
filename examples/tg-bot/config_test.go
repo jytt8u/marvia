@@ -15,7 +15,7 @@ import (
 func write(t *testing.T, body string) string {
 	t.Helper()
 
-	path := filepath.Join(t.TempDir(), "veil-bot.json")
+	path := filepath.Join(t.TempDir(), "marvia-bot.json")
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatalf("файл настроек: %v", err)
 	}

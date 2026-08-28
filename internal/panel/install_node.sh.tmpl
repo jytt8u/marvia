@@ -19,7 +19,7 @@ PORT="${PORT:-443}"
 DEST="${DEST:-www.samsung.com:443}"
 NAME="${NAME:-$(hostname 2>/dev/null || echo нода)}"
 COUNTRY="${COUNTRY:-}"
-DIR=/opt/veil-node
+DIR=/opt/marvia-node
 
 say() { printf '%s\n' "$*"; }
 die() { printf '\nустановка прервана: %s\n' "$*" >&2; exit 1; }
@@ -31,7 +31,7 @@ command -v systemctl >/dev/null 2>&1 || die 'на этой системе нет
 command -v curl >/dev/null 2>&1 || die 'нет curl. Поставь: apt-get install -y curl'
 
 if [ -d "$DIR" ]; then
-	die "$DIR уже существует. Здесь, похоже, уже стоит нода. Снести: systemctl disable --now veil-node && rm -rf $DIR"
+	die "$DIR уже существует. Здесь, похоже, уже стоит нода. Снести: systemctl disable --now marvia-node && rm -rf $DIR"
 fi
 
 # Порт должен быть свободен до того, как мы что-то скачаем и запишем.
@@ -65,15 +65,15 @@ say "скачиваю ядро"
 mkdir -p "$DIR"
 chmod 700 "$DIR"
 
-curl -fsSL "$PANEL/install/$INVITE/veil-server" -o "$DIR/veil-server" || die 'не скачался veil-server'
-curl -fsSL "$PANEL/install/$INVITE/veil-keygen" -o "$DIR/veil-keygen" || die 'не скачался veil-keygen'
-chmod 755 "$DIR/veil-server" "$DIR/veil-keygen"
+curl -fsSL "$PANEL/install/$INVITE/marvia-node" -o "$DIR/marvia-node" || die 'не скачался marvia-node'
+curl -fsSL "$PANEL/install/$INVITE/marvia-keygen" -o "$DIR/marvia-keygen" || die 'не скачался marvia-keygen'
+chmod 755 "$DIR/marvia-node" "$DIR/marvia-keygen"
 
 say "выпускаю ключи"
 umask 077
 
-"$DIR/veil-keygen" > "$DIR/.k1" 2>&1
-"$DIR/veil-keygen" -reality > "$DIR/.k2" 2>&1
+"$DIR/marvia-keygen" > "$DIR/.k1" 2>&1
+"$DIR/marvia-keygen" -reality > "$DIR/.k2" 2>&1
 
 NODE_KEY=$(awk '/Приватный ключ:/{print $3; exit}' "$DIR/.k1")
 NODE_PUB=$(awk '/Публичный ключ:/{print $3; exit}' "$DIR/.k1")
@@ -116,22 +116,22 @@ chmod 600 "$DIR/env"
 
 say "настраиваю автозапуск"
 
-id -u veil >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin veil
-chown -R veil:veil "$DIR"
+id -u marvia >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin marvia
+chown -R marvia:marvia "$DIR"
 
-cat > /etc/systemd/system/veil-node.service <<UNITEOF
+cat > /etc/systemd/system/marvia-node.service <<UNITEOF
 [Unit]
-Description=Veil node
+Description=Marvia node
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=veil
-Group=veil
+User=marvia
+Group=marvia
 WorkingDirectory=$DIR
 EnvironmentFile=$DIR/env
-ExecStart=$DIR/veil-server -listen 0.0.0.0:$PORT -key-file $DIR/node.key -panel $PANEL -reality-dest $DEST -reality-short-id $SHORT_ID
+ExecStart=$DIR/marvia-node -listen 0.0.0.0:$PORT -key-file $DIR/node.key -panel $PANEL -reality-dest $DEST -reality-short-id $SHORT_ID
 Restart=on-failure
 RestartSec=3
 
@@ -150,24 +150,24 @@ WantedBy=multi-user.target
 UNITEOF
 
 systemctl daemon-reload
-systemctl enable --now veil-node >/dev/null 2>&1
+systemctl enable --now marvia-node >/dev/null 2>&1
 
 # Даём службе мгновение подняться и проверяем, что она действительно жива.
 # «Установка завершена» при упавшей службе — худшее, что может напечатать
 # установщик: человек уходит довольный, а работать начинает завтра.
 i=0
 while [ "$i" -lt 10 ]; do
-	if [ "$(systemctl is-active veil-node)" = active ]; then
+	if [ "$(systemctl is-active marvia-node)" = active ]; then
 		break
 	fi
 	i=$((i + 1))
 	sleep 1
 done
 
-if [ "$(systemctl is-active veil-node)" != active ]; then
+if [ "$(systemctl is-active marvia-node)" != active ]; then
 	say ''
 	say 'служба не поднялась. Последние строки журнала:'
-	journalctl -u veil-node -n 15 --no-pager -o cat || true
+	journalctl -u marvia-node -n 15 --no-pager -o cat || true
 	die 'нода не запустилась'
 fi
 
@@ -179,6 +179,6 @@ say " имя           $NAME"
 say " порт          $PORT"
 say " прикрытие     $DEST"
 say ''
-say " журнал        journalctl -u veil-node -f"
-say " снести        systemctl disable --now veil-node && rm -rf $DIR /etc/systemd/system/veil-node.service"
+say " журнал        journalctl -u marvia-node -f"
+say " снести        systemctl disable --now marvia-node && rm -rf $DIR /etc/systemd/system/marvia-node.service"
 say '════════════════════════════════════════════'

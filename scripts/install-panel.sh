@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Установка панели Veil на чистый сервер.
+# Установка панели Marvia на чистый сервер.
 #
 #   ./install-panel.sh --domain panel.example.com [--port 443] [--email ты@example.com]
 #
@@ -9,7 +9,7 @@
 # смысл: продавец покупает сервер и продаёт доступ, не касаясь кода.
 #
 # Откуда качать, можно задать:
-#   --from https://…/veil_linux_amd64.tar.gz   готовый архив
+#   --from https://…/marvia_linux_amd64.tar.gz   готовый архив
 #   --bin-dir /путь                            уже распакованные бинарники
 #
 # Ноды ставятся иначе: панель выдаёт готовую строку, и ей скачивать заранее
@@ -20,7 +20,8 @@ set -eu
 DOMAIN=''
 PORT=443
 EMAIL=''
-DIR=/opt/veil
+DIR=/opt/marvia
+MIGRATED=0
 BIN_DIR=''
 FROM=''
 
@@ -54,7 +55,31 @@ command -v tar >/dev/null 2>&1 || die 'нет tar. Поставь: apt-get insta
 [ -n "$DOMAIN" ] || die 'не задан домен: --domain panel.example.com'
 
 if [ -d "$DIR" ]; then
-	die "$DIR уже существует. Здесь, похоже, уже стоит панель. Внутри база с подписчиками — снеси её осознанно: systemctl disable --now veil-panel && rm -rf $DIR"
+	die "$DIR уже существует. Здесь, похоже, уже стоит панель. Внутри база с подписчиками — снеси её осознанно: systemctl disable --now marvia-panel && rm -rf $DIR"
+fi
+
+# Переезд со старого имени.
+#
+# До переименования панель жила в /opt/veil под службой veil-panel, и внутри
+# лежит база со всеми покупателями продавца. Оставить её там и поставить рядом
+# чистую — значит молча отобрать у человека бизнес. Поэтому переносим сами, а
+# копию держим на месте, пока он не убедится, что всё поднялось.
+OLD_DIR=/opt/veil
+if [ -d "$OLD_DIR" ]; then
+	say "нашёл старую установку в $OLD_DIR — переношу вместе с базой"
+
+	systemctl disable --now veil-panel >/dev/null 2>&1 || true
+	rm -f /etc/systemd/system/veil-panel.service
+
+	cp -a "$OLD_DIR" "$OLD_DIR.before-marvia"
+	mv "$OLD_DIR" "$DIR"
+
+	# Бинарники со старыми именами: панель перезапишется ниже, а ноду и
+	# генератор ключей она раздаёт из dist по именам — их надо убрать, иначе
+	# в каталоге будут лежать две пары и установщик ноды возьмёт не ту.
+	rm -f "$DIR/veil-panel" "$DIR/dist/veil-server" "$DIR/dist/veil-keygen"
+
+	MIGRATED=1
 fi
 
 # Домен обязан вести сюда. Проверяем до всего остального: Let's Encrypt
@@ -93,7 +118,7 @@ if [ -z "$BIN_DIR" ]; then
 	# Рядом со скриптом уже лежат? Так бывает, когда человек скачал архив и
 	# распаковал его руками — тогда качать второй раз незачем.
 	HERE=$(cd "$(dirname "$0")" && pwd)
-	if [ -f "$HERE/veil-panel" ]; then
+	if [ -f "$HERE/marvia-panel" ]; then
 		BIN_DIR="$HERE"
 	fi
 fi
@@ -105,19 +130,19 @@ if [ -z "$BIN_DIR" ]; then
 	*) die "разрядность $(uname -m) не поддерживается: собери бинарники сам и укажи --bin-dir" ;;
 	esac
 
-	[ -n "$FROM" ] || FROM="https://github.com/$REPO/releases/latest/download/veil_linux_$ARCH.tar.gz"
+	[ -n "$FROM" ] || FROM="https://github.com/$REPO/releases/latest/download/marvia_linux_$ARCH.tar.gz"
 
 	WORK=$(mktemp -d)
 	say "скачиваю ядро для $ARCH"
 
-	if ! curl -fsSL --max-time 300 "$FROM" -o "$WORK/veil.tar.gz"; then
+	if ! curl -fsSL --max-time 300 "$FROM" -o "$WORK/marvia.tar.gz"; then
 		say ''
 		say "не скачалось: $FROM"
 		say ''
 		say 'Чаще всего это значит, что с сервера не открывается github.com:'
 		say 'так бывает у хостеров в Иране и Китае. Скачай архив на машину, с'
 		say 'которой открывается, положи рядом и укажи --bin-dir,'
-		say 'либо задай своё зеркало: --from https://…/veil_linux_'"$ARCH"'.tar.gz'
+		say 'либо задай своё зеркало: --from https://…/marvia_linux_'"$ARCH"'.tar.gz'
 		die 'нет откуда взять бинарники'
 	fi
 
@@ -126,9 +151,9 @@ if [ -z "$BIN_DIR" ]; then
 	SUMS="${FROM%/*}/SHA256SUMS"
 	if curl -fsSL --max-time 60 "$SUMS" -o "$WORK/SHA256SUMS" 2>/dev/null &&
 		command -v sha256sum >/dev/null 2>&1; then
-		WANT=$(awk -v f="veil_linux_$ARCH.tar.gz" '$2 == f || $2 == "*"f {print $1}' "$WORK/SHA256SUMS" | head -1)
+		WANT=$(awk -v f="marvia_linux_$ARCH.tar.gz" '$2 == f || $2 == "*"f {print $1}' "$WORK/SHA256SUMS" | head -1)
 		if [ -n "$WANT" ]; then
-			GOT=$(sha256sum "$WORK/veil.tar.gz" | awk '{print $1}')
+			GOT=$(sha256sum "$WORK/marvia.tar.gz" | awk '{print $1}')
 			[ "$WANT" = "$GOT" ] || die "контрольная сумма архива не сошлась. Ожидалась $WANT, получена $GOT"
 			say 'контрольная сумма сошлась'
 		fi
@@ -137,11 +162,11 @@ if [ -z "$BIN_DIR" ]; then
 	fi
 
 	mkdir -p "$WORK/bin"
-	tar -xzf "$WORK/veil.tar.gz" -C "$WORK/bin"
+	tar -xzf "$WORK/marvia.tar.gz" -C "$WORK/bin"
 	BIN_DIR="$WORK/bin"
 fi
 
-for f in veil-panel veil-server veil-keygen; do
+for f in marvia-panel marvia-node marvia-keygen; do
 	[ -f "$BIN_DIR/$f" ] || die "в $BIN_DIR нет $f"
 done
 
@@ -149,16 +174,16 @@ done
 
 say "ставлю панель в $DIR"
 # backup — сюда панель сама складывает копии базы. Каталог заводим здесь и
-# отдаём его пользователю veil вместе с остальным: созданный потом руками из-под
+# отдаём его пользователю marvia вместе с остальным: созданный потом руками из-под
 # root, он оставит панель без права записи, и продавец узнает об этом в тот
 # день, когда копия понадобится.
 mkdir -p "$DIR/dist" "$DIR/acme" "$DIR/backup"
 umask 077
 
-cp "$BIN_DIR/veil-panel" "$DIR/veil-panel"
-cp "$BIN_DIR/veil-server" "$DIR/dist/veil-server"
-cp "$BIN_DIR/veil-keygen" "$DIR/dist/veil-keygen"
-chmod 755 "$DIR/veil-panel" "$DIR/dist/veil-server" "$DIR/dist/veil-keygen"
+cp "$BIN_DIR/marvia-panel" "$DIR/marvia-panel"
+cp "$BIN_DIR/marvia-node" "$DIR/dist/marvia-node"
+cp "$BIN_DIR/marvia-keygen" "$DIR/dist/marvia-keygen"
+chmod 755 "$DIR/marvia-panel" "$DIR/dist/marvia-node" "$DIR/dist/marvia-keygen"
 
 # Приложения покупателей кладём рядом: раздавать их будет сама панель, с
 # домена продавца.
@@ -170,7 +195,7 @@ chmod 755 "$DIR/veil-panel" "$DIR/dist/veil-server" "$DIR/dist/veil-keygen"
 #
 # Не скачалось — не беда: панель просто не покажет ссылку, а продавец положит
 # файлы руками позже.
-for app in veil-android.apk veil-windows.exe; do
+for app in marvia-android.apk marvia-windows.exe; do
 	if [ -f "$BIN_DIR/$app" ]; then
 		cp "$BIN_DIR/$app" "$DIR/dist/$app"
 	else
@@ -181,14 +206,14 @@ for app in veil-android.apk veil-windows.exe; do
 	[ -f "$DIR/dist/$app" ] && chmod 644 "$DIR/dist/$app"
 done
 
-if [ -f "$DIR/dist/veil-android.apk" ]; then
+if [ -f "$DIR/dist/marvia-android.apk" ]; then
 	say 'приложения на месте: панель раздаёт их покупателям сама'
 else
 	say 'ВНИМАНИЕ: приложений нет — покупателям их скачивать неоткуда.'
-	say "Положи veil-android.apk и veil-windows.exe в $DIR/dist"
+	say "Положи marvia-android.apk и marvia-windows.exe в $DIR/dist"
 fi
 
-ADMIN_TOKEN=$("$DIR/veil-panel" -new-token)
+ADMIN_TOKEN=$("$DIR/marvia-panel" -new-token)
 [ -n "$ADMIN_TOKEN" ] || die 'не выпустился админский токен'
 
 # Токен уезжает в файл окружения, а не в строку запуска: в строке его видел
@@ -204,22 +229,25 @@ fi
 ACME_EMAIL=''
 [ -n "$EMAIL" ] && ACME_EMAIL=" -acme-email $EMAIL"
 
-id -u veil >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin veil
-chown -R veil:veil "$DIR"
+# Служебный пользователь. Старая установка работала под veil; заводим marvia
+# и передаём ему каталог целиком, чтобы после переезда не осталось файлов,
+# которые панель не может перезаписать.
+id -u marvia >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin marvia
+chown -R marvia:marvia ""
 
-cat > /etc/systemd/system/veil-panel.service <<UNITEOF
+cat > /etc/systemd/system/marvia-panel.service <<UNITEOF
 [Unit]
-Description=Veil panel
+Description=Marvia panel
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=veil
-Group=veil
+User=marvia
+Group=marvia
 WorkingDirectory=$DIR
 EnvironmentFile=$DIR/env
-ExecStart=$DIR/veil-panel -listen 0.0.0.0:$PORT -db $DIR/panel.db -dist $DIR/dist -sub-base $BASE -acme-domain $DOMAIN -acme-cache $DIR/acme$ACME_EMAIL
+ExecStart=$DIR/marvia-panel -listen 0.0.0.0:$PORT -db $DIR/panel.db -dist $DIR/dist -sub-base $BASE -acme-domain $DOMAIN -acme-cache $DIR/acme$ACME_EMAIL
 Restart=on-failure
 RestartSec=3
 
@@ -238,7 +266,7 @@ WantedBy=multi-user.target
 UNITEOF
 
 systemctl daemon-reload
-systemctl enable --now veil-panel >/dev/null 2>&1
+systemctl enable --now marvia-panel >/dev/null 2>&1
 
 # ---------------------------------------------------------------- проверка
 
@@ -260,7 +288,7 @@ done
 if [ "$OK" != yes ]; then
 	say ''
 	say 'панель не отвечает по https. Последние строки журнала:'
-	journalctl -u veil-panel -n 20 --no-pager -o cat || true
+	journalctl -u marvia-panel -n 20 --no-pager -o cat || true
 	die 'сертификат не получен'
 fi
 
@@ -282,7 +310,14 @@ say ''
 say '  Добавить первую ноду: открой панель, вкладка «Ноды» → «Добавить ноду».'
 say '  Панель выдаст готовую строку для нового сервера.'
 say ''
-say "  журнал      journalctl -u veil-panel -f"
-say "  снести      systemctl disable --now veil-panel && rm -rf $DIR"
+say "  журнал      journalctl -u marvia-panel -f"
+if [ "$MIGRATED" = 1 ]; then
+	say ""
+	say "Старый каталог сохранён в $OLD_DIR.before-marvia — удали его, когда убедишься, что панель работает:"
+	say "  rm -rf $OLD_DIR.before-marvia"
+	say ""
+fi
+
+say "  снести      systemctl disable --now marvia-panel && rm -rf $DIR"
 say "              внимание: в $DIR лежит база со всеми подписчиками"
 say ''

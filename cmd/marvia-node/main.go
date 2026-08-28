@@ -1,4 +1,4 @@
-// Команда veil-server — нода Veil.
+// Команда marvia-node — нода Veil.
 //
 // Принимает соединения, маскируясь под обычный сайт на 443 порту: тот, кто
 // пришёл без правильного ключа, получает настоящую веб-страницу, а не разрыв
@@ -122,7 +122,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Println("veil-server", version)
+		fmt.Println("marvia-node", version)
 		return
 	}
 
@@ -179,7 +179,7 @@ func run(opts serverOptions) error {
 		ln = transport.Listen(ln, transport.ServerConfig{Certificate: cert})
 	}
 
-	log.Printf("veil-server %s слушает %s", version, addr)
+	log.Printf("marvia-node %s слушает %s", version, addr)
 	log.Printf("публичный ключ ноды: %s", vp1.EncodeKey(static.Public))
 	if opts.plain {
 		log.Printf("ВНИМАНИЕ: режим -plain, маскировки нет — трафик опознаётся DPI")
@@ -387,7 +387,7 @@ func listenReality(inner net.Listener, opts serverOptions) (net.Listener, error)
 		keyStr = os.Getenv("VEIL_REALITY_KEY")
 	}
 	if keyStr == "" {
-		return nil, errors.New("не задан ключ REALITY: укажи -reality-key или VEIL_REALITY_KEY (выпустить: veil-keygen -reality)")
+		return nil, errors.New("не задан ключ REALITY: укажи -reality-key или VEIL_REALITY_KEY (выпустить: marvia-keygen -reality)")
 	}
 	key, err := vp1.DecodeKey(strings.TrimSpace(keyStr))
 	if err != nil {
@@ -475,7 +475,7 @@ func loadStaticKey(keyStr, keyFile string) (vp1.KeyPair, error) {
 		keyStr = strings.TrimSpace(string(raw))
 	}
 	if keyStr == "" {
-		return vp1.KeyPair{}, errors.New("не задан приватный ключ: укажи -key, -key-file или VEIL_SERVER_KEY (сгенерировать: veil-keygen)")
+		return vp1.KeyPair{}, errors.New("не задан приватный ключ: укажи -key, -key-file или VEIL_SERVER_KEY (сгенерировать: marvia-keygen)")
 	}
 
 	priv, err := vp1.DecodeKey(strings.TrimSpace(keyStr))

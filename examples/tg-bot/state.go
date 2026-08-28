@@ -94,4 +94,4 @@ func (s *State) save() {
 }
 
 // StatePath — где по умолчанию лежит состояние.
-func StatePath(dir string) string { return filepath.Join(dir, "veil-bot-state.json") }
+func StatePath(dir string) string { return filepath.Join(dir, "marvia-bot-state.json") }

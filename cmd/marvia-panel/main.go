@@ -1,4 +1,4 @@
-// Команда veil-panel — управляющий слой платформы.
+// Команда marvia-panel — управляющий слой платформы.
 //
 // Через неё продавец заводит подписчиков, продлевает и отключает их, а ноды
 // забирают свои списки и сдают статистику. Пользовательский трафик через
@@ -61,7 +61,7 @@ func main() {
 	var opts options
 
 	flag.StringVar(&opts.listen, "listen", "127.0.0.1:8080", "адрес HTTP-интерфейса")
-	flag.StringVar(&opts.dbPath, "db", "veil-panel.db", "файл базы данных")
+	flag.StringVar(&opts.dbPath, "db", "marvia-panel.db", "файл базы данных")
 	flag.StringVar(&opts.adminToken, "admin-token", "", "админский токен (по умолчанию — из VEIL_ADMIN_TOKEN)")
 	flag.StringVar(&opts.subBase, "sub-base", "", "внешний адрес панели для ссылок подписки, например https://sub.example.com")
 	flag.StringVar(&opts.distDir, "dist", "dist", "каталог с бинарниками ноды: панель раздаёт их установщику")
@@ -85,7 +85,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Println("veil-panel", version)
+		fmt.Println("marvia-panel", version)
 		return
 	}
 
@@ -110,7 +110,7 @@ func run(opts options) error {
 		opts.adminToken = os.Getenv("VEIL_ADMIN_TOKEN")
 	}
 	if opts.adminToken == "" {
-		return errors.New("не задан админский токен: укажи -admin-token или VEIL_ADMIN_TOKEN (выпустить: veil-panel -new-token)")
+		return errors.New("не задан админский токен: укажи -admin-token или VEIL_ADMIN_TOKEN (выпустить: marvia-panel -new-token)")
 	}
 	if len(strings.TrimSpace(opts.adminToken)) < 16 {
 		return errors.New("админский токен слишком короткий: нужен хотя бы 16 символов, лучше выпустить через -new-token")
@@ -182,7 +182,7 @@ func run(opts options) error {
 		_ = server.Shutdown(shutdownCtx)
 	}()
 
-	log.Printf("veil-panel %s слушает %s, база %s", version, opts.listen, opts.dbPath)
+	log.Printf("marvia-panel %s слушает %s, база %s", version, opts.listen, opts.dbPath)
 	if opts.subBase == "" {
 		log.Printf("ВНИМАНИЕ: не задан -sub-base, ссылки подписки будут с заглушкой вместо адреса")
 	}
