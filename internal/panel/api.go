@@ -759,6 +759,7 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 		Link      string `json:"link"`
 
 		WSPath           string `json:"ws_path,omitempty"`
+		QUIC             bool   `json:"quic,omitempty"`
 		RealityPublicKey string `json:"reality_public_key,omitempty"`
 		RealityShortID   string `json:"reality_short_id,omitempty"`
 	}
@@ -772,6 +773,7 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 			ID: n.ID, Name: n.Name, Country: n.Country, Address: n.Address, SNI: n.SNI,
 			PublicKey: n.PublicKey, Link: VeilNodeLink(n),
 			WSPath:           n.WSPath,
+			QUIC:             n.QUIC,
 			RealityPublicKey: n.RealityPublicKey,
 			RealityShortID:   n.RealityShortID,
 		})

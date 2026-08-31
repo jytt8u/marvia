@@ -49,6 +49,17 @@ type Node struct {
 	// RealityPublicKey не пуст, когда нода работает под маскировкой REALITY.
 	RealityPublicKey string `json:"reality_public_key,omitempty"`
 	RealityShortID   string `json:"reality_short_id,omitempty"`
+
+	// QUIC означает, что нода принимает ещё и по UDP на том же порту.
+	//
+	// Это не замена TCP, а вторая дорога. На сети с потерями она заметно
+	// ровнее: весь трафик человека идёт одним соединением, и по TCP один
+	// потерянный пакет тормозит сразу всё. Плюс переход из вайфая в мобильный
+	// интернет соединение переживает, а не умирает.
+	//
+	// Где UDP режут — а режут его целыми сетями и вырезают в белых списках —
+	// клиент просто не дозвонится по нему и пойдёт обычным путём.
+	QUIC bool `json:"quic,omitempty"`
 }
 
 // Transport — каким способом подключаться к ноде.
@@ -58,6 +69,7 @@ const (
 	TransportTLS     Transport = "tls"
 	TransportWS      Transport = "ws"
 	TransportReality Transport = "reality"
+	TransportQUIC    Transport = "quic"
 )
 
 // Transport определяет способ подключения по заполненным полям.

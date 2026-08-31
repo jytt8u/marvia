@@ -97,7 +97,12 @@ type Node struct {
 
 	// WSPath заполняется, когда нода работает за CDN через WebSocket.
 	// Тогда в ссылки уходит type=ws, а адрес указывает на CDN, а не на ноду.
-	WSPath    string     `json:"ws_path,omitempty"`
+	WSPath string `json:"ws_path,omitempty"`
+
+	// QUIC — нода принимает ещё и по UDP на том же порту. Клиент пробует его
+	// первым и молча уходит на TCP там, где UDP режут.
+	QUIC bool `json:"quic,omitempty"`
+
 	Enabled   bool       `json:"enabled"`
 	LastSeen  *time.Time `json:"last_seen,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -149,6 +154,7 @@ CREATE TABLE IF NOT EXISTS nodes (
     reality_public_key TEXT NOT NULL DEFAULT '',
     reality_short_id   TEXT NOT NULL DEFAULT '',
     ws_path            TEXT NOT NULL DEFAULT '',
+    quic               INTEGER NOT NULL DEFAULT 0,
     token_hash TEXT    NOT NULL UNIQUE,
     enabled    INTEGER NOT NULL DEFAULT 1,
     last_seen  TEXT,
@@ -254,6 +260,7 @@ func migrate(db *sql.DB) error {
 		`ALTER TABLE nodes ADD COLUMN reality_short_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN ws_path TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN country TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE nodes ADD COLUMN quic INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE users ADD COLUMN external_id TEXT`,
 		`CREATE TABLE IF NOT EXISTS api_keys (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, scopes TEXT NOT NULL, created_at TEXT NOT NULL, last_used_at TEXT, revoked_at TEXT)`,
 		// Индекс живёт только здесь, а не в схеме. Схема выполняется первой, и
@@ -601,6 +608,7 @@ type CreateNodeParams struct {
 	RealityPublicKey string `json:"reality_public_key"`
 	RealityShortID   string `json:"reality_short_id"`
 	WSPath           string `json:"ws_path"`
+	QUIC             bool   `json:"quic"`
 }
 
 // CreateNode регистрирует ноду и выдаёт ей токен.
@@ -619,9 +627,9 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 	now := time.Now().UTC()
 
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO nodes (name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, token_hash, enabled, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
-		p.Name, p.Country, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, p.WSPath, HashToken(token), format(now))
+		`INSERT INTO nodes (name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, quic, token_hash, enabled, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+		p.Name, p.Country, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, p.WSPath, boolInt(p.QUIC), HashToken(token), format(now))
 	if err != nil {
 		return Node{}, "", fmt.Errorf("создание ноды: %w", err)
 	}
@@ -632,7 +640,7 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 
 	return Node{ID: id, Name: p.Name, Country: p.Country, Address: p.Address, SNI: p.SNI,
 		PublicKey: p.PublicKey, RealityPublicKey: p.RealityPublicKey, RealityShortID: p.RealityShortID,
-		WSPath: p.WSPath, Enabled: true, CreatedAt: now}, token, nil
+		WSPath: p.WSPath, QUIC: p.QUIC, Enabled: true, CreatedAt: now}, token, nil
 }
 
 // ListNodes возвращает все ноды.
@@ -654,7 +662,7 @@ func (s *Store) GetNode(ctx context.Context, id int64) (Node, error) {
 
 func (s *Store) queryNodes(ctx context.Context, where string, args ...any) ([]Node, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, enabled, last_seen, created_at
+		`SELECT id, name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, quic, enabled, last_seen, created_at
 		 FROM nodes `+where+` ORDER BY id`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("чтение нод: %w", err)
@@ -665,15 +673,18 @@ func (s *Store) queryNodes(ctx context.Context, where string, args ...any) ([]No
 	for rows.Next() {
 		var (
 			n         Node
+			quicOn    int
 			enabled   int
 			lastSeen  sql.NullString
 			createdAt string
 		)
 		if err := rows.Scan(&n.ID, &n.Name, &n.Country, &n.Address, &n.SNI, &n.PublicKey,
-			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &enabled, &lastSeen, &createdAt); err != nil {
+			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &quicOn, &enabled, &lastSeen, &createdAt); err != nil {
 			return nil, err
 		}
 		n.Enabled = enabled != 0
+		n.QUIC = quicOn != 0
+		n.QUIC = quicOn != 0
 		n.LastSeen = parseNullTime(lastSeen)
 		n.CreatedAt = parse(createdAt)
 		list = append(list, n)
@@ -749,15 +760,16 @@ func (s *Store) DeleteNode(ctx context.Context, id int64) error {
 func (s *Store) AuthenticateNode(ctx context.Context, token string) (Node, error) {
 	var (
 		n         Node
+		quicOn    int
 		enabled   int
 		lastSeen  sql.NullString
 		createdAt string
 	)
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, enabled, last_seen, created_at
+		`SELECT id, name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, quic, enabled, last_seen, created_at
 		 FROM nodes WHERE token_hash = ?`, HashToken(token)).
 		Scan(&n.ID, &n.Name, &n.Country, &n.Address, &n.SNI, &n.PublicKey,
-			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &enabled, &lastSeen, &createdAt)
+			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &quicOn, &enabled, &lastSeen, &createdAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Node{}, ErrNotFound
 	}
@@ -766,6 +778,7 @@ func (s *Store) AuthenticateNode(ctx context.Context, token string) (Node, error
 	}
 
 	n.Enabled = enabled != 0
+	n.QUIC = quicOn != 0
 	n.LastSeen = parseNullTime(lastSeen)
 	n.CreatedAt = parse(createdAt)
 

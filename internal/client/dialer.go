@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync/atomic"
+	"time"
 
 	"github.com/veilproject/veil/internal/transport"
 	"github.com/veilproject/veil/internal/tunnel"
@@ -24,6 +26,12 @@ type Dialer struct {
 	// Второй раз ходить за подпиской ради этого незачем — она уже в руках.
 	sub Subscription
 }
+
+// quicAttempt — сколько ждём дозвона по UDP, прежде чем уйти на TCP.
+//
+// Четыре секунды: этого хватает на честное рукопожатие даже на плохой
+// мобильной сети, но человек не успевает решить, что приложение зависло.
+const quicAttempt = 4 * time.Second
 
 // Options — необязательные настройки дозвона.
 //
@@ -81,6 +89,61 @@ func NewDialer(node Node, key vp1.KeyPair, opts Options) (*Dialer, error) {
 
 // transportDialer выбирает внешний слой под то, как настроена нода.
 func transportDialer(node Node, serverName string, opts Options) (func(context.Context) (net.Conn, error), error) {
+	// QUIC пробуем первым и откатываемся на TCP, если не вышло.
+	//
+	// Только для обычного TLS: под REALITY нода не может держать QUIC (там
+	// нет своего сертификата), а за CDN адрес принадлежит не ноде, и UDP до
+	// неё не дойдёт.
+	if node.QUIC && node.Transport() == TransportTLS {
+		tcp, err := tcpDialer(node, serverName, opts)
+		if err != nil {
+			return nil, err
+		}
+		return quicFirst(node, serverName, opts, tcp), nil
+	}
+
+	return tcpDialer(node, serverName, opts)
+}
+
+// quicFirst пробует UDP, а потом навсегда переходит на TCP.
+//
+// «Навсегда» важнее, чем кажется. UDP режут не по одному пакету, а целой
+// сетью: у оператора, в офисе, в белом списке. Там первая попытка не просто
+// не удастся — она будет молча висеть до тайм-аута, и так на каждом новом
+// соединении. Один раз выяснили, что дороги нет, и больше туда не ходим.
+func quicFirst(node Node, serverName string, opts Options, tcp func(context.Context) (net.Conn, error)) func(context.Context) (net.Conn, error) {
+	var udpDead atomic.Bool
+
+	return func(ctx context.Context) (net.Conn, error) {
+		if udpDead.Load() {
+			return tcp(ctx)
+		}
+
+		quicCtx, cancel := context.WithTimeout(ctx, quicAttempt)
+		defer cancel()
+
+		conn, err := transport.DialQUIC(quicCtx, node.Address, transport.QUICDialConfig{
+			TLS: transport.ClientConfig{
+				ServerName:         serverName,
+				RootCAs:            opts.RootCAs,
+				InsecureSkipVerify: opts.InsecureSkipVerify,
+			},
+		})
+		if err == nil {
+			return conn, nil
+		}
+
+		// Отмена самим человеком — не приговор дороге: он просто нажал
+		// «отключиться», и в следующий раз UDP надо пробовать снова.
+		if ctx.Err() == nil {
+			udpDead.Store(true)
+		}
+		return tcp(ctx)
+	}
+}
+
+// tcpDialer собирает дозвон по TCP — тот, что был до появления QUIC.
+func tcpDialer(node Node, serverName string, opts Options) (func(context.Context) (net.Conn, error), error) {
 	tlsCfg := transport.ClientConfig{
 		ServerName:         serverName,
 		RootCAs:            opts.RootCAs,

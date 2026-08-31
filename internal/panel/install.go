@@ -119,6 +119,7 @@ func (a *API) registerNode(w http.ResponseWriter, r *http.Request) {
 		RealityPublicKey string `json:"reality_public_key"`
 		RealityShortID   string `json:"reality_short_id"`
 		WSPath           string `json:"ws_path"`
+		QUIC             bool   `json:"quic"`
 	}
 	if !decode(w, r, &p) {
 		return
@@ -146,6 +147,7 @@ func (a *API) registerNode(w http.ResponseWriter, r *http.Request) {
 		RealityPublicKey: p.RealityPublicKey,
 		RealityShortID:   p.RealityShortID,
 		WSPath:           p.WSPath,
+		QUIC:             p.QUIC,
 	})
 	if errors.Is(err, ErrInviteSpent) {
 		fail(w, http.StatusForbidden, err.Error())
