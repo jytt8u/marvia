@@ -116,4 +116,25 @@
         android:layout_gravity="end"
         android:layout_marginBottom="8dp"
         android:text="@string/action_save" />
+
+    <!--
+        Приложения мимо туннеля. Внизу, под ключом: настраивают это один раз и
+        обычно уже после того, как наткнулись на неоткрывающиеся госуслуги.
+    -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bypassButton"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="@string/bypass_open" />
+
+    <TextView
+        android:id="@+id/bypassSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:textAlignment="center"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="13sp" />
 </LinearLayout>

@@ -70,6 +70,16 @@ class MainActivity : AppCompatActivity() {
         ui.keyInput.setText(store.accountLink)
 
         ui.saveButton.setOnClickListener { saveKey() }
+        ui.bypassButton.setOnClickListener {
+            Bypass.show(this, lifecycleScope, store) {
+                showBypassSummary()
+                // Список читается при поднятии туннеля, а не на лету: менять
+                // маршруты у работающего VPN нельзя, его надо пересобрать.
+                if (VeilState.state.value is TunnelState.On) {
+                    Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
         ui.connectButton.setOnClickListener { toggle() }
 
         lifecycleScope.launch {
@@ -78,8 +88,19 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        showBypassSummary()
         askForNotifications()
         acceptLinkFrom(intent)
+    }
+
+    /** showBypassSummary пишет под кнопкой, сколько приложений идёт мимо. */
+    private fun showBypassSummary() {
+        val chosen = store.bypassed
+        ui.bypassSummary.text = when (chosen.size) {
+            0 -> getString(R.string.bypass_none)
+            1 -> Bypass.label(this, chosen.first())
+            else -> getString(R.string.bypass_some, chosen.size)
+        }
     }
 
     /**

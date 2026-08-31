@@ -41,6 +41,21 @@
     <string name="key_replace_yes">Заменить</string>
     <string name="key_replace_no">Оставить прежний</string>
 
+    <!--
+        Байпас. Значок VPN в шторке остаётся всегда — его рисует Android, пока
+        поднят туннель. Но госуслуги ломает не значок, а зарубежный адрес
+        ноды, и вот его исключение из туннеля и чинит.
+    -->
+    <string name="bypass_open">Приложения мимо туннеля</string>
+    <string name="bypass_title">Что не пускать в туннель</string>
+    <string name="bypass_none">Все приложения идут через туннель</string>
+    <string name="bypass_some">Мимо туннеля: %1$d</string>
+    <string name="bypass_hint">Госуслуги, банки и всё государственное не отвечают на запросы из-за границы. Отправь их мимо — у них останется обычный интернет с российским адресом.</string>
+    <string name="bypass_preset">Госуслуги и банки</string>
+    <string name="bypass_save">Сохранить</string>
+    <string name="bypass_restart">Изменения применятся при следующем подключении</string>
+    <string name="bypass_loading">Смотрю, что установлено…</string>
+
     <string name="consent_denied">Без разрешения системы туннель поднять нельзя</string>
     <string name="error_no_interface">Система не выдала сетевой интерфейс</string>
 
