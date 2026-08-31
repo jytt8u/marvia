@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/quic-go/quic-go"
+	utls "github.com/refraction-networking/utls"
 )
 
 // Транспорт поверх QUIC.
@@ -67,23 +68,22 @@ func DialQUIC(ctx context.Context, addr string, cfg QUICDialConfig) (net.Conn, e
 		name = host
 	}
 
-	tlsCfg := &tls.Config{
+	tlsCfg := &utls.Config{
 		ServerName:         name,
 		RootCAs:            cfg.TLS.RootCAs,
 		InsecureSkipVerify: cfg.TLS.InsecureSkipVerify, //nolint:gosec // только для отладки, как и в TLS-транспорте
 		NextProtos:         quicALPN,
-		MinVersion:         tls.VersionTLS13,
+		MinVersion:         utls.VersionTLS13,
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, handshakeTimeout)
 	defer cancel()
 
-	conn, err := quic.DialAddr(ctx, addr, tlsCfg, &quic.Config{
-		MaxIdleTimeout:  quicIdleTimeout,
-		KeepAlivePeriod: quicIdleTimeout / 3,
-	})
+	// Отпечаток чужой, см. quic_fingerprint.go: свой стек опознаётся по первому
+	// же пакету, и никакое шифрование от этого не спасает.
+	conn, err := dialQUICMimicking(ctx, addr, tlsCfg)
 	if err != nil {
-		return nil, fmt.Errorf("quic до %s: %w", addr, err)
+		return nil, err
 	}
 
 	stream, err := conn.OpenStreamSync(ctx)
@@ -92,7 +92,22 @@ func DialQUIC(ctx context.Context, addr string, cfg QUICDialConfig) (net.Conn, e
 		return nil, fmt.Errorf("поток quic до %s: %w", addr, err)
 	}
 
-	return &quicConn{stream: stream, conn: conn}, nil
+	return &quicConn{
+		stream:       stream,
+		local:        conn.LocalAddr(),
+		remote:       conn.RemoteAddr(),
+		closeSession: func() { _ = conn.CloseWithError(0, "") },
+	}, nil
+}
+
+// newServerConn заворачивает принятый нодой поток.
+func newServerConn(stream *quic.Stream, conn *quic.Conn) net.Conn {
+	return &quicConn{
+		stream:       stream,
+		local:        conn.LocalAddr(),
+		remote:       conn.RemoteAddr(),
+		closeSession: func() { _ = conn.CloseWithError(0, "") },
+	}
 }
 
 // QUICListener принимает соединения по QUIC.
@@ -148,7 +163,7 @@ func (l *QUICListener) accept() {
 					return
 				}
 				select {
-				case l.conns <- &quicConn{stream: stream, conn: conn}:
+				case l.conns <- newServerConn(stream, conn):
 				case <-l.done:
 					_ = conn.CloseWithError(0, "")
 					return
@@ -180,14 +195,31 @@ func (l *QUICListener) Close() error {
 // Addr отдаёт адрес, на котором слушаем.
 func (l *QUICListener) Addr() net.Addr { return l.ln.Addr() }
 
+// quicStream — то, что нужно от потока: он у двух библиотек разный по типу,
+// но одинаковый по обязанностям.
+type quicStream interface {
+	Read([]byte) (int, error)
+	Write([]byte) (int, error)
+	Close() error
+	SetDeadline(time.Time) error
+	SetReadDeadline(time.Time) error
+	SetWriteDeadline(time.Time) error
+}
+
 // quicConn — поток QUIC в обличье обычного соединения.
 //
-// Адреса берём у соединения, а чтение и запись — у потока: всё, что выше,
-// работает с net.Conn и не должно знать, что под ним не TCP.
+// Всё, что выше, работает с net.Conn и не должно знать, что под ним не TCP —
+// и тем более какой библиотекой поднято соединение.
 type quicConn struct {
-	stream *quic.Stream
-	conn   *quic.Conn
-	once   sync.Once
+	stream quicStream
+	local  net.Addr
+	remote net.Addr
+
+	// closeSession закрывает само соединение. Функцией, а не полем-объектом:
+	// у клиента и у ноды под ним разные библиотеки с разными типами ошибок.
+	closeSession func()
+
+	once sync.Once
 }
 
 func (c *quicConn) Read(b []byte) (int, error)  { return c.stream.Read(b) }
@@ -213,7 +245,7 @@ func (c *quicConn) Close() error {
 	c.once.Do(func() {
 		go func() {
 			time.Sleep(quicLinger)
-			_ = c.conn.CloseWithError(0, "")
+			c.closeSession()
 		}()
 	})
 
@@ -223,8 +255,8 @@ func (c *quicConn) Close() error {
 	return err
 }
 
-func (c *quicConn) LocalAddr() net.Addr                { return c.conn.LocalAddr() }
-func (c *quicConn) RemoteAddr() net.Addr               { return c.conn.RemoteAddr() }
+func (c *quicConn) LocalAddr() net.Addr                { return c.local }
+func (c *quicConn) RemoteAddr() net.Addr               { return c.remote }
 func (c *quicConn) SetDeadline(t time.Time) error      { return c.stream.SetDeadline(t) }
 func (c *quicConn) SetReadDeadline(t time.Time) error  { return c.stream.SetReadDeadline(t) }
 func (c *quicConn) SetWriteDeadline(t time.Time) error { return c.stream.SetWriteDeadline(t) }
