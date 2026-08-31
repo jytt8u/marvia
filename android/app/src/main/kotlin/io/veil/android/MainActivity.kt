@@ -22,7 +22,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import io.veil.android.databinding.ActivityMainBinding
 import io.veil.mobile.Mobile
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 /**
@@ -89,18 +91,56 @@ class MainActivity : AppCompatActivity() {
         }
 
         showBypassSummary()
+        refreshRoutes()
         askForNotifications()
         acceptLinkFrom(intent)
+    }
+
+    /**
+     * askRussianBypass предлагает увести российские сайты мимо туннеля.
+     *
+     * Спрашиваем один раз при включении, а не прячем в настройки: человек
+     * узнаёт про эту возможность ровно тогда, когда у него не открылись
+     * госуслуги, — то есть уже разозлившись.
+     */
+    private fun offerRussianBypass() {
+        if (!RuRoutes.supported() || store.bypassRussian || store.bypassAsked) {
+            return
+        }
+        store.bypassAsked = true
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.bypass_ru_title)
+            .setMessage(R.string.bypass_ru_body)
+            .setPositiveButton(R.string.bypass_ru_yes) { _, _ ->
+                store.bypassRussian = true
+                showBypassSummary()
+                refreshRoutes()
+            }
+            .setNegativeButton(R.string.bypass_ru_no, null)
+            .show()
+    }
+
+    /** refreshRoutes подтягивает список подсетей с панели продавца. */
+    private fun refreshRoutes() {
+        val subscription = RuRoutes.subscriptionURL(store.accountLink) ?: return
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) { RuRoutes.refresh(applicationContext, subscription) }
+        }
     }
 
     /** showBypassSummary пишет под кнопкой, сколько приложений идёт мимо. */
     private fun showBypassSummary() {
         val chosen = store.bypassed
-        ui.bypassSummary.text = when (chosen.size) {
-            0 -> getString(R.string.bypass_none)
+        val apps = when (chosen.size) {
+            0 -> null
             1 -> Bypass.label(this, chosen.first())
             else -> getString(R.string.bypass_some, chosen.size)
         }
+        val ru = if (store.bypassRussian) getString(R.string.bypass_ru_on) else null
+
+        ui.bypassSummary.text = listOfNotNull(ru, apps).joinToString(" · ")
+            .ifEmpty { getString(R.string.bypass_none) }
     }
 
     /**
@@ -203,6 +243,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 ui.connectButton.setText(R.string.action_disconnect)
                 ui.connectButton.isEnabled = true
+                offerRussianBypass()
 
                 val sub = subscriptionText(state.subscription)
                 ui.subText.text = sub
