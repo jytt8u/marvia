@@ -6,6 +6,8 @@ require (
 	github.com/coder/websocket v1.8.15
 	github.com/flynn/noise v1.1.0
 	github.com/hashicorp/yamux v0.1.2
+	github.com/jchv/go-webview2 v0.0.0-20260205173254-56598839c808
+	github.com/quic-go/quic-go v0.62.0
 	github.com/refraction-networking/utls v1.8.2
 	github.com/xjasonlyu/tun2socks/v2 v2.7.0
 	github.com/xtls/reality v0.0.0-20260322125925-9234c772ba8f
@@ -23,7 +25,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/jchv/go-webview2 v0.0.0-20260205173254-56598839c808 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/klauspost/compress v1.17.4 // indirect

@@ -89,6 +89,10 @@ type serverOptions struct {
 	plain           bool
 	coverSite       string
 	coverTitle      string
+
+	// quic поднимает второй слушатель на том же порту, но по UDP.
+	quic     bool
+	quicAddr string
 }
 
 func main() {
@@ -115,6 +119,9 @@ func main() {
 	flag.StringVar(&opts.wsPath, "ws-path", "", "путь туннеля WebSocket, например /assets/app.js (режим для работы за CDN)")
 
 	flag.StringVar(&opts.coverSite, "cover", "", "адрес настоящего сайта для неопознанных гостей, например https://example.org")
+	flag.BoolVar(&opts.quic, "quic", false, "принимать ещё и по QUIC на том же порту (нужен -tls-cert)")
+	flag.StringVar(&opts.quicAddr, "quic-listen", "", "отдельный адрес для QUIC (по умолчанию — тот же, что у -listen)")
+
 	flag.StringVar(&opts.coverTitle, "cover-title", "", "если сайт-прикрытие не задан, отдавать заглушку с таким заголовком")
 
 	showVersion := flag.Bool("version", false, "показать версию и выйти")
@@ -200,14 +207,45 @@ func run(opts serverOptions) error {
 		log.Printf("прикрытие обеспечивает REALITY: неопознанные гости уходят на %s", opts.realityDest)
 	}
 
-	// Закрытие слушателя по сигналу разблокирует Accept.
+	d := deps{static: static, guard: vp1.NewReplayGuard(vp1.ClockSkew), registry: registry, fallback: cover}
+
+	// QUIC — рядом, а не вместо.
+	//
+	// Тот же порт, но по UDP, те же клиенты и тот же протокол внутри. Смысл в
+	// двух вещах: на сети с потерями один потерянный пакет не тормозит весь
+	// туннель разом, а при переходе из вайфая в мобильный интернет соединение
+	// переезжает вместо того, чтобы умереть и переподключаться на глазах.
+	//
+	// Включается отдельно и TCP не заменяет: UDP режут целыми сетями, а в
+	// белых списках его нет вовсе. Кто не дозвонится по UDP, придёт по TCP.
+	quicLn, err := listenQUIC(opts)
+	if err != nil {
+		return err
+	}
+	if quicLn != nil {
+		defer quicLn.Close()
+		log.Printf("quic слушает %s по UDP", quicLn.Addr())
+
+		go func() {
+			for {
+				conn, err := quicLn.Accept()
+				if err != nil {
+					return
+				}
+				go serve(conn, d)
+			}
+		}()
+	}
+
+	// Закрытие слушателей по сигналу разблокирует Accept.
 	go func() {
 		<-ctx.Done()
 		log.Printf("завершаем работу")
 		_ = ln.Close()
+		if quicLn != nil {
+			_ = quicLn.Close()
+		}
 	}()
-
-	d := deps{static: static, guard: vp1.NewReplayGuard(vp1.ClockSkew), registry: registry, fallback: cover}
 
 	for {
 		conn, err := ln.Accept()
@@ -483,4 +521,36 @@ func loadStaticKey(keyStr, keyFile string) (vp1.KeyPair, error) {
 		return vp1.KeyPair{}, fmt.Errorf("приватный ключ: %w", err)
 	}
 	return vp1.KeyPairFromPrivate(priv)
+}
+
+// listenQUIC поднимает слушателя QUIC, если продавец его включил.
+//
+// Возвращает nil без ошибки, когда QUIC не просили: это не поломка, а обычный
+// случай — большинство нод живут по TCP под REALITY.
+func listenQUIC(opts serverOptions) (*transport.QUICListener, error) {
+	if !opts.quic {
+		return nil, nil
+	}
+
+	// Настоящий сертификат обязателен, и вот почему.
+	//
+	// В QUIC нет чужого рукопожатия, за которое можно спрятаться: REALITY
+	// зеркалит TCP-хендшейк настоящего сайта, а здесь зеркалить нечего. Значит
+	// нода предъявляет свой сертификат сама, и самоподписанный виден сканеру
+	// как объявление «тут не сайт». Пусть лучше QUIC не включится, чем
+	// включится и выдаст ноду.
+	if opts.certFile == "" || opts.keyPEMFile == "" {
+		return nil, errors.New("для -quic нужен настоящий сертификат: -tls-cert и -tls-key. Самоподписанный выдаёт ноду сканеру, а прятаться в QUIC не за что")
+	}
+
+	cert, err := transport.LoadCertificate(opts.certFile, opts.keyPEMFile)
+	if err != nil {
+		return nil, err
+	}
+
+	addr := opts.quicAddr
+	if addr == "" {
+		addr = opts.listenAddr
+	}
+	return transport.ListenQUIC(addr, cert)
 }
