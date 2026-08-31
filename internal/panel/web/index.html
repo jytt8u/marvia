@@ -63,6 +63,37 @@ header.top .spacer { flex: 1; }
 }
 .tabs button.active { background: var(--surface); border-color: var(--border); color: var(--text); font-weight: 600; }
 
+/* ------------------------------------------------------------- статистика */
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .8rem; margin-bottom: .9rem; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .85rem 1rem; }
+.tile .name { font-size: .82rem; color: var(--muted); }
+.tile .value { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; margin-top: .1rem; }
+.tile .note { font-size: .84rem; color: var(--muted); }
+
+.card-head { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: .7rem; }
+.card-head h2 { margin: 0; }
+
+.periods { margin-left: auto; display: flex; gap: .25rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.periods button {
+  border: 0; background: transparent; color: var(--muted);
+  font: inherit; font-size: .86rem; padding: .25rem .7rem; border-radius: 6px; cursor: pointer;
+}
+.periods button.active { background: var(--text); color: var(--bg); font-weight: 600; }
+
+/* Столбик дня. Ширина считается от числа дней, поэтому здесь только вид. */
+.chart { display: flex; align-items: flex-end; gap: 2px; height: 168px; padding-top: .4rem; }
+.chart .day { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; min-width: 0; }
+.chart .bar { background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; }
+.chart .day.empty .bar { background: var(--border); }
+.chart-axis { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); padding-top: .35rem; border-top: 1px solid var(--border); margin-top: .3rem; }
+
+.node-bar { display: flex; align-items: center; gap: .7rem; padding: .45rem 0; }
+.node-bar .who { width: 190px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node-bar .track { flex: 1; height: 10px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.node-bar .fill { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; }
+.node-bar .amount { width: 84px; text-align: right; font-variant-numeric: tabular-nums; }
+
 .card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;
@@ -171,10 +202,38 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
     заходят раз в жизни, когда заводят бота, и раз в месяц за копией базы.
   -->
   <nav class="tabs">
-    <button data-tab="nodes" class="active">Ноды</button>
+    <button data-tab="stats" class="active">Статистика</button>
+    <button data-tab="nodes">Ноды</button>
     <button data-tab="users">Подписчики</button>
     <button data-tab="keys">Хозяйство</button>
   </nav>
+
+  <!--
+    Статистика первой: панель открывают посмотреть, как идут дела, а не чинить.
+    Числа здесь — люди, устройства и гигабайты, а не деньги: панель ставят и
+    для себя, и на семью, и на перепродажу, и «выручка» осмысленна только в
+    третьем случае.
+  -->
+  <section id="tab-stats">
+    <div class="tiles" id="stats-tiles"></div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Трафик по дням</h2>
+        <div class="periods" id="stats-periods">
+          <button data-days="7">7 дней</button>
+          <button data-days="30" class="active">30 дней</button>
+          <button data-days="90">90 дней</button>
+        </div>
+      </div>
+      <div id="stats-chart"></div>
+    </div>
+
+    <div class="card">
+      <h2>По нодам</h2>
+      <div id="stats-nodes"></div>
+    </div>
+  </section>
 
   <section id="tab-users" hidden>
     <div class="card">
@@ -204,7 +263,7 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
     </div>
   </section>
 
-  <section id="tab-nodes">
+  <section id="tab-nodes" hidden>
     <div class="card">
       <h2>Добавить ноду</h2>
       <p class="muted" style="margin:0 0 .9rem">
@@ -852,6 +911,10 @@ async function load() {
 
   renderUsers();
   renderNodes();
+
+  // Статистика — первая вкладка, и она должна быть заполнена к тому моменту,
+  // когда человек на неё посмотрит, а не после того, как он её нажмёт.
+  if (!$("tab-stats").hidden) loadStats();
 }
 
 function logout() {
@@ -894,6 +957,81 @@ $("nn-create").addEventListener("click", createNode);
 //
 // Отдельно от общего обновления: на этой вкладке продавец бывает раз в
 // месяц, а ходить за списком ключей на каждом обновлении незачем.
+// ------------------------------------------------------------- статистика
+
+// Столбики, а не кривая: у нас суточные значения, а линия между ними врёт —
+// обещает, что между днями что-то происходило плавно.
+function renderChart(days) {
+  const host = $("stats-chart");
+  host.replaceChildren();
+
+  const max = Math.max(...days.map((d) => d.up + d.down), 1);
+
+  const chart = el("div", { class: "chart" });
+  for (const d of days) {
+    const total = d.up + d.down;
+    const height = total ? Math.max(2, Math.round((total / max) * 100)) : 0;
+    // Подсказка обычным title: своя всплывашка на графике, который смотрят
+    // раз в неделю, — это код, который потом чинить.
+    chart.append(el("div", {
+      class: total ? "day" : "day empty",
+      title: d.day + " — " + bytes(total),
+    }, el("i", { class: "bar", style: "height:" + (total ? height : 2) + "%" })));
+  }
+  host.append(chart);
+
+  host.append(el("div", { class: "chart-axis" },
+    el("span", { text: days[0].day }),
+    el("span", { text: "всего " + bytes(days.reduce((s, d) => s + d.up + d.down, 0)) }),
+    el("span", { text: days[days.length - 1].day })));
+}
+
+function renderStatsNodes(nodes) {
+  const host = $("stats-nodes");
+  host.replaceChildren();
+
+  if (!nodes.length) {
+    host.append(el("div", { class: "empty", text: "За этот период через ноды ничего не прошло." }));
+    return;
+  }
+
+  const max = Math.max(...nodes.map((n) => n.up + n.down), 1);
+  for (const n of nodes) {
+    const total = n.up + n.down;
+    host.append(el("div", { class: "node-bar" },
+      el("span", { class: "who", text: n.country ? n.country + " · " + n.name : n.name }),
+      el("span", { class: "track" }, el("i", { class: "fill", style: "width:" + Math.max(2, (total / max) * 100) + "%" })),
+      el("span", { class: "amount", text: bytes(total) })));
+  }
+}
+
+async function loadStats(days) {
+  const period = days || Number(document.querySelector("#stats-periods button.active").dataset.days) || 30;
+  try {
+    const res = await api("GET", "/api/v1/stats?days=" + period);
+
+    const active = state.users.filter((u) => u.enabled).length;
+    const todayUsage = res.by_day.length ? res.by_day[res.by_day.length - 1] : { up: 0, down: 0 };
+
+    $("stats-tiles").replaceChildren(
+      el("div", { class: "tile" },
+        el("div", { class: "name", text: "Люди" }),
+        el("div", { class: "value", text: String(state.users.length) }),
+        el("div", { class: "note", text: "у " + active + " доступ работает" })),
+      el("div", { class: "tile" },
+        el("div", { class: "name", text: "Трафик за сутки" }),
+        el("div", { class: "value", text: bytes(todayUsage.up + todayUsage.down) }),
+        el("div", { class: "note", text: "с полуночи по UTC" })),
+      el("div", { class: "tile" },
+        el("div", { class: "name", text: "За " + period + " дней" }),
+        el("div", { class: "value", text: bytes(res.total) }),
+        el("div", { class: "note", text: res.by_node.length + " " + plural(res.by_node.length, "нода", "ноды", "нод") })));
+
+    renderChart(res.by_day);
+    renderStatsNodes(res.by_node);
+  } catch (err) { toast(err.message, true); }
+}
+
 async function loadHousehold() {
   await Promise.all([loadKeys(), loadApps()]);
 }
@@ -1024,10 +1162,18 @@ $("backup-get").addEventListener("click", downloadBackup);
 document.querySelectorAll(".tabs button").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b === btn));
-    ["users", "nodes", "keys"].forEach((name) => {
+    ["stats", "users", "nodes", "keys"].forEach((name) => {
       $("tab-" + name).hidden = btn.dataset.tab !== name;
     });
     if (btn.dataset.tab === "keys") loadHousehold();
+    if (btn.dataset.tab === "stats") loadStats();
+  });
+});
+
+document.querySelectorAll("#stats-periods button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#stats-periods button").forEach((b) => b.classList.toggle("active", b === btn));
+    loadStats(Number(btn.dataset.days));
   });
 });
 
