@@ -67,6 +67,26 @@
     <string name="bypass_ru_no">Не надо</string>
     <string name="bypass_ru_on">Российские сайты мимо</string>
 
+    <!--
+        Настройки. Здесь нет ручек протокола: их место внутри, а не на экране
+        человека, который не может выбрать между ними осознанно.
+    -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_apps">Приложения мимо туннеля</string>
+    <string name="settings_autostart_off">Включаться после перезагрузки: нет</string>
+    <string name="settings_autostart_on">Включаться после перезагрузки: да</string>
+    <string name="settings_autostart_short">автозапуск</string>
+    <string name="settings_autostart_saved">После перезагрузки телефона туннель поднимется сам</string>
+    <string name="settings_autostart_off_saved">После перезагрузки придётся включить руками</string>
+    <string name="settings_always_on">Постоянный VPN в системе</string>
+    <string name="settings_always_on_missing">На этом телефоне нет такого раздела настроек</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_journal">Журнал</string>
+    <string name="theme_system">Как в системе</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="journal_send">Отправить продавцу</string>
+
     <string name="consent_denied">Без разрешения системы туннель поднять нельзя</string>
     <string name="error_no_interface">Система не выдала сетевой интерфейс</string>
 

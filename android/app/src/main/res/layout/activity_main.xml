@@ -122,15 +122,15 @@
         обычно уже после того, как наткнулись на неоткрывающиеся госуслуги.
     -->
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/bypassButton"
+        android:id="@+id/settingsButton"
         style="@style/Widget.Material3.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="4dp"
-        android:text="@string/bypass_open" />
+        android:text="@string/settings_title" />
 
     <TextView
-        android:id="@+id/bypassSummary"
+        android:id="@+id/settingsSummary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"

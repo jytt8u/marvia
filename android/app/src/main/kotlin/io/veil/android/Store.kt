@@ -75,6 +75,31 @@ class Store(context: Context) {
             prefs.edit().putBoolean(KEY_BYPASS_ASKED, value).apply()
         }
 
+    /**
+     * autoStart — поднимать ли туннель после перезагрузки телефона.
+     *
+     * Телефон перезагружается сам: от обновления, от разряда, от зависания.
+     * Человек замечает это не сразу, а когда открывает нужный сайт, — и
+     * винит не телефон, а нас.
+     */
+    var autoStart: Boolean
+        get() = prefs.getBoolean(KEY_AUTOSTART, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_AUTOSTART, value).apply()
+        }
+
+    /**
+     * theme — светлая, тёмная или как в системе.
+     *
+     * Значения совпадают с режимами AppCompatDelegate, чтобы не заводить
+     * второй словарь и не переводить одно в другое при каждом чтении.
+     */
+    var theme: Int
+        get() = prefs.getInt(KEY_THEME, -1)
+        set(value) {
+            prefs.edit().putInt(KEY_THEME, value).apply()
+        }
+
     /** Каталог, который приложение отдаёт ядру под кэш подписки. */
     fun cacheDir(): String = app.filesDir.absolutePath
 
@@ -89,5 +114,7 @@ class Store(context: Context) {
         const val KEY_BYPASSED = "bypassed_apps"
         const val KEY_BYPASS_RU = "bypass_russian"
         const val KEY_BYPASS_ASKED = "bypass_asked"
+        const val KEY_AUTOSTART = "autostart"
+        const val KEY_THEME = "theme"
     }
 }
