@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.Build
@@ -84,7 +85,7 @@ class VeilVpnService : VpnService() {
 
         worker = scope.launch {
             val descriptor = try {
-                openInterface()
+                openInterface(store.bypassed)
             } catch (t: Throwable) {
                 // Вид здесь известен без ядра: до ядра мы ещё не дошли.
                 shutdown(TunnelState.Failed(Mobile.FailSystem, reasonOf(t)))
@@ -121,7 +122,7 @@ class VeilVpnService : VpnService() {
     }
 
     /** openInterface просит у системы интерфейс и описывает, что в него слать. */
-    private fun openInterface(): ParcelFileDescriptor {
+    private fun openInterface(bypassed: Set<String>): ParcelFileDescriptor {
         val builder = Builder()
             .setSession(getString(R.string.app_name))
             .setMtu(MTU)
@@ -139,6 +140,21 @@ class VeilVpnService : VpnService() {
         // Свой трафик в собственный туннель не заворачиваем. Иначе соединение
         // до ноды пошло бы через интерфейс, который сам же и ведёт к ноде.
         builder.addDisallowedApplication(packageName)
+
+        // Приложения, которые человек отправил мимо туннеля: госуслуги, банки,
+        // всё, что не отвечает на запросы из-за границы. Система оставляет им
+        // обычную сеть, и на сервер приходит их настоящий адрес.
+        //
+        // Пропавшее приложение не повод не подниматься: его могли удалить между
+        // настройкой и запуском, а падать посреди включения VPN из-за этого —
+        // худший из возможных ответов.
+        for (pkg in bypassed) {
+            try {
+                builder.addDisallowedApplication(pkg)
+            } catch (_: PackageManager.NameNotFoundException) {
+                Log.w(TAG, "мимо туннеля просили $pkg, но оно не установлено")
+            }
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             builder.setMetered(false)

@@ -35,6 +35,26 @@ class Store(context: Context) {
             prefs.edit().putString(KEY_ACCOUNT_LINK, link).apply()
         }
 
+    /**
+     * bypassed — приложения, которые ходят мимо туннеля.
+     *
+     * Госуслуги, банки и всё государственное не отвечают на запросы с
+     * зарубежных адресов, а нода стоит за границей — отсюда и берётся «включил
+     * VPN, и госуслуги не открываются». Исключённому приложению система
+     * оставляет обычную сеть, и на сервер приходит нормальный российский адрес.
+     *
+     * Значок VPN в шторке при этом остаётся: его рисует Android, пока поднят
+     * туннель, и убрать его нельзя ничем. Но ломает госуслуги не значок, а
+     * адрес, и вот его исключение чинит.
+     */
+    var bypassed: Set<String>
+        // Копию отдаём намеренно: SharedPreferences возвращает своё множество,
+        // и правка его на месте молча не сохранилась бы.
+        get() = prefs.getStringSet(KEY_BYPASSED, emptySet())?.toSet().orEmpty()
+        set(value) {
+            prefs.edit().putStringSet(KEY_BYPASSED, value.toSet()).apply()
+        }
+
     /** Каталог, который приложение отдаёт ядру под кэш подписки. */
     fun cacheDir(): String = app.filesDir.absolutePath
 
@@ -46,5 +66,6 @@ class Store(context: Context) {
 
     private companion object {
         const val KEY_ACCOUNT_LINK = "account_link"
+        const val KEY_BYPASSED = "bypassed_apps"
     }
 }
