@@ -55,6 +55,26 @@ class Store(context: Context) {
             prefs.edit().putStringSet(KEY_BYPASSED, value.toSet()).apply()
         }
 
+    /**
+     * bypassRussian — вести ли российские сайты мимо туннеля.
+     *
+     * Отдельно от списка приложений: приложения человек выбирает сам, а это
+     * один переключатель на всю страну. Работает с Android 13, где система
+     * научилась исключать маршруты.
+     */
+    var bypassRussian: Boolean
+        get() = prefs.getBoolean(KEY_BYPASS_RU, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_BYPASS_RU, value).apply()
+        }
+
+    /** Спрашивали ли уже про российские сайты. Второй раз не навязываемся. */
+    var bypassAsked: Boolean
+        get() = prefs.getBoolean(KEY_BYPASS_ASKED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_BYPASS_ASKED, value).apply()
+        }
+
     /** Каталог, который приложение отдаёт ядру под кэш подписки. */
     fun cacheDir(): String = app.filesDir.absolutePath
 
@@ -67,5 +87,7 @@ class Store(context: Context) {
     private companion object {
         const val KEY_ACCOUNT_LINK = "account_link"
         const val KEY_BYPASSED = "bypassed_apps"
+        const val KEY_BYPASS_RU = "bypass_russian"
+        const val KEY_BYPASS_ASKED = "bypass_asked"
     }
 }

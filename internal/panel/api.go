@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/veilproject/veil/internal/routes"
 	"github.com/veilproject/veil/internal/users"
 )
 
@@ -97,6 +98,10 @@ func (a *API) Handler() http.Handler {
 	// Приложения покупателям раздаёт сама панель — с домена продавца.
 	// Подробности и причина в apps.go.
 	mux.HandleFunc("GET /sub/{token}/app/{name}", a.appDownload)
+
+	// Российские подсети для байпаса. По токену подписки: список не секрет, но
+	// и раздавать его всему интернету с домена продавца незачем.
+	mux.HandleFunc("GET /sub/{token}/bypass", a.bypassRoutes)
 	mux.HandleFunc("GET /api/v1/apps", a.scoped(ScopeRead, a.listApps))
 	mux.HandleFunc("GET /api/v1/stats", a.scoped(ScopeRead, a.stats))
 
@@ -1040,4 +1045,31 @@ func (a *API) stats(w http.ResponseWriter, r *http.Request) {
 		"by_node": byNode,
 		"total":   total,
 	})
+}
+
+// bypassRoutes отдаёт российские подсети, которые клиент ведёт мимо туннеля.
+//
+// Зачем это нужно. Нода стоит за границей, и для госуслуг, банков и всего
+// государственного человек оказывается иностранцем — они просто не отвечают.
+// Клиент исключает эти подсети из туннеля, и такие сайты открываются с
+// настоящего адреса.
+//
+// Список отдаёт панель, а не приложение носит его в себе: он меняется раз в
+// месяц, а обновление приложения у покупателя упирается в магазин, который в
+// нужный момент как раз и не работает.
+func (a *API) bypassRoutes(w http.ResponseWriter, r *http.Request) {
+	if _, err := a.store.UserBySubToken(r.Context(), r.PathValue("token")); err != nil {
+		// Как и подписка: не подсказываем, существует ли токен.
+		http.NotFound(w, r)
+		return
+	}
+
+	prefixes, err := routes.RussianPrefixes()
+	if err != nil {
+		fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	ok(w, map[string]any{"prefixes": prefixes})
 }

@@ -85,7 +85,7 @@ class VeilVpnService : VpnService() {
 
         worker = scope.launch {
             val descriptor = try {
-                openInterface(store.bypassed)
+                openInterface(store.bypassed, store.bypassRussian)
             } catch (t: Throwable) {
                 // Вид здесь известен без ядра: до ядра мы ещё не дошли.
                 shutdown(TunnelState.Failed(Mobile.FailSystem, reasonOf(t)))
@@ -122,7 +122,7 @@ class VeilVpnService : VpnService() {
     }
 
     /** openInterface просит у системы интерфейс и описывает, что в него слать. */
-    private fun openInterface(bypassed: Set<String>): ParcelFileDescriptor {
+    private fun openInterface(bypassed: Set<String>, bypassRu: Boolean): ParcelFileDescriptor {
         val builder = Builder()
             .setSession(getString(R.string.app_name))
             .setMtu(MTU)
@@ -140,6 +140,23 @@ class VeilVpnService : VpnService() {
         // Свой трафик в собственный туннель не заворачиваем. Иначе соединение
         // до ноды пошло бы через интерфейс, который сам же и ведёт к ноде.
         builder.addDisallowedApplication(packageName)
+
+        // Российские подсети мимо туннеля. Исключение маршрутов появилось в
+        // Android 13; на старых остаётся исключение по приложениям, и обещать
+        // человеку больше, чем умеет система, нельзя.
+        if (bypassRu && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            var excluded = 0
+            for (prefix in RuRoutes.load(this)) {
+                try {
+                    builder.excludeRoute(prefix)
+                    excluded++
+                } catch (t: IllegalArgumentException) {
+                    // Одна битая строка в списке не повод остаться без туннеля.
+                    Log.w(TAG, "подсеть не принята: " + t.message)
+                }
+            }
+            Log.i(TAG, "мимо туннеля российских подсетей: " + excluded)
+        }
 
         // Приложения, которые человек отправил мимо туннеля: госуслуги, банки,
         // всё, что не отвечает на запросы из-за границы. Система оставляет им
