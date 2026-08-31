@@ -81,6 +81,7 @@ class VeilVpnService : VpnService() {
             return
         }
 
+        Journal.add("включаю туннель")
         VeilState.set(TunnelState.Connecting)
 
         worker = scope.launch {
@@ -114,6 +115,7 @@ class VeilVpnService : VpnService() {
                 limitBytes = started.trafficLimit(),
                 leftBytes = started.trafficLeft(),
             )
+            Journal.add("подключено через " + node)
             VeilState.set(TunnelState.On(node, subscription = subscription))
             goForeground(getString(R.string.status_on), getString(R.string.detail_node, node))
 
@@ -219,6 +221,7 @@ class VeilVpnService : VpnService() {
             // В журнал — чтобы причину можно было достать с чужого телефона,
             // где экран уже закрыли и пересказывают по памяти.
             Log.w(TAG, "туннель не поднялся (${state.kind}): ${state.detail}")
+            Journal.add("не поднялся: " + state.kind + " — " + state.detail)
         }
 
         worker?.cancel()

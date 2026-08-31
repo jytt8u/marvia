@@ -13,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -60,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppCompatDelegate.setDefaultNightMode(Store(this).theme)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
@@ -72,11 +74,11 @@ class MainActivity : AppCompatActivity() {
         ui.keyInput.setText(store.accountLink)
 
         ui.saveButton.setOnClickListener { saveKey() }
-        ui.bypassButton.setOnClickListener {
-            Bypass.show(this, lifecycleScope, store) {
+        ui.settingsButton.setOnClickListener {
+            Settings.show(this, lifecycleScope, store) {
                 showBypassSummary()
-                // Список читается при поднятии туннеля, а не на лету: менять
-                // маршруты у работающего VPN нельзя, его надо пересобрать.
+                // Исключения читаются при поднятии туннеля: менять маршруты
+                // у работающего VPN нельзя, его надо пересобрать.
                 if (VeilState.state.value is TunnelState.On) {
                     Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
                 }
@@ -129,7 +131,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** showBypassSummary пишет под кнопкой, сколько приложений идёт мимо. */
+    /** showBypassSummary пишет под кнопкой, что уже настроено. */
     private fun showBypassSummary() {
         val chosen = store.bypassed
         val apps = when (chosen.size) {
@@ -138,8 +140,9 @@ class MainActivity : AppCompatActivity() {
             else -> getString(R.string.bypass_some, chosen.size)
         }
         val ru = if (store.bypassRussian) getString(R.string.bypass_ru_on) else null
+        val auto = if (store.autoStart) getString(R.string.settings_autostart_short) else null
 
-        ui.bypassSummary.text = listOfNotNull(ru, apps).joinToString(" · ")
+        ui.settingsSummary.text = listOfNotNull(ru, apps, auto).joinToString(" · ")
             .ifEmpty { getString(R.string.bypass_none) }
     }
 
