@@ -194,6 +194,26 @@ CREATE TABLE IF NOT EXISTS usage (
     PRIMARY KEY (user_id, node_id)
 );
 
+-- История расхода по суткам.
+--
+-- Таблица usage выше хранит только накопительный итог: сколько всего прошло
+-- через эту ноду у этого человека. По ней нельзя ответить ни на «сколько за
+-- вчера», ни на «растём ли мы» — а это первое, что продавец хочет видеть.
+--
+-- Нода присылает тот же накопительный итог, поэтому здесь копятся разницы
+-- между её отчётами. День берём в UTC: продавец и его покупатели живут в
+-- разных поясах, и любой другой выбор был бы произволом в пользу одного.
+CREATE TABLE IF NOT EXISTS usage_daily (
+    day     TEXT    NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    node_id INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    up      INTEGER NOT NULL DEFAULT 0,
+    down    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, user_id, node_id)
+);
+
+CREATE INDEX IF NOT EXISTS usage_daily_day ON usage_daily(day);
+
 CREATE TABLE IF NOT EXISTS idempotency (
     key        TEXT NOT NULL PRIMARY KEY,
     scope      TEXT NOT NULL,
@@ -243,6 +263,8 @@ func migrate(db *sql.DB) error {
 		// каждого продавца при обновлении.
 		`CREATE UNIQUE INDEX IF NOT EXISTS users_external ON users(external_id) WHERE external_id IS NOT NULL`,
 		`CREATE TABLE IF NOT EXISTS idempotency (key TEXT NOT NULL PRIMARY KEY, scope TEXT NOT NULL, response TEXT NOT NULL, created_at TEXT NOT NULL)`,
+		`CREATE TABLE IF NOT EXISTS usage_daily (day TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, node_id INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE, up INTEGER NOT NULL DEFAULT 0, down INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, user_id, node_id))`,
+		`CREATE INDEX IF NOT EXISTS usage_daily_day ON usage_daily(day)`,
 	}
 
 	for _, step := range steps {
@@ -841,7 +863,10 @@ func (s *Store) ReportUsage(ctx context.Context, nodeID int64, report map[string
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	now := format(time.Now().UTC())
+	stamp := time.Now().UTC()
+	now := format(stamp)
+	day := stamp.Format("2006-01-02")
+
 	for account, usage := range report {
 		userID, err := strconv.ParseInt(account, 10, 64)
 		if err != nil {
@@ -860,14 +885,49 @@ func (s *Store) ReportUsage(ctx context.Context, nodeID int64, report map[string
 			return err
 		}
 
+		// Сколько прошло с прошлого отчёта. Нода присылает накопительный итог,
+		// поэтому история суток — это разницы между её отчётами.
+		var prevUp, prevDown int64
+		err = tx.QueryRowContext(ctx,
+			`SELECT up, down FROM usage WHERE user_id = ? AND node_id = ?`, userID, nodeID).
+			Scan(&prevUp, &prevDown)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO usage (user_id, node_id, up, down, updated_at) VALUES (?, ?, ?, ?, ?)
 			ON CONFLICT (user_id, node_id) DO UPDATE SET up = excluded.up, down = excluded.down, updated_at = excluded.updated_at`,
 			userID, nodeID, usage.Up, usage.Down, now); err != nil {
 			return fmt.Errorf("запись расхода: %w", err)
 		}
+
+		up, down := delta(prevUp, usage.Up), delta(prevDown, usage.Down)
+		if up == 0 && down == 0 {
+			continue
+		}
+
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO usage_daily (day, user_id, node_id, up, down) VALUES (?, ?, ?, ?, ?)
+			ON CONFLICT (day, user_id, node_id) DO UPDATE SET up = up + excluded.up, down = down + excluded.down`,
+			day, userID, nodeID, up, down); err != nil {
+			return fmt.Errorf("запись расхода за сутки: %w", err)
+		}
 	}
 	return tx.Commit()
+}
+
+// delta — сколько прибавилось между двумя отчётами ноды.
+//
+// Счётчик у ноды накопительный, но не вечный: после перезапуска она начинает с
+// нуля, а после потери файла расхода — тоже. Тогда «новое минус старое» уходит
+// в минус, и без этой проверки сутки получили бы отрицательный расход, а
+// график — провал вниз. Считаем, что весь пришедший объём и есть прирост.
+func delta(prev, now int64) int64 {
+	if now < prev {
+		return now
+	}
+	return now - prev
 }
 
 func format(t time.Time) string { return t.UTC().Format(time.RFC3339Nano) }
@@ -1037,4 +1097,115 @@ func (e *Expiry) at() *time.Time {
 	}
 	t := e.Time.UTC()
 	return &t
+}
+
+// DayUsage — сколько прошло за сутки.
+type DayUsage struct {
+	Day  string `json:"day"`
+	Up   int64  `json:"up"`
+	Down int64  `json:"down"`
+}
+
+// NodeUsage — сколько прошло через ноду за период.
+type NodeUsage struct {
+	NodeID  int64  `json:"node_id"`
+	Name    string `json:"name"`
+	Country string `json:"country,omitempty"`
+	Up      int64  `json:"up"`
+	Down    int64  `json:"down"`
+}
+
+// UsageByDay отдаёт расход по суткам за последние days дней.
+//
+// Дни без трафика возвращаются нулями, а не пропускаются: провал в графике —
+// это тоже ответ, и рисовать его надо на своём месте, а не сдвигать соседние
+// столбики.
+func (s *Store) UsageByDay(ctx context.Context, days int) ([]DayUsage, error) {
+	if days <= 0 {
+		days = 30
+	}
+
+	from := time.Now().UTC().AddDate(0, 0, -(days - 1)).Format("2006-01-02")
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT day, SUM(up), SUM(down) FROM usage_daily
+		WHERE day >= ? GROUP BY day`, from)
+	if err != nil {
+		return nil, fmt.Errorf("расход по суткам: %w", err)
+	}
+	defer rows.Close()
+
+	found := make(map[string]DayUsage, days)
+	for rows.Next() {
+		var d DayUsage
+		if err := rows.Scan(&d.Day, &d.Up, &d.Down); err != nil {
+			return nil, err
+		}
+		found[d.Day] = d
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	out := make([]DayUsage, 0, days)
+	for i := days - 1; i >= 0; i-- {
+		day := time.Now().UTC().AddDate(0, 0, -i).Format("2006-01-02")
+		if d, ok := found[day]; ok {
+			out = append(out, d)
+			continue
+		}
+		out = append(out, DayUsage{Day: day})
+	}
+	return out, nil
+}
+
+// UsageByNode отдаёт расход по нодам за последние days дней.
+//
+// Ноды, которых уже нет, сюда не попадают: их строки уходят вместе с ними по
+// внешнему ключу. Это осознанно — статистика по удалённой ноде никому не
+// поможет, а удаление и так предупреждает, что уносит учёт с собой.
+func (s *Store) UsageByNode(ctx context.Context, days int) ([]NodeUsage, error) {
+	if days <= 0 {
+		days = 30
+	}
+
+	from := time.Now().UTC().AddDate(0, 0, -(days - 1)).Format("2006-01-02")
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT n.id, n.name, n.country, SUM(u.up), SUM(u.down)
+		FROM usage_daily u JOIN nodes n ON n.id = u.node_id
+		WHERE u.day >= ?
+		GROUP BY n.id, n.name, n.country
+		ORDER BY SUM(u.up) + SUM(u.down) DESC`, from)
+	if err != nil {
+		return nil, fmt.Errorf("расход по нодам: %w", err)
+	}
+	defer rows.Close()
+
+	var out []NodeUsage
+	for rows.Next() {
+		var n NodeUsage
+		if err := rows.Scan(&n.NodeID, &n.Name, &n.Country, &n.Up, &n.Down); err != nil {
+			return nil, err
+		}
+		out = append(out, n)
+	}
+	return out, rows.Err()
+}
+
+// ForgetOldUsage выбрасывает историю старше keep дней.
+//
+// Без этого таблица растёт вечно: строка на человека, ноду и день. У продавца
+// с тысячей покупателей и пятью нодами это пять тысяч строк в сутки, и через
+// год база распухнет там, где её ежедневно копируют на свой компьютер.
+func (s *Store) ForgetOldUsage(ctx context.Context, keep int) error {
+	if keep <= 0 {
+		keep = 400
+	}
+
+	edge := time.Now().UTC().AddDate(0, 0, -keep).Format("2006-01-02")
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM usage_daily WHERE day < ?`, edge); err != nil {
+		return fmt.Errorf("очистка истории расхода: %w", err)
+	}
+	return nil
 }

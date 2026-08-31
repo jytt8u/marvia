@@ -98,6 +98,7 @@ func (a *API) Handler() http.Handler {
 	// Подробности и причина в apps.go.
 	mux.HandleFunc("GET /sub/{token}/app/{name}", a.appDownload)
 	mux.HandleFunc("GET /api/v1/apps", a.scoped(ScopeRead, a.listApps))
+	mux.HandleFunc("GET /api/v1/stats", a.scoped(ScopeRead, a.stats))
 
 	// Веб-интерфейс. Только по точному корню: всё остальное — 404, чтобы
 	// панель не отвечала страницей на случайные пути сканеров.
@@ -993,5 +994,48 @@ func (a *API) rotateSubToken(w http.ResponseWriter, r *http.Request) {
 		// Секретов здесь нет: меняется только адрес подписки, наборы доступа
 		// остаются прежними, и заново их панель не выдаёт.
 		"links": a.links(r.Context(), user, nil),
+	})
+}
+
+// stats отдаёт историю расхода: по суткам и по нодам.
+//
+// Числа считает панель, а не браузер: у продавца может быть тысяча покупателей
+// и год истории, и тащить это в страницу целиком ради трёх графиков — способ
+// подвесить его ноутбук.
+func (a *API) stats(w http.ResponseWriter, r *http.Request) {
+	days := 30
+	if raw := strings.TrimSpace(r.URL.Query().Get("days")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n <= 0 {
+			fail(w, http.StatusBadRequest, "days: нужно положительное число дней")
+			return
+		}
+		// Год с запасом. Больше — не отказ, а тихое обрезание: график за пять
+		// лет всё равно нечитаем, а запрос на такую выборку легко сделать
+		// случайно.
+		days = min(n, 400)
+	}
+
+	byDay, err := a.store.UsageByDay(r.Context(), days)
+	if err != nil {
+		fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	byNode, err := a.store.UsageByNode(r.Context(), days)
+	if err != nil {
+		fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	var total int64
+	for _, d := range byDay {
+		total += d.Up + d.Down
+	}
+
+	ok(w, map[string]any{
+		"days":    days,
+		"by_day":  byDay,
+		"by_node": byNode,
+		"total":   total,
 	})
 }
