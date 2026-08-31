@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -701,6 +702,18 @@ type UpdateNodeParams struct {
 	Name    *string `json:"name,omitempty"`
 	Country *string `json:"country,omitempty"`
 	Enabled *bool   `json:"enabled,omitempty"`
+
+	// Address — адрес ноды, если панель определила его неверно.
+	//
+	// Обычно его определяет сама панель по тому, откуда пришла регистрация, и
+	// это правильно: нода, которая называет адрес сама, может назвать чужой, и
+	// тогда покупатели пойдут на чужой сервер.
+	//
+	// Но когда панель стоит за обратным прокси — Cloudflare и подобным, — она
+	// видит адрес прокси, а не ноды, и записывает его. Клиенты после этого идут
+	// к прокси вместо ноды. Поправить это может только человек, у которого есть
+	// админский токен: он один знает, где стоит его сервер.
+	Address *string `json:"address,omitempty"`
 }
 
 // UpdateNode меняет заданные поля ноды.
@@ -728,6 +741,16 @@ func (s *Store) UpdateNode(ctx context.Context, id int64, p UpdateNodeParams) (N
 	if p.Enabled != nil {
 		sets = append(sets, "enabled = ?")
 		args = append(args, boolInt(*p.Enabled))
+	}
+	if p.Address != nil {
+		address := strings.TrimSpace(*p.Address)
+		// Проверяем форму: бессмысленный адрес уедет в ссылки всех покупателей
+		// этой ноды, и узнают об этом они раньше продавца.
+		if _, _, err := net.SplitHostPort(address); err != nil {
+			return Node{}, fmt.Errorf("адрес ноды %q: нужен вид хост:порт", address)
+		}
+		sets = append(sets, "address = ?")
+		args = append(args, address)
 	}
 	if len(sets) == 0 {
 		return s.GetNode(ctx, id)
