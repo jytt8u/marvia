@@ -324,6 +324,16 @@ func (d *countingDialer) DialTarget(ctx context.Context, target vp1.Address) (ne
 	return &countingConn{Conn: conn, up: d.up, down: d.down}, nil
 }
 
+func (d *countingDialer) DialDatagrams(ctx context.Context, target vp1.Address) (net.Conn, error) {
+	conn, err := d.inner.DialDatagrams(ctx, target)
+	if err != nil {
+		return nil, err
+	}
+	// Обёртка та же: она считает байты, не заглядывая внутрь, а границы
+	// датаграмм соблюдает нижележащее соединение.
+	return &countingConn{Conn: conn, up: d.up, down: d.down}, nil
+}
+
 type countingConn struct {
 	net.Conn
 	up, down *atomic.Int64

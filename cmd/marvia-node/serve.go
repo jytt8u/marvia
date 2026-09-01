@@ -199,12 +199,17 @@ func serveStream(stream net.Conn, peer net.Addr, client string) {
 	defer stream.Close()
 
 	_ = stream.SetReadDeadline(time.Now().Add(requestTimeout))
-	addr, err := vp1.ReadRequest(stream)
+	addr, kind, err := vp1.ReadRequestOf(stream)
 	if err != nil {
 		log.Printf("[%s] клиент %s: чтение запроса: %v", peer, client, err)
 		return
 	}
 	_ = stream.SetReadDeadline(time.Time{})
+
+	if kind == vp1.KindUDP {
+		serveDatagrams(stream, addr, peer, client)
+		return
+	}
 
 	target, err := net.DialTimeout("tcp", addr.String(), dialTimeout)
 	if err != nil {
@@ -223,6 +228,76 @@ func serveStream(stream net.Conn, peer net.Addr, client string) {
 	if err := relay.Bidirectional(stream, target); err != nil {
 		log.Printf("[%s] клиент %s -> %s: обрыв: %v", peer, client, addr, err)
 	}
+}
+
+// udpIdleTimeout — сколько держим поток датаграмм без единого пакета.
+//
+// У UDP нет конца разговора, закрывать поток некому. Полторы минуты выбраны
+// по QUIC: он шлёт своё подтверждение жизни куда чаще, так что живое
+// соединение сюда не попадёт, а брошенное не будет висеть до отключения
+// человека от туннеля.
+const udpIdleTimeout = 90 * time.Second
+
+// serveDatagrams обслуживает поток датаграмм до одной цели.
+//
+// Цель фиксируется запросом и дальше не меняется: поток на неё и заведён.
+// Поэтому проверять адрес источника у пришедших ответов не нужно — сокет
+// подключённый, ядро само отбросит чужие.
+func serveDatagrams(stream net.Conn, addr vp1.Address, peer net.Addr, client string) {
+	target, err := net.DialTimeout("udp", addr.String(), dialTimeout)
+	if err != nil {
+		log.Printf("[%s] клиент %s: не открыли udp до %s: %v", peer, client, addr, err)
+		_ = vp1.WriteStatus(stream, vp1.StatusUnreachable)
+		return
+	}
+	defer target.Close()
+
+	if err := vp1.WriteStatus(stream, vp1.StatusOK); err != nil {
+		log.Printf("[%s] клиент %s: отправка статуса: %v", peer, client, err)
+		return
+	}
+
+	log.Printf("[%s] клиент %s -> %s (udp)", peer, client, addr)
+
+	done := make(chan struct{})
+
+	// Ответы цели — обратно в туннель.
+	go func() {
+		defer close(done)
+		buf := make([]byte, vp1.MaxDatagram)
+		for {
+			_ = target.SetReadDeadline(time.Now().Add(udpIdleTimeout))
+			n, err := target.Read(buf)
+			if n > 0 {
+				if err := vp1.WriteDatagram(stream, buf[:n]); err != nil {
+					return
+				}
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	// Датаграммы человека — наружу.
+	buf := make([]byte, vp1.MaxDatagram)
+	for {
+		_ = stream.SetReadDeadline(time.Now().Add(udpIdleTimeout))
+		n, err := vp1.ReadDatagram(stream, buf)
+		if n > 0 {
+			if _, err := target.Write(buf[:n]); err != nil {
+				break
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	// Закрываем сокет, чтобы отпустить чтение ответов, и дожидаемся его:
+	// иначе горутина писала бы в уже закрытый поток.
+	_ = target.Close()
+	<-done
 }
 
 // startAccounting запускает учёт трафика и присмотр за подпиской.

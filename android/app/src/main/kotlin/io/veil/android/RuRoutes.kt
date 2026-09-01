@@ -108,11 +108,24 @@ object RuRoutes {
         }
     }
 
-    /** Адрес подписки из ссылки доступа — оттуда же берётся список. */
+    /**
+     * subscriptionURL — адрес подписки из ссылки доступа.
+     *
+     * Порт обязателен, и на нём это уже один раз сломалось. Панель продавца
+     * часто стоит не на 443: её ставят рядом с чужим сайтом или за CDN, где
+     * 443 занят. Без порта запрос уходил на 443, получал чужой ответ, список
+     * не скачивался — и всё молча, потому что качается он в фоне.
+     */
     fun subscriptionURL(accountLink: String): String? = try {
         val uri = android.net.Uri.parse(accountLink)
-        if (uri.host.isNullOrBlank() || uri.path.isNullOrBlank()) null
-        else "https://" + uri.host + uri.path
+        val host = uri.host
+        val path = uri.path
+        if (host.isNullOrBlank() || path.isNullOrBlank()) {
+            null
+        } else {
+            val port = if (uri.port > 0) ":${uri.port}" else ""
+            "https://$host$port$path"
+        }
     } catch (_: Throwable) {
         null
     }
