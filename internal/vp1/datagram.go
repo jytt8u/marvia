@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 )
 
 // Датаграммы внутри потока.
@@ -80,3 +81,24 @@ func ReadDatagram(r io.Reader, buf []byte) (int, error) {
 // затем, что лечится он по-разному: там подождать, а здесь — навсегда
 // вернуться к прежнему поведению до конца сессии.
 var ErrDatagramsUnsupported = errors.New("нода не поддерживает датаграммы")
+
+// Datagrams надевает на поток границы датаграмм.
+//
+// Один Read — одна датаграмма, один Write — одна датаграмма. Обёртка нужна
+// обеим сторонам, и нужна именно как net.Conn: иначе границы пришлось бы
+// соблюдать вручную в каждом месте, где такой поток используется, а забытое
+// место означало бы склеенные пакеты — то есть тихую порчу данных.
+func Datagrams(conn net.Conn) net.Conn { return datagramConn{conn} }
+
+type datagramConn struct{ net.Conn }
+
+func (c datagramConn) Read(p []byte) (int, error) {
+	return ReadDatagram(c.Conn, p)
+}
+
+func (c datagramConn) Write(p []byte) (int, error) {
+	if err := WriteDatagram(c.Conn, p); err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
