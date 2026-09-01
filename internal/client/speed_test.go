@@ -29,14 +29,14 @@ func TestSpeedSampleGoesThroughNode(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	speed, err := dialer.MeasureSpeed(ctx, vp1.DefaultSpeedSample)
+	took, err := dialer.MeasureFetch(ctx, vp1.DefaultSpeedSample)
 	if err != nil {
 		t.Fatalf("замер: %v", err)
 	}
-	if speed <= 0 {
-		t.Fatalf("замер дал %v байт/с", speed)
+	if took <= 0 {
+		t.Fatalf("замер дал %v", took)
 	}
-	t.Logf("по петле нода отдаёт %.0f Мбит/с", speed*8/1e6)
+	t.Logf("по петле порция ушла за %s", took)
 }
 
 // TestSampleSizeIsCapped — нода не отдаёт больше потолка, сколько ни проси.
@@ -74,15 +74,17 @@ func TestSampleSizeIsCapped(t *testing.T) {
 // Ровно тот случай, ради которого всё и делалось. Раньше побеждала та, что
 // быстрее отвечает, — и человек получал восьмикратно более медленный канал.
 func TestSlowNodeLosesToFastOne(t *testing.T) {
+	// Одна и та же порция: Хельсинки отдал быстро, Дубай — медленно. При
+	// этом задержки различаются в пять раз, а порции — в десять.
 	fast := client.Measurement{
 		Node:    client.Node{Name: "fi-1"},
 		Latency: 28 * time.Millisecond,
-		Speed:   170e6 / 8, // 170 Мбит/с
+		Fetch:   40 * time.Millisecond,
 	}
 	slow := client.Measurement{
 		Node:    client.Node{Name: "ae-1"},
 		Latency: 150 * time.Millisecond,
-		Speed:   8e6 / 8, // 8 Мбит/с
+		Fetch:   400 * time.Millisecond,
 	}
 
 	if !(fast.Cost() < slow.Cost()) {
@@ -112,8 +114,9 @@ func TestUnmeasuredNodeFallsBackToLatency(t *testing.T) {
 // Иначе замер скорости заслонил бы задержку целиком, и клиент выбирал бы
 // ноду на другом материке из-за случайных процентов в замере.
 func TestFastNodeBeatsSlightlyQuickerOne(t *testing.T) {
-	near := client.Measurement{Latency: 20 * time.Millisecond, Speed: 100e6 / 8}
-	far := client.Measurement{Latency: 90 * time.Millisecond, Speed: 100e6 / 8}
+	// Канал одинаковый, поэтому вся разница в порции — это круг до ноды.
+	near := client.Measurement{Latency: 20 * time.Millisecond, Fetch: 30 * time.Millisecond}
+	far := client.Measurement{Latency: 90 * time.Millisecond, Fetch: 100 * time.Millisecond}
 
 	if !(near.Cost() < far.Cost()) {
 		t.Fatal("при равной скорости ближняя нода не выиграла")

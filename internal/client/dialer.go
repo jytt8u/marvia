@@ -205,18 +205,28 @@ func (d *Dialer) DialDatagrams(ctx context.Context, target vp1.Address) (net.Con
 	return vp1.Datagrams(stream), nil
 }
 
-// MeasureSpeed узнаёт, с какой скоростью нода отдаёт данные.
+// MeasureFetch узнаёт, за сколько нода отдаёт порцию данных.
 //
-// Возвращает байты в секунду. Цель в запросе не участвует — наружу нода не
-// пойдёт, отдаст своё, — но адрес в протоколе обязателен, поэтому шлём
-// заведомо пустой.
-func (d *Dialer) MeasureSpeed(ctx context.Context, size int) (float64, error) {
+// Возвращает время целиком: от просьбы до последнего байта, вместе с кругом до
+// ноды и разгоном TCP. Именно это человек и ждёт, открывая страницу.
+//
+// Отсчёт нарочно не с первого байта, хотя так казалось точнее. Первая попытка
+// так и делала — и на живой ноде показала 884 Мбит/с при канале в 155. Пока мы
+// доходили до чтения, нода уже успевала прислать всю порцию, и та лежала в
+// буфере ядра: часы мерили не сеть, а скорость памяти. Замер с начала запроса
+// такого обмана не допускает.
+//
+// Цель в запросе не участвует — наружу нода не пойдёт, отдаст своё, — но адрес
+// в протоколе обязателен, поэтому шлём заведомо пустой.
+func (d *Dialer) MeasureFetch(ctx context.Context, size int) (time.Duration, error) {
 	// Размер уходит вместе с запросом, до ответа ноды. Отправлять его после
 	// статуса нельзя: обе стороны встанут ждать друг друга.
 	var ask bytes.Buffer
 	if err := vp1.RequestSample(&ask, size); err != nil {
 		return 0, err
 	}
+
+	start := time.Now()
 
 	stream, err := d.open(ctx, vp1.Address{Type: vp1.AtypIPv4, Host: "0.0.0.0", Port: 0}, vp1.KindProbe, ask.Bytes())
 	if err != nil {
@@ -229,16 +239,7 @@ func (d *Dialer) MeasureSpeed(ctx context.Context, size int) (float64, error) {
 		return 0, err
 	}
 
-	// Отсчёт с первого байта, а не с запроса: круг до ноды и обратно — это
-	// задержка, её мы уже померили отдельно. Здесь нужна скорость.
-	var first [1]byte
-	if _, err := io.ReadFull(stream, first[:]); err != nil {
-		return 0, fmt.Errorf("замер не начался: %w", err)
-	}
-
-	start := time.Now()
-	read, err := io.CopyN(io.Discard, stream, int64(granted-1))
-	took := time.Since(start)
+	read, err := io.CopyN(io.Discard, stream, int64(granted))
 	if err != nil {
 		return 0, fmt.Errorf("замер оборван: %w", err)
 	}
@@ -246,14 +247,11 @@ func (d *Dialer) MeasureSpeed(ctx context.Context, size int) (float64, error) {
 		return 0, errors.New("замер пустой")
 	}
 
-	// Часы у Windows грубые, а замер маленький: на быстром канале он
-	// укладывается в один тик, и деление даёт бесконечность. Считаем по нижней
-	// границе — точное число не нужно, нужно сравнить ноды, а такая нода
-	// выиграет при любом округлении.
-	if took < clockGrain {
-		took = clockGrain
-	}
-	return float64(read) / took.Seconds(), nil
+	took := time.Since(start)
+
+	// Часы у Windows грубые: всё, что быстрее тика, для нас неотличимо, и
+	// притворяться, что мы видим микросекунды, значит выдавать шум за замер.
+	return max(took, clockGrain), nil
 }
 
 // Granted — сколько байт нода согласилась отдать на последний замер.

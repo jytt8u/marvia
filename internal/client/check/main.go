@@ -71,7 +71,12 @@ func run(link string) error {
 		if !m.OK() {
 			state = "молчит"
 		}
-		fmt.Printf("  замер: %-26s %s %s\n", m.Node.Name, state, m.Latency.Round(time.Millisecond))
+		line := fmt.Sprintf("  замер: %-26s %s %s", m.Node.Name, state, m.Latency.Round(time.Millisecond))
+		if m.Fetch > 0 {
+			line += fmt.Sprintf(", порцию отдала за %s (~%.0f Мбит/с)",
+				m.Fetch.Round(time.Millisecond), m.Speed()*8/1e6)
+		}
+		fmt.Println(line)
 	}
 
 	ip, err := egressIP(ctx, dialer)
@@ -80,12 +85,58 @@ func run(link string) error {
 	}
 	fmt.Printf("внешний мир видит адрес: %s\n", ip)
 
+	// Два числа, и путать их нельзя. Первое — короткая порция от самой ноды,
+	// по нему клиент выбирает ноду. Второе — настоящее скачивание с чужого
+	// сервера, и это то, что человек называет «скорость VPN». Когда жалуются
+	// на медленный VPN, виновато обычно второе, а чинят первое.
+	if took, err := dialer.MeasureFetch(ctx, vp1.DefaultSpeedSample); err == nil {
+		fmt.Printf("порция %d КБ от ноды: за %s (~%.0f Мбит/с вместе с кругом до неё)\n",
+			vp1.DefaultSpeedSample>>10, took.Round(time.Millisecond),
+			float64(vp1.DefaultSpeedSample)/took.Seconds()*8/1e6)
+	} else {
+		fmt.Printf("порция от ноды: не померили (%v)\n", err)
+	}
+
+	if speed, err := downloadSpeed(ctx, dialer); err == nil {
+		fmt.Printf("скачивание сквозь туннель: %.0f Мбит/с\n", speed*8/1e6)
+	} else {
+		fmt.Printf("скачивание сквозь туннель: не вышло (%v)\n", err)
+	}
+
 	return nil
 }
 
-// egressIP спрашивает у внешней службы, каким адресом мы для неё выглядим.
-func egressIP(ctx context.Context, dialer *client.Dialer) (string, error) {
-	transport := &http.Transport{
+// downloadSpeed качает через туннель настоящий файл с чужого сервера.
+//
+// Это то число, которое человек называет «скорость VPN»: в нём и наш канал, и
+// всё, что дальше ноды.
+func downloadSpeed(ctx context.Context, dialer *client.Dialer) (float64, error) {
+	const source = "https://speed.cloudflare.com/__down?bytes=50000000"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, source, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	client := &http.Client{Transport: tunnelTransport(dialer), Timeout: 90 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	start := time.Now()
+	read, err := io.Copy(io.Discard, resp.Body)
+	took := time.Since(start)
+	if read == 0 {
+		return 0, fmt.Errorf("ничего не скачалось: %w", err)
+	}
+	return float64(read) / took.Seconds(), nil
+}
+
+// tunnelTransport заставляет обычный HTTP-клиент ходить через туннель.
+func tunnelTransport(dialer *client.Dialer) *http.Transport {
+	return &http.Transport{
 		DialContext: func(ctx context.Context, _, addr string) (net.Conn, error) {
 			host, portText, err := net.SplitHostPort(addr)
 			if err != nil {
@@ -102,6 +153,11 @@ func egressIP(ctx context.Context, dialer *client.Dialer) (string, error) {
 			return dialer.DialTarget(ctx, target)
 		},
 	}
+}
+
+// egressIP спрашивает у внешней службы, каким адресом мы для неё выглядим.
+func egressIP(ctx context.Context, dialer *client.Dialer) (string, error) {
+	transport := tunnelTransport(dialer)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.ipify.org", nil)
 	if err != nil {
