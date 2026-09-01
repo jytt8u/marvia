@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"errors"
@@ -33,6 +34,13 @@ type Dialer struct {
 // Четыре секунды: этого хватает на честное рукопожатие даже на плохой
 // мобильной сети, но человек не успевает решить, что приложение зависло.
 const quicAttempt = 4 * time.Second
+
+// clockGrain — во что упирается точность замера.
+//
+// Windows меряет время грубо. Всё, что быстрее одной миллисекунды, для нас
+// неотличимо, и притворяться, что мы видим микросекунды, значит выдавать шум
+// за измерение.
+const clockGrain = time.Millisecond
 
 // Options — необязательные настройки дозвона.
 //
@@ -181,7 +189,7 @@ func tcpDialer(node Node, serverName string, opts Options) (func(context.Context
 
 // DialTarget открывает поток до цели через туннель.
 func (d *Dialer) DialTarget(ctx context.Context, target vp1.Address) (net.Conn, error) {
-	return d.open(ctx, target, vp1.KindTCP)
+	return d.open(ctx, target, vp1.KindTCP, nil)
 }
 
 // DialDatagrams открывает поток датаграмм до цели.
@@ -190,14 +198,87 @@ func (d *Dialer) DialTarget(ctx context.Context, target vp1.Address) (net.Conn, 
 // другим правилам — границы датаграмм в нём сохраняются, и обращаться с ним
 // как с потоком байтов нельзя.
 func (d *Dialer) DialDatagrams(ctx context.Context, target vp1.Address) (net.Conn, error) {
-	stream, err := d.open(ctx, target, vp1.KindUDP)
+	stream, err := d.open(ctx, target, vp1.KindUDP, nil)
 	if err != nil {
 		return nil, err
 	}
 	return vp1.Datagrams(stream), nil
 }
 
-func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind) (net.Conn, error) {
+// MeasureSpeed узнаёт, с какой скоростью нода отдаёт данные.
+//
+// Возвращает байты в секунду. Цель в запросе не участвует — наружу нода не
+// пойдёт, отдаст своё, — но адрес в протоколе обязателен, поэтому шлём
+// заведомо пустой.
+func (d *Dialer) MeasureSpeed(ctx context.Context, size int) (float64, error) {
+	// Размер уходит вместе с запросом, до ответа ноды. Отправлять его после
+	// статуса нельзя: обе стороны встанут ждать друг друга.
+	var ask bytes.Buffer
+	if err := vp1.RequestSample(&ask, size); err != nil {
+		return 0, err
+	}
+
+	stream, err := d.open(ctx, vp1.Address{Type: vp1.AtypIPv4, Host: "0.0.0.0", Port: 0}, vp1.KindProbe, ask.Bytes())
+	if err != nil {
+		return 0, err
+	}
+	defer stream.Close()
+
+	granted, err := vp1.ReadGrant(stream)
+	if err != nil {
+		return 0, err
+	}
+
+	// Отсчёт с первого байта, а не с запроса: круг до ноды и обратно — это
+	// задержка, её мы уже померили отдельно. Здесь нужна скорость.
+	var first [1]byte
+	if _, err := io.ReadFull(stream, first[:]); err != nil {
+		return 0, fmt.Errorf("замер не начался: %w", err)
+	}
+
+	start := time.Now()
+	read, err := io.CopyN(io.Discard, stream, int64(granted-1))
+	took := time.Since(start)
+	if err != nil {
+		return 0, fmt.Errorf("замер оборван: %w", err)
+	}
+	if read <= 0 {
+		return 0, errors.New("замер пустой")
+	}
+
+	// Часы у Windows грубые, а замер маленький: на быстром канале он
+	// укладывается в один тик, и деление даёт бесконечность. Считаем по нижней
+	// границе — точное число не нужно, нужно сравнить ноды, а такая нода
+	// выиграет при любом округлении.
+	if took < clockGrain {
+		took = clockGrain
+	}
+	return float64(read) / took.Seconds(), nil
+}
+
+// Granted — сколько байт нода согласилась отдать на последний замер.
+//
+// Нужно проверке потолка: клиент может попросить сколько угодно, а решает нода.
+func (d *Dialer) Granted(ctx context.Context, size int) (int, error) {
+	var ask bytes.Buffer
+	if err := vp1.RequestSample(&ask, size); err != nil {
+		return 0, err
+	}
+
+	stream, err := d.open(ctx, vp1.Address{Type: vp1.AtypIPv4, Host: "0.0.0.0", Port: 0}, vp1.KindProbe, ask.Bytes())
+	if err != nil {
+		return 0, err
+	}
+	defer stream.Close()
+
+	return vp1.ReadGrant(stream)
+}
+
+// open открывает поток нужного вида.
+//
+// Хвост дописывается сразу за запросом, до чтения статуса: если чего-то ждёт
+// нода, а мы уже сели ждать её ответа, встанут обе стороны.
+func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind, tail []byte) (net.Conn, error) {
 	stream, err := d.pool.Open(ctx)
 	if err != nil {
 		return nil, err
@@ -206,6 +287,12 @@ func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind) (n
 	if err := vp1.WriteRequestOf(stream, target, kind); err != nil {
 		_ = stream.Close()
 		return nil, fmt.Errorf("запрос на %s: %w", target, err)
+	}
+	if len(tail) > 0 {
+		if _, err := stream.Write(tail); err != nil {
+			_ = stream.Close()
+			return nil, fmt.Errorf("запрос на %s: %w", target, err)
+		}
 	}
 
 	status, err := vp1.ReadStatus(stream)
