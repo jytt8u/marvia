@@ -47,9 +47,10 @@ type Measurement struct {
 	Latency time.Duration
 	Err     error
 
-	// Speed — сколько байт в секунду нода отдаёт. Ноль, если не мерили:
-	// живая нода одна, или она старой версии и такого не умеет.
-	Speed float64
+	// Fetch — за сколько нода отдала пробную порцию: круг до неё, разгон и
+	// сама передача вместе. Ноль, если не мерили: живая нода одна, или она
+	// старой версии и такого не умеет.
+	Fetch time.Duration
 
 	// dialer остаётся живым только у победителя: переустанавливать
 	// соединение сразу после удачного замера — лишний круг по сети.
@@ -59,25 +60,30 @@ type Measurement struct {
 // OK сообщает, годится ли нода.
 func (m Measurement) OK() bool { return m.Err == nil }
 
-// typicalPage — объём, на котором сравниваются ноды.
+// Cost — во что обходится эта нода.
 //
-// Мегабайт — порядок обычной страницы с картинками или куска видео.
-const typicalPage = 1 << 20
-
-// Cost — сколько эта нода потратит на обычную страницу.
+// Порция у всех нод одна и та же, поэтому сравнивать можно прямо время: в нём
+// уже и круг до ноды, и разгон, и сама передача. Разбирать его на задержку и
+// скорость незачем — человек ждёт сумму.
 //
-// Одно число вместо двух, и оно объясняется вслух: сначала круг до ноды, потом
-// сама передача. Замер на живом канале: Дубай отвечал за 150 мс и качал
-// 8 Мбит/с — это 1,15 секунды на страницу. Хельсинки: 28 мс и 170 Мбит/с — 83
-// миллисекунды. По задержке разница пятикратная, по делу — четырнадцати-, и
-// человек чувствует вторую.
-//
-// Где скорость не мерили, остаётся задержка — как было до сих пор.
+// Где порцию не мерили, остаётся задержка — как было до сих пор.
 func (m Measurement) Cost() time.Duration {
-	if m.Speed <= 0 {
+	if m.Fetch <= 0 {
 		return m.Latency
 	}
-	return m.Latency + time.Duration(float64(typicalPage)/m.Speed*float64(time.Second))
+	return m.Fetch
+}
+
+// Speed — сколько это даёт в байтах в секунду, для показа человеку.
+//
+// Число заниженное: в него входит круг до ноды, а порция маленькая. Для
+// сравнения нод это неважно — все меряются одинаково, — но выдавать его за
+// скорость канала нельзя.
+func (m Measurement) Speed() float64 {
+	if m.Fetch <= 0 {
+		return 0
+	}
+	return float64(vp1.DefaultSpeedSample) / m.Fetch.Seconds()
 }
 
 // Probe измеряет одну ноду.
@@ -204,11 +210,11 @@ func measureSpeeds(ctx context.Context, results []Measurement) {
 			speedCtx, cancel := context.WithTimeout(ctx, SpeedTimeout)
 			defer cancel()
 
-			speed, err := results[i].dialer.MeasureSpeed(speedCtx, vp1.DefaultSpeedSample)
+			fetch, err := results[i].dialer.MeasureFetch(speedCtx, vp1.DefaultSpeedSample)
 			if err != nil {
 				return
 			}
-			results[i].Speed = speed
+			results[i].Fetch = fetch
 		}(i)
 	}
 	wg.Wait()
