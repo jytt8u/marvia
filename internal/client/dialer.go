@@ -194,7 +194,7 @@ func (d *Dialer) DialDatagrams(ctx context.Context, target vp1.Address) (net.Con
 	if err != nil {
 		return nil, err
 	}
-	return datagramConn{stream}, nil
+	return vp1.Datagrams(stream), nil
 }
 
 func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind) (net.Conn, error) {
@@ -224,24 +224,6 @@ func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind) (n
 		return nil, fmt.Errorf("нода отказала по %s: %s", target, vp1.StatusText(status))
 	}
 	return stream, nil
-}
-
-// datagramConn сохраняет границы датаграмм поверх потока.
-//
-// Обёртка нужна, чтобы вызывающий работал с привычным net.Conn: один Read —
-// одна датаграмма, один Write — одна датаграмма. Без неё границы пришлось бы
-// вручную соблюдать в каждом месте, где такой поток используется.
-type datagramConn struct{ net.Conn }
-
-func (c datagramConn) Read(p []byte) (int, error) {
-	return vp1.ReadDatagram(c.Conn, p)
-}
-
-func (c datagramConn) Write(p []byte) (int, error) {
-	if err := vp1.WriteDatagram(c.Conn, p); err != nil {
-		return 0, err
-	}
-	return len(p), nil
 }
 
 // Node возвращает ноду, к которой подключён этот дозвон.

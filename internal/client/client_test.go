@@ -13,6 +13,7 @@ import (
 
 	"github.com/veilproject/veil/internal/client"
 	"github.com/veilproject/veil/internal/mux"
+	"github.com/veilproject/veil/internal/relay"
 	"github.com/veilproject/veil/internal/transport"
 	"github.com/veilproject/veil/internal/vp1"
 )
@@ -289,8 +290,24 @@ func serveNodeConn(conn net.Conn, key vp1.KeyPair, guard *vp1.ReplayGuard) {
 		go func() {
 			defer stream.Close()
 
-			addr, err := vp1.ReadRequest(stream)
+			addr, kind, err := vp1.ReadRequestOf(stream)
 			if err != nil {
+				return
+			}
+
+			// Датаграммы отдаём тому же коду, что работает в бою: копия
+			// здесь проверяла бы копию, а не ноду.
+			if kind == vp1.KindUDP {
+				socket, err := net.DialTimeout("udp", addr.String(), 10*time.Second)
+				if err != nil {
+					_ = vp1.WriteStatus(stream, vp1.StatusUnreachable)
+					return
+				}
+				if err := vp1.WriteStatus(stream, vp1.StatusOK); err != nil {
+					_ = socket.Close()
+					return
+				}
+				relay.Datagrams(vp1.Datagrams(stream), socket, 10*time.Second)
 				return
 			}
 			upstream, err := net.DialTimeout("tcp", addr.String(), 10*time.Second)

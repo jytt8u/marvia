@@ -259,45 +259,7 @@ func serveDatagrams(stream net.Conn, addr vp1.Address, peer net.Addr, client str
 
 	log.Printf("[%s] клиент %s -> %s (udp)", peer, client, addr)
 
-	done := make(chan struct{})
-
-	// Ответы цели — обратно в туннель.
-	go func() {
-		defer close(done)
-		buf := make([]byte, vp1.MaxDatagram)
-		for {
-			_ = target.SetReadDeadline(time.Now().Add(udpIdleTimeout))
-			n, err := target.Read(buf)
-			if n > 0 {
-				if err := vp1.WriteDatagram(stream, buf[:n]); err != nil {
-					return
-				}
-			}
-			if err != nil {
-				return
-			}
-		}
-	}()
-
-	// Датаграммы человека — наружу.
-	buf := make([]byte, vp1.MaxDatagram)
-	for {
-		_ = stream.SetReadDeadline(time.Now().Add(udpIdleTimeout))
-		n, err := vp1.ReadDatagram(stream, buf)
-		if n > 0 {
-			if _, err := target.Write(buf[:n]); err != nil {
-				break
-			}
-		}
-		if err != nil {
-			break
-		}
-	}
-
-	// Закрываем сокет, чтобы отпустить чтение ответов, и дожидаемся его:
-	// иначе горутина писала бы в уже закрытый поток.
-	_ = target.Close()
-	<-done
+	relay.Datagrams(vp1.Datagrams(stream), target, udpIdleTimeout)
 }
 
 // startAccounting запускает учёт трафика и присмотр за подпиской.
