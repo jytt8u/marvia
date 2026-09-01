@@ -206,8 +206,12 @@ func serveStream(stream net.Conn, peer net.Addr, client string) {
 	}
 	_ = stream.SetReadDeadline(time.Time{})
 
-	if kind == vp1.KindUDP {
+	switch kind {
+	case vp1.KindUDP:
 		serveDatagrams(stream, addr, peer, client)
+		return
+	case vp1.KindProbe:
+		serveSample(stream, peer, client)
 		return
 	}
 
@@ -229,6 +233,48 @@ func serveStream(stream net.Conn, peer net.Addr, client string) {
 		log.Printf("[%s] клиент %s -> %s: обрыв: %v", peer, client, addr, err)
 	}
 }
+
+// serveSample отдаёт клиенту порцию байт, чтобы тот померил скорость.
+//
+// Клиент выбирает ноду сам, с устройства, и до появления этого замера выбирал
+// по задержке. Задержка и скорость — разные вещи: нода может отвечать быстро и
+// при этом еле качать, и человек получит именно вторую. Дать ему померить —
+// дешевле, чем объяснять, почему у него всё тормозит на «самой быстрой» ноде.
+//
+// Байты настоящие, и платит за них продавец. Поэтому потолок жёсткий и
+// проверяется здесь, а не только на клиенте: чужой клиент попросить может
+// сколько угодно.
+func serveSample(stream net.Conn, peer net.Addr, client string) {
+	_ = stream.SetReadDeadline(time.Now().Add(requestTimeout))
+	size, err := vp1.ReadSampleRequest(stream)
+	if err != nil {
+		log.Printf("[%s] клиент %s: замер: %v", peer, client, err)
+		return
+	}
+	_ = stream.SetReadDeadline(time.Time{})
+
+	if err := vp1.WriteStatus(stream, vp1.StatusOK); err != nil {
+		return
+	}
+
+	// Сколько отдадим на самом деле — иначе клиенту оставалось бы читать до
+	// конца потока и верить, что конец наступит.
+	if err := vp1.GrantSample(stream, size); err != nil {
+		return
+	}
+
+	// Срок на отдачу: без него медленный или залипший клиент держал бы поток
+	// и трафик ноды сколько захочет.
+	_ = stream.SetWriteDeadline(time.Now().Add(sampleTimeout))
+	if err := vp1.WriteSample(stream, size); err != nil {
+		log.Printf("[%s] клиент %s: замер оборван: %v", peer, client, err)
+	}
+}
+
+// sampleTimeout — сколько отводим на отдачу замера.
+//
+// Не влезли — значит нода и правда медленная, и это ответ, а не сбой.
+const sampleTimeout = 20 * time.Second
 
 // udpIdleTimeout — сколько держим поток датаграмм без единого пакета.
 //

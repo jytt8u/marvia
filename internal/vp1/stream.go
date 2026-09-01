@@ -33,25 +33,33 @@ func StatusText(code byte) string {
 type Kind byte
 
 const (
-	KindTCP Kind = iota // обычное соединение
-	KindUDP             // поток датаграмм до одной цели
+	KindTCP   Kind = iota // обычное соединение
+	KindUDP               // поток датаграмм до одной цели
+	KindProbe             // замер скорости самой ноды
 )
 
 func (k Kind) String() string {
-	if k == KindUDP {
+	switch k {
+	case KindUDP:
 		return "udp"
+	case KindProbe:
+		return "замер"
+	default:
+		return "tcp"
 	}
-	return "tcp"
 }
 
-// udpFlag — старший бит типа адреса, помечающий запрос UDP.
+// Старшие биты типа адреса, помечающие вид запроса.
 //
-// Отдельного байта команды нет намеренно. Ноды уже стоят у продавцов, и
-// лишний байт в начале запроса сделал бы всех новых клиентов несовместимыми
-// со всеми старыми нодами разом. Со старшим битом старая нода видит
-// неизвестный тип адреса, честно отвечает ошибкой и закрывает поток, а клиент
-// откатывается на то же поведение, что было до появления UDP.
-const udpFlag byte = 0x80
+// Отдельного байта команды нет намеренно. Ноды уже стоят у продавцов, и лишний
+// байт в начале запроса сделал бы всех новых клиентов несовместимыми со всеми
+// старыми нодами разом. Со старшим битом старая нода видит неизвестный тип
+// адреса, честно отвечает ошибкой и закрывает поток, а клиент откатывается на
+// то поведение, что было до появления нового вида.
+const (
+	udpFlag   byte = 0x80
+	probeFlag byte = 0x40
+)
 
 // WriteRequest отправляет серверу адрес, к которому нужно подключиться.
 // Это первый кадр после хендшейка.
@@ -65,8 +73,11 @@ func WriteRequestOf(w io.Writer, addr Address, kind Kind) error {
 	if err != nil {
 		return err
 	}
-	if kind == KindUDP {
+	switch kind {
+	case KindUDP:
 		raw[0] |= udpFlag
+	case KindProbe:
+		raw[0] |= probeFlag
 	}
 	// Один Write — один кадр: адрес не должен размазываться по нескольким
 	// пакетам, иначе его длину видно по таймингам.
@@ -90,11 +101,14 @@ func ReadRequestOf(r io.Reader) (Address, Kind, error) {
 	}
 
 	kind := KindTCP
-	if head[0]&udpFlag != 0 {
+	switch {
+	case head[0]&udpFlag != 0:
 		kind = KindUDP
+	case head[0]&probeFlag != 0:
+		kind = KindProbe
 	}
 
-	addr, err := ReadAddressAfterType(r, head[0]&^udpFlag)
+	addr, err := ReadAddressAfterType(r, head[0]&^(udpFlag|probeFlag))
 	return addr, kind, err
 }
 
