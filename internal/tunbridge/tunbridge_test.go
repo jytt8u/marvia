@@ -106,6 +106,10 @@ func (stubDialer) DialTarget(context.Context, vp1.Address) (net.Conn, error) {
 	return nil, errors.New("некуда")
 }
 
+func (stubDialer) DialDatagrams(context.Context, vp1.Address) (net.Conn, error) {
+	return nil, errors.New("некуда")
+}
+
 // TestBridgeLifecycle: мост поднимается на потоке вместо настоящего
 // интерфейса и закрывается без зависаний. На телефоне включение и выключение
 // VPN — самая частая операция, и подвисание здесь заметят все.

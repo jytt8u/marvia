@@ -81,9 +81,16 @@ func ReadAddress(r io.Reader) (Address, error) {
 	if _, err := io.ReadFull(r, head[:]); err != nil {
 		return Address{}, fmt.Errorf("чтение типа адреса: %w", err)
 	}
+	return ReadAddressAfterType(r, head[0])
+}
 
+// ReadAddressAfterType дочитывает адрес, когда тип уже снят с потока.
+//
+// Нужен там, где по первому байту принимается решение до разбора адреса:
+// в запросе клиента в нём же закодировано, TCP это или UDP.
+func ReadAddressAfterType(r io.Reader, atyp byte) (Address, error) {
 	var host string
-	switch head[0] {
+	switch atyp {
 	case AtypIPv4:
 		var raw [4]byte
 		if _, err := io.ReadFull(r, raw[:]); err != nil {
@@ -110,12 +117,12 @@ func ReadAddress(r io.Reader) (Address, error) {
 		}
 		host = string(raw)
 	default:
-		return Address{}, fmt.Errorf("неизвестный тип адреса 0x%02x", head[0])
+		return Address{}, fmt.Errorf("неизвестный тип адреса 0x%02x", atyp)
 	}
 
 	var port [2]byte
 	if _, err := io.ReadFull(r, port[:]); err != nil {
 		return Address{}, fmt.Errorf("чтение порта: %w", err)
 	}
-	return Address{Type: head[0], Host: host, Port: binary.BigEndian.Uint16(port[:])}, nil
+	return Address{Type: atyp, Host: host, Port: binary.BigEndian.Uint16(port[:])}, nil
 }

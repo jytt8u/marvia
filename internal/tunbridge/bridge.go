@@ -19,6 +19,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/xjasonlyu/tun2socks/v2/core"
@@ -41,11 +42,22 @@ const (
 
 	// dnsPort — порт, на котором мы перехватываем запросы имён.
 	dnsPort = 53
+
+	// udpIdleTimeout — сколько держим поток датаграмм без единого пакета.
+	//
+	// У UDP нет конца разговора, закрывать поток некому. Полторы минуты: QUIC
+	// подтверждает жизнь куда чаще, так что живое соединение сюда не попадёт,
+	// а брошенное не будет висеть до отключения человека от туннеля.
+	udpIdleTimeout = 90 * time.Second
 )
 
 // Dialer открывает поток до цели через туннель.
 type Dialer interface {
 	DialTarget(ctx context.Context, target vp1.Address) (net.Conn, error)
+
+	// DialDatagrams открывает поток датаграмм до цели. Границы в нём
+	// сохраняются: один Read — одна датаграмма, один Write — одна датаграмма.
+	DialDatagrams(ctx context.Context, target vp1.Address) (net.Conn, error)
 }
 
 // Config описывает мост.
@@ -81,12 +93,14 @@ type Config struct {
 	// Dialer — как добраться до цели.
 	Dialer Dialer
 
-	// DNS — куда отправлять перехваченные запросы имён, в виде host:port.
+	// DNS — куда отправлять запросы имён, если нода не умеет датаграммы.
 	//
-	// Запросы приложений уходят в туннель по TCP, а не по UDP. Так сделано
-	// не из любви к TCP: наш протокол UDP пока не проксирует, а без работающих
-	// имён телефон бесполезен. Заодно это закрывает утечку — запрос имени,
-	// ушедший мимо туннеля, выдаёт цензору весь список посещённых сайтов.
+	// Обычно имена идут по UDP, как им и положено. Но нода у продавца может
+	// быть старой версии, а без работающих имён телефон бесполезен — поэтому
+	// остался и запасной путь: тот же запрос по TCP внутрь туннеля.
+	//
+	// Мимо туннеля запросы имён не уходят ни в одном из случаев: запрос имени
+	// в открытую выдаёт цензору весь список посещённых сайтов.
 	DNS string
 
 	// OnError вызывается на ошибках отдельных соединений. Может быть nil.
@@ -182,6 +196,10 @@ type handler struct {
 	dialer  Dialer
 	dns     string
 	onError func(error)
+
+	// noUDP — нода отказалась от датаграмм. Ставится один раз за сессию,
+	// чтобы не платить лишний круг на каждом новом потоке.
+	noUDP atomic.Bool
 }
 
 func (h *handler) fail(err error) {
@@ -221,11 +239,33 @@ func (h *handler) HandleTCP(conn adapter.TCPConn) {
 
 // HandleUDP обслуживает датаграммы.
 //
-// Поддержан только порт имён. Всё остальное молча отбрасывается: наш протокол
-// UDP пока не проксирует, и притворяться, что проксирует, хуже, чем честно
-// не отвечать — приложение быстрее перейдёт на TCP.
+// Раньше здесь проходил только порт имён, а всё остальное отбрасывалось — с
+// расчётом, что приложение поймёт и перейдёт на TCP. Расчёт оказался неверным:
+// видео в TikTok, YouTube и Instagram ходит по QUIC, то есть по UDP на 443, и
+// приложение не «понимает», а ждёт таймаута, пробует ещё раз, и только потом
+// откатывается. На живом телефоне это выглядело как «крутится и подгружается»
+// на каждом новом ролике.
 func (h *handler) HandleUDP(conn adapter.UDPConn) {
 	defer conn.Close()
+
+	target := targetOf(conn.ID().LocalAddress.String(), conn.ID().LocalPort)
+
+	// Ноды обновляются не разом с клиентами: продавец ставит их сам, и часть
+	// стоит со старой версией, которая про датаграммы не знает. Такая нода
+	// отвечает отказом на первый же запрос — тогда мы запоминаем это на всю
+	// сессию, чтобы не платить лишний круг на каждом потоке, и уводим хотя бы
+	// имена по TCP, как делали раньше. Без имён телефон бесполезен.
+	if !h.noUDP.Load() {
+		err := h.pipeUDP(conn, target)
+		if err == nil {
+			return
+		}
+		if !errors.Is(err, vp1.ErrDatagramsUnsupported) {
+			h.fail(fmt.Errorf("датаграммы до %s: %w", target, err))
+			return
+		}
+		h.noUDP.Store(true)
+	}
 
 	if conn.ID().LocalPort != dnsPort {
 		return
@@ -233,6 +273,72 @@ func (h *handler) HandleUDP(conn adapter.UDPConn) {
 	if err := h.serveDNS(conn); err != nil {
 		h.fail(fmt.Errorf("запрос имени: %w", err))
 	}
+}
+
+// pipeUDP гоняет датаграммы между приложением и целью.
+//
+// Поток заведён на одну цель, поэтому адрес в датаграммах не нужен: куда
+// слать наружу, знает нода, а кому отдавать ответы — известно из первой
+// датаграммы приложения.
+func (h *handler) pipeUDP(conn adapter.UDPConn, target vp1.Address) error {
+	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
+	stream, err := h.dialer.DialDatagrams(ctx, target)
+	cancel()
+	if err != nil {
+		return err
+	}
+	defer stream.Close()
+
+	// Первую датаграмму читаем отдельно: вместе с ней приходит адрес
+	// приложения, по которому потом уходят ответы.
+	first := make([]byte, vp1.MaxDatagram)
+	_ = conn.SetReadDeadline(time.Now().Add(udpIdleTimeout))
+	n, from, err := conn.ReadFrom(first)
+	if err != nil {
+		return fmt.Errorf("чтение датаграммы: %w", err)
+	}
+	if _, err := stream.Write(first[:n]); err != nil {
+		return fmt.Errorf("отправка датаграммы: %w", err)
+	}
+
+	done := make(chan struct{})
+
+	// Ответы — обратно приложению.
+	go func() {
+		defer close(done)
+		buf := make([]byte, vp1.MaxDatagram)
+		for {
+			_ = stream.SetReadDeadline(time.Now().Add(udpIdleTimeout))
+			n, err := stream.Read(buf)
+			if n > 0 {
+				if _, err := conn.WriteTo(buf[:n], from); err != nil {
+					return
+				}
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	buf := make([]byte, vp1.MaxDatagram)
+	for {
+		_ = conn.SetReadDeadline(time.Now().Add(udpIdleTimeout))
+		n, _, err := conn.ReadFrom(buf)
+		if n > 0 {
+			if _, err := stream.Write(buf[:n]); err != nil {
+				break
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	// Закрываем поток, чтобы отпустить чтение ответов, и дожидаемся его.
+	_ = stream.Close()
+	<-done
+	return nil
 }
 
 // serveDNS переводит запрос имени с UDP на TCP и уносит его в туннель.

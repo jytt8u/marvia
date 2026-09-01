@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sync/atomic"
 	"time"
@@ -180,12 +181,29 @@ func tcpDialer(node Node, serverName string, opts Options) (func(context.Context
 
 // DialTarget открывает поток до цели через туннель.
 func (d *Dialer) DialTarget(ctx context.Context, target vp1.Address) (net.Conn, error) {
+	return d.open(ctx, target, vp1.KindTCP)
+}
+
+// DialDatagrams открывает поток датаграмм до цели.
+//
+// Отдельный метод, а не флаг в DialTarget: вернувшееся соединение живёт по
+// другим правилам — границы датаграмм в нём сохраняются, и обращаться с ним
+// как с потоком байтов нельзя.
+func (d *Dialer) DialDatagrams(ctx context.Context, target vp1.Address) (net.Conn, error) {
+	stream, err := d.open(ctx, target, vp1.KindUDP)
+	if err != nil {
+		return nil, err
+	}
+	return datagramConn{stream}, nil
+}
+
+func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind) (net.Conn, error) {
 	stream, err := d.pool.Open(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := vp1.WriteRequest(stream, target); err != nil {
+	if err := vp1.WriteRequestOf(stream, target, kind); err != nil {
 		_ = stream.Close()
 		return nil, fmt.Errorf("запрос на %s: %w", target, err)
 	}
@@ -193,6 +211,12 @@ func (d *Dialer) DialTarget(ctx context.Context, target vp1.Address) (net.Conn, 
 	status, err := vp1.ReadStatus(stream)
 	if err != nil {
 		_ = stream.Close()
+		// Старая нода не знает про датаграммы: она видит незнакомый тип
+		// адреса и закрывает поток, не ответив. Обрыв ровно здесь и ровно на
+		// запросе датаграмм — это она, а не сеть.
+		if kind == vp1.KindUDP && closedEarly(err) {
+			return nil, vp1.ErrDatagramsUnsupported
+		}
 		return nil, fmt.Errorf("ответ ноды по %s: %w", target, err)
 	}
 	if status != vp1.StatusOK {
@@ -200,6 +224,24 @@ func (d *Dialer) DialTarget(ctx context.Context, target vp1.Address) (net.Conn, 
 		return nil, fmt.Errorf("нода отказала по %s: %s", target, vp1.StatusText(status))
 	}
 	return stream, nil
+}
+
+// datagramConn сохраняет границы датаграмм поверх потока.
+//
+// Обёртка нужна, чтобы вызывающий работал с привычным net.Conn: один Read —
+// одна датаграмма, один Write — одна датаграмма. Без неё границы пришлось бы
+// вручную соблюдать в каждом месте, где такой поток используется.
+type datagramConn struct{ net.Conn }
+
+func (c datagramConn) Read(p []byte) (int, error) {
+	return vp1.ReadDatagram(c.Conn, p)
+}
+
+func (c datagramConn) Write(p []byte) (int, error) {
+	if err := vp1.WriteDatagram(c.Conn, p); err != nil {
+		return 0, err
+	}
+	return len(p), nil
 }
 
 // Node возвращает ноду, к которой подключён этот дозвон.
@@ -217,4 +259,12 @@ func (d *Dialer) withSubscription(s Subscription) *Dialer {
 		d.sub = s
 	}
 	return d
+}
+
+// closedEarly отличает «собеседник закрыл поток, не ответив» от прочих бед.
+func closedEarly(err error) bool {
+	return errors.Is(err, io.EOF) ||
+		errors.Is(err, io.ErrUnexpectedEOF) ||
+		errors.Is(err, net.ErrClosed) ||
+		errors.Is(err, io.ErrClosedPipe)
 }
