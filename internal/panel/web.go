@@ -44,6 +44,11 @@ func (a *API) ServeApp(w http.ResponseWriter, _ *http.Request) {
 		"default-src 'none'",
 		"script-src 'nonce-" + nonce + "'",
 		"style-src 'unsafe-inline'",
+		// Только встроенные картинки, и никаких внешних. Значок вкладки
+		// нарисован прямо в странице; сеть для картинок панели не нужна
+		// вовсе, а единственный внешний адрес в интерфейсе — это уже утечка
+		// того, что панель открыли, и откуда.
+		"img-src data:",
 		"connect-src 'self'",
 		"form-action 'none'",
 		"frame-ancestors 'none'",
