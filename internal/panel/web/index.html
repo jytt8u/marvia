@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Marvia — панель</title>
+<!--
+  Значок вкладки нарисован прямо здесь. Отдельным файлом он стоил бы запроса
+  к панели на каждой загрузке, а так ноль запросов и ноль зависимостей.
+-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233566d6'/%3E%3Cpath d='M16 6.5 24.5 10v7.5c0 5.2-3.6 9.6-8.5 11-4.9-1.4-8.5-5.8-8.5-11V10z' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="robots" content="noindex, nofollow">
 <style>
 :root {
   color-scheme: light dark;
@@ -13,12 +19,29 @@
   --border: #dfe3e8;
   --text: #1b1f24;
   --muted: #6b7480;
-  --accent: #2f6fed;
+  --accent: #3566d6;
+  --accent-soft: #e8eefb;
   --accent-text: #ffffff;
   --ok: #1a7f45;
   --warn: #a86400;
   --bad: #c0392b;
-  --radius: 10px;
+
+  /*
+    Скругления шкалой, а не одним числом. Одинаковый радиус на кнопке и на
+    карточке съедает вложенность: глаз перестаёт понимать, что во что вложено.
+    Внутреннее острее, внешнее мягче.
+  */
+  --r-sm: 6px;
+  --r: 10px;
+  --r-lg: 14px;
+  --radius: var(--r);
+
+  /* Тень с оттенком фона, а не чёрная: чёрная на цветном фоне сереет. */
+  --shadow: 0 1px 2px rgba(20,28,45,.06), 0 10px 30px -14px rgba(20,28,45,.22);
+
+  /* Порядок слоёв задан один раз, чтобы не заводились z-index: 9999. */
+  --z-toast: 100;
+  --z-modal: 200;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -28,23 +51,48 @@
     --border: #2f3641;
     --text: #e6e9ee;
     --muted: #949daa;
-    --accent: #4d86ff;
+    --accent: #6f9bff;
+    --accent-soft: #1e2739;
     --ok: #4ec27f;
     --warn: #e0a33a;
     --bad: #ef6b5b;
+    --shadow: 0 1px 2px rgba(0,0,0,.34), 0 14px 34px -16px rgba(0,0,0,.62);
   }
 }
 * { box-sizing: border-box; }
+/*
+  Шрифт системный, и это выбор, а не лень.
+
+  Панель раздаётся самим бинарником и открывается на сервере продавца — часто
+  без выхода наружу, часто из страны, где половина CDN недоступна. Панель для
+  обхода блокировок, которая сама не открывается без шрифта из-за границы, —
+  это смешно. Характер набираем тем, что не требует загрузки: весом, трекингом
+  и цифрами одинаковой ширины.
+*/
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  font: 15px/1.55 system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
 }
 a { color: var(--accent); }
-h1, h2, h3 { margin: 0 0 .6rem; line-height: 1.25; }
-h1 { font-size: 1.25rem; }
-h2 { font-size: 1.05rem; }
+
+h1, h2, h3 { margin: 0 0 .6rem; line-height: 1.2; text-wrap: balance; }
+h1 { font-size: 1.55rem; font-weight: 650; letter-spacing: -.021em; }
+h2 { font-size: 1.08rem; font-weight: 600; letter-spacing: -.011em; }
+h3 { font-size: .95rem; font-weight: 600; }
+
+/*
+  Цифры одинаковой ширины везде, где они стоят столбиком или меняются на
+  месте. Иначе счётчик дёргает соседний текст на каждом обновлении, а числа в
+  таблице не сравнить глазом: они не выравниваются по разрядам.
+*/
+.tile .value, .node-bar .amount, td, .chart-axis, #summary {
+  font-variant-numeric: tabular-nums;
+}
 
 .wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
 
@@ -59,14 +107,23 @@ header.top .spacer { flex: 1; }
 .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .tabs button {
   background: transparent; border: 1px solid transparent; color: var(--muted);
-  padding: .45rem .8rem; border-radius: var(--radius); cursor: pointer; font: inherit;
+  padding: .45rem .85rem; border-radius: var(--r); cursor: pointer; font: inherit;
+  font-weight: 500;
 }
-.tabs button.active { background: var(--surface); border-color: var(--border); color: var(--text); font-weight: 600; }
+.tabs button:hover { color: var(--text); background: var(--surface-2); border-color: transparent; }
+.tabs button.active {
+  background: var(--surface); border-color: var(--border);
+  color: var(--text); font-weight: 600;
+}
+.tabs button.active:hover { background: var(--surface); }
 
 /* ------------------------------------------------------------- статистика */
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .8rem; margin-bottom: .9rem; }
-.tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .85rem 1rem; }
+.tile {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: .9rem 1.05rem;
+}
 .tile .name { font-size: .82rem; color: var(--muted); }
 .tile .value { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; margin-top: .1rem; }
 .tile .note { font-size: .84rem; color: var(--muted); }
@@ -96,25 +153,64 @@ header.top .spacer { flex: 1; }
 
 .card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;
+  border-radius: var(--r-lg); padding: 1.1rem; margin-bottom: 1rem;
 }
 .card > h2 { display: flex; align-items: center; gap: .5rem; }
 
 button {
-  font: inherit; cursor: pointer; border-radius: 8px;
+  font: inherit; font-weight: 500; cursor: pointer; border-radius: var(--r-sm);
   border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-  padding: .4rem .75rem;
+  padding: .42rem .8rem;
+  transition: background-color .16s, border-color .16s, color .16s, transform .06s;
 }
-button:hover { border-color: var(--accent); }
+button:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+/* Нажатие должно чувствоваться: без этого кнопка кажется неживой. */
+button:active { transform: translateY(1px); }
+
 button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button.primary:hover { filter: brightness(1.08); background: var(--accent); }
 button.danger { color: var(--bad); }
-button.tiny { padding: .2rem .5rem; font-size: .85rem; }
-button:disabled { opacity: .5; cursor: default; }
+button.danger:hover { border-color: var(--bad); background: transparent; }
+button.tiny { padding: .22rem .55rem; font-size: .85rem; }
+
+/*
+  Тихая кнопка для того, что делают редко.
+
+  В строке подписчика шесть действий, и одного веса они быть не могут. Ссылки
+  и продление — это работа продавца каждый день. Отключить, выдать ещё доступ,
+  сменить подписку, удалить — это разбор жалобы и возврат, то есть раз в
+  месяц. Пока все шесть выглядели одинаково, «Удалить» читалось так же, как
+  «+30 дней», и найти нужное было одинаково трудно в обе стороны.
+*/
+button.quiet {
+  background: transparent; border-color: transparent; color: var(--muted);
+}
+button.quiet:hover { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+button.quiet.danger { color: var(--muted); }
+button.quiet.danger:hover { color: var(--bad); border-color: var(--bad); background: transparent; }
+button:disabled { opacity: .5; cursor: default; transform: none; }
+button:disabled:hover { border-color: var(--border); background: var(--surface-2); }
+
+/*
+  Кольцо фокуса. Его не было ни на одном элементе: с клавиатуры по панели
+  нельзя было понять, где ты находишься. Это не украшение, а условие того,
+  что панелью можно пользоваться без мыши.
+*/
+:where(button, input, select, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
 
 input, select {
   font: inherit; color: var(--text); background: var(--surface-2);
-  border: 1px solid var(--border); border-radius: 8px; padding: .4rem .55rem; width: 100%;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: .42rem .6rem; width: 100%;
+  transition: border-color .16s, background-color .16s;
 }
+input:hover, select:hover { border-color: var(--muted); }
+input:focus, select:focus { background: var(--surface); border-color: var(--accent); }
 label.field { display: block; }
 label.field > span { display: block; font-size: .82rem; color: var(--muted); margin-bottom: .2rem; }
 
@@ -126,7 +222,15 @@ label.field > span { display: block; font-size: .82rem; color: var(--muted); mar
 
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: .55rem .5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
-th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+/*
+  Заголовки строчными, а не капсом. Капс в кириллице читается заметно хуже
+  латиницы: у наших букв нет разной высоты, по которой глаз узнаёт слово
+  целиком, и «ПОДПИСЧИК» приходится разбирать по буквам.
+*/
+th {
+  font-size: .8rem; letter-spacing: .01em; color: var(--muted);
+  font-weight: 600; padding-bottom: .4rem;
+}
 tr:last-child td { border-bottom: none; }
 td.actions { text-align: right; white-space: nowrap; }
 
@@ -149,7 +253,9 @@ td.actions { text-align: right; white-space: nowrap; }
 }
 
 dialog#modal {
-  border: 1px solid var(--border); border-radius: var(--radius);
+  z-index: var(--z-modal);
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
   background: var(--surface); color: var(--text);
   max-width: 680px; width: calc(100% - 2rem); padding: 1.1rem;
 }
@@ -163,12 +269,42 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
 #toast {
   position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%);
   background: var(--surface); border: 1px solid var(--border); color: var(--text);
-  padding: .5rem .9rem; border-radius: 999px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
+  padding: .5rem .9rem; border-radius: 999px; box-shadow: var(--shadow);
+  z-index: var(--z-toast);
   opacity: 0; pointer-events: none; transition: opacity .18s;
 }
 #toast.show { opacity: 1; }
 #toast.bad { border-color: var(--bad); color: var(--bad); }
 .empty { color: var(--muted); padding: 1rem .5rem; text-align: center; }
+
+/*
+  Скелет вместо крутящегося кружка. Кружок говорит «жди», скелет говорит
+  «жди, и вот такой формы будет то, что появится»: глаз успевает
+  подготовиться, и данные не выскакивают рывком.
+*/
+.skeleton { display: grid; gap: .55rem; padding: .3rem 0; }
+.skeleton i {
+  display: block; height: 1.05rem; border-radius: var(--r-sm);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 37%, var(--surface-2) 63%);
+  background-size: 340% 100%;
+  animation: sheen 1.25s ease-in-out infinite;
+}
+.skeleton i:nth-child(2) { width: 82%; }
+.skeleton i:nth-child(3) { width: 64%; }
+@keyframes sheen { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/*
+  Движение отключаемо. В панели его немного, но человек, попросивший систему
+  не двигать картинку, просил об этом всерьёз.
+*/
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -601,13 +737,13 @@ function renderUsers() {
         " ",
         el("button", { class: "tiny", onclick: () => extend(user, 30) }, "+30 дней"),
         " ",
-        el("button", { class: "tiny", onclick: () => toggle(user) }, user.enabled ? "Отключить" : "Включить"),
+        el("button", { class: "tiny quiet", onclick: () => toggle(user) }, user.enabled ? "Отключить" : "Включить"),
         " ",
-        el("button", { class: "tiny", onclick: () => addKind(user) }, "Ещё доступ"),
+        el("button", { class: "tiny quiet", onclick: () => addKind(user) }, "Ещё доступ"),
         " ",
-        el("button", { class: "tiny", onclick: () => rotateSub(user) }, "Сменить подписку"),
+        el("button", { class: "tiny quiet", onclick: () => rotateSub(user) }, "Сменить подписку"),
         " ",
-        el("button", { class: "tiny danger", onclick: () => removeUser(user) }, "Удалить")
+        el("button", { class: "tiny quiet danger", onclick: () => removeUser(user) }, "Удалить")
       )
     );
   });
@@ -965,6 +1101,19 @@ function renderChart(days) {
   const host = $("stats-chart");
   host.replaceChildren();
 
+  /*
+    Пустой график и сломанный график выглядят одинаково: пусто. Продавец,
+    поставивший панель час назад, видит две серые коробки и не понимает,
+    трафика ещё нет или что-то не работает. Разница для него огромная, а
+    стоит объяснить одну строку.
+  */
+  if (!days || !days.some((d) => d.up + d.down > 0)) {
+    host.append(el("p", { class: "empty" },
+      "Трафика пока нет. Он появится здесь, когда покупатели подключатся: " +
+      "ноды присылают расход раз в минуту."));
+    return;
+  }
+
   const max = Math.max(...days.map((d) => d.up + d.down), 1);
 
   const chart = el("div", { class: "chart" });
@@ -986,11 +1135,13 @@ function renderChart(days) {
     el("span", { text: days[days.length - 1].day })));
 }
 
+// Разбивка по нодам с тем же правилом: молчание объясняем словами.
 function renderStatsNodes(nodes) {
   const host = $("stats-nodes");
   host.replaceChildren();
 
-  if (!nodes.length) {
+  // Список бывает и null: панель могла остаться прежней версии.
+  if (!nodes || !nodes.length) {
     host.append(el("div", { class: "empty", text: "За этот период через ноды ничего не прошло." }));
     return;
   }
