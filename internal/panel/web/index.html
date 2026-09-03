@@ -125,8 +125,22 @@ header.top .spacer { flex: 1; }
   border-radius: var(--r-lg); padding: .9rem 1.05rem;
 }
 .tile .name { font-size: .82rem; color: var(--muted); }
-.tile .value { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; margin-top: .1rem; }
-.tile .note { font-size: .84rem; color: var(--muted); }
+.tile .value { font-size: 1.75rem; font-weight: 680; letter-spacing: -.025em; margin-top: .05rem; line-height: 1.1; }
+
+/*
+  Подпись под числом — обычный текст, а не плашка.
+
+  Класс .note занят предупреждениями: у них жёлтая полоса слева и заливка.
+  Здесь имя совпало, а смысл нет, и все три подписи в статистике выглядели
+  тревогой: «у 6 доступ работает» с жёлтой полосой читается как «что-то не
+  так с шестью». Сбрасываем чужое оформление явно, а не надеемся на порядок
+  правил в файле.
+*/
+.tile .note {
+  font-size: .84rem; color: var(--muted);
+  border: 0; background: none; padding: 0; border-radius: 0;
+  margin-top: .35rem;
+}
 
 .card-head { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: .7rem; }
 .card-head h2 { margin: 0; }
@@ -234,6 +248,18 @@ th {
 tr:last-child td { border-bottom: none; }
 td.actions { text-align: right; white-space: nowrap; }
 
+/*
+  Строка состояния в шапке. Обычно приглушённая, но когда ноды молчат —
+  заметная: это не примечание, а «продавать сейчас нечего».
+*/
+.state { color: var(--muted); font-size: .9rem; }
+.state.warn, .state.bad {
+  font-weight: 600; padding: .16rem .5rem; border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.state.warn { color: var(--warn); }
+.state.bad { color: var(--bad); }
+
 .tag { display: inline-block; padding: .1rem .45rem; border-radius: 999px; font-size: .75rem; border: 1px solid var(--border); }
 .tag.ok { color: var(--ok); border-color: currentColor; }
 .tag.bad { color: var(--bad); border-color: currentColor; }
@@ -326,7 +352,7 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
 <div class="wrap" id="app" hidden>
   <header class="top">
     <span class="brand">Marvia</span>
-    <span class="muted" id="summary"></span>
+    <span id="summary"></span>
     <span class="spacer"></span>
     <button id="refresh">Обновить</button>
     <button id="logout">Выйти</button>
@@ -1042,8 +1068,24 @@ async function load() {
 
   const active = state.users.filter((u) => u.enabled).length;
   const alive = state.nodes.filter((n) => n.last_seen && (Date.now() - new Date(n.last_seen)) < 120000).length;
-  $("summary").textContent =
-    active + " из " + state.users.length + " активны · нод на связи " + alive + " из " + state.nodes.length;
+
+  /*
+    Строка в шапке — единственное, что продавец видит, не нажимая ничего.
+    Поэтому она обязана менять вид, а не только текст.
+
+    «Нод на связи 0 из 3» серым шрифтом рядом с названием — это сообщение о
+    том, что доступа нет ни у кого, поданное как примечание. Пока ноды молчат,
+    продавать нечего: ссылки у покупателей ведут в пустоту. Такое говорят
+    вслух.
+  */
+  const summary = $("summary");
+  const dead = state.nodes.length > 0 && alive === 0;
+  const partial = alive > 0 && alive < state.nodes.length;
+
+  summary.className = dead ? "state bad" : partial ? "state warn" : "state";
+  summary.textContent = dead
+    ? "ни одна нода не на связи — доступа нет ни у кого"
+    : active + " из " + state.users.length + " активны · нод на связи " + alive + " из " + state.nodes.length;
 
   renderUsers();
   renderNodes();
