@@ -176,7 +176,7 @@ body {
   background-image: var(--backdrop);
   background-attachment: fixed;
   color: var(--text);
-  font: 15px/1.55 var(--font);
+  font: var(--text-size, 15px)/1.55 var(--font);
   -webkit-font-smoothing: antialiased;
   scroll-behavior: smooth;
   min-height: 100dvh;
@@ -260,7 +260,7 @@ body {
 th, td { padding: calc(.55rem * var(--density)) .5rem; }
 
 /* Рамки карточек — тумблер: без них панель читается как сплошной лист. */
-.card, .tile { border-width: var(--card-border); }
+.card, .tile { border-width: var(--card-border); box-shadow: var(--card-shadow, none); }
 
 /*
   Уважение к системной просьбе не двигать картинку — и к тумблеру «Анимации».
@@ -515,7 +515,8 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
 
 /* --------------------------------------------------------------- вид */
 
-.presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: .55rem; }
+/* Двадцать семь тем: колонки узкие, чтобы список не уезжал на три экрана. */
+.presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 6px; }
 .preset {
   display: flex; align-items: center; gap: .55rem;
   border: 1px solid var(--border); background: var(--surface-2);
@@ -543,6 +544,28 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
   font-size: .86rem; padding: .3rem .7rem; border-radius: var(--r-sm);
 }
 .choice button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+/* Роза ветров: девять клеток, середина — просто якорь, она не нажимается. */
+.compass { display: grid; grid-template-columns: repeat(3, 30px); gap: 4px; }
+.compass button {
+  width: 30px; height: 30px; padding: 0; border-radius: var(--r-sm);
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.compass button:hover { background: var(--accent-soft); }
+.compass button.active { background: var(--accent); border-color: var(--accent); }
+.compass button.hub {
+  background: transparent; border-style: dashed; opacity: .5; cursor: default;
+}
+.compass button.hub:hover { background: transparent; }
+
+.field .ends {
+  display: flex; justify-content: space-between; margin-top: 3px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.field .ends em { font-style: normal; }
+
+input[type="range"] { padding: 0; background: transparent; border: 0; accent-color: var(--accent); }
+
 /* Образец акцента — сам цвет, а не подпись к нему. */
 .choice.swatches { gap: .45rem; }
 .swatch {
@@ -777,6 +800,66 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
         <div class="knob"><span class="knob-name">Акцент</span>
           <div class="choice swatches" id="look-accent"></div>
         </div>
+
+        <div class="knob"><span class="knob-name">Свет</span>
+          <div class="choice" data-choice="light">
+            <button data-value="even">Ровный</button>
+            <button data-value="soft">Мягкий</button>
+            <button data-value="spot">Пятном</button>
+            <button data-value="glow">Сияние</button>
+          </div>
+        </div>
+
+        <div class="knob" id="knob-dir"><span class="knob-name">Откуда светит</span>
+          <div class="compass" data-choice="dir">
+            <button data-value="nw" title="сверху слева"></button>
+            <button data-value="n" title="сверху"></button>
+            <button data-value="ne" title="сверху справа"></button>
+            <button data-value="w" title="слева"></button>
+            <button class="hub" disabled tabindex="-1"></button>
+            <button data-value="e" title="справа"></button>
+            <button data-value="sw" title="снизу слева"></button>
+            <button data-value="s" title="снизу"></button>
+            <button data-value="se" title="снизу справа"></button>
+          </div>
+        </div>
+
+        <label class="field" id="knob-depth">
+          <span>Густота тени <b id="look-depth-val" class="mono"></b></span>
+          <input type="range" id="look-depth" min="0" max="100" step="1">
+          <span class="ends"><em>светло</em><em>чёрно</em></span>
+        </label>
+
+        <div class="knob" id="knob-tint"><span class="knob-name">Оттенок светлой стороны</span>
+          <div class="choice swatches" id="look-tint"></div>
+        </div>
+
+        <div class="knob" id="knob-glow"><span class="knob-name">Свечение</span>
+          <div class="choice" data-choice="glow">
+            <button data-value="none">Нет</button>
+            <button data-value="soft">Мягко</button>
+            <button data-value="mid">Средне</button>
+            <button data-value="neon">Неон</button>
+          </div>
+        </div>
+
+        <div class="knob"><span class="knob-name">Карточки</span>
+          <div class="choice" data-choice="cards">
+            <button data-value="flat">Плоские</button>
+            <button data-value="outline">Обводка</button>
+            <button data-value="shadow">С тенью</button>
+          </div>
+        </div>
+
+        <div class="knob"><span class="knob-name">Скругления</span>
+          <div class="choice" data-choice="radius">
+            <button data-value="sharp">Острые</button>
+            <button data-value="soft">Мягкие</button>
+            <button data-value="round">Круглые</button>
+            <button data-value="pill">Капля</button>
+          </div>
+        </div>
+
         <div class="knob"><span class="knob-name">Плотность</span>
           <div class="choice" data-choice="density">
             <button data-value="compact">Плотно</button>
@@ -784,6 +867,15 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
             <button data-value="roomy">Просторно</button>
           </div>
         </div>
+
+        <div class="knob"><span class="knob-name">Размер текста</span>
+          <div class="choice" data-choice="text">
+            <button data-value="small">Мелкий</button>
+            <button data-value="normal">Обычный</button>
+            <button data-value="large">Крупный</button>
+          </div>
+        </div>
+
         <div class="knob"><span class="knob-name">Шрифт</span>
           <div class="choice" data-choice="font">
             <button data-value="onest">Onest</button>
@@ -792,11 +884,25 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
             <button data-value="spectral">Spectral</button>
           </div>
         </div>
+
         <div class="knob"><span class="knob-name">Анимации</span>
           <div class="choice" data-choice="motion">
             <button data-value="on">Есть</button>
             <button data-value="off">Нет</button>
           </div>
+        </div>
+      </div>
+
+      <!--
+        Код темы. Весь вид умещается в одну строку, которую можно переслать:
+        продавец настроил под себя и отдал такую же настройку помощнику, не
+        объясняя словами, где он что двигал.
+      -->
+      <div class="knob" style="margin-top:1rem">
+        <span class="knob-name">Код темы — можно передать другому</span>
+        <div class="row">
+          <input id="look-code" class="mono" spellcheck="false">
+          <button class="tiny" id="look-code-apply">Применить</button>
         </div>
       </div>
       <p class="note" style="margin-top:1rem">
@@ -1724,25 +1830,65 @@ wireLook();
 */
 
 const PRESETS = {
-  emerald:  { label: "Изумруд",  bg: "#070d0b", fg: "#e6f5ef", acc: "#21c48a" },
-  steel:    { label: "Сталь",    bg: "#0c0e12", fg: "#f2f4f8", acc: "#f2f4f8" },
-  amber:    { label: "Янтарь",   bg: "#0e0b06", fg: "#f6efe2", acc: "#ffb347" },
-  ice:      { label: "Лёд",      bg: "#060b10", fg: "#e4f2fa", acc: "#4dc9ff" },
-  plum:     { label: "Слива",    bg: "#0a070e", fg: "#efe6fa", acc: "#b06cff" },
-  olive:    { label: "Олива",    bg: "#0a0c07", fg: "#eef2e2", acc: "#a8c256" },
-  oled:     { label: "OLED",     bg: "#000000", fg: "#ffffff", acc: "#4dffbe" },
-  daylight: { label: "Дневная",  bg: "#f2f4f8", fg: "#0c0e12", acc: "#0f7a58" },
+  emerald:  { label: "Изумруд", bg: "#06100c", fg: "#e8f6ef", acc: "#1fd18d" },
+  jade:     { label: "Нефрит",  bg: "#071310", fg: "#e3f5f0", acc: "#33d6c0" },
+  teal:     { label: "Лагуна",  bg: "#04100f", fg: "#dff5f3", acc: "#00d4c8" },
+  ice:      { label: "Лёд",     bg: "#060c14", fg: "#e2f0fb", acc: "#54c8ff" },
+  cobalt:   { label: "Кобальт", bg: "#070a18", fg: "#e6eaff", acc: "#5c7cff" },
+  ultra:    { label: "Ультра",  bg: "#05061a", fg: "#e4e7ff", acc: "#3d5bff" },
+  plum:     { label: "Слива",   bg: "#0b0714", fg: "#efe7fb", acc: "#a86dff" },
+  orchid:   { label: "Орхидея", bg: "#100716", fg: "#f7e8fb", acc: "#e46ce0" },
+  fuchsia:  { label: "Фуксия",  bg: "#120616", fg: "#fbe6f6", acc: "#ff5ecd" },
+  rose:     { label: "Роза",    bg: "#120709", fg: "#fbe8ec", acc: "#ff5f7e" },
+  crimson:  { label: "Кармин",  bg: "#130508", fg: "#fbe3e6", acc: "#ff3b52" },
+  ember:    { label: "Угли",    bg: "#120902", fg: "#fbeadc", acc: "#ff7a3d" },
+  amber:    { label: "Янтарь",  bg: "#100c04", fg: "#f8f0dd", acc: "#ffc247" },
+  gold:     { label: "Золото",  bg: "#0f0d05", fg: "#f7f1dc", acc: "#e8c25a" },
+  citrus:   { label: "Цитрус",  bg: "#0c0f05", fg: "#f0f5dd", acc: "#c9e64b" },
+  lime:     { label: "Лайм",    bg: "#080f06", fg: "#ecf7e2", acc: "#8ff04f" },
+  olive:    { label: "Олива",   bg: "#0a0d07", fg: "#eaf1de", acc: "#96bf5c" },
+  sand:     { label: "Песок",   bg: "#100d09", fg: "#f5ede1", acc: "#d9a97a" },
+  copper:   { label: "Медь",    bg: "#110a06", fg: "#f8e9dd", acc: "#e08b4c" },
+  steel:    { label: "Сталь",   bg: "#0c0e11", fg: "#f1f4f7", acc: "#c3ccd6" },
+  slate:    { label: "Графит",  bg: "#0e1013", fg: "#eef1f4", acc: "#8fa3b8" },
+  mono:     { label: "Моно",    bg: "#0a0a0a", fg: "#fafafa", acc: "#fafafa" },
+  oled:     { label: "OLED",    bg: "#000000", fg: "#ffffff", acc: "#3dffc0" },
+  midnight: { label: "Полночь", bg: "#03050a", fg: "#dfe8f5", acc: "#4d8cff" },
+  daylight: { label: "Дневная", bg: "#f3f5f7", fg: "#0d1013", acc: "#046b4a" },
+  paper:    { label: "Бумага",  bg: "#f7f4ee", fg: "#14120e", acc: "#8a4b1f" },
+  linen:    { label: "Лён",     bg: "#f4f1ea", fg: "#171512", acc: "#3f6b4a" },
 };
 
-// Плотность двигает скругление, внутренний отступ и зазор разом: по
-// отдельности они расходятся, и «плотно» получается плотным только местами.
+// Оси конструктора. Значения не подобраны на глаз — взяты из макета.
 const DENSITY = {
-  compact: { r: 12, pad: 12, gap: 8 },
-  normal:  { r: 16, pad: 16, gap: 12 },
-  roomy:   { r: 22, pad: 20, gap: 16 },
+  compact: { pad: 12, gap: 8 },
+  normal:  { pad: 16, gap: 12 },
+  roomy:   { pad: 20, gap: 16 },
 };
 
-const ACCENTS = ["#21c48a", "#4dc9ff", "#b06cff", "#ffb347"];
+// Скругление — своя ось, отдельно от плотности: «просторно и остро» это
+// осмысленное сочетание, а связанные вместе они его не дают.
+const RADII = { sharp: 6, soft: 14, round: 22, pill: 30 };
+
+// Размер текста меняет только основной кегль. Заголовки и ярлыки заданы
+// в пикселях и остаются на месте: иначе «крупный» разносит всю раскладку.
+const TEXTS = { small: 14, normal: 15, large: 17 };
+
+// Свечение — насколько ярко акцент светится в фоне.
+const GLOWS = { none: 0, soft: 0.2, mid: 0.42, neon: 0.72 };
+
+// Откуда светит: угол для линейного и точка для остальных.
+const DIRS = {
+  n:  [0,   "top"],          ne: [45,  "top right"],
+  e:  [90,  "right"],        se: [135, "bottom right"],
+  s:  [180, "bottom"],       sw: [225, "bottom left"],
+  w:  [270, "left"],         nw: [315, "top left"],
+};
+
+const LIGHTS = { even: "Ровный", soft: "Мягкий", spot: "Пятном", glow: "Сияние" };
+const CARDS = { flat: "Плоские", outline: "Обводка", shadow: "С тенью" };
+
+const ACCENTS = ["#1fd18d", "#54c8ff", "#a86dff", "#ff5f7e", "#ffc247", "#8ff04f", "#c3ccd6", "#ff7a3d"];
 
 const FONTS = {
   onest: 'Onest, system-ui, "Segoe UI", sans-serif',
@@ -1754,7 +1900,15 @@ const FONTS = {
 const THEME_DEFAULT = {
   preset: "emerald",
   accent: null,     // null — берём из пресета
+  light: "soft",    // как светит фон
+  dir: "nw",        // откуда
+  depth: 62,        // густота тени на дальней стороне
+  tint: null,       // оттенок светлой стороны; null — акцентом
+  glow: "soft",
+  radius: "soft",
   density: "normal",
+  text: "normal",
+  cards: "outline",
   font: "onest",
   motion: "on",
 };
@@ -1831,6 +1985,36 @@ function palette() {
   };
 }
 
+/*
+  backdrop рисует свет на фоне страницы.
+
+  Три ползунка человека складываются так: откуда светит задаёт угол или точку,
+  оттенок — чем светит, густота — насколько темнеет противоположная сторона.
+  Светлые темы темнеют слабее: то же затемнение, что уместно на чёрном, на
+  бумажном фоне выглядит грязью.
+*/
+function backdrop(p) {
+  if (theme.light === "even") return "none";
+
+  const [angle, spot] = DIRS[theme.dir] || DIRS.nw;
+  const tint = theme.tint || p.acc;
+  const glow = GLOWS[theme.glow] ?? GLOWS.soft;
+
+  // Светлая сторона: подмешиваем оттенок к фону тем сильнее, чем ярче свечение.
+  const near = mix(p.bg, tint, 0.06 + glow * 0.22);
+  // Дальняя: уводим в чёрное (или в белое на светлой теме).
+  const far = mix(p.bg, p.dark ? "#000000" : "#ffffff", (theme.depth / 100) * (p.dark ? 0.55 : 0.3));
+
+  if (theme.light === "soft") {
+    return "linear-gradient(" + angle + "deg, " + far + ", " + near + ")";
+  }
+  if (theme.light === "spot") {
+    return "radial-gradient(120% 90% at " + spot + ", " + near + ", " + far + ")";
+  }
+  // Сияние — пятно у края, дальше ровный фон: мягче градиента во весь лист.
+  return "radial-gradient(58% 46% at " + spot + ", " + near + ", transparent 72%)";
+}
+
 function applyTheme() {
   const p = palette();
   const d = DENSITY[theme.density] || DENSITY.normal;
@@ -1857,14 +2041,16 @@ function applyTheme() {
     ? "0 1px 2px rgba(0,0,0,.4), 0 14px 34px -16px rgba(0,0,0,.66)"
     : "0 1px 2px rgba(12,14,18,.06), 0 10px 30px -14px rgba(12,14,18,.2)");
 
-  set("--r-shape", d.r + "px");
+  set("--r-shape", (RADII[theme.radius] || RADII.soft) + "px");
   set("--pad", d.pad + "px");
   set("--gap", d.gap + "px");
   set("--density", String(d.pad / 16));
+  set("--text-size", (TEXTS[theme.text] || TEXTS.normal) + "px");
 
   set("--font", FONTS[theme.font] || FONTS.onest);
-  set("--card-border", "1px");
-  set("--backdrop", "none");
+  set("--card-border", theme.cards === "flat" ? "0" : "1px");
+  set("--card-shadow", theme.cards === "shadow" ? "var(--shadow)" : "none");
+  set("--backdrop", backdrop(p));
 
   root.dataset.motion = theme.motion;
   root.style.colorScheme = p.dark ? "dark" : "light";
@@ -1935,22 +2121,141 @@ function renderAccents() {
   });
 }
 
-function renderLook() {
-  renderPresets();
-  renderAccents();
+// Оттенок светлой стороны: те же образцы, что и у акцента, плюс «как акцент».
+function renderTints() {
+  const box = $("look-tint");
+  box.textContent = "";
 
-  document.querySelectorAll("#tab-look .choice[data-choice]").forEach((row) => {
-    const key = row.dataset.choice;
-    row.querySelectorAll("button").forEach((b) => {
-      b.classList.toggle("active", b.dataset.value === theme[key]);
+  const base = PRESETS[theme.preset] || PRESETS.emerald;
+  const auto = theme.accent || base.acc;
+
+  [null, ...ACCENTS].forEach((color) => {
+    const btn = document.createElement("button");
+    const chosen = color === null ? theme.tint === null : theme.tint === color;
+    btn.className = "swatch" + (chosen ? " active" : "");
+    btn.style.setProperty("--swatch", color || auto);
+    btn.title = color === null ? "как акцент" : color;
+    if (color === null) btn.style.outline = "1px dashed var(--muted)";
+    btn.addEventListener("click", () => {
+      theme.tint = color;
+      applyTheme();
+      renderLook();
     });
+    box.append(btn);
   });
 }
 
+function renderLook() {
+  renderPresets();
+  renderAccents();
+  renderTints();
+
+  document.querySelectorAll("#tab-look [data-choice]").forEach((row) => {
+    const key = row.dataset.choice;
+    row.querySelectorAll("button[data-value]").forEach((b) => {
+      b.classList.toggle("active", b.dataset.value === theme[key]);
+    });
+  });
+
+  $("look-depth").value = String(theme.depth);
+  $("look-depth-val").textContent = theme.depth + "%";
+  $("look-code").value = themeCode();
+
+  // На ровном фоне светить неоткуда: прячем то, что ни на что не влияет,
+  // а не показываем неработающим.
+  const even = theme.light === "even";
+  $("knob-dir").hidden = even;
+  $("knob-depth").hidden = even;
+  $("knob-tint").hidden = even;
+  $("knob-glow").hidden = even;
+}
+
+/*
+  Код темы.
+
+  Весь вид умещается в строку, которую можно переслать: продавец настроил под
+  себя и отдал такую же настройку помощнику, не объясняя словами, где он что
+  двигал. Порядок частей закреплён — по нему код и разбирается обратно.
+*/
+const CODE_ORDER = ["preset", "accent", "light", "dir", "depth", "tint", "glow", "radius", "density", "text", "cards", "font", "motion"];
+
+// Пропуск помечаем словом, а не дефисом: дефис здесь разделитель, и два
+// пропуска подряд слились бы в пустоту — код перестал бы разбираться обратно.
+const CODE_NONE = "AUTO";
+
+function themeCode() {
+  const parts = CODE_ORDER.map((k) => {
+    const v = theme[k];
+    if (v === null || v === undefined) return CODE_NONE;
+    return String(v).replace(/^#/, "");
+  });
+  return "MV1-" + parts.join("-").toUpperCase();
+}
+
+function applyCode(code) {
+  const raw = String(code).trim().toUpperCase();
+  if (!raw.startsWith("MV1-")) return false;
+
+  const parts = raw.slice(4).split("-");
+  if (parts.length !== CODE_ORDER.length) return false;
+
+  // Разбираем в копию: код может быть чужой или битый, и портить рабочую
+  // тему на полпути нельзя.
+  const next = { ...THEME_DEFAULT };
+
+  for (let i = 0; i < CODE_ORDER.length; i++) {
+    const key = CODE_ORDER[i];
+    const val = parts[i];
+    if (val === CODE_NONE) { next[key] = null; continue; }
+
+    if (key === "depth") {
+      const n = Number(val);
+      if (!Number.isFinite(n) || n < 0 || n > 100) return false;
+      next[key] = n;
+      continue;
+    }
+    if (key === "accent" || key === "tint") {
+      if (!/^[0-9A-F]{6}$/.test(val)) return false;
+      next[key] = "#" + val.toLowerCase();
+      continue;
+    }
+    next[key] = val.toLowerCase();
+  }
+
+  // Проверяем, что названия вообще существуют: иначе тема молча съедет в
+  // умолчания, и человек решит, что код не сработал наполовину.
+  if (!PRESETS[next.preset] || !LIGHTS[next.light] || !DIRS[next.dir]
+      || !(next.glow in GLOWS) || !(next.radius in RADII)
+      || !DENSITY[next.density] || !(next.text in TEXTS)
+      || !(next.cards in CARDS) || !FONTS[next.font]) {
+    return false;
+  }
+
+  theme = next;
+  return true;
+}
+
 function wireLook() {
-  document.querySelectorAll("#tab-look .choice[data-choice]").forEach((row) => {
+  $("look-depth").addEventListener("input", (e) => {
+    theme.depth = Number(e.target.value);
+    $("look-depth-val").textContent = theme.depth + "%";
+    applyTheme();
+  });
+
+  $("look-code-apply").addEventListener("click", () => {
+    if (applyCode($("look-code").value)) {
+      applyTheme();
+      renderLook();
+      toast("Тема применена");
+    } else {
+      toast("Код не разобрался", true);
+      renderLook();
+    }
+  });
+
+  document.querySelectorAll("#tab-look [data-choice]").forEach((row) => {
     row.addEventListener("click", (e) => {
-      const btn = e.target.closest("button");
+      const btn = e.target.closest("button[data-value]");
       if (!btn) return;
       theme[row.dataset.choice] = btn.dataset.value;
       applyTheme();
