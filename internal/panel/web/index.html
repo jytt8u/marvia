@@ -194,7 +194,7 @@ body {
   похожая раскладка — это и есть «навайбкожено»: вроде то же самое, а
   выглядит дешевле.
 */
-.shell { display: grid; grid-template-rows: 52px minmax(0, 1fr); min-height: 100dvh; }
+.shell { display: grid; grid-template-rows: 46px minmax(0, 1fr); min-height: 100dvh; }
 
 .topbar {
   grid-column: 1 / -1;
@@ -257,7 +257,6 @@ body {
 .wrap { max-width: 1100px; margin: 0 auto; padding: calc(1.25rem * var(--density)); }
 .card { padding: calc(1.1rem * var(--density)); }
 .tile { padding: calc(.9rem * var(--density)) calc(1.05rem * var(--density)); }
-th, td { padding: calc(.55rem * var(--density)) .5rem; }
 
 /* Рамки карточек — тумблер: без них панель читается как сплошной лист. */
 .card, .tile { border-width: var(--card-border); box-shadow: var(--card-shadow, none); }
@@ -319,7 +318,7 @@ header.top .spacer { flex: 1; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--gap); }
 .tile {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: .9rem 1.05rem;
+  border-radius: var(--r); padding: var(--pad);
 }
 /*
   Ярлык плитки моноширинным и вразрядку — так он читается как подпись, а не
@@ -444,18 +443,29 @@ label.field > span { display: block; font-size: .82rem; color: var(--muted); mar
 .kinds input { width: auto; }
 
 table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: .55rem .5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+th, td { text-align: left; vertical-align: middle; }
 /*
   Заголовки строчными, а не капсом. Капс в кириллице читается заметно хуже
   латиницы: у наших букв нет разной высоты, по которой глаз узнаёт слово
   целиком, и «ПОДПИСЧИК» приходится разбирать по буквам.
 */
+/*
+  Строки таблицы — отдельные карточки, а не полосы с разделителем. Разделитель
+  клеит их в один лист, и глаз перестаёт видеть, где кончается одна запись:
+  в таблице подписчиков это значит перепутать, кому продлевать.
+*/
+table { border-collapse: separate; border-spacing: 0 6px; }
+
 th {
-  font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
   text-transform: uppercase; color: var(--muted);
-  font-weight: 400; padding-bottom: .5rem;
+  font-weight: 400; border: 0; padding: 0 12px .2rem;
 }
-tr:last-child td { border-bottom: none; }
+
+tbody tr { background: var(--surface-2); }
+tbody td { border: 0; padding: 11px 12px; }
+tbody td:first-child { border-radius: var(--r) 0 0 var(--r); }
+tbody td:last-child { border-radius: 0 var(--r) var(--r) 0; }
 td.actions { text-align: right; white-space: nowrap; }
 
 /*
@@ -1868,7 +1878,9 @@ const DENSITY = {
 
 // Скругление — своя ось, отдельно от плотности: «просторно и остро» это
 // осмысленное сочетание, а связанные вместе они его не дают.
-const RADII = { sharp: 6, soft: 14, round: 22, pill: 30 };
+// В мобильном прототипе «мягкие» — 14, в панельном — 16. Панель важнее: её
+// эталон прислан как готовый, и по умолчанию она должна совпасть с ним.
+const RADII = { sharp: 6, soft: 16, round: 22, pill: 30 };
 
 // Размер текста меняет только основной кегль. Заголовки и ярлыки заданы
 // в пикселях и остаются на месте: иначе «крупный» разносит всю раскладку.
