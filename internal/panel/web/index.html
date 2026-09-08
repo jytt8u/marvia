@@ -163,7 +163,48 @@ body {
   Плотность двигает отступы, а не размер шрифта. Мельче текст в панели, где
   и так шестизначные числа, — это не «просторнее», это хуже видно.
 */
-.wrap { padding: calc(1.25rem * var(--density)); }
+/* ------------------------------------------------------------ оболочка */
+
+.shell {
+  display: grid;
+  grid-template-columns: 218px minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.side {
+  display: flex; flex-direction: column; gap: var(--gap);
+  padding: calc(var(--pad) * 1.1);
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top: 0; height: 100dvh;
+}
+.side .brand {
+  font-weight: 700; font-size: 1.1rem; letter-spacing: .04em;
+  padding: .35rem .55rem .55rem;
+}
+.side-foot { margin-top: auto; display: grid; gap: .4rem; }
+.side-foot button { width: 100%; }
+
+.main { min-width: 0; padding: calc(var(--pad) * 1.4); max-width: 1180px; }
+
+/*
+  Заголовок раздела всегда с подписью, и подпись живая: она отвечает на
+  вопрос «что тут сейчас», не заставляя читать таблицу. Место под неё
+  держим всегда — иначе заголовок прыгает, пока данные едут.
+*/
+.page-head { margin-bottom: calc(var(--gap) * 1.4); }
+.page-head h1 { margin: 0; }
+.page-head p { margin: .25rem 0 0; color: var(--muted); font-size: .92rem; min-height: 1.4em; }
+
+@media (max-width: 860px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+  .tabs { flex-direction: row; flex-wrap: wrap; }
+  .side-foot { margin-top: 0; grid-auto-flow: column; }
+}
+
+/* .wrap остался только у экрана входа: внутри панели раскладку держит .shell. */
+.wrap { max-width: 1100px; margin: 0 auto; padding: calc(1.25rem * var(--density)); }
 .card { padding: calc(1.1rem * var(--density)); }
 .tile { padding: calc(.9rem * var(--density)) calc(1.05rem * var(--density)); }
 th, td { padding: calc(.55rem * var(--density)) .5rem; }
@@ -197,7 +238,6 @@ h3 { font-size: .95rem; font-weight: 600; }
   font-variant-numeric: tabular-nums;
 }
 
-.wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
 
 header.top {
   display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
@@ -207,18 +247,22 @@ header.top {
 header.top .brand { font-weight: 700; font-size: 1.15rem; letter-spacing: .02em; }
 header.top .spacer { flex: 1; }
 
-.tabs { display: flex; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.tabs { display: flex; flex-direction: column; gap: 2px; }
+/* Квадратная метка, а не кружок: круг читался бы как индикатор состояния —
+   «горит зелёным, значит работает», — а это просто метка раздела. */
+.tabs button i {
+  width: 7px; height: 7px; border-radius: 2px; flex: 0 0 7px;
+  background: var(--muted); transition: background-color .16s;
+}
+.tabs button.active i { background: var(--accent); }
 .tabs button {
+  display: flex; align-items: center; gap: 10px;
   background: transparent; border: 1px solid transparent; color: var(--muted);
-  padding: .45rem .85rem; border-radius: var(--r); cursor: pointer; font: inherit;
-  font-weight: 500;
+  padding: 9px 12px; border-radius: var(--r); cursor: pointer; font: inherit;
+  font-size: 13px; font-weight: 500; text-align: left;
 }
-.tabs button:hover { color: var(--text); background: var(--surface-2); border-color: transparent; }
-.tabs button.active {
-  background: var(--surface); border-color: var(--border);
-  color: var(--text); font-weight: 600;
-}
-.tabs button.active:hover { background: var(--surface); }
+.tabs button:hover { color: var(--text); background: var(--surface-2); }
+.tabs button.active { background: var(--surface-2); color: var(--text); font-weight: 600; }
 
 /* ------------------------------------------------------------- статистика */
 
@@ -436,10 +480,15 @@ dialog#modal::backdrop { background: rgba(0,0,0,.5); }
   font-size: .86rem; padding: .3rem .7rem; border-radius: var(--r-sm);
 }
 .choice button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
-.choice.compass { display: grid; grid-template-columns: repeat(3, 34px); gap: .3rem; }
-.choice.compass button { padding: .3rem 0; text-align: center; }
-
-input[type="range"] { padding: 0; background: transparent; border: 0; accent-color: var(--accent); }
+/* Образец акцента — сам цвет, а не подпись к нему. */
+.choice.swatches { gap: .45rem; }
+.swatch {
+  width: 30px; height: 30px; padding: 0; border-radius: var(--r-sm);
+  background: var(--swatch); border: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(128,128,128,.28);
+}
+.swatch:hover { background: var(--swatch); border-color: var(--border); }
+.swatch.active { border-color: var(--text); }
 
 /*
   Скелет вместо крутящегося кружка. Кружок говорит «жди», скелет говорит
@@ -487,27 +536,41 @@ input[type="range"] { padding: 0; background: transparent; border: 0; accent-col
   </div>
 </div>
 
-<div class="wrap" id="app" hidden>
-  <header class="top">
-    <span class="brand">Marvia</span>
-    <span id="summary"></span>
-    <span class="spacer"></span>
-    <button id="refresh">Обновить</button>
-    <button id="logout">Выйти</button>
-  </header>
-
+<div class="shell" id="app" hidden>
   <!--
-    Порядок вкладок — это порядок работы. Ноды первыми: пока их нет, продавать
-    нечего, ссылки у покупателей будут пустые. «Хозяйство» последним: туда
-    заходят раз в жизни, когда заводят бота, и раз в месяц за копией базы.
+    Меню слева, а не вкладками сверху. Разделов больше четырёх, и вкладки уже
+    начали переноситься на вторую строку на узком окне; в столбце их можно
+    добавлять, ничего не ломая.
+
+    Порядок — это порядок работы. Ноды первыми: пока их нет, продавать нечего,
+    ссылки у покупателей будут пустые. «Хозяйство» ближе к концу: туда заходят
+    раз в жизни, когда заводят бота, и раз в месяц за копией базы.
   -->
-  <nav class="tabs">
-    <button data-tab="stats" class="active">Статистика</button>
-    <button data-tab="nodes">Ноды</button>
-    <button data-tab="users">Подписчики</button>
-    <button data-tab="keys">Хозяйство</button>
-    <button data-tab="look">Вид</button>
-  </nav>
+  <aside class="side">
+    <div class="brand">Marvia</div>
+    <nav class="tabs">
+      <button data-tab="stats" class="active"><i></i>Статистика</button>
+      <button data-tab="nodes"><i></i>Ноды</button>
+      <button data-tab="users"><i></i>Подписчики</button>
+      <button data-tab="keys"><i></i>Хозяйство</button>
+      <button data-tab="look"><i></i>Вид</button>
+    </nav>
+    <div class="side-foot">
+      <button id="refresh">Обновить</button>
+      <button id="logout">Выйти</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!--
+      Заголовок раздела всегда с подписью, и подпись живая: она отвечает на
+      вопрос «что тут сейчас», не заставляя читать таблицу. Пустая подпись —
+      это тоже ответ, поэтому строка не исчезает.
+    -->
+    <header class="page-head">
+      <h1 id="page-title">Статистика</h1>
+      <p id="summary"></p>
+    </header>
 
   <!--
     Статистика первой: панель открывают посмотреть, как идут дела, а не чинить.
@@ -620,6 +683,11 @@ input[type="range"] { padding: 0; background: transparent; border: 0; accent-col
     Она здесь потому, что панель — рабочее место продавца, а не наше: он
     смотрит в неё каждый день, и пусть смотрит в то, что ему приятно.
   -->
+  <!--
+    Вид. Единственная вкладка, которая ничего не делает с доступами и нодами.
+    Она здесь потому, что панель — рабочее место продавца, а не наше: он
+    смотрит в неё каждый день, и пусть смотрит в то, что ему приятно.
+  -->
   <section id="tab-look" hidden>
     <div class="card">
       <div class="card-head"><h2>Тема</h2>
@@ -632,73 +700,26 @@ input[type="range"] { padding: 0; background: transparent; border: 0; accent-col
     <div class="card">
       <h2>Настроить под себя</h2>
       <div class="knobs">
-        <label class="field"><span>Оттенок акцента</span>
-          <input type="range" id="look-hue" min="0" max="360" step="1">
-        </label>
-        <div class="knob"><span class="knob-name">Фон</span>
-          <div class="choice" id="look-backdrop" data-choice="backdrop">
-            <button data-value="flat">Плоский</button>
-            <button data-value="linear">Линейный</button>
-            <button data-value="radial">Радиальный</button>
-            <button data-value="glow">Сияние</button>
-          </div>
-        </div>
-        <div class="knob" id="look-dir-row"><span class="knob-name">Откуда светит</span>
-          <div class="choice compass" id="look-dir" data-choice="dir">
-            <button data-value="nw" title="сверху слева">↖</button>
-            <button data-value="n" title="сверху">↑</button>
-            <button data-value="ne" title="сверху справа">↗</button>
-            <button data-value="w" title="слева">←</button>
-            <button data-value="e" title="справа">→</button>
-            <button data-value="sw" title="снизу слева">↙</button>
-            <button data-value="s" title="снизу">↓</button>
-            <button data-value="se" title="снизу справа">↘</button>
-          </div>
-        </div>
-        <label class="field" id="look-tint-row"><span>Насыщенность свечения <b id="look-tint-val" class="mono"></b></span>
-          <input type="range" id="look-tint" min="0" max="100" step="1">
-        </label>
-        <label class="field" id="look-fade-row"><span>Затемнение дальней стороны <b id="look-fade-val" class="mono"></b></span>
-          <input type="range" id="look-fade" min="0" max="100" step="1">
-        </label>
-        <div class="knob"><span class="knob-name">Скругления</span>
-          <div class="choice" id="look-shape" data-choice="shape">
-            <button data-value="sharp">Острые</button>
-            <button data-value="soft">Мягкие</button>
-            <button data-value="round">Круглые</button>
-            <button data-value="drop">Капля</button>
-          </div>
+        <div class="knob"><span class="knob-name">Акцент</span>
+          <div class="choice swatches" id="look-accent"></div>
         </div>
         <div class="knob"><span class="knob-name">Плотность</span>
-          <div class="choice" id="look-density" data-choice="density">
-            <button data-value="tight">Плотно</button>
+          <div class="choice" data-choice="density">
+            <button data-value="compact">Плотно</button>
             <button data-value="normal">Обычно</button>
-            <button data-value="loose">Просторно</button>
+            <button data-value="roomy">Просторно</button>
           </div>
         </div>
         <div class="knob"><span class="knob-name">Шрифт</span>
-          <div class="choice" id="look-font" data-choice="font">
+          <div class="choice" data-choice="font">
             <button data-value="onest">Onest</button>
             <button data-value="manrope">Manrope</button>
             <button data-value="geologica">Geologica</button>
             <button data-value="spectral">Spectral</button>
           </div>
         </div>
-        <div class="knob"><span class="knob-name">Контраст текста</span>
-          <div class="choice" id="look-contrast" data-choice="contrast">
-            <button data-value="calm">Спокойный</button>
-            <button data-value="normal">Обычный</button>
-            <button data-value="sharp">Резкий</button>
-          </div>
-        </div>
-        <div class="knob"><span class="knob-name">Рамки карточек</span>
-          <div class="choice" id="look-borders" data-choice="borders">
-            <button data-value="on">Есть</button>
-            <button data-value="off">Нет</button>
-          </div>
-        </div>
         <div class="knob"><span class="knob-name">Анимации</span>
-          <div class="choice" id="look-motion" data-choice="motion">
+          <div class="choice" data-choice="motion">
             <button data-value="on">Есть</button>
             <button data-value="off">Нет</button>
           </div>
@@ -755,6 +776,8 @@ input[type="range"] { padding: 0; background: transparent; border: 0; accent-col
       <div id="apps-body"></div>
     </div>
   </section>
+
+  </main>
 </div>
 
 <dialog id="modal"><div id="modal-body"></div>
@@ -1603,22 +1626,48 @@ wireLook();
   перед экраном, а у продавца их может быть три.
 */
 
-const PRESETS = [
-  { id: "emerald",   name: "Изумруд",  hue: 158, sat: 58, mode: "dark",  brand: true },
-  { id: "jade",      name: "Нефрит",   hue: 172, sat: 46, mode: "dark" },
-  { id: "ice",       name: "Лёд",      hue: 196, sat: 62, mode: "dark" },
-  { id: "cobalt",    name: "Кобальт",  hue: 222, sat: 68, mode: "dark" },
-  { id: "plum",      name: "Слива",    hue: 278, sat: 52, mode: "dark" },
-  { id: "orchid",    name: "Орхидея",  hue: 306, sat: 54, mode: "dark" },
-  { id: "rose",      name: "Роза",     hue: 344, sat: 58, mode: "dark" },
-  { id: "embers",    name: "Угли",     hue: 16,  sat: 56, mode: "dark" },
-  { id: "amber",     name: "Янтарь",   hue: 38,  sat: 68, mode: "dark" },
-  { id: "citrus",    name: "Цитрус",   hue: 72,  sat: 58, mode: "dark" },
-  { id: "olive",     name: "Олива",    hue: 96,  sat: 40, mode: "dark" },
-  { id: "steel",     name: "Сталь",    hue: 214, sat: 22, mode: "dark" },
-  { id: "oled",      name: "OLED",     hue: 220, sat: 46, mode: "oled" },
-  { id: "day",       name: "Дневная",  hue: 222, sat: 62, mode: "light" },
-];
+/*
+  Тема взята из макета, а не придумана заново.
+
+  Пресет задаёт три цвета: фон, текст, акцент. Всё остальное — поверхности,
+  рамки, приглушённый текст, цвет надписи на акценте — выводится из них
+  расчётом. Держать в пресете десяток цветов значило бы, что восемь тем
+  неизбежно разъедутся: где-то рамка светлее поверхности, где-то приглушённый
+  текст сливается с фоном.
+
+  Два расчёта здесь делают то, чего на глаз не сделать.
+
+  readableDim подбирает приглушённый цвет так, чтобы он сохранял контраст 4.5
+  к обеим поверхностям. Это порог, ниже которого текст перестают читать люди
+  со слабым зрением и все остальные на плохом мониторе. Подбирается перебором
+  от «сильно приглушить» к «почти не приглушать»: берём первый, который
+  проходит.
+
+  bestOn выбирает цвет надписи на акценте по замеру контраста, а не по
+  предположению. Белым по янтарному — нечитаемо, а именно так и вышло бы,
+  если бы цвет был вписан в пресет руками.
+*/
+
+const PRESETS = {
+  emerald:  { label: "Изумруд",  bg: "#070d0b", fg: "#e6f5ef", acc: "#21c48a" },
+  steel:    { label: "Сталь",    bg: "#0c0e12", fg: "#f2f4f8", acc: "#f2f4f8" },
+  amber:    { label: "Янтарь",   bg: "#0e0b06", fg: "#f6efe2", acc: "#ffb347" },
+  ice:      { label: "Лёд",      bg: "#060b10", fg: "#e4f2fa", acc: "#4dc9ff" },
+  plum:     { label: "Слива",    bg: "#0a070e", fg: "#efe6fa", acc: "#b06cff" },
+  olive:    { label: "Олива",    bg: "#0a0c07", fg: "#eef2e2", acc: "#a8c256" },
+  oled:     { label: "OLED",     bg: "#000000", fg: "#ffffff", acc: "#4dffbe" },
+  daylight: { label: "Дневная",  bg: "#f2f4f8", fg: "#0c0e12", acc: "#0f7a58" },
+};
+
+// Плотность двигает скругление, внутренний отступ и зазор разом: по
+// отдельности они расходятся, и «плотно» получается плотным только местами.
+const DENSITY = {
+  compact: { r: 12, pad: 12, gap: 8 },
+  normal:  { r: 16, pad: 16, gap: 12 },
+  roomy:   { r: 22, pad: 20, gap: 16 },
+};
+
+const ACCENTS = ["#21c48a", "#4dc9ff", "#b06cff", "#ffb347"];
 
 const FONTS = {
   onest: 'Onest, system-ui, "Segoe UI", sans-serif',
@@ -1627,111 +1676,89 @@ const FONTS = {
   spectral: 'Spectral, Georgia, "Times New Roman", serif',
 };
 
-const SHAPES = { sharp: "3px", soft: "10px", round: "16px", drop: "22px" };
-const DENSITIES = { tight: 0.84, normal: 1, loose: 1.2 };
-
-// Контраст — это разница светлоты текста и фона. Двигаем текст, а не фон:
-// фон задаёт тему, а читаемость — задача текста.
-const CONTRASTS = { calm: -6, normal: 0, sharp: 7 };
-
-// Куда светит фон. Числа — это углы для линейного и точка для радиального.
-const DIRS = {
-  n:  { angle: 180, x: 50,  y: 0 },
-  ne: { angle: 225, x: 100, y: 0 },
-  e:  { angle: 270, x: 100, y: 50 },
-  se: { angle: 315, x: 100, y: 100 },
-  s:  { angle: 0,   x: 50,  y: 100 },
-  sw: { angle: 45,  x: 0,   y: 100 },
-  w:  { angle: 90,  x: 0,   y: 50 },
-  nw: { angle: 135, x: 0,   y: 0 },
-};
-
 const THEME_DEFAULT = {
   preset: "emerald",
-  hue: null,          // null — берём из пресета
-  backdrop: "glow",
-  dir: "nw",
-  tint: 42,
-  fade: 62,
-  shape: "soft",
+  accent: null,     // null — берём из пресета
   density: "normal",
   font: "onest",
-  contrast: "normal",
-  borders: "on",
   motion: "on",
 };
 
 let theme = { ...THEME_DEFAULT };
 
-function hsl(h, s, l) { return "hsl(" + h + " " + s + "% " + l + "%)"; }
+/* -------------------------------------------------------------- цвета */
 
-/*
-  palette собирает весь набор цветов из тона, насыщенности и режима.
+function hex(h) {
+  const v = h.replace("#", "");
+  const n = v.length === 3 ? v.split("").map((c) => c + c).join("") : v;
+  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+}
 
-  Нейтральные берут тот же тон, что и акцент, но с низкой насыщенностью — это
-  и есть разница между «серый» и «серый этой темы». Разброс светлот подобран
-  так, чтобы поверхность отличалась от фона на глаз, но не разваливала лист.
-*/
-function palette(hue, sat, mode, contrast) {
-  const c = CONTRASTS[contrast] || 0;
+function mix(a, b, t) {
+  const A = hex(a), B = hex(b);
+  return "#" + A.map((c, i) => Math.round(c + (B[i] - c) * t).toString(16).padStart(2, "0")).join("");
+}
 
-  if (mode === "light") {
-    return {
-      bg: hsl(hue, 18, 97), surface: hsl(hue, 30, 100), surface2: hsl(hue, 20, 94),
-      border: hsl(hue, 16, 87), text: hsl(hue, 24, Math.max(4, 15 - c)),
-      muted: hsl(hue, 12, 44), accent: hsl(hue, sat, 44),
-      accentSoft: hsl(hue, sat, 94), accentText: "#fff",
-      ok: hsl(148, 62, 30), warn: hsl(36, 82, 32), bad: hsl(354, 64, 44),
-      shadow: "0 1px 2px hsl(" + hue + " 22% 20% / .06), 0 10px 30px -14px hsl(" + hue + " 22% 20% / .22)",
-    };
+// Относительная яркость по формуле WCAG — та же, по которой считают контраст.
+function relLum(h) {
+  return hex(h)
+    .map((c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); })
+    .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+}
+
+function ratio(a, b) {
+  const x = relLum(a), y = relLum(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+// bestOn — чем писать поверх этого цвета: тёмным или белым.
+function bestOn(bg) {
+  return ratio("#08110d", bg) >= ratio("#ffffff", bg) ? "#08110d" : "#ffffff";
+}
+
+// readableDim приглушает текст ровно настолько, насколько можно без потери
+// читаемости: перебираем от сильного приглушения к слабому и берём первое,
+// что держит контраст 4.5 к каждой из поверхностей.
+function readableDim(fg, grounds) {
+  const tone = grounds[grounds.length - 1];
+  const ok = (c) => Math.min(...grounds.map((g) => ratio(c, g))) >= 4.5;
+
+  let t = 0.55;
+  let out = mix(fg, tone, t);
+  while (t > 0 && !ok(out)) {
+    t = Math.max(0, t - 0.04);
+    out = mix(fg, tone, t);
   }
+  return out;
+}
 
-  const deep = mode === "oled";
-  const bgL = deep ? 0 : 8;
-  const bgS = deep ? 0 : 16;
+function palette() {
+  const base = PRESETS[theme.preset] || PRESETS.emerald;
+  const acc = theme.accent || base.acc;
+  const dark = relLum(base.bg) < 0.5;
+  const over = dark ? "#ffffff" : "#000000";
+
+  const surf = mix(base.bg, over, 0.05);
+  const surf2 = mix(base.bg, over, 0.10);
+  const [r, g, b] = hex(acc);
 
   return {
-    bg: hsl(hue, bgS, bgL),
-    surface: hsl(hue, deep ? 12 : 15, deep ? 6 : 12),
-    surface2: hsl(hue, deep ? 12 : 14, deep ? 10 : 16),
-    border: hsl(hue, deep ? 12 : 13, deep ? 17 : 23),
-    text: hsl(hue, 18, Math.min(99, 92 + c)),
-    muted: hsl(hue, 12, 62),
-    accent: hsl(hue, sat, 66),
-    accentSoft: hsl(hue, sat, deep ? 12 : 16),
-    accentText: hsl(hue, 40, 8),
-    ok: hsl(152, 58, 56), warn: hsl(38, 76, 58), bad: hsl(354, 74, 68),
-    shadow: "0 1px 2px hsl(0 0% 0% / .34), 0 14px 34px -16px hsl(0 0% 0% / .62)",
+    bg: base.bg,
+    surface: surf,
+    surface2: surf2,
+    line: mix(base.bg, over, 0.16),
+    fg: base.fg,
+    dim: readableDim(base.fg, [surf, surf2]),
+    acc,
+    accFg: bestOn(acc),
+    accSoft: "rgba(" + r + "," + g + "," + b + ",0.13)",
+    dark,
   };
 }
 
-// backdrop рисует фон страницы поверх сплошного цвета.
-function backdrop(t, hue, sat, mode) {
-  if (t.backdrop === "flat") return "none";
-
-  const d = DIRS[t.dir] || DIRS.nw;
-  const light = mode === "light";
-
-  // Оттенок ближней стороны и темнота дальней — два ползунка человека.
-  const near = hsl(hue, Math.round(sat * (t.tint / 100)), light ? 92 : 14);
-  const far = light
-    ? "hsl(" + hue + " 10% " + (99 - t.fade * 0.12) + "%)"
-    : "hsl(" + hue + " 14% " + Math.max(0, 9 - t.fade * 0.08) + "%)";
-
-  if (t.backdrop === "linear") {
-    return "linear-gradient(" + d.angle + "deg, " + near + ", " + far + ")";
-  }
-  if (t.backdrop === "radial") {
-    return "radial-gradient(120% 90% at " + d.x + "% " + d.y + "%, " + near + ", " + far + ")";
-  }
-  // Сияние — пятно у края, дальше ровный фон. Мягче градиента во весь лист.
-  return "radial-gradient(60% 48% at " + d.x + "% " + d.y + "%, " + near + ", transparent 70%)";
-}
-
 function applyTheme() {
-  const preset = PRESETS.find((p) => p.id === theme.preset) || PRESETS[0];
-  const hue = theme.hue === null ? preset.hue : theme.hue;
-  const p = palette(hue, preset.sat, preset.mode, theme.contrast);
+  const p = palette();
+  const d = DENSITY[theme.density] || DENSITY.normal;
 
   const root = document.documentElement;
   const set = (k, v) => root.style.setProperty(k, v);
@@ -1739,28 +1766,33 @@ function applyTheme() {
   set("--bg", p.bg);
   set("--surface", p.surface);
   set("--surface-2", p.surface2);
-  set("--border", p.border);
-  set("--text", p.text);
-  set("--muted", p.muted);
-  set("--accent", p.accent);
-  set("--accent-soft", p.accentSoft);
-  set("--accent-text", p.accentText);
-  set("--ok", p.ok);
-  set("--warn", p.warn);
-  set("--bad", p.bad);
-  set("--shadow", p.shadow);
+  set("--border", p.line);
+  set("--text", p.fg);
+  set("--muted", p.dim);
+  set("--accent", p.acc);
+  set("--accent-soft", p.accSoft);
+  set("--accent-text", p.accFg);
+
+  // Свои цвета состояний темнеют и светлеют вместе с темой, иначе на
+  // «Дневной» зелёный «работает» светится как неон.
+  set("--ok", p.dark ? "#4ec27f" : "#0f7a4a");
+  set("--warn", p.dark ? "#f2a03d" : "#a4650a");
+  set("--bad", p.dark ? "#ef6b5b" : "#c0392b");
+  set("--shadow", p.dark
+    ? "0 1px 2px rgba(0,0,0,.4), 0 14px 34px -16px rgba(0,0,0,.66)"
+    : "0 1px 2px rgba(12,14,18,.06), 0 10px 30px -14px rgba(12,14,18,.2)");
+
+  set("--r-shape", d.r + "px");
+  set("--pad", d.pad + "px");
+  set("--gap", d.gap + "px");
+  set("--density", String(d.pad / 16));
 
   set("--font", FONTS[theme.font] || FONTS.onest);
-  set("--r-shape", SHAPES[theme.shape] || SHAPES.soft);
-  set("--density", String(DENSITIES[theme.density] || 1));
-  set("--card-border", theme.borders === "off" ? "0" : "1px");
-  set("--backdrop", backdrop(theme, hue, preset.sat, preset.mode));
+  set("--card-border", "1px");
+  set("--backdrop", "none");
 
   root.dataset.motion = theme.motion;
-
-  // Тёмная или светлая — говорим браузеру, чтобы полосы прокрутки и
-  // системные поля не остались из другого мира.
-  root.style.colorScheme = preset.mode === "light" ? "light" : "dark";
+  root.style.colorScheme = p.dark ? "dark" : "light";
 
   saveTheme();
 }
@@ -1780,23 +1812,21 @@ function renderPresets() {
   const box = $("look-presets");
   box.textContent = "";
 
-  PRESETS.forEach((preset) => {
-    const p = palette(preset.hue, preset.sat, preset.mode, "normal");
-
+  Object.entries(PRESETS).forEach(([key, preset]) => {
     const btn = document.createElement("button");
-    btn.className = "preset" + (preset.id === theme.preset ? " active" : "");
-    btn.style.setProperty("--dot-accent", p.accent);
-    btn.style.setProperty("--dot-bg", p.bg);
+    btn.className = "preset" + (key === theme.preset ? " active" : "");
+    btn.style.setProperty("--dot-accent", preset.acc);
+    btn.style.setProperty("--dot-bg", preset.bg);
 
     const dot = document.createElement("span");
     dot.className = "dot";
-    btn.append(dot, document.createTextNode(preset.name + (preset.brand ? " · наша" : "")));
+    btn.append(dot, document.createTextNode(preset.label));
 
     btn.addEventListener("click", () => {
-      theme.preset = preset.id;
-      // Смена пресета сбрасывает подобранный вручную тон: иначе человек
+      theme.preset = key;
+      // Смена темы сбрасывает подобранный вручную акцент: иначе человек
       // жмёт «Слива», получает прежний зелёный и решает, что сломалось.
-      theme.hue = null;
+      theme.accent = null;
       applyTheme();
       renderLook();
     });
@@ -1805,33 +1835,45 @@ function renderPresets() {
   });
 }
 
+function renderAccents() {
+  const box = $("look-accent");
+  box.textContent = "";
+
+  const base = PRESETS[theme.preset] || PRESETS.emerald;
+  const chosen = theme.accent || base.acc;
+
+  // Первым идёт акцент самой темы: «как было» должно быть выбором, а не
+  // отсутствием выбора.
+  const list = [base.acc, ...ACCENTS.filter((c) => c !== base.acc)];
+
+  list.forEach((color) => {
+    const btn = document.createElement("button");
+    btn.className = "swatch" + (color === chosen ? " active" : "");
+    btn.style.setProperty("--swatch", color);
+    btn.title = color === base.acc ? "как в теме" : color;
+    btn.addEventListener("click", () => {
+      theme.accent = color === base.acc ? null : color;
+      applyTheme();
+      renderLook();
+    });
+    box.append(btn);
+  });
+}
+
 function renderLook() {
   renderPresets();
+  renderAccents();
 
-  const preset = PRESETS.find((p) => p.id === theme.preset) || PRESETS[0];
-  $("look-hue").value = String(theme.hue === null ? preset.hue : theme.hue);
-  $("look-tint").value = String(theme.tint);
-  $("look-fade").value = String(theme.fade);
-  $("look-tint-val").textContent = theme.tint + "%";
-  $("look-fade-val").textContent = theme.fade + "%";
-
-  document.querySelectorAll("#tab-look .choice").forEach((row) => {
+  document.querySelectorAll("#tab-look .choice[data-choice]").forEach((row) => {
     const key = row.dataset.choice;
     row.querySelectorAll("button").forEach((b) => {
       b.classList.toggle("active", b.dataset.value === theme[key]);
     });
   });
-
-  // Направление и ползунки свечения бессмысленны на плоском фоне —
-  // прячем, а не показываем неработающими.
-  const flat = theme.backdrop === "flat";
-  $("look-dir-row").hidden = flat;
-  $("look-tint-row").hidden = flat;
-  $("look-fade-row").hidden = flat;
 }
 
 function wireLook() {
-  document.querySelectorAll("#tab-look .choice").forEach((row) => {
+  document.querySelectorAll("#tab-look .choice[data-choice]").forEach((row) => {
     row.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
       if (!btn) return;
@@ -1839,21 +1881,6 @@ function wireLook() {
       applyTheme();
       renderLook();
     });
-  });
-
-  $("look-hue").addEventListener("input", (e) => {
-    theme.hue = Number(e.target.value);
-    applyTheme();
-  });
-  $("look-tint").addEventListener("input", (e) => {
-    theme.tint = Number(e.target.value);
-    $("look-tint-val").textContent = theme.tint + "%";
-    applyTheme();
-  });
-  $("look-fade").addEventListener("input", (e) => {
-    theme.fade = Number(e.target.value);
-    $("look-fade-val").textContent = theme.fade + "%";
-    applyTheme();
   });
 
   $("look-reset").addEventListener("click", () => {
@@ -1867,9 +1894,20 @@ function wireLook() {
 loadTheme();
 applyTheme();
 
+// Название раздела и подпись под ним. Подпись у каждого своя: она отвечает
+// на вопрос «что тут сейчас», а не повторяет название другими словами.
+const PAGE_TITLES = {
+  stats: "Статистика",
+  nodes: "Ноды",
+  users: "Подписчики",
+  keys: "Хозяйство",
+  look: "Вид",
+};
+
 document.querySelectorAll(".tabs button").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b === btn));
+    $("page-title").textContent = PAGE_TITLES[btn.dataset.tab] || "";
     ["stats", "users", "nodes", "keys", "look"].forEach((name) => {
       $("tab-" + name).hidden = btn.dataset.tab !== name;
     });
