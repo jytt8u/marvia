@@ -145,6 +145,16 @@
   #veil .kinds { flex-direction: row; gap: 14px; flex-wrap: wrap; }
   #veil .kinds span { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg, #eaf5ee); }
   #veil .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  #veil .line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: var(--surf2, #1f2824);
+  }
+  #veil .line button { padding: 6px 10px; font-size: 12px; }
   #veil .note { font-size: 12px; line-height: 1.5; color: var(--dim, #6c8a76); }
   #veil button {
     padding: 11px 16px;
@@ -391,6 +401,13 @@
                   <div style="{{ emptyStyle }}">{{ emptyTable }}</div>
                 </sc-if>
               </div>
+              <sc-if value="{{ hasPages }}">
+                <div style="{{ pagerRow }}">
+                  <div style="{{ prevStyle }}" onClick="{{ prevPage }}">Назад</div>
+                  <div style="{{ pagerInfo }}">{{ pagerText }}</div>
+                  <div style="{{ nextStyle }}" onClick="{{ nextPage }}">Вперёд</div>
+                </div>
+              </sc-if>
             </div>
           </div>
         </sc-if>
@@ -677,6 +694,7 @@ const state = {
   keys: [],
   apps: null,
   q: "",
+  rowsPage: 1,
   loading: false,
   error: null,
 };
@@ -937,8 +955,50 @@ function userSheet(user) {
     ["Срок", user.expires_at ? shortDate(user.expires_at) + (left === null ? "" : " · " + left + " " + plural(left, "день", "дня", "дней")) : "бессрочно"],
     ["Израсходовано", bytes(user.used) + (user.traffic_limit ? " из " + bytes(user.traffic_limit) : " · без лимита")],
     ["Устройств", user.max_ips ? String(user.max_ips) : "без ограничения"],
-    ["Доступы", (user.credentials || []).map((c) => c.kind).join(", ") || "нет"],
   ].map(([k, v]) => el("div", { cls: "note", text: k + ": " + v }));
+
+  // Доступы — списком с отзывом поштучно.
+  //
+  // У одного покупателя их бывает несколько: наш vp1 на телефон и vless на
+  // старое приложение, которое он не хочет менять. Отзывать всё разом, когда
+  // утёк один, значит наказывать человека за чужую беду.
+  const creds = user.credentials || [];
+  facts.push(el("div", { cls: "note", text: creds.length ? "Доступы:" : "Доступов нет" }));
+  for (const c of creds) {
+    facts.push(el("div", { cls: "line" },
+      el("div", { cls: "note", text: c.kind + " · выдан " + shortDate(c.created_at) }),
+      btn("Отозвать", "bad", () => act(async () => {
+        const last = creds.length === 1;
+        const yes = await ask("Отозвать доступ " + c.kind + "?",
+          last
+            ? "Это единственный доступ покупателя — после отзыва он не подключится ничем, "
+              + "пока не выдашь новый. Сама запись и срок останутся."
+            : "Перестанет работать только он. Остальные доступы покупателя останутся живы.",
+          "Отозвать");
+        if (!yes) return;
+        await api("/api/v1/credentials/" + c.id, "DELETE");
+        closeSheet();
+        toast("Доступ отозван");
+        await loadAll();
+      }))));
+  }
+
+  // Выдать можно только то, чего ещё нет: второй vp1 у одного покупателя
+  // ничего не даёт, а в списке путается с первым.
+  const have = new Set(creds.map((c) => c.kind));
+  const missing = ["vp1", "vless", "trojan"].filter((k) => !have.has(k));
+  if (missing.length) {
+    const row = el("div", { cls: "row" });
+    for (const kind of missing) {
+      row.append(btn("+ " + kind, "", () => act(async () => {
+        const res = await api("/api/v1/users/" + user.id + "/credentials", "POST", { kind, label: "" });
+        await loadAll();
+        showLinks("Доступ " + kind + " выдан — отправь покупателю", res.links || {}, true);
+      })));
+    }
+    facts.push(el("div", { cls: "note", text: "Выдать ещё:" }));
+    facts.push(row);
+  }
 
   sheet(name, facts, [
     btn("+30 дней", "go", () => act(async () => {
@@ -1362,7 +1422,15 @@ const PAGES = {
   look:    ["Вид", "Тема панели · 27 готовых видов"],
 };
 
+// Сколько строк на странице. Полсотни — столько влезает в экран прокруткой и
+// столько человек ещё готов просмотреть глазами, не листая.
+const ROWS = 50;
+
 function setState(patch) {
+  // Смена раздела или запроса сбрасывает лист. Иначе продавец, стоявший на
+  // четвёртой странице, ищет одного человека и видит «никого нет»: найденных
+  // трое, а он смотрит на четвёртую полусотню.
+  if ("page" in patch || "q" in patch) state.rowsPage = 1;
   Object.assign(state, patch);
   if ("preset" in patch || "acc" in patch || "density" in patch) saveLook();
   render();
@@ -1532,7 +1600,17 @@ function renderVals() {
   const tableCols = tbl.cols;
   const tableHead = "display:grid;grid-template-columns:" + tbl.grid
     + ";gap:12px;padding:0 12px;font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:.14em;color:" + t.dim;
-  const tableRows = tbl.rows.map((r, idx) => {
+  // Постраничность. Рисовать тысячу строк разом браузер умеет, но человек их
+  // не читает, а прокрутка перестаёт быть навигацией.
+  const totalRows = tbl.rows.length;
+  const lastPage = Math.max(1, Math.ceil(totalRows / ROWS));
+  // Лист мог уехать за конец: покупателя удалили, найденных стало меньше.
+  const curPage = Math.min(state.rowsPage, lastPage);
+  const from = (curPage - 1) * ROWS;
+  const pageRows = tbl.rows.slice(from, from + ROWS);
+
+  const tableRows = pageRows.map((r, i) => {
+    const idx = from + i;
     const st = r[r.length - 1], cells = r.slice(0, -1);
     const col = st === "ok" ? t.acc : st === "warn" ? t.warn : t.dim;
     const soft = st === "ok" ? t.accSoft : st === "warn" ? "rgba(242,160,61,.13)" : t.surf;
@@ -1773,6 +1851,17 @@ function renderVals() {
     pageKpis, tableCols, tableHead, tableRows,
     noTableRows: tableRows.length === 0,
     emptyTable: tbl.empty,
+
+    hasPages: totalRows > ROWS,
+    pagerText: (from + 1) + "–" + Math.min(from + ROWS, totalRows) + " из " + totalRows,
+    prevPage: curPage > 1 ? () => setState({ rowsPage: curPage - 1 }) : null,
+    nextPage: curPage < lastPage ? () => setState({ rowsPage: curPage + 1 }) : null,
+    pagerRow: "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px",
+    pagerInfo: "font-family:JetBrains Mono,monospace;font-size:11px;color:" + t.dim,
+    prevStyle: "padding:7px 14px;border-radius:" + d.r + "px;font-size:12px;background:" + t.surf2
+      + ";color:" + (curPage > 1 ? t.fg : t.dim) + (curPage > 1 ? ";cursor:pointer" : ";opacity:.45"),
+    nextStyle: "padding:7px 14px;border-radius:" + d.r + "px;font-size:12px;background:" + t.surf2
+      + ";color:" + (curPage < lastPage ? t.fg : t.dim) + (curPage < lastPage ? ";cursor:pointer" : ";opacity:.45"),
 
     nodeCards,
     dayBars, shareRows,
