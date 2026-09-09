@@ -778,7 +778,7 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 		}
 		views = append(views, nodeView{
 			ID: n.ID, Name: n.Name, Country: n.Country, Address: n.Address, SNI: n.SNI,
-			PublicKey: n.PublicKey, Link: VeilNodeLink(n),
+			PublicKey: n.PublicKey, Link: NodeLink(n),
 			WSPath:           n.WSPath,
 			QUIC:             n.QUIC,
 			RealityPublicKey: n.RealityPublicKey,
