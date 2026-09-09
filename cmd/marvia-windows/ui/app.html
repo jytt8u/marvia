@@ -87,6 +87,7 @@
   }
   body[data-state="connected"] .glow { background: radial-gradient(circle, rgba(33,196,138,.22) 0%, rgba(33,196,138,0) 62%); opacity: 1; }
   body[data-state="failed"] .glow { background: radial-gradient(circle, rgba(239,91,107,.18) 0%, rgba(239,91,107,0) 62%); opacity: 1; }
+  body[data-state="stalled"] .glow { background: radial-gradient(circle, rgba(242,160,61,.18) 0%, rgba(242,160,61,0) 62%); opacity: 1; }
 
   .page { display: none; flex: 1; min-height: 0; flex-direction: column; padding: 26px 32px 28px; position: relative; }
   .page[data-open] { display: flex; }
@@ -121,6 +122,15 @@
     box-shadow: 0 0 0 10px rgba(239,91,107,.10), 0 0 54px rgba(239,91,107,.32);
   }
   .power[data-state="failed"] svg { color: #fff; }
+
+  /* Связь потеряна — янтарный, а не красный: туннель поднят, и это не то же
+     самое, что «не подключилось». Разный цвет говорит это без слов. */
+  .power[data-state="stalled"] {
+    background: linear-gradient(160deg, #f5b942 0%, #d98a1f 100%);
+    border-color: rgba(255,255,255,.2);
+    box-shadow: 0 0 0 10px rgba(242,160,61,.10), 0 0 54px rgba(242,160,61,.32);
+  }
+  .power[data-state="stalled"] svg { color: #fff; }
 
   .power[data-state="connecting"] { animation: breathe 1.5s ease-in-out infinite; }
   @keyframes breathe {
@@ -500,6 +510,7 @@ const titles = {
   connecting: "Подключаюсь",
   connected: "Подключено",
   failed: "Не подключилось",
+  stalled: "Связь потеряна",
 };
 
 let prev = null;
@@ -529,8 +540,13 @@ function render(s) {
   document.body.dataset.state = s.state;
   $("status").textContent = titles[s.state] || s.state;
   $("power").dataset.state = s.state;
-  $("power").disabled = s.state === "connecting" || !s.elevated;
-  $("power").title = s.state === "connected" ? "Отключиться" : "Подключиться";
+  // Во время подключения кнопка была заблокирована, а обработчик отмену умел:
+  // человек полторы минуты смотрел на замершее окно и не мог ничего сделать.
+  $("power").disabled = !s.elevated;
+  $("power").title =
+    s.state === "connecting" ? "Отменить"
+    : s.state === "connected" || s.state === "stalled" ? "Отключиться"
+    : "Подключиться";
   $("elev-warn").hidden = s.elevated;
 
   const detail = $("detail");
@@ -539,9 +555,10 @@ function render(s) {
   if (s.state === "connecting" || s.state === "connected") complaint = null;
 
   const said = complaintNow();
-  detail.classList.toggle("bad", s.state === "failed" || said !== null);
+  detail.classList.toggle("bad", s.state === "failed" || s.state === "stalled" || said !== null);
   if (said !== null) detail.textContent = said;
   else if (s.state === "failed") detail.textContent = s.reason || "причина неизвестна";
+  else if (s.state === "stalled") detail.textContent = s.reason || "нода перестала отвечать";
   else if (s.state === "connecting") detail.textContent = "выбираю самую быструю ноду";
   else if (s.state === "connected") detail.textContent = "весь трафик компьютера идёт через туннель";
   else if (!s.has_account) detail.textContent = "вставь ключ доступа, его присылает бот после оплаты";

@@ -29,6 +29,33 @@ const (
 	StateConnecting State = "connecting"
 	StateConnected  State = "connected"
 	StateFailed     State = "failed"
+
+	// StateStalled — туннель поднят, но нода перестала отвечать.
+	//
+	// Отдельное состояние, а не «не подключилось»: туннель на месте, маршруты
+	// стоят, и разница для человека принципиальная — «нажми ещё раз» против
+	// «сейчас ничего не работает и вот почему».
+	StateStalled State = "stalled"
+)
+
+// Как сторож проверяет, что нода жива.
+const (
+	// Раз в полминуты: чаще — лишний трафик и лишние потоки на ноде, реже —
+	// человек успевает решить, что сломался его интернет.
+	watchEvery = 30 * time.Second
+
+	// Дольше этого ответа не ждём: живая нода отвечает за доли секунды, а
+	// мёртвая не ответит и за минуту.
+	watchTimeout = 8 * time.Second
+
+	// Сколько проверок подряд должны провалиться. Одиночный промах — это
+	// моргнувший Wi-Fi, и объявлять по нему разрыв значит приучить не верить
+	// надписи вовсе.
+	watchMisses = 3
+
+	// Сколько байт просим на проверку. Килобайт раз в полминуты — три
+	// мегабайта в сутки; за правдивую надпись это недорого.
+	watchSample = 1024
 )
 
 // Status — всё, что показывает окно.
@@ -180,7 +207,9 @@ func (c *Controller) SetAccount(link string) error {
 // Connect поднимает туннель.
 func (c *Controller) Connect() error {
 	c.mu.Lock()
-	if c.state == StateConnecting || c.state == StateConnected {
+	// StateStalled сюда же: туннель поднят, просто нода молчит. Поднимать
+	// второй поверх первого нельзя — адаптер и маршруты уже заняты.
+	if c.state == StateConnecting || c.state == StateConnected || c.state == StateStalled {
 		c.mu.Unlock()
 		return nil
 	}
@@ -307,7 +336,85 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 	c.mu.Unlock()
 
 	c.log.add("туннель поднят: весь трафик идёт через %s", node.Name)
+
+	// Сторож живёт на том же контексте, что и подключение: «отключиться»
+	// гасит и его, отдельного выключателя заводить не надо.
+	go c.watch(ctx, dialer)
 	return nil
+}
+
+// watch следит, что нода всё ещё отвечает.
+//
+// Состояние «подключено» ставилось один раз и больше не проверялось: нода
+// умирала, а окно оставалось зелёным. Человек в это время перезагружает
+// роутер и звонит провайдеру — виноватым оказывается кто угодно, кроме нас.
+//
+// Проверяем тем же замером, каким выбирали ноду: он проходит весь путь —
+// сессия, поток, ответ ноды, — и потому ловит не только оборванный провод, но
+// и ноду, которая жива, а обслуживать перестала.
+func (c *Controller) watch(ctx context.Context, dialer *client.Dialer) {
+	ticker := time.NewTicker(watchEvery)
+	defer ticker.Stop()
+
+	misses := 0
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+
+		probe, cancel := context.WithTimeout(ctx, watchTimeout)
+		_, err := dialer.MeasureFetch(probe, watchSample)
+		cancel()
+
+		// Отключились, пока шла проверка: её итог уже никого не касается.
+		if ctx.Err() != nil {
+			return
+		}
+
+		if err == nil {
+			if misses >= watchMisses {
+				c.log.add("нода снова отвечает")
+				c.unstall()
+			}
+			misses = 0
+			continue
+		}
+
+		misses++
+		if misses != watchMisses {
+			continue
+		}
+
+		c.log.add("нода не отвечает на %d проверки подряд: %v", watchMisses, err)
+		c.stall("нода не отвечает — туннель поднят, но трафик через неё не идёт")
+	}
+}
+
+// stall говорит, что связь потеряна, но туннель не разбирает.
+//
+// Разобрать было бы соблазнительно — «всё равно не работает», — но тогда
+// маршруты снимутся, и трафик пойдёт мимо туннеля открыто ровно в тот момент,
+// когда человек об этом не знает. Для средства обхода блокировок это хуже,
+// чем отсутствие связи. Пусть не работает ничего, но видно, что именно.
+func (c *Controller) stall(reason string) {
+	c.mu.Lock()
+	if c.state == StateConnected {
+		c.state = StateStalled
+		c.reason = reason
+	}
+	c.mu.Unlock()
+}
+
+// unstall возвращает надпись обратно, когда нода ожила.
+func (c *Controller) unstall() {
+	c.mu.Lock()
+	if c.state == StateStalled {
+		c.state = StateConnected
+		c.reason = ""
+	}
+	c.mu.Unlock()
 }
 
 // Disconnect убирает туннель и всё, что под него настраивалось.
