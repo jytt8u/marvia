@@ -20,7 +20,7 @@ param(
     [string]$Tag,
 
     # Репозиторий сборок. Открытый: покупатель качает без токенов и логинов.
-    [string]$Repo = 'jytt8u/marvia-releases',
+    [string]$Repo = 'jytt8u/marvia',
 
     # Пропустить пересборку ядра на Go — она долгая и нужна, только когда
     # менялся Go, а не Kotlin.
