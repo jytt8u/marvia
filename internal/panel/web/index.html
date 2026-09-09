@@ -256,6 +256,17 @@
           </sc-if>
         </div>
 
+        <!--
+          Поиск. Таблица рисует всех разом, и на трёхстах покупателях глазами
+          нужного не найти. Ищем по тому, что продавец помнит: по метке и по
+          внешнему номеру, под которым покупатель заведён у бота.
+        -->
+        <sc-if value="{{ hasSearch }}">
+          <input id="q" type="text" style="{{ searchStyle }}" value="{{ q }}"
+                 placeholder="Поиск по имени или номеру у бота" autocomplete="off" spellcheck="false"
+                 onInput="{{ doSearch }}">
+        </sc-if>
+
         <sc-if value="{{ hasError }}">
           <div style="{{ errStyle }}">{{ errText }}</div>
         </sc-if>
@@ -462,6 +473,42 @@
           </div>
         </sc-if>
 
+        <!--
+          Приложения. Покупатель качает их с домена панели, а не из магазина:
+          в августе 2026 провайдеры начали рубить загрузку из Google Play и
+          App Store, и ссылка «скачай приложение» отваливается раньше всего
+          остального — до того, как человек заплатил.
+
+          Продавцу нужен ответ на вопрос «почему покупателю не пришла ссылка
+          на приложение». Ответ здесь: либо файл лежит, либо нет.
+        -->
+        <sc-if value="{{ isAppsPage }}">
+          <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--gap, 12px);">
+            <sc-for list="{{ appCards }}" as="ap">
+              <div style="{{ ap.style }}">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                  <div style="font-size: 16px; font-weight: 600; color: var(--fg);">{{ ap.title }}</div>
+                  <div style="{{ ap.badge }}">{{ ap.state }}</div>
+                </div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ ap.file }}</div>
+                <div style="display: flex; gap: 18px; flex-wrap: wrap;">
+                  <div style="display: flex; flex-direction: column; gap: 3px;">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">РАЗМЕР</div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--fg);">{{ ap.size }}</div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">SHA256</div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--fg); overflow: hidden; text-overflow: ellipsis;">{{ ap.sum }}</div>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ appsHint }}">
+              <div style="{{ hintBox }}">{{ appsHintText }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
+
         <sc-if value="{{ isLook }}">
           <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--gap, 12px); overflow: hidden;">
             <div style="display: flex; align-items: center; gap: 14px; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line);">
@@ -581,12 +628,16 @@ function buildInto(source, target, scope) {
       const name = attr.name;
       const value = attr.value;
 
-      if (name.toLowerCase() === "onclick") {
+      // Любой on* — слушателем. Атрибутом с кодом строкой политика его не
+      // пустит, и правильно сделает: страница с админским токеном не должна
+      // уметь выполнять то, что попало в разметку.
+      const low = name.toLowerCase();
+      if (low.startsWith("on")) {
         const m = WHOLE_BINDING.exec(value);
         const fn = m ? resolvePath(m[1], scope) : null;
         if (typeof fn === "function") {
-          el.style.cursor = "pointer";
-          el.addEventListener("click", fn);
+          if (low === "onclick") el.style.cursor = "pointer";
+          el.addEventListener(low.slice(2), fn);
         }
         continue;
       }
@@ -623,6 +674,9 @@ const state = {
   users: [],
   nodes: [],
   stats: null,
+  keys: [],
+  apps: null,
+  q: "",
   loading: false,
   error: null,
 };
@@ -654,16 +708,18 @@ async function loadAll() {
   state.error = null;
   render();
   try {
-    const [users, nodes, stats, keys] = await Promise.all([
+    const [users, nodes, stats, keys, apps] = await Promise.all([
       api("/api/v1/users"),
       api("/api/v1/nodes"),
       api("/api/v1/stats?days=30"),
       api("/api/v1/keys"),
+      api("/api/v1/apps"),
     ]);
     state.users = (users && users.users) || [];
     state.nodes = (nodes && nodes.nodes) || [];
     state.stats = stats || null;
     state.keys = (keys && keys.keys) || [];
+    state.apps = apps || null;
   } catch (err) {
     state.error = err.message;
   } finally {
@@ -1302,6 +1358,7 @@ const PAGES = {
   keys:    ["Ключи ботов", ""],
   nodes:   ["Ноды", ""],
   stats:   ["Статистика", "Трафик за 30 дней"],
+  apps:    ["Приложения", ""],
   look:    ["Вид", "Тема панели · 27 готовых видов"],
 };
 
@@ -1343,14 +1400,26 @@ function renderVals() {
   }).length;
   const liveNodes = nodes.filter(nodeAlive).length;
 
+  // Показатели считаем по всем: поиск — это способ найти одного, а не
+  // основание врать про то, сколько у продавца покупателей.
+  const q = state.q.trim().toLowerCase();
+  const shown = q
+    ? users.filter((u) => ((u.label || "") + " " + (u.external_id || "") + " #" + u.id).toLowerCase().includes(q))
+    : users;
+
   const subFor = {
     dash: "Обзор за 30 дней",
-    clients: users.length + " " + plural(users.length, "клиент", "клиента", "клиентов")
+    clients: q
+      ? "найдено " + shown.length + " из " + users.length
+      : users.length + " " + plural(users.length, "клиент", "клиента", "клиентов")
       + " · " + activeUsers + " активных",
     keys: "Токены для ботов и интеграций",
     nodes: nodes.length + " " + plural(nodes.length, "нода", "ноды", "нод")
       + " · " + liveNodes + " на связи",
     stats: "Трафик за 30 дней · " + bytes(total),
+    apps: (((state.apps && state.apps.apps) || []).length === 0
+      ? "ничего не выложено"
+      : "покупатель качает их с домена панели, а не из магазина"),
     look: "Тема панели · 27 готовых видов",
   };
 
@@ -1436,15 +1505,15 @@ function renderVals() {
     clients: {
       cols: ["КЛИЕНТ", "КЛЮЧ", "ДО", "УСТРОЙСТВ", "ТРАФИК", "СТАТУС"],
       grid: "2fr 1.4fr 1.2fr 1fr 1fr 0.9fr",
-      rows: users.map((u) => {
+      rows: shown.map((u) => {
         const [status, st] = clientStatus(u);
         return [u.label || ("#" + u.id), keyShort(u), shortDate(u.expires_at),
           String(u.max_ips || "—"), bytes(u.used), status, st];
       }),
-      empty: "Ни одного клиента. Заводи кнопкой сверху или через бота.",
+      empty: q ? "По запросу никого нет." : "Ни одного клиента. Заводи кнопкой сверху или через бота.",
       // Строка открывает карточку подписчика. Индекс тот же, что у rows:
-      // список строится из users одним проходом.
-      onRow: (i) => () => userSheet(users[i]),
+      // список строится из shown одним проходом.
+      onRow: (i) => () => userSheet(shown[i]),
     },
     keys: {
       cols: ["ИМЯ", "ПРАВА", "СОЗДАН", "ПОСЛЕДНИЙ ВХОД", "СТАТУС"],
@@ -1594,6 +1663,23 @@ function renderVals() {
   const ghostBtn = "padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;color:" + t.dim
     + ";background:" + t.surf2;
 
+  // ── приложения ───────────────────────────────────────────────────────────
+  const APP_TITLES = { android: "Android", windows: "Windows" };
+  const laid = ((state.apps && state.apps.apps) || []);
+  const appCards = laid.map((ap) => ({
+    title: APP_TITLES[ap.name] || ap.name,
+    file: ap.file,
+    size: bytes(ap.size),
+    // Половины отпечатка хватает, чтобы сверить с тем, что скачивал, и она
+    // влезает в строку. Целиком он всё равно нечитаем глазами.
+    sum: (ap.sha256 || "").slice(0, 16) + "…",
+    state: "ВЫЛОЖЕНО",
+    style: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf
+      + ";border:1px solid " + t.line + ";display:flex;flex-direction:column;gap:12px",
+    badge: "flex:none;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
+      + t.acc + ";background:" + t.accSoft,
+  }));
+
   // ── с чего начать ────────────────────────────────────────────────────────
   //
   // Путь от пустой панели до первой продажи — три шага, и до сих пор нигде не
@@ -1655,7 +1741,24 @@ function renderVals() {
     isTable: page === "clients" || page === "keys",
     isNodesPage: page === "nodes",
     isStatsPage: page === "stats",
+    isAppsPage: page === "apps",
     isLook: page === "look",
+
+    // Поиск нужен там, где список длинный и растёт. У нод и ключей их
+    // единицы — поле поиска над тремя строками только мешает.
+    hasSearch: page === "clients",
+    q: state.q,
+    doSearch: (e) => setState({ q: e.target.value }),
+    searchStyle: "width:100%;padding:10px 12px;border-radius:" + d.r + "px;background:" + t.surf
+      + ";border:1px solid " + t.line + ";color:" + t.fg
+      + ";font-family:Onest,system-ui,sans-serif;font-size:13px;outline:none",
+
+    appCards,
+    appsHint: laid.length === 0,
+    appsHintText: (state.apps && state.apps.hint)
+      || "Приложения пока не выложены: покупателям их раздаёт сама панель со своего домена.",
+    hintBox: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf
+      + ";border:1px solid " + t.line + ";font-size:13px;line-height:1.5;color:" + t.dim,
 
     kpis, lolli, nodes: dashNodes, clients, dashHead,
     totalTraffic: bytes(total),
@@ -1692,9 +1795,25 @@ function render() {
   app.classList.toggle("busy", state.loading);
   document.body.style.background = theme().bg;
 
+  // Перерисовка собирает разметку заново, а значит поле поиска — уже другой
+  // элемент, и набор текста терял бы фокус на каждой букве. Запоминаем, где
+  // стоял курсор, и возвращаем его в новое поле.
+  const old = document.getElementById("q");
+  const hadFocus = old && document.activeElement === old;
+  const caret = hadFocus ? old.selectionStart : null;
+
   const frag = document.createDocumentFragment();
   buildInto(shell.content, frag, vals);
   app.replaceChildren(frag);
+
+  if (hadFocus) {
+    const next = document.getElementById("q");
+    if (next) {
+      next.focus();
+      const at = caret == null ? next.value.length : caret;
+      next.setSelectionRange(at, at);
+    }
+  }
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
