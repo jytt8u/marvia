@@ -69,7 +69,7 @@ func ParseAccountLink(link string) (Account, error) {
 
 	parsed, err := url.Parse(link)
 	if err != nil {
-		return Account{}, fmt.Errorf("ссылка не разбирается: %w", err)
+		return Account{}, fmt.Errorf("ссылка не разбирается: %w", withoutLink(err))
 	}
 	if parsed.Scheme != AccountScheme && parsed.Scheme != LegacyAccountScheme {
 		return Account{}, fmt.Errorf("ожидалась схема %s://, получено %q", AccountScheme, parsed.Scheme)

@@ -65,7 +65,7 @@ func SendReports(ctx context.Context, subURL string, reports []Report) error {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("отправка отчётов: %w", err)
+		return fmt.Errorf("отправка отчётов: %w", withoutSecret(err))
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
