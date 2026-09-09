@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // version подставляется при сборке: -ldflags "-X main.version=v0.1.0".
@@ -49,7 +49,7 @@ func main() {
 		// Ключ тот же самый по сути — X25519, — но роли у сторон другие,
 		// и путать их дорого: приватный ключ REALITY на ноде и приватный
 		// ключ клиента живут в разных местах.
-		fmt.Println("Приватный ключ — ноде:      -reality-key или VEIL_REALITY_KEY")
+		fmt.Println("Приватный ключ — ноде:      -reality-key или MARVIA_REALITY_KEY")
 		fmt.Println("Публичный ключ — клиентам:  параметр pbk в ссылке")
 		fmt.Println()
 		fmt.Println("Это обычная пара X25519, совместимая с тем, что выдаёт xray x25519.")

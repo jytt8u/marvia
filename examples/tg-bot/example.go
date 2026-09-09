@@ -6,7 +6,7 @@ package main
 // три строки сверху и цены, остальное работает как есть. Всё, что можно было
 // решить за него, уже решено.
 const ExampleConfig = `{
-  "telegram_token": "укажи токен от @BotFather или задай VEIL_BOT_TOKEN",
+  "telegram_token": "укажи токен от @BotFather или задай MARVIA_BOT_TOKEN",
   "panel": "https://panel.example.com",
   "panel_key": "vk_ключ_с_правом_users",
 

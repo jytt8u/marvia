@@ -30,11 +30,11 @@ val releaseKeys = Properties().apply {
 }
 
 android {
-    namespace = "io.veil.android"
+    namespace = "io.marvia.android"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "io.veil.android"
+        applicationId = "io.marvia.android"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -114,7 +114,7 @@ android {
 
 dependencies {
     // Ядро: тот же код на Go, что работает на сервере и на настольной машине.
-    implementation(files("libs/veil.aar"))
+    implementation(files("libs/marvia.aar"))
 
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.core:core-ktx:1.15.0")

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/veilproject/veil/internal/panel"
+	"github.com/jytt8u/marvia/internal/panel"
 )
 
 // Приложения раздаёт сама панель.

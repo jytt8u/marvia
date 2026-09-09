@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/veilproject/veil/internal/transport"
-	"github.com/veilproject/veil/internal/tunnel"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/transport"
+	"github.com/jytt8u/marvia/internal/tunnel"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // Dialer держит соединение до одной ноды и раздаёт потоки до целей.
