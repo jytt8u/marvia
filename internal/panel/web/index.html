@@ -103,6 +103,93 @@
 
   #app { height: 100%; }
   #app.busy { opacity: .55; }
+
+  /* Окно поверх панели. Цвета берутся из темы переменными, поэтому оно
+     перекрашивается вместе с ней и не выпадает из выбранного вида. */
+  #veil {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, .55);
+  }
+  #veil .sheet {
+    width: 100%;
+    max-width: 460px;
+    max-height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+    border-radius: var(--r, 16px);
+    background: var(--surf, #0c1a11);
+    border: 1px solid var(--line, #1c2e21);
+    color: var(--fg, #eaf5ee);
+  }
+  #veil h2 { font-size: 18px; font-weight: 700; }
+  #veil label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--dim, #6c8a76); }
+  #veil input[type=text], #veil input[type=number] {
+    padding: 11px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line, #1c2e21);
+    background: var(--bg, #05100a);
+    color: var(--fg, #eaf5ee);
+    font-family: Onest, system-ui, sans-serif;
+    font-size: 14px;
+  }
+  #veil input:focus { outline: none; border-color: var(--acc, #46e07a); }
+  #veil .kinds { flex-direction: row; gap: 14px; flex-wrap: wrap; }
+  #veil .kinds span { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg, #eaf5ee); }
+  #veil .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  #veil .note { font-size: 12px; line-height: 1.5; color: var(--dim, #6c8a76); }
+  #veil button {
+    padding: 11px 16px;
+    border-radius: 10px;
+    border: none;
+    font-family: Onest, system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--surf2, #1f2824);
+    color: var(--fg, #eaf5ee);
+  }
+  #veil button.go { background: var(--acc, #46e07a); color: var(--accFg, #05130b); }
+  #veil button.bad { background: rgba(242, 160, 61, .16); color: #f2a03d; }
+  #veil pre {
+    margin: 0;
+    padding: 11px 12px;
+    border-radius: 10px;
+    background: var(--bg, #05100a);
+    border: 1px solid var(--line, #1c2e21);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--fg, #eaf5ee);
+  }
+
+  /* Сообщение о результате. Внизу справа, само уходит: действия здесь
+     короткие, и требовать закрывать каждое подтверждение — издевательство. */
+  #toast {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 30;
+    max-width: 380px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    background: var(--surf2, #1f2824);
+    color: var(--fg, #eaf5ee);
+    border: 1px solid var(--line, #1c2e21);
+  }
+  #toast.bad { background: rgba(242, 160, 61, .16); color: #f2a03d; border-color: #f2a03d; }
 </style>
 </head>
 <body>
@@ -163,6 +250,9 @@
             <div style="font-size: 25px; font-weight: 700; color: var(--fg, #eaf5ee);">{{ pageTitle }}</div>
             <div style="font-size: 13px; color: var(--dim, #6c8a76); margin-top: 3px;">{{ pageSub }}</div>
           </div>
+          <sc-if value="{{ hasCta }}">
+            <div style="{{ ctaStyle }}" onClick="{{ doCta }}">{{ pageCta }}</div>
+          </sc-if>
         </div>
 
         <sc-if value="{{ hasError }}">
@@ -221,7 +311,7 @@
                 <div>КЛИЕНТ</div><div>КЛЮЧ</div><div>ДО</div><div>ТРАФИК</div><div>СТАТУС</div>
               </div>
               <sc-for list="{{ clients }}" as="c">
-                <div style="{{ c.rowStyle }}">
+                <div style="{{ c.rowStyle }}" onClick="{{ c.onClick }}">
                   <div style="font-size: 13px; color: var(--fg, #eaf5ee); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.name }}</div>
                   <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim, #6c8a76);">{{ c.key }}</div>
                   <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim, #6c8a76);">{{ c.until }}</div>
@@ -255,7 +345,7 @@
               </div>
               <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
                 <sc-for list="{{ tableRows }}" as="row">
-                  <div style="{{ row.style }}">
+                  <div style="{{ row.style }}" onClick="{{ row.onClick }}">
                     <sc-for list="{{ row.cells }}" as="cell">
                       <div style="{{ cell.style }}">{{ cell.text }}</div>
                     </sc-for>
@@ -512,12 +602,21 @@ const state = {
   error: null,
 };
 
-async function api(path) {
-  const res = await fetch(path, { headers: { Authorization: "Bearer " + state.token } });
+async function api(path, method, body) {
+  const res = await fetch(path, {
+    method: method || "GET",
+    headers: Object.assign(
+      { Authorization: "Bearer " + state.token },
+      body ? { "Content-Type": "application/json" } : {}
+    ),
+    body: body ? JSON.stringify(body) : undefined,
+  });
   if (res.status === 401) {
     logout();
     throw new Error("токен не подошёл");
   }
+  if (res.status === 204) return null;
+
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { /* не JSON */ }
@@ -554,6 +653,241 @@ function logout() {
   document.getElementById("app").hidden = true;
   document.getElementById("login").hidden = false;
   document.getElementById("login-token").value = "";
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Окна и сообщения
+
+   В дизайне их нет: холст рисовал экраны, а не диалоги. Поэтому собраны здесь
+   вручную, но целиком на переменных темы — окно перекрашивается вместе с
+   панелью и не выпадает из выбранного вида.
+   ──────────────────────────────────────────────────────────────────────── */
+
+function el(tag, opts, ...kids) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(opts || {})) {
+    if (k === "text") node.textContent = v;
+    else if (k === "cls") node.className = v;
+    else if (k === "on") for (const [ev, fn] of Object.entries(v)) node.addEventListener(ev, fn);
+    else node.setAttribute(k, v);
+  }
+  for (const kid of kids) if (kid) node.append(kid);
+  return node;
+}
+
+let toastTimer = null;
+function toast(text, bad) {
+  const old = document.getElementById("toast");
+  if (old) old.remove();
+  clearTimeout(toastTimer);
+
+  const box = el("div", { id: "toast", cls: bad ? "bad" : "", text });
+  document.body.append(box);
+  toastTimer = setTimeout(() => box.remove(), bad ? 6000 : 3200);
+}
+
+// closeSheet и sheet держат ровно одно окно: два наложенных друг на друга —
+// верный способ нажать «удалить» не там, где смотришь.
+function closeSheet() {
+  const old = document.getElementById("veil");
+  if (old) old.remove();
+}
+
+function sheet(title, body, buttons) {
+  closeSheet();
+
+  const box = el("div", { cls: "sheet" }, el("h2", { text: title }));
+  for (const part of body) box.append(part);
+  if (buttons && buttons.length) {
+    const row = el("div", { cls: "row" });
+    for (const b of buttons) row.append(b);
+    box.append(row);
+  }
+
+  const veil = el("div", { id: "veil", on: { click: (e) => { if (e.target === veil) closeSheet(); } } }, box);
+  // Тема живёт переменными на #app, а окно лежит выше по дереву — переносим
+  // их сюда, иначе оно нарисуется цветами из значений по умолчанию.
+  veil.setAttribute("style", document.getElementById("app").getAttribute("style") || "");
+  document.body.append(veil);
+  const first = box.querySelector("input");
+  if (first) first.focus();
+  return box;
+}
+
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+
+function btn(text, cls, fn) {
+  return el("button", { type: "button", cls: cls || "", text, on: { click: fn } });
+}
+
+function field(label, id, type, value, hint) {
+  return el("label", { text: label },
+    el("input", { id, type, value: value == null ? "" : String(value) }),
+    hint ? el("span", { cls: "note", text: hint }) : null);
+}
+
+function val(id) { return (document.getElementById(id).value || "").trim(); }
+function num(id) { return Number(document.getElementById(id).value) || 0; }
+
+// ask — подтверждение своим окном, а не confirm().
+//
+// Родное окно браузера рисуется системными цветами поверх выбранной темы и,
+// главное, не даёт объяснить последствие: «Сменить адрес подписки?» без
+// объяснения человек нажимает не думая.
+function ask(title, text, danger) {
+  return new Promise((resolve) => {
+    const done = (v) => { closeSheet(); resolve(v); };
+    sheet(title, [el("div", { cls: "note", text })], [
+      btn(danger || "Да", "bad", () => done(true)),
+      btn("Отмена", "", () => done(false)),
+    ]);
+  });
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Действия над подписчиком
+   ──────────────────────────────────────────────────────────────────────── */
+
+// showLinks отдаёт то, что надо переслать покупателю.
+//
+// Приватную часть vp1 панель нигде не хранит — в этом весь смысл: утечка её
+// базы не даёт доступа ни к одному покупателю. Значит показать ссылку можно
+// ровно один раз, сразу после выдачи, и об этом надо предупредить.
+function showLinks(title, links, fresh) {
+  const parts = [];
+  const add = (label, text) => {
+    parts.push(el("div", { cls: "note", text: label }));
+    parts.push(el("pre", { text }));
+    parts.push(btn("Скопировать", "", async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("Скопировано");
+      } catch (_) {
+        toast("Браузер не дал скопировать — выдели и скопируй руками", true);
+      }
+    }));
+  };
+
+  if (links.account) add("Ссылка доступа — для нашего приложения", links.account);
+  if (links.subscription) add("Подписка", links.subscription);
+
+  // stock приходит плоским списком: по ссылке на каждую пару «нода + вид
+  // доступа». Вид достаём из схемы, ноду — из хвоста после решётки: иначе
+  // продавец видит несколько одинаковых на вид строк и не знает, какая куда.
+  for (const link of links.stock || []) {
+    const kind = (link.split("://")[0] || "доступ");
+    let where = "";
+    const hash = link.indexOf("#");
+    if (hash >= 0) {
+      try { where = " · " + decodeURIComponent(link.slice(hash + 1)); } catch (_) { /* кривой хвост */ }
+    }
+    add(kind + where + " — для v2rayNG, Hiddify и прочих", link);
+  }
+
+  if (fresh) {
+    parts.unshift(el("div", { cls: "note",
+      text: "Секретная часть показывается один раз: панель её не хранит. "
+        + "Перешли покупателю сейчас — потом останется только выпустить новую." }));
+  }
+
+  sheet(title, parts, [btn("Закрыть", "go", closeSheet)]);
+}
+
+async function act(fn) {
+  try {
+    await fn();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+function newUserSheet() {
+  const kinds = el("label", { cls: "kinds", text: "Виды доступа" });
+  for (const [kind, note] of [["vp1", "наше приложение"], ["vless", "чужие клиенты"], ["trojan", "чужие клиенты"]]) {
+    const input = el("input", { type: "checkbox", value: kind });
+    if (kind === "vp1") input.checked = true;
+    kinds.append(el("span", {}, input, el("span", { text: kind + " · " + note })));
+  }
+
+  const box = sheet("Новый клиент", [
+    field("Имя или метка", "nu-label", "text", "", "Видно только тебе — по нему ищут в списке"),
+    field("Срок, дней", "nu-days", "number", 30, "0 — бессрочно"),
+    field("Лимит трафика, ГБ", "nu-gb", "number", 100, "0 — без лимита"),
+    field("Устройств", "nu-ips", "number", 3, "0 — без ограничения"),
+    kinds,
+  ], [
+    btn("Завести", "go", () => act(async () => {
+      const picked = Array.from(box.querySelectorAll(".kinds input:checked")).map((i) => i.value);
+      if (!picked.length) { toast("Выбери хотя бы один вид доступа", true); return; }
+
+      const body = {
+        label: val("nu-label"),
+        traffic_limit: Math.round(num("nu-gb") * 1024 * 1024 * 1024),
+        max_ips: num("nu-ips"),
+        kinds: picked,
+      };
+      const days = num("nu-days");
+      if (days > 0) body.expires_at = new Date(Date.now() + days * 86400000).toISOString();
+
+      const res = await api("/api/v1/users", "POST", body);
+      await loadAll();
+      showLinks("Доступ выдан — отправь покупателю", res.links || {}, true);
+    })),
+    btn("Отмена", "", closeSheet),
+  ]);
+}
+
+function userSheet(user) {
+  const name = user.label || ("#" + user.id);
+  const left = daysLeft(user.expires_at);
+
+  const facts = [
+    ["Состояние", user.enabled ? "включён" : "отключён"],
+    ["Срок", user.expires_at ? shortDate(user.expires_at) + (left === null ? "" : " · " + left + " " + plural(left, "день", "дня", "дней")) : "бессрочно"],
+    ["Израсходовано", bytes(user.used) + (user.traffic_limit ? " из " + bytes(user.traffic_limit) : " · без лимита")],
+    ["Устройств", user.max_ips ? String(user.max_ips) : "без ограничения"],
+    ["Доступы", (user.credentials || []).map((c) => c.kind).join(", ") || "нет"],
+  ].map(([k, v]) => el("div", { cls: "note", text: k + ": " + v }));
+
+  sheet(name, facts, [
+    btn("+30 дней", "go", () => act(async () => {
+      await api("/api/v1/users/" + user.id, "PATCH", { extend_by: "30d", enabled: true });
+      closeSheet();
+      toast("Продлено на 30 дней");
+      await loadAll();
+    })),
+    btn("Ссылки", "", () => act(async () => {
+      const links = await api("/api/v1/users/" + user.id + "/links");
+      showLinks(name, links, false);
+    })),
+    btn(user.enabled ? "Отключить" : "Включить", "", () => act(async () => {
+      await api("/api/v1/users/" + user.id, "PATCH", { enabled: !user.enabled });
+      closeSheet();
+      await loadAll();
+    })),
+    btn("Сменить адрес подписки", "bad", () => act(async () => {
+      const yes = await ask("Сменить адрес подписки?",
+        "Старая ссылка перестанет работать сразу — вместе с той, что у покупателя "
+        + "на устройстве. Панель выдаст новую, её надо ему переслать. "
+        + "Это то, что делают, когда ссылку раздали знакомым: отзывать весь доступ "
+        + "за это — терять покупателя.", "Сменить");
+      if (!yes) return;
+      await api("/api/v1/users/" + user.id + "/sub-token", "POST");
+      const res = await api("/api/v1/users/" + user.id + "/credentials", "POST", { kind: "vp1", label: "" });
+      showLinks("Новый доступ для " + name, res.links || {}, true);
+      await loadAll();
+    })),
+    btn("Удалить", "bad", () => act(async () => {
+      const yes = await ask("Удалить " + name + "?",
+        "Вместе с ключами и накопленной статистикой. Отменить нельзя.", "Удалить");
+      if (!yes) return;
+      await api("/api/v1/users/" + user.id, "DELETE");
+      closeSheet();
+      toast("Удалён");
+      await loadAll();
+    })),
+    btn("Закрыть", "", closeSheet),
+  ]);
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -866,6 +1200,7 @@ function renderVals() {
       until: shortDate(u.expires_at),
       traffic: bytes(u.used),
       status,
+      onClick: () => userSheet(u),
       rowStyle: "display:grid;grid-template-columns:" + clientRow
         + ";gap:12px;align-items:center;padding:11px 12px;border-radius:" + d.r + "px;background:" + t.surf2,
       badgeStyle: "justify-self:start;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
@@ -884,7 +1219,10 @@ function renderVals() {
         return [u.label || ("#" + u.id), keyShort(u), shortDate(u.expires_at),
           String(u.max_ips || "—"), bytes(u.used), status, st];
       }),
-      empty: "Ни одного клиента. Заводит их бот продавца через API.",
+      empty: "Ни одного клиента. Заводи кнопкой сверху или через бота.",
+      // Строка открывает карточку подписчика. Индекс тот же, что у rows:
+      // список строится из users одним проходом.
+      onRow: (i) => () => userSheet(users[i]),
     },
     keys: {
       cols: ["ИМЯ", "ПРАВА", "СОЗДАН", "ПОСЛЕДНИЙ ВХОД", "СТАТУС"],
@@ -902,11 +1240,12 @@ function renderVals() {
   const tableCols = tbl.cols;
   const tableHead = "display:grid;grid-template-columns:" + tbl.grid
     + ";gap:12px;padding:0 12px;font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:.14em;color:" + t.dim;
-  const tableRows = tbl.rows.map((r) => {
+  const tableRows = tbl.rows.map((r, idx) => {
     const st = r[r.length - 1], cells = r.slice(0, -1);
     const col = st === "ok" ? t.acc : st === "warn" ? t.warn : t.dim;
     const soft = st === "ok" ? t.accSoft : st === "warn" ? "rgba(242,160,61,.13)" : t.surf;
     return {
+      onClick: tbl.onRow ? tbl.onRow(idx) : null,
       style: "display:grid;grid-template-columns:" + tbl.grid
         + ";gap:12px;align-items:center;padding:11px 12px;border-radius:" + d.r + "px;background:" + t.surf2,
       cells: cells.map((text, i) => ({
@@ -1044,6 +1383,15 @@ function renderVals() {
     nav,
     pageTitle: PAGES[page][0],
     pageSub: subFor[page] || PAGES[page][1],
+
+    // Кнопка действия есть только там, где действие вправду работает.
+    // Нарисованная кнопка — это обещание, и «Скачать журнал» на разделе,
+    // которого нет, стоит дороже пустого угла.
+    hasCta: page === "clients",
+    pageCta: "+ Клиент",
+    doCta: newUserSheet,
+    ctaStyle: "height:40px;padding:0 18px;border-radius:" + d.r + "px;background:" + t.acc
+      + ";color:" + t.accFg + ";display:flex;align-items:center;font-size:13px;font-weight:600;cursor:pointer",
 
     hasError: !!state.error,
     errText: state.error || "",
