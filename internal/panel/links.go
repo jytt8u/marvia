@@ -94,8 +94,11 @@ func TrojanLink(n Node, password, name string) string {
 	}).String()
 }
 
-// VeilNodeLink собирает ссылку на ноду для нашего клиента.
-func VeilNodeLink(n Node) string {
+// NodeLink собирает ссылку на ноду для нашего клиента.
+//
+// Схема та же, что у ссылки доступа: проект называется Marvia, и «veil» в
+// адресе, который видит покупатель, — остаток прежнего имени.
+func NodeLink(n Node) string {
 	q := url.Values{}
 	if n.SNI != "" {
 		q.Set("sni", n.SNI)
@@ -103,7 +106,7 @@ func VeilNodeLink(n Node) string {
 	q.Set("fp", "chrome")
 
 	return (&url.URL{
-		Scheme:   "veil",
+		Scheme:   accountScheme,
 		User:     url.User(n.PublicKey),
 		Host:     n.Address,
 		RawQuery: q.Encode(),
@@ -130,7 +133,7 @@ func NodeTitle(n Node) string {
 
 // StockLinks собирает ссылки для приложений, которые уже стоят у покупателя.
 //
-// Наши ссылки сюда намеренно не попадают: чужие клиенты не знают схемы veil://
+// Наши ссылки сюда намеренно не попадают: чужие клиенты не знают схемы marvia://
 // и на незнакомой строке в подписке некоторые из них спотыкаются целиком.
 // Смешивать форматы в одном списке — верный способ сломать подписку тем, ради
 // кого мы всё это и делаем.
