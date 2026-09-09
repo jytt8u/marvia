@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/yamux"
-	"github.com/veilproject/veil/internal/mux"
+	"github.com/jytt8u/marvia/internal/mux"
 )
 
 // DialFunc устанавливает одно шифрованное соединение до ноды.

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/panel"
-	"github.com/veilproject/veil/internal/users"
+	"github.com/jytt8u/marvia/internal/panel"
+	"github.com/jytt8u/marvia/internal/users"
 )
 
 // История расхода — то, из чего рисуется вся статистика.

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/veilproject/veil/internal/panel"
+	"github.com/jytt8u/marvia/internal/panel"
 )
 
 // TestUpgradeFromOlderSchema — обновление панели не должно ломать базу.

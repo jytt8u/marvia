@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/client"
+	"github.com/jytt8u/marvia/internal/client"
 )
 
 // Тесты кэша подписки.
