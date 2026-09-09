@@ -108,6 +108,8 @@ func (a *API) Handler() http.Handler {
 	// Веб-интерфейс. Только по точному корню: всё остальное — 404, чтобы
 	// панель не отвечала страницей на случайные пути сканеров.
 	mux.HandleFunc("GET /{$}", a.ServeApp)
+	mux.HandleFunc("GET /fonts/{name}", a.ServeFont)
+	mux.HandleFunc("GET /assets/{name}", a.ServeAsset)
 
 	// Версия — с авторизацией. Продавцу она нужна, когда он пишет в поддержку;
 	// постороннему сканеру знать её незачем.
@@ -1040,11 +1042,28 @@ func (a *API) stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ok(w, map[string]any{
-		"days":    days,
-		"by_day":  byDay,
-		"by_node": byNode,
+		"days": days,
+		// Пустой список отдаём списком, а не null.
+		//
+		// В Go пустой срез превращается в JSON как null, и на свежей панели
+		// вся вкладка статистики падала на попытке узнать его длину: продавец
+		// в первый же заход видел ошибку вместо «трафика пока нет». Разница
+		// между «пусто» и «сломалось» тут стоит одной строки.
+		"by_day":  emptyIfNil(byDay),
+		"by_node": emptyIfNil(byNode),
 		"total":   total,
 	})
+}
+
+// emptyIfNil заменяет несуществующий список пустым.
+//
+// Клиент не должен различать «поля нет», «поле null» и «поле пустое»: это три
+// написания одного и того же, и каждое надо было бы проверять отдельно.
+func emptyIfNil[T any](list []T) []T {
+	if list == nil {
+		return []T{}
+	}
+	return list
 }
 
 // bypassRoutes отдаёт российские подсети, которые клиент ведёт мимо туннеля.

@@ -49,6 +49,15 @@ type Status struct {
 	LeftBytes  int64  `json:"left_bytes,omitempty"`
 	HasAccount bool   `json:"has_account"`
 	Elevated   bool   `json:"elevated"`
+
+	// Proxy — предупреждение о системном прокси, если он есть.
+	//
+	// Пока он прописан, наше «весь трафик идёт через туннель» неправда:
+	// браузеры и Steam слушаются прокси, а не маршрутов. Молчать об этом
+	// нельзя — человек платит именно за то, чтобы трафик шёл через нас.
+	Proxy      string `json:"proxy,omitempty"`
+	ProxyOwner string `json:"proxy_owner,omitempty"`
+	ProxyEnv   bool   `json:"proxy_env,omitempty"`
 }
 
 // Controller держит туннель и знает, как его включить и выключить.
@@ -76,6 +85,12 @@ type Controller struct {
 	cancel  context.CancelFunc
 
 	up, down atomic.Int64
+
+	// proxy — что нашлось в системных настройках прокси на момент подключения.
+	//
+	// Проверяем при включении, а не на каждый опрос окна: перебор слушающих
+	// сокетов ради надписи, которая меняется раз в неделю, — расточительство.
+	proxy wintun.Proxy
 
 	dns string
 	mtu uint32
@@ -107,7 +122,35 @@ func (c *Controller) Status() Status {
 		LeftBytes:  c.leftBytes,
 		HasAccount: c.account != "",
 		Elevated:   elevated(),
+		Proxy:      c.proxy.Describe(),
+		ProxyOwner: c.proxy.Owner,
+		ProxyEnv:   c.proxy.FromEnv,
 	}
+}
+
+// DropProxy снимает системный прокси и перепроверяет, что получилось.
+//
+// Только по нажатию человека. Прокси мог быть поставлен осознанно — рабочим,
+// родительским контролем, другим клиентом, которым он пользуется, — и снять
+// его молча значило бы сломать то, чего мы не понимаем.
+func (c *Controller) DropProxy() error {
+	if err := wintun.DisableSystemProxy(); err != nil {
+		return err
+	}
+
+	c.mu.Lock()
+	c.proxy = wintun.SystemProxy()
+	left := c.proxy
+	c.mu.Unlock()
+
+	c.log.add("системный прокси снят")
+
+	// Переменные окружения остаются жить в уже запущенных программах: они
+	// прочитали их при старте, и наша правка реестра до них не дойдёт.
+	if left.Found() && left.FromEnv {
+		return errors.New("прокси остался в переменных окружения — его убирает та программа, которая поставила")
+	}
+	return nil
 }
 
 // Account отдаёт сохранённую ссылку доступа.
@@ -151,6 +194,7 @@ func (c *Controller) Connect() error {
 	}
 
 	account := c.account
+	c.proxy = wintun.SystemProxy()
 	c.state = StateConnecting
 	c.reason = ""
 	c.up.Store(0)
@@ -324,6 +368,16 @@ func (d *countingDialer) DialTarget(ctx context.Context, target vp1.Address) (ne
 	return &countingConn{Conn: conn, up: d.up, down: d.down}, nil
 }
 
+func (d *countingDialer) DialDatagrams(ctx context.Context, target vp1.Address) (net.Conn, error) {
+	conn, err := d.inner.DialDatagrams(ctx, target)
+	if err != nil {
+		return nil, err
+	}
+	// Обёртка та же: она считает байты, не заглядывая внутрь, а границы
+	// датаграмм соблюдает нижележащее соединение.
+	return &countingConn{Conn: conn, up: d.up, down: d.down}, nil
+}
+
 type countingConn struct {
 	net.Conn
 	up, down *atomic.Int64
@@ -351,13 +405,27 @@ func latencyOf(measurements []client.Measurement, node client.Node) time.Duratio
 	return 0
 }
 
-// settingsDir — каталог настроек: %APPDATA%\Veil.
+// settingsDir — каталог настроек: %APPDATA%\Marvia.
 func settingsDir() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "Veil"), nil
+	return filepath.Join(dir, "Marvia"), nil
+}
+
+// legacyAccountPath — где ключ лежал до переименования.
+//
+// Ключ доступа хранится у покупателя на диске, а не у нас в базе. Просто
+// сменить имя каталога значило бы, что после обновления человек открывает окно
+// и видит пустое поле там, где вчера был рабочий доступ, — и идёт к продавцу с
+// «у меня всё пропало».
+func legacyAccountPath() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "Veil", "account"), nil
 }
 
 // accountPath — где лежит сохранённая ссылка доступа.
@@ -386,11 +454,23 @@ func readAccount() string {
 	if err != nil {
 		return ""
 	}
-	raw, err := os.ReadFile(path)
+	if raw, err := os.ReadFile(path); err == nil {
+		return strings.TrimSpace(string(raw))
+	}
+
+	// Нового ключа нет — смотрим, не остался ли он от прежнего имени. Найдя,
+	// сразу перекладываем, чтобы этот путь понадобился ровно один раз.
+	legacy, err := legacyAccountPath()
 	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(string(raw))
+	raw, err := os.ReadFile(legacy)
+	if err != nil {
+		return ""
+	}
+	link := strings.TrimSpace(string(raw))
+	_ = writeAccount(link)
+	return link
 }
 
 // writeAccount сохраняет ссылку доступа только для владельца.

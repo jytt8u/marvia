@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Veil</title>
+<title>Marvia</title>
 <style>
   :root {
     --bg:        #070b16;
@@ -145,6 +145,29 @@
     transition: border-color .3s;
   }
   body[data-state="connected"] .node { border-color: rgba(33,196,138,.3); }
+
+  /*
+    Предупреждение о прокси. Намеренно не красное: ничего не сломано, туннель
+    работает. Сломано обещание — часть трафика идёт мимо, — и об этом надо
+    сказать заметно, но без паники, иначе человек решит, что не подключился.
+  */
+  .leak {
+    margin-top: 14px; width: 100%; max-width: 430px;
+    background: rgba(240,180,60,.09); border: 1px solid rgba(240,180,60,.28);
+    border-radius: 14px; padding: 13px 16px; text-align: left;
+  }
+  .leak .head { display: flex; align-items: center; gap: 9px; }
+  .leak .head svg { width: 16px; height: 16px; flex: 0 0 16px; color: #f0b43c; }
+  .leak .title { font-weight: 600; font-size: 13px; color: #f0b43c; }
+  .leak .body { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.5; }
+  .leak .act { margin-top: 11px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .leak button {
+    background: rgba(240,180,60,.16); border: 1px solid rgba(240,180,60,.34);
+    color: #f0b43c; font-size: 12px; padding: 6px 12px; border-radius: 9px;
+    cursor: pointer;
+  }
+  .leak button:hover { background: rgba(240,180,60,.24); }
+  .leak .said { color: var(--muted); font-size: 12px; }
   .node .mark {
     width: 34px; height: 34px; border-radius: 10px; flex: 0 0 34px;
     display: grid; place-items: center;
@@ -162,6 +185,13 @@
   .node .ping:empty { display: none; }
 
   /* --------------------------------------------------------- предупрежд. */
+
+  /*
+    Текст ошибки — единственное, что человек может отправить продавцу. Общий
+    запрет выделения делал его непередаваемым: оставалось переписывать с
+    экрана руками или фотографировать.
+  */
+  #detail, .leak .body, .leak .said { user-select: text; }
 
   .warn {
     background: rgba(239,91,107,.1); border: 1px solid rgba(239,91,107,.28);
@@ -213,7 +243,7 @@
   <aside>
     <div class="brand">
       <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 20 5.2V11.5C20 16.6 16.6 20.9 12 22.2 7.4 20.9 4 16.6 4 11.5V5.2Z" fill="#4d7cfe"/><path d="M8.3 9.4 12 16.6 15.7 9.4" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      VEIL
+      MARVIA
     </div>
 
     <button class="tab" data-tab="home" aria-selected="true">
@@ -302,6 +332,23 @@
           </div>
           <div class="ping" id="node-ping"></div>
         </div>
+
+        <div class="leak" id="proxy-warn" hidden>
+          <div class="head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v5M12 17.5v.01"/><path d="M10.3 3.9 2.4 17.4A2 2 0 0 0 4.1 20.4h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            <span class="title">Часть трафика идёт мимо туннеля</span>
+          </div>
+          <div class="body" id="proxy-text"></div>
+          <div class="body" id="proxy-care">
+            Если прокси ставил не ты — на рабочем компьютере или под родительским
+            контролем — не трогай его: без него перестанут открываться рабочие
+            ресурсы.
+          </div>
+          <div class="act">
+            <button id="proxy-off">Убрать прокси</button>
+            <span class="said" id="proxy-msg"></span>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -331,7 +378,7 @@
     <section class="page" data-tab="about">
       <h2>О программе</h2>
       <p class="about">
-        Veil забирает весь трафик компьютера и уводит его через ноду,
+        Marvia забирает весь трафик компьютера и уводит его через ноду,
         замаскированную под обычный сайт. <b>Ноду программа выбирает сама</b> — по
         замерам с этой машины, а не по мнению панели: панель стоит за границей и
         видит ноду живой тогда, когда для тебя она уже мертва.
@@ -366,6 +413,58 @@ document.querySelectorAll(".tab").forEach((tab) => {
     });
   });
 });
+
+/* ------------------------------------------------------------- прокси */
+
+/*
+  Предупреждение о системном прокси.
+
+  Показываем только при поднятом туннеле, и вот почему: пока туннель выключен,
+  прокси никому не мешает и говорить не о чем. А вот когда окно написало «весь
+  трафик компьютера идёт через туннель», это обещание должно быть верным — или
+  рядом должно стоять честное «кроме вот этого».
+
+  Кнопка снимает только настройку системы. Переменные окружения живут в уже
+  запущенных программах, наша правка до них не дойдёт, и обещать обратное
+  нечестно — так и пишем.
+*/
+function showProxy(s) {
+  const box = $("proxy-warn");
+  const show = s.state === "connected" && !!s.proxy;
+
+  box.hidden = !show;
+  if (!show) return;
+
+  $("proxy-text").textContent = s.proxy;
+
+  // Переменные окружения снять из реестра нельзя, поэтому и кнопку не
+  // показываем: кнопка, которая не помогает, хуже её отсутствия.
+  const button = $("proxy-off");
+  button.hidden = s.proxy_env;
+  $("proxy-care").hidden = s.proxy_env;
+  $("proxy-msg").textContent = s.proxy_env
+    ? "Его поставила программа через переменные окружения — убрать можно только в ней."
+    : "";
+}
+
+async function dropProxy() {
+  const button = $("proxy-off");
+  const said = $("proxy-msg");
+
+  button.disabled = true;
+  said.textContent = "убираю…";
+  try {
+    const after = await api("POST", "api/proxy/off");
+    render(after);
+    if (!after.proxy) {
+      said.textContent = "Убрал. Браузер подхватит это после перезапуска.";
+    }
+  } catch (e) {
+    said.textContent = e.message;
+  } finally {
+    button.disabled = false;
+  }
+}
 
 /* ----------------------------------------------------------------- обмен */
 
@@ -405,6 +504,27 @@ const titles = {
 
 let prev = null;
 
+/*
+  Последняя ошибка, показанная в ответ на нажатие.
+
+  Опрос состояния приходит раз в секунду и переписывает ту же строку, поэтому
+  всё, что программа отвечает сразу — «не задана ссылка доступа», «нужны права
+  администратора», — вспыхивало и пропадало быстрее, чем человек успевал
+  прочитать. Он видел красный проблеск и нажимал снова.
+*/
+let complaint = null;
+
+function complain(text) {
+  complaint = { text, until: Date.now() + 12000 };
+  $("detail").textContent = text;
+}
+
+function complaintNow() {
+  if (complaint && Date.now() < complaint.until) return complaint.text;
+  complaint = null;
+  return null;
+}
+
 function render(s) {
   document.body.dataset.state = s.state;
   $("status").textContent = titles[s.state] || s.state;
@@ -414,8 +534,14 @@ function render(s) {
   $("elev-warn").hidden = s.elevated;
 
   const detail = $("detail");
-  detail.classList.toggle("bad", s.state === "failed");
-  if (s.state === "failed") detail.textContent = s.reason || "причина неизвестна";
+
+  // Пока подключаемся или подключились, жалоба уже неактуальна.
+  if (s.state === "connecting" || s.state === "connected") complaint = null;
+
+  const said = complaintNow();
+  detail.classList.toggle("bad", s.state === "failed" || said !== null);
+  if (said !== null) detail.textContent = said;
+  else if (s.state === "failed") detail.textContent = s.reason || "причина неизвестна";
   else if (s.state === "connecting") detail.textContent = "выбираю самую быструю ноду";
   else if (s.state === "connected") detail.textContent = "весь трафик компьютера идёт через туннель";
   else if (!s.has_account) detail.textContent = "вставь ключ доступа, его присылает бот после оплаты";
@@ -441,6 +567,8 @@ function render(s) {
     $("node-addr").textContent = "подключись — она выберется сама, по замерам";
     $("node-ping").textContent = "";
   }
+
+  showProxy(s);
 
   // Скорость считаем сами, по разнице между опросами: программе незачем
   // помнить, когда её спрашивали в прошлый раз.
@@ -469,12 +597,14 @@ $("power").addEventListener("click", async () => {
     else await api("POST", "api/connect");
     await tick();
   } catch (err) {
-    $("detail").textContent = err.message;
+    complain(err.message);
     $("detail").classList.add("bad");
   } finally {
     busy = false;
   }
 });
+
+$("proxy-off").addEventListener("click", dropProxy);
 
 $("save").addEventListener("click", async () => {
   const msg = $("save-msg");

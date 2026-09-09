@@ -1,421 +1,523 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Marvia — панель</title>
+<title>Marvia Partner</title>
+
+<!-- Значок нарисован прямо здесь: единственный внешний адрес в интерфейсе —
+     это уже утечка, а ради иконки вкладки её допускать незачем. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c1a11'/%3E%3Cpath d='M8 10l8 14 8-14' fill='none' stroke='%2346e07a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
 <style>
-:root {
-  color-scheme: light dark;
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --surface-2: #f0f2f5;
-  --border: #dfe3e8;
-  --text: #1b1f24;
-  --muted: #6b7480;
-  --accent: #2f6fed;
-  --accent-text: #ffffff;
-  --ok: #1a7f45;
-  --warn: #a86400;
-  --bad: #c0392b;
-  --radius: 10px;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14171c;
-    --surface: #1c2027;
-    --surface-2: #232830;
-    --border: #2f3641;
-    --text: #e6e9ee;
-    --muted: #949daa;
-    --accent: #4d86ff;
-    --ok: #4ec27f;
-    --warn: #e0a33a;
-    --bad: #ef6b5b;
+  /* Шрифты вшиты в бинарник и отдаются самой панелью. Панель для обхода
+     блокировок, которая не открывается без зарубежного CDN, — издевательство,
+     плюс каждое открытие сообщало бы стороннему хосту, что её открыли. */
+  @font-face { font-family: Onest; src: url(fonts/onest-latin.woff2) format('woff2');
+    font-weight: 300 700; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212; }
+  @font-face { font-family: Onest; src: url(fonts/onest-cyrillic.woff2) format('woff2');
+    font-weight: 300 700; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+
+  @font-face { font-family: 'JetBrains Mono'; src: url(fonts/jetbrains-latin.woff2) format('woff2');
+    font-weight: 400 700; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212; }
+  @font-face { font-family: 'JetBrains Mono'; src: url(fonts/jetbrains-cyrillic.woff2) format('woff2');
+    font-weight: 400 700; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+
+  @font-face { font-family: Unbounded; src: url(fonts/unbounded-latin.woff2) format('woff2');
+    font-weight: 400 800; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212; }
+  @font-face { font-family: Unbounded; src: url(fonts/unbounded-cyrillic.woff2) format('woff2');
+    font-weight: 400 800; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+
+  /* Chakra Petch — только латиница: им набрана одна надпись MARVIA PARTNER,
+     кириллицы у этого шрифта нет вовсе. */
+  @font-face { font-family: 'Chakra Petch'; src: url(fonts/chakra-petch-latin.woff2) format('woff2');
+    font-weight: 700; font-display: swap; unicode-range: U+0000-00FF; }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: Onest, system-ui, sans-serif;
+    background: #05100a;
+    color: #eaf5ee;
+    overflow: hidden;
   }
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
-}
-a { color: var(--accent); }
-h1, h2, h3 { margin: 0 0 .6rem; line-height: 1.25; }
-h1 { font-size: 1.25rem; }
-h2 { font-size: 1.05rem; }
+  [hidden] { display: none !important; }
 
-.wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
+  /* Вход. Отдельный экран, а не модальное окно поверх панели: пока токен не
+     принят, показывать нечего, и рисовать за формой пустую панель — обман. */
+  #login {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  #login .box {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 30px;
+    border-radius: 18px;
+    background: #0c1a11;
+    border: 1px solid #1c2e21;
+  }
+  #login .mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #login .mark img { height: 24px; width: auto; display: block; }
+  #login .word {
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .2em;
+    color: #c3ccd6;
+  }
+  #login p { font-size: 13px; line-height: 1.55; color: #6c8a76; }
+  #login input {
+    width: 100%;
+    padding: 13px 14px;
+    border-radius: 12px;
+    border: 1px solid #1c2e21;
+    background: #05100a;
+    color: #eaf5ee;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+  #login input:focus { outline: none; border-color: #46e07a; }
+  #login button {
+    padding: 13px 18px;
+    border-radius: 12px;
+    border: none;
+    background: #46e07a;
+    color: #05130b;
+    font-family: Onest, system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #login .err { font-size: 12px; color: #f2a03d; min-height: 16px; }
 
-header.top {
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: .9rem; margin-bottom: 1.1rem;
-}
-header.top .brand { font-weight: 700; font-size: 1.15rem; letter-spacing: .02em; }
-header.top .spacer { flex: 1; }
-
-.tabs { display: flex; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
-.tabs button {
-  background: transparent; border: 1px solid transparent; color: var(--muted);
-  padding: .45rem .8rem; border-radius: var(--radius); cursor: pointer; font: inherit;
-}
-.tabs button.active { background: var(--surface); border-color: var(--border); color: var(--text); font-weight: 600; }
-
-/* ------------------------------------------------------------- статистика */
-
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .8rem; margin-bottom: .9rem; }
-.tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .85rem 1rem; }
-.tile .name { font-size: .82rem; color: var(--muted); }
-.tile .value { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; margin-top: .1rem; }
-.tile .note { font-size: .84rem; color: var(--muted); }
-
-.card-head { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: .7rem; }
-.card-head h2 { margin: 0; }
-
-.periods { margin-left: auto; display: flex; gap: .25rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
-.periods button {
-  border: 0; background: transparent; color: var(--muted);
-  font: inherit; font-size: .86rem; padding: .25rem .7rem; border-radius: 6px; cursor: pointer;
-}
-.periods button.active { background: var(--text); color: var(--bg); font-weight: 600; }
-
-/* Столбик дня. Ширина считается от числа дней, поэтому здесь только вид. */
-.chart { display: flex; align-items: flex-end; gap: 2px; height: 168px; padding-top: .4rem; }
-.chart .day { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; min-width: 0; }
-.chart .bar { background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; }
-.chart .day.empty .bar { background: var(--border); }
-.chart-axis { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); padding-top: .35rem; border-top: 1px solid var(--border); margin-top: .3rem; }
-
-.node-bar { display: flex; align-items: center; gap: .7rem; padding: .45rem 0; }
-.node-bar .who { width: 190px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.node-bar .track { flex: 1; height: 10px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
-.node-bar .fill { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; }
-.node-bar .amount { width: 84px; text-align: right; font-variant-numeric: tabular-nums; }
-
-.card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;
-}
-.card > h2 { display: flex; align-items: center; gap: .5rem; }
-
-button {
-  font: inherit; cursor: pointer; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-  padding: .4rem .75rem;
-}
-button:hover { border-color: var(--accent); }
-button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-button.danger { color: var(--bad); }
-button.tiny { padding: .2rem .5rem; font-size: .85rem; }
-button:disabled { opacity: .5; cursor: default; }
-
-input, select {
-  font: inherit; color: var(--text); background: var(--surface-2);
-  border: 1px solid var(--border); border-radius: 8px; padding: .4rem .55rem; width: 100%;
-}
-label.field { display: block; }
-label.field > span { display: block; font-size: .82rem; color: var(--muted); margin-bottom: .2rem; }
-
-.grid { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; }
-.row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
-.kinds { display: flex; gap: .8rem; flex-wrap: wrap; }
-.kinds label { display: flex; gap: .3rem; align-items: center; font-size: .9rem; }
-.kinds input { width: auto; }
-
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: .55rem .5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
-th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
-tr:last-child td { border-bottom: none; }
-td.actions { text-align: right; white-space: nowrap; }
-
-.tag { display: inline-block; padding: .1rem .45rem; border-radius: 999px; font-size: .75rem; border: 1px solid var(--border); }
-.tag.ok { color: var(--ok); border-color: currentColor; }
-.tag.bad { color: var(--bad); border-color: currentColor; }
-.tag.warn { color: var(--warn); border-color: currentColor; }
-
-.bar { height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-top: .25rem; }
-.bar > i { display: block; height: 100%; background: var(--accent); }
-.bar > i.warn { background: var(--warn); }
-.bar > i.bad { background: var(--bad); }
-.muted { color: var(--muted); font-size: .85rem; }
-.mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .82rem; word-break: break-all; }
-
-.linkbox { display: flex; gap: .5rem; align-items: flex-start; margin: .45rem 0; }
-.linkbox .mono {
-  flex: 1; background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: 8px; padding: .45rem .55rem;
-}
-
-dialog#modal {
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface); color: var(--text);
-  max-width: 680px; width: calc(100% - 2rem); padding: 1.1rem;
-}
-dialog#modal::backdrop { background: rgba(0,0,0,.5); }
-
-.gate { max-width: 420px; margin: 12vh auto; }
-.note {
-  border-left: 3px solid var(--warn); padding: .5rem .7rem;
-  background: var(--surface-2); border-radius: 0 8px 8px 0; font-size: .88rem;
-}
-#toast {
-  position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%);
-  background: var(--surface); border: 1px solid var(--border); color: var(--text);
-  padding: .5rem .9rem; border-radius: 999px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
-  opacity: 0; pointer-events: none; transition: opacity .18s;
-}
-#toast.show { opacity: 1; }
-#toast.bad { border-color: var(--bad); color: var(--bad); }
-.empty { color: var(--muted); padding: 1rem .5rem; text-align: center; }
+  #app { height: 100%; }
+  #app.busy { opacity: .55; }
 </style>
 </head>
 <body>
 
-<div class="wrap gate" id="gate">
-  <h1>Marvia — панель</h1>
-  <div class="card">
-    <p class="muted">Введи админский токен. Он останется в этом браузере и не уйдёт никуда, кроме самой панели.</p>
-    <label class="field"><span>Админский токен</span>
-      <input id="tokenInput" type="password" autocomplete="off" spellcheck="false">
-    </label>
-    <div class="row" style="margin-top:.7rem">
-      <button class="primary" id="tokenSubmit">Войти</button>
-      <span class="muted">выпустить: <code class="mono">marvia-panel -new-token</code></span>
+<div id="login">
+  <form class="box" id="login-form">
+    <div class="mark">
+      <img src="assets/marvia-mark.png" alt="">
+      <div class="word">MARVIA PARTNER</div>
     </div>
-  </div>
+    <p>Панель открывается админским токеном — тем, что задан ноде переменной
+       <code>VEIL_ADMIN_TOKEN</code>.</p>
+    <input id="login-token" type="password" autocomplete="current-password"
+           placeholder="админский токен" spellcheck="false">
+    <div class="err" id="login-err"></div>
+    <button type="submit">Войти</button>
+  </form>
 </div>
 
-<div class="wrap" id="app" hidden>
-  <header class="top">
-    <span class="brand">Marvia</span>
-    <span class="muted" id="summary"></span>
-    <span class="spacer"></span>
-    <button id="refresh">Обновить</button>
-    <button id="logout">Выйти</button>
-  </header>
+<div id="app" hidden></div>
 
-  <!--
-    Порядок вкладок — это порядок работы. Ноды первыми: пока их нет, продавать
-    нечего, ссылки у покупателей будут пустые. «Хозяйство» последним: туда
-    заходят раз в жизни, когда заводят бота, и раз в месяц за копией базы.
-  -->
-  <nav class="tabs">
-    <button data-tab="stats" class="active">Статистика</button>
-    <button data-tab="nodes">Ноды</button>
-    <button data-tab="users">Подписчики</button>
-    <button data-tab="keys">Хозяйство</button>
-  </nav>
+<!--
+  Разметка панели перенесена из дизайна (Marvia Seller.dc.html, экран S02)
+  как есть, вместе с его же языком шаблонов: sc-for, sc-if и {{ }}. Так правку
+  дизайна можно перенести обратной вставкой, а не переписыванием.
 
-  <!--
-    Статистика первой: панель открывают посмотреть, как идут дела, а не чинить.
-    Числа здесь — люди, устройства и гигабайты, а не деньги: панель ставят и
-    для себя, и на семью, и на перепродажу, и «выручка» осмысленна только в
-    третьем случае.
-  -->
-  <section id="tab-stats">
-    <div class="tiles" id="stats-tiles"></div>
+  Разделов «Тарифы», «Платежи», «Рассылка», «Логи и аудит» здесь нет намеренно:
+  их нет ни в базе, ни в API, а нарисованный раздел — это обещание.
+-->
+<template id="shell">
+  <div style="height: 100%; background: var(--bg, #05100a); display: flex; flex-direction: column; overflow: hidden;">
 
-    <div class="card">
-      <div class="card-head">
-        <h2>Трафик по дням</h2>
-        <div class="periods" id="stats-periods">
-          <button data-days="7">7 дней</button>
-          <button data-days="30" class="active">30 дней</button>
-          <button data-days="90">90 дней</button>
+    <div style="height: 46px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line, #1c2e21); background: var(--surf, #0c1a11);">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <img src="assets/marvia-mark.png" alt="" style="height: 22px; width: auto; display: block;">
+        <div style="font-family: 'Chakra Petch', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: .2em; color: #c3ccd6;">MARVIA PARTNER</div>
+        <div style="{{ hostBadge }}">{{ host }}</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="{{ ghostBtn }}" onClick="{{ doReload }}">{{ reloadLabel }}</div>
+        <div style="{{ ghostBtn }}" onClick="{{ doLogout }}">Выход</div>
+      </div>
+    </div>
+
+    <div style="flex: 1; display: flex; min-height: 0;">
+      <div style="width: 224px; flex: none; border-right: 1px solid var(--line, #1c2e21); background: var(--surf, #0c1a11); padding: 16px 12px; display: flex; flex-direction: column; gap: 3px;">
+        <sc-for list="{{ nav }}" as="n">
+          <div style="{{ n.style }}" onClick="{{ n.onClick }}">
+            <div style="{{ n.dot }}"></div>
+            <div>{{ n.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="flex: 1; min-width: 0; padding: 22px 26px; display: flex; flex-direction: column; gap: 18px; overflow: hidden;">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+          <div>
+            <div style="font-size: 25px; font-weight: 700; color: var(--fg, #eaf5ee);">{{ pageTitle }}</div>
+            <div style="font-size: 13px; color: var(--dim, #6c8a76); margin-top: 3px;">{{ pageSub }}</div>
+          </div>
         </div>
+
+        <sc-if value="{{ hasError }}">
+          <div style="{{ errStyle }}">{{ errText }}</div>
+        </sc-if>
+
+        <sc-if value="{{ isDash }}">
+          <div style="display: flex; flex-direction: column; gap: var(--gap, 12px); flex: 1; min-height: 0;">
+            <div style="display: flex; gap: var(--gap, 12px);">
+              <sc-for list="{{ kpis }}" as="k">
+                <div style="{{ k.style }}">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim, #6c8a76);">{{ k.label }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: var(--fg, #eaf5ee); margin-top: 7px;">{{ k.value }}</div>
+                  <div style="{{ k.deltaStyle }}">{{ k.delta }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display: flex; gap: var(--gap, 12px); height: 210px;">
+              <div style="flex: 1.6; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--line, #1c2e21); display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">Трафик · 30 дней</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim, #6c8a76);">{{ totalTraffic }}</div>
+                </div>
+                <div style="flex: 1; display: flex; align-items: flex-end; gap: 4px; padding-top: 10px;">
+                  <sc-for list="{{ lolli }}" as="l">
+                    <div style="{{ l.colStyle }}" title="{{ l.title }}">
+                      <div style="{{ l.dotStyle }}"></div>
+                      <div style="{{ l.stemStyle }}"></div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .12em; color: var(--dim, #6c8a76);"><span>{{ firstDay }}</span><span>{{ lastDay }}</span></div>
+              </div>
+              <div style="flex: 1; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--line, #1c2e21); display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+                <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">Ноды</div>
+                <sc-for list="{{ nodes }}" as="n">
+                  <div style="{{ n.rowStyle }}">
+                    <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                      <div style="{{ n.dotStyle }}"></div>
+                      <div style="font-size: 13px; color: var(--fg, #eaf5ee); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ n.name }}</div>
+                    </div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim, #6c8a76); flex: none;">{{ n.load }}</div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ noNodes }}">
+                  <div style="{{ emptyStyle }}">Ни одной ноды. Заведи первую — панель отдаст установщик.</div>
+                </sc-if>
+              </div>
+            </div>
+            <div style="flex: 1; min-height: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--line, #1c2e21); display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">Клиенты</div>
+                <div style="{{ allClients }}" onClick="{{ goClients }}">{{ allClientsLabel }}</div>
+              </div>
+              <div style="{{ dashHead }}">
+                <div>КЛИЕНТ</div><div>КЛЮЧ</div><div>ДО</div><div>ТРАФИК</div><div>СТАТУС</div>
+              </div>
+              <sc-for list="{{ clients }}" as="c">
+                <div style="{{ c.rowStyle }}">
+                  <div style="font-size: 13px; color: var(--fg, #eaf5ee); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.name }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim, #6c8a76);">{{ c.key }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim, #6c8a76);">{{ c.until }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--fg, #eaf5ee);">{{ c.traffic }}</div>
+                  <div style="{{ c.badgeStyle }}">{{ c.status }}</div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ noClients }}">
+                <div style="{{ emptyStyle }}">Ни одного клиента. Заведи первого через бота или API.</div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isTable }}">
+          <div style="display: flex; flex-direction: column; gap: var(--gap, 12px); flex: 1; min-height: 0;">
+            <div style="display: flex; gap: var(--gap, 12px);">
+              <sc-for list="{{ pageKpis }}" as="k">
+                <div style="{{ k.style }}">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim);">{{ k.label }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: var(--fg); margin-top: 7px;">{{ k.value }}</div>
+                  <div style="{{ k.deltaStyle }}">{{ k.delta }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="flex: 1; min-height: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; overflow: hidden;">
+              <div style="{{ tableHead }}">
+                <sc-for list="{{ tableCols }}" as="col">
+                  <div>{{ col }}</div>
+                </sc-for>
+              </div>
+              <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+                <sc-for list="{{ tableRows }}" as="row">
+                  <div style="{{ row.style }}">
+                    <sc-for list="{{ row.cells }}" as="cell">
+                      <div style="{{ cell.style }}">{{ cell.text }}</div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ noTableRows }}">
+                  <div style="{{ emptyStyle }}">{{ emptyTable }}</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isNodesPage }}">
+          <div style="flex: 1; min-height: 0; overflow-y: auto;">
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap, 12px); align-content: start;">
+              <sc-for list="{{ nodeCards }}" as="nc">
+                <div style="{{ nc.style }}">
+                  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                      <div style="font-size: 16px; font-weight: 600; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ nc.name }}</div>
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ nc.host }}</div>
+                    </div>
+                    <div style="{{ nc.badge }}">{{ nc.state }}</div>
+                  </div>
+                  <div style="display: flex; gap: 18px;">
+                    <div style="display: flex; flex-direction: column; gap: 3px;">
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">ТРАФИК · 30 Д</div>
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--fg);">{{ nc.load }}</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 3px;">
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">ДОЛЯ</div>
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--fg);">{{ nc.share }}</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 3px;">
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">НА СВЯЗИ</div>
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--acc);">{{ nc.seen }}</div>
+                    </div>
+                  </div>
+                  <div style="{{ nc.track }}"><div style="{{ nc.fill }}"></div></div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ noNodes }}">
+                <div style="{{ emptyStyle }}">Ни одной ноды. Установщик раздаёт сама панель — заведи ноду и получишь команду.</div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isStatsPage }}">
+          <div style="display: flex; flex-direction: column; gap: var(--gap, 12px); flex: 1; min-height: 0;">
+            <div style="display: flex; gap: var(--gap, 12px);">
+              <sc-for list="{{ pageKpis }}" as="k">
+                <div style="{{ k.style }}">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim);">{{ k.label }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: var(--fg); margin-top: 7px;">{{ k.value }}</div>
+                  <div style="{{ k.deltaStyle }}">{{ k.delta }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="flex: 1; min-height: 0; display: flex; gap: var(--gap, 12px);">
+              <div style="flex: 1.5; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="font-size: 14px; font-weight: 600; color: var(--fg);">Трафик по дням</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ totalTraffic }}</div>
+                </div>
+                <div style="flex: 1; display: flex; align-items: flex-end; gap: 3px;">
+                  <sc-for list="{{ dayBars }}" as="rb">
+                    <div style="{{ rb.col }}" title="{{ rb.title }}">
+                      <div style="{{ rb.bar }}"></div>
+                      <div style="{{ rb.label }}">{{ rb.month }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="flex: 1; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; overflow-y: auto;">
+                <div style="font-size: 14px; font-weight: 600; color: var(--fg);">Доля нод</div>
+                <sc-for list="{{ shareRows }}" as="sr">
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--fg);"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ sr.name }}</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); flex: none;">{{ sr.pct }}</span></div>
+                    <div style="{{ sr.track }}"><div style="{{ sr.fill }}"></div></div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ noShare }}">
+                  <div style="{{ emptyStyle }}">Трафика за период ещё нет.</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isLook }}">
+          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--gap, 12px); overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 14px; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line);">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim); flex: none;">АКЦЕНТ</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+                <sc-for list="{{ accents }}" as="a">
+                  <div style="{{ a.style }}" onClick="{{ a.onClick }}"></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap, 12px); align-content: start;">
+              <sc-for list="{{ looks }}" as="lk">
+                <div style="{{ lk.wrap }}" onClick="{{ lk.onClick }}">
+                  <div style="{{ lk.canvas }}">
+                    <div style="{{ lk.side }}"></div>
+                    <div style="{{ lk.navA }}"></div>
+                    <div style="{{ lk.navB }}"></div>
+                    <div style="{{ lk.navC }}"></div>
+                    <div style="{{ lk.kpiA }}"></div>
+                    <div style="{{ lk.kpiB }}"></div>
+                    <div style="{{ lk.kpiC }}"></div>
+                    <div style="{{ lk.chart }}"></div>
+                  </div>
+                  <div style="{{ lk.label }}">
+                    <div style="{{ lk.name2 }}">{{ lk.name }}</div>
+                    <div style="{{ lk.sub2 }}">{{ lk.sub }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
       </div>
-      <div id="stats-chart"></div>
     </div>
-
-    <div class="card">
-      <h2>По нодам</h2>
-      <div id="stats-nodes"></div>
-    </div>
-  </section>
-
-  <section id="tab-users" hidden>
-    <div class="card">
-      <h2>Выдать доступ</h2>
-      <div class="grid">
-        <label class="field"><span>Метка</span><input id="nu-label" placeholder="заказ 1043"></label>
-        <label class="field"><span>Срок, дней</span><input id="nu-days" type="number" min="0" value="30"></label>
-        <label class="field"><span>Квота, ГБ</span><input id="nu-gb" type="number" min="0" value="100"></label>
-        <label class="field"><span>Устройств</span><input id="nu-ips" type="number" min="0" value="3"></label>
-      </div>
-      <div class="kinds" style="margin:.8rem 0">
-        <label><input type="checkbox" value="vp1" checked> vp1 — наш клиент</label>
-        <label><input type="checkbox" value="vless" checked> vless — v2rayNG, Hiddify</label>
-        <label><input type="checkbox" value="trojan" checked> trojan</label>
-      </div>
-      <button class="primary" id="nu-create">Создать и показать ссылки</button>
-    </div>
-
-    <div class="card">
-      <h2>Подписчики <span class="muted" id="users-count"></span></h2>
-      <!--
-        Поиск: покупатель, который написал, называет себя как угодно, но не
-        «подписчик №147». Ищем по метке, по номеру и по ключу из телеграма.
-      -->
-      <input id="users-search" placeholder="поиск по метке, номеру или tg:…" style="margin-bottom:.8rem">
-      <div id="users-body"></div>
-    </div>
-  </section>
-
-  <section id="tab-nodes" hidden>
-    <div class="card">
-      <h2>Добавить ноду</h2>
-      <p class="muted" style="margin:0 0 .9rem">
-        Панель выдаст одноразовое приглашение и готовую строку. Вставь её на чистом
-        сервере от root — нода выпустит себе ключи, запишется сюда и поднимется сама.
-      </p>
-      <button class="primary" id="nn-invite">Получить команду</button>
-
-      <details style="margin-top:1.2rem">
-      <summary class="muted" style="cursor:pointer">…или вписать ноду вручную</summary>
-      <p class="muted">
-        Нужно в двух случаях: нода стоит за CDN — таких установщик пока не умеет, —
-        либо её ставили руками. Тогда ключи придётся взять из журнала
-        <code class="mono">marvia-node</code>.
-      </p>
-      <div class="grid">
-        <label class="field"><span>Имя</span><input id="nn-name" placeholder="msk-1"></label>
-        <label class="field"><span>Страна — как её увидит покупатель</span><input id="nn-country" placeholder="Нидерланды"></label>
-        <label class="field"><span>Адрес и порт</span><input id="nn-address" placeholder="msk.example.com:443"></label>
-        <label class="field"><span>SNI — домен ноды или сайта прикрытия</span><input id="nn-sni" placeholder="www.samsung.com"></label>
-        <label class="field"><span>Публичный ключ ноды</span><input id="nn-key" placeholder="из журнала marvia-node"></label>
-        <label class="field"><span>Публичный ключ REALITY (pbk)</span><input id="nn-pbk" placeholder="пусто — обычный TLS"></label>
-        <label class="field"><span>Короткий идентификатор (sid)</span><input id="nn-sid" placeholder="необязательно"></label>
-        <label class="field"><span>Путь WebSocket (за CDN)</span><input id="nn-wspath" placeholder="пусто — прямое подключение"></label>
-      </div>
-      <p class="muted" style="margin:.6rem 0 0">
-        Заполни pbk, если нода запущена с <code class="mono">-reality-dest</code>: ссылки уйдут
-        с <code class="mono">security=reality</code>, а SNI должен указывать на сайт прикрытия.
-        Заполни путь WebSocket, если нода стоит за CDN: тогда адрес выше — это адрес CDN,
-        а настоящий адрес ноды в конфиг не попадёт. Вместе они не работают: CDN
-        расшифровывает TLS у себя, и REALITY через него невозможен.
-      </p>
-      <button id="nn-create" style="margin-top:.8rem">Добавить</button>
-      </details>
-    </div>
-
-    <div class="card">
-      <h2>Ноды <span class="muted" id="nodes-count"></span></h2>
-      <div id="nodes-body"></div>
-    </div>
-  </section>
-
-  <!--
-    Хозяйство: ключи для ботов, копия базы, приложения покупателям.
-
-    Всё это до сих пор делалось только curl'ом. С ключами это было хуже всего:
-    мы пишем в документации «боту — отдельный ключ, админский не давать», а
-    выпустить его в панели было нечем — и продавец, который не касается кода,
-    отдавал боту админский токен, потому что кнопки не было.
-  -->
-  <section id="tab-keys" hidden>
-    <div class="card">
-      <h2>Ключи для ботов</h2>
-      <p class="muted" style="margin:0 0 .9rem">
-        Боту нужен свой ключ, а не админский токен. Админским ты входишь сюда;
-        отдать его боту — значит дать право снести все ноды со статистикой и
-        увести секреты покупателей, а при утечке отозвать его нельзя, не
-        выкинув из панели себя.
-      </p>
-      <div class="grid">
-        <label class="field"><span>Название — по нему потом отзывать</span><input id="nk-name" placeholder="телеграм-бот"></label>
-      </div>
-      <div class="kinds" style="margin:.8rem 0">
-        <label><input type="checkbox" value="users" checked> users — покупатели</label>
-        <label><input type="checkbox" value="nodes"> nodes — ноды</label>
-        <label><input type="checkbox" value="read"> read — только смотреть</label>
-      </div>
-      <button class="primary" id="nk-create">Выпустить ключ</button>
-      <div id="keys-body" style="margin-top:1rem"></div>
-    </div>
-
-    <div class="card">
-      <h2>Копия базы</h2>
-      <p class="muted" style="margin:0 0 .9rem">
-        В базе все покупатели и все оплаченные ими месяцы. Панель делает копию
-        сама раз в сутки, но она лежит на этом же сервере — а теряют сервер
-        целиком, вместе с хостером. Забери копию к себе.
-      </p>
-      <button id="backup-get">Скачать копию базы</button>
-      <p class="muted" style="margin:.6rem 0 0">
-        В файле секреты покупателей: храни его так же, как админский токен.
-      </p>
-    </div>
-
-    <div class="card">
-      <h2>Приложения покупателям</h2>
-      <p class="muted" style="margin:0 0 .9rem">
-        Их раздаёт сама панель, с твоего домена: магазины приложений и
-        международные CDN в России отваливаются первыми, и покупатель
-        застревает на шаге «скачай» — уже заплатив.
-      </p>
-      <div id="apps-body"></div>
-    </div>
-  </section>
-</div>
-
-<dialog id="modal"><div id="modal-body"></div>
-  <div class="row" style="margin-top:1rem;justify-content:flex-end">
-    <button id="modal-close">Закрыть</button>
   </div>
-</dialog>
-
-<div id="toast"></div>
+</template>
 
 <script nonce="%NONCE%">
 "use strict";
 
-/* Всё содержимое ставится через textContent, а не через разметку строкой.
-   Метки подписчиков приходят от продавца и его бота, и одна угловая скобка в
-   имени не должна превращаться в исполняемый код на странице, где лежит
-   админский токен. */
+/* ────────────────────────────────────────────────────────────────────────────
+   Маленький отрисовщик шаблона
 
-const state = { token: localStorage.getItem("veil.token") || "", users: [], nodes: [] };
+   Дизайн приходит с холста на своём языке: sc-for, sc-if и {{ путь }}. Его
+   родной рантайм собирает логику компонента из строки через new Function, а
+   это требует 'unsafe-eval' в политике — на странице, где живёт админский
+   токен, такого допускать нельзя. Отсюда свой отрисовщик: он умеет ровно те
+   три конструкции, что использует дизайн, и не выполняет ничего, кроме них.
 
-const $ = (id) => document.getElementById(id);
+   Выражение в {{ }} — только путь через точку либо true/false. Это не
+   ограничение реализации, а решение: как только в шаблон попадает
+   произвольное выражение, его снова нужно чем-то вычислять.
+   ──────────────────────────────────────────────────────────────────────── */
 
-function el(tag, props, ...kids) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(props || {})) {
-    if (k === "class") node.className = v;
-    else if (k === "text") node.textContent = v;
-    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
-    else if (v !== null && v !== undefined) node.setAttribute(k, v);
+const BINDING = /\{\{\s*([\w.]+)\s*\}\}/g;
+const WHOLE_BINDING = /^\s*\{\{\s*([\w.]+)\s*\}\}\s*$/;
+
+function resolvePath(path, scope) {
+  if (path === "true") return true;
+  if (path === "false") return false;
+  let cur = scope;
+  for (const part of path.split(".")) {
+    if (cur == null) return undefined;
+    cur = cur[part];
   }
-  for (const kid of kids.flat()) {
-    if (kid === null || kid === undefined || kid === false) continue;
-    node.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
-  }
-  return node;
+  return cur;
 }
 
-let toastTimer = 0;
-function toast(message, bad) {
-  const box = $("toast");
-  box.textContent = message;
-  box.className = bad ? "show bad" : "show";
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { box.className = ""; }, 3200);
-}
-
-async function api(method, path, body) {
-  const res = await fetch(path, {
-    method,
-    headers: Object.assign(
-      { "Authorization": "Bearer " + state.token },
-      body ? { "Content-Type": "application/json" } : {}
-    ),
-    body: body ? JSON.stringify(body) : undefined,
+function interpolate(text, scope) {
+  return text.replace(BINDING, (_, path) => {
+    const v = resolvePath(path, scope);
+    return v == null ? "" : String(v);
   });
-  if (res.status === 401) { logout(); throw new Error("токен не подошёл"); }
-  if (res.status === 204) return null;
+}
 
+// buildInto переносит содержимое шаблонного узла в живой, разрешая по дороге
+// подстановки. Обработчики вешаются слушателем, а не атрибутом: атрибут с
+// кодом строкой политика не пустит, и правильно сделает.
+function buildInto(source, target, scope) {
+  for (const node of source.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.nodeValue;
+      if (!text.includes("{{")) {
+        target.appendChild(node.cloneNode(false));
+        continue;
+      }
+      target.appendChild(document.createTextNode(interpolate(text, scope)));
+      continue;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) continue;
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === "sc-for") {
+      const list = resolvePath((node.getAttribute("list") || "").replace(/[{}\s]/g, ""), scope);
+      const as = node.getAttribute("as") || "item";
+      if (!Array.isArray(list)) continue;
+      for (const item of list) {
+        // Наследуем область через прототип: вложенный цикл видит и внешние
+        // имена, но своим присваиванием их не затирает.
+        const inner = Object.create(scope);
+        inner[as] = item;
+        buildInto(node, target, inner);
+      }
+      continue;
+    }
+
+    if (tag === "sc-if") {
+      const cond = resolvePath((node.getAttribute("value") || "").replace(/[{}\s]/g, ""), scope);
+      if (cond) buildInto(node, target, scope);
+      continue;
+    }
+
+    const el = document.createElement(tag);
+    for (const attr of node.attributes) {
+      const name = attr.name;
+      const value = attr.value;
+
+      if (name.toLowerCase() === "onclick") {
+        const m = WHOLE_BINDING.exec(value);
+        const fn = m ? resolvePath(m[1], scope) : null;
+        if (typeof fn === "function") {
+          el.style.cursor = "pointer";
+          el.addEventListener("click", fn);
+        }
+        continue;
+      }
+
+      const m = WHOLE_BINDING.exec(value);
+      if (m) {
+        const v = resolvePath(m[1], scope);
+        if (v == null || v === "") continue;
+        el.setAttribute(name, String(v));
+        continue;
+      }
+      el.setAttribute(name, value.includes("{{") ? interpolate(value, scope) : value);
+    }
+    buildInto(node, el, scope);
+    target.appendChild(el);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Разговор с панелью
+   ──────────────────────────────────────────────────────────────────────── */
+
+// Ключ тот же, что был у прежней панели: продавец, уже вошедший однажды, не
+// должен искать токен заново из-за смены вида.
+const TOKEN_KEY = "veil.token";
+const LOOK_KEY = "marvia-look";
+
+const state = {
+  token: null,
+  page: "dash",
+  preset: "steel",
+  acc: null,
+  density: "normal",
+  users: [],
+  nodes: [],
+  stats: null,
+  loading: false,
+  error: null,
+};
+
+async function api(path) {
+  const res = await fetch(path, { headers: { Authorization: "Bearer " + state.token } });
+  if (res.status === 401) {
+    logout();
+    throw new Error("токен не подошёл");
+  }
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { /* не JSON */ }
@@ -423,11 +525,168 @@ async function api(method, path, body) {
   return data;
 }
 
-/* ---------- человеческие форматы ---------- */
+async function loadAll() {
+  state.loading = true;
+  state.error = null;
+  render();
+  try {
+    const [users, nodes, stats, keys] = await Promise.all([
+      api("/api/v1/users"),
+      api("/api/v1/nodes"),
+      api("/api/v1/stats?days=30"),
+      api("/api/v1/keys"),
+    ]);
+    state.users = (users && users.users) || [];
+    state.nodes = (nodes && nodes.nodes) || [];
+    state.stats = stats || null;
+    state.keys = (keys && keys.keys) || [];
+  } catch (err) {
+    state.error = err.message;
+  } finally {
+    state.loading = false;
+    render();
+  }
+}
+
+function logout() {
+  try { localStorage.removeItem(TOKEN_KEY); } catch (_) { /* приватное окно */ }
+  state.token = null;
+  document.getElementById("app").hidden = true;
+  document.getElementById("login").hidden = false;
+  document.getElementById("login-token").value = "";
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Тема. Перенесена из дизайна дословно: 27 видов, три плотности и арифметика
+   контраста, которая подбирает приглушённый цвет так, чтобы он оставался
+   читаемым на обоих фонах.
+   ──────────────────────────────────────────────────────────────────────── */
+
+const PRESETS = {
+  emerald:  { label: "Изумруд", bg: "#06100c", fg: "#e8f6ef", acc: "#1fd18d" },
+  jade:     { label: "Нефрит", bg: "#071310", fg: "#e3f5f0", acc: "#33d6c0" },
+  teal:     { label: "Лагуна", bg: "#04100f", fg: "#dff5f3", acc: "#00d4c8" },
+  ice:      { label: "Лёд", bg: "#060c14", fg: "#e2f0fb", acc: "#54c8ff" },
+  cobalt:   { label: "Кобальт", bg: "#070a18", fg: "#e6eaff", acc: "#5c7cff" },
+  ultra:    { label: "Ультра", bg: "#05061a", fg: "#e4e7ff", acc: "#3d5bff" },
+  plum:     { label: "Слива", bg: "#0b0714", fg: "#efe7fb", acc: "#a86dff" },
+  orchid:   { label: "Орхидея", bg: "#100716", fg: "#f7e8fb", acc: "#e46ce0" },
+  fuchsia:  { label: "Фуксия", bg: "#120616", fg: "#fbe6f6", acc: "#ff5ecd" },
+  rose:     { label: "Роза", bg: "#120709", fg: "#fbe8ec", acc: "#ff5f7e" },
+  crimson:  { label: "Кармин", bg: "#130508", fg: "#fbe3e6", acc: "#ff3b52" },
+  ember:    { label: "Угли", bg: "#120902", fg: "#fbeadc", acc: "#ff7a3d" },
+  amber:    { label: "Янтарь", bg: "#100c04", fg: "#f8f0dd", acc: "#ffc247" },
+  gold:     { label: "Золото", bg: "#0f0d05", fg: "#f7f1dc", acc: "#e8c25a" },
+  citrus:   { label: "Цитрус", bg: "#0c0f05", fg: "#f0f5dd", acc: "#c9e64b" },
+  lime:     { label: "Лайм", bg: "#080f06", fg: "#ecf7e2", acc: "#8ff04f" },
+  olive:    { label: "Олива", bg: "#0a0d07", fg: "#eaf1de", acc: "#96bf5c" },
+  sand:     { label: "Песок", bg: "#100d09", fg: "#f5ede1", acc: "#d9a97a" },
+  copper:   { label: "Медь", bg: "#110a06", fg: "#f8e9dd", acc: "#e08b4c" },
+  steel:    { label: "Серый", bg: "#0c0e11", fg: "#f1f4f7", acc: "#c3ccd6" },
+  slate:    { label: "Графит", bg: "#0e1013", fg: "#eef1f4", acc: "#8fa3b8" },
+  mono:     { label: "Моно", bg: "#0a0a0a", fg: "#fafafa", acc: "#fafafa" },
+  oled:     { label: "OLED", bg: "#000000", fg: "#ffffff", acc: "#3dffc0" },
+  midnight: { label: "Полночь", bg: "#03050a", fg: "#dfe8f5", acc: "#4d8cff" },
+  daylight: { label: "Дневная", bg: "#f3f5f7", fg: "#0d1013", acc: "#046b4a" },
+  paper:    { label: "Бумага", bg: "#f7f4ee", fg: "#14120e", acc: "#8a4b1f" },
+  linen:    { label: "Лён", bg: "#f4f1ea", fg: "#171512", acc: "#3f6b4a" },
+};
+
+const DENSITY = {
+  compact: { r: 12, pad: 12, gap: 8 },
+  normal:  { r: 16, pad: 16, gap: 12 },
+  roomy:   { r: 22, pad: 20, gap: 16 },
+};
+
+const LOOKS = [
+  ["Серый (из коробки)", "steel", "normal"],
+  ["Изумруд", "emerald", "normal"], ["Нефрит", "jade", "normal"], ["Лагуна", "teal", "normal"],
+  ["Лёд", "ice", "normal"], ["Кобальт", "cobalt", "normal"], ["Ультра", "ultra", "roomy"],
+  ["Слива", "plum", "roomy"], ["Орхидея", "orchid", "normal"], ["Фуксия", "fuchsia", "normal"],
+  ["Роза", "rose", "roomy"], ["Кармин", "crimson", "compact"], ["Угли", "ember", "normal"],
+  ["Янтарь", "amber", "roomy"], ["Золото", "gold", "roomy"], ["Цитрус", "citrus", "normal"],
+  ["Лайм", "lime", "normal"], ["Олива", "olive", "normal"], ["Песок", "sand", "roomy"],
+  ["Медь", "copper", "roomy"], ["Сталь", "steel", "compact"], ["Графит", "slate", "compact"],
+  ["Моно", "mono", "compact"], ["OLED", "oled", "compact"], ["Полночь", "midnight", "normal"],
+  ["Дневная", "daylight", "normal"], ["Бумага", "paper", "roomy"], ["Лён", "linen", "roomy"],
+];
+
+function hex(h) {
+  const v = h.replace("#", "");
+  const n = v.length === 3 ? v.split("").map((c) => c + c).join("") : v;
+  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+}
+function mix(a, b, t) {
+  const A = hex(a), B = hex(b);
+  return "#" + A.map((c, i) => Math.round(c + (B[i] - c) * t).toString(16).padStart(2, "0")).join("");
+}
+function lum(h) {
+  const [r, g, b] = hex(h);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+function rl(h) {
+  return hex(h).map((c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  }).reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+}
+function ratio(a, b) {
+  const x = rl(a), y = rl(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+function bestOn(bg) {
+  return ratio("#08110d", bg) >= ratio("#ffffff", bg) ? "#08110d" : "#ffffff";
+}
+function readableDim(fg, grounds, start) {
+  const list = [].concat(grounds), tone = list[list.length - 1];
+  const ok = (c) => Math.min.apply(null, list.map((g) => ratio(c, g))) >= 4.5;
+  let t = Math.min(start == null ? 0.55 : start, 0.55), out = mix(fg, tone, t);
+  while (t > 0 && !ok(out)) { t = Math.max(0, t - 0.04); out = mix(fg, tone, t); }
+  return out;
+}
+
+function theme(ov) {
+  const st = ov ? Object.assign({}, state, ov) : state;
+  const base = PRESETS[st.preset] || PRESETS.steel;
+  const acc = st.acc || base.acc;
+  const bg = base.bg, dark = lum(bg) < 0.5;
+  const [r, g, b] = hex(acc);
+  const surf = mix(bg, dark ? "#ffffff" : "#000000", 0.05);
+  const surf2 = mix(bg, dark ? "#ffffff" : "#000000", 0.10);
+  return {
+    bg, acc, surf, surf2,
+    line: mix(bg, dark ? "#ffffff" : "#000000", 0.16),
+    fg: base.fg,
+    dim: readableDim(base.fg, [surf, surf2]),
+    accFg: bestOn(acc),
+    accSoft: "rgba(" + r + "," + g + "," + b + ",0.13)",
+    warn: "#f2a03d",
+  };
+}
+
+function saveLook() {
+  try {
+    localStorage.setItem(LOOK_KEY, JSON.stringify({ preset: state.preset, acc: state.acc, density: state.density }));
+  } catch (_) { /* приватное окно — вид просто не запомнится */ }
+}
+function loadLook() {
+  try {
+    const raw = localStorage.getItem(LOOK_KEY);
+    if (!raw) return;
+    const v = JSON.parse(raw);
+    if (v && PRESETS[v.preset]) state.preset = v.preset;
+    if (v && DENSITY[v.density]) state.density = v.density;
+    if (v && typeof v.acc === "string") state.acc = v.acc;
+  } catch (_) { /* испорченное значение — берём вид из коробки */ }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Человеческие форматы
+   ──────────────────────────────────────────────────────────────────────── */
 
 function bytes(n) {
   if (!n) return "0";
-  const units = ["Б", "КБ", "МБ", "ГБ", "ТБ"];
+  const units = ["Б", "КБ", "МБ", "ГБ", "ТБ", "ПБ"];
   let i = 0, v = n;
   while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
   return (v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)) + " " + units[i];
@@ -441,743 +700,440 @@ function plural(n, one, few, many) {
   return many;
 }
 
-function untilText(iso) {
-  if (!iso) return { text: "бессрочно", cls: "" };
-
-  const left = new Date(iso) - Date.now();
-  if (left < 0) return { text: "истекла", cls: "bad" };
-
-  // Округляем вверх, а не вниз. Выданная на семь дней подписка живёт на
-  // несколько секунд меньше семи суток, и округление вниз показывало бы
-  // «6 дней» сразу после выдачи — продавец решит, что панель его обсчитала.
-  const days = Math.ceil(left / 86400000);
-  if (days === 0) return { text: "истекает сегодня", cls: "warn" };
-  return { text: days + " " + plural(days, "день", "дня", "дней"), cls: days <= 3 ? "warn" : "" };
+function shortDate(iso) {
+  if (!iso) return "бессрочно";
+  const d = new Date(iso);
+  if (isNaN(d)) return "—";
+  return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + d.getFullYear();
 }
 
-function agoText(iso) {
-  if (!iso) return { text: "не выходила на связь", cls: "bad" };
-  const sec = Math.floor((Date.now() - new Date(iso)) / 1000);
-  if (sec > 120) {
-    const min = Math.floor(sec / 60);
-    if (min < 60) return { text: min + " " + plural(min, "минуту", "минуты", "минут") + " назад", cls: "bad" };
-    const hours = Math.floor(min / 60);
-    return { text: hours + " " + plural(hours, "час", "часа", "часов") + " назад", cls: "bad" };
-  }
-  return { text: sec < 20 ? "только что" : sec + " с назад", cls: "ok" };
+function dayLabel(day) {
+  const p = day.split("-");
+  return p.length === 3 ? p[2] + "." + p[1] : day;
 }
 
-/* ---------- копирование ---------- */
-
-async function copy(value) {
-  try {
-    await navigator.clipboard.writeText(value);
-    toast("Скопировано");
-  } catch (_) {
-    // Буфер обмена доступен только по HTTPS или на localhost. Панель за
-    // прокси без TLS этого не получит, поэтому запасной путь обязателен.
-    const area = el("textarea", { style: "position:fixed;opacity:0" });
-    area.value = value;
-    document.body.append(area);
-    area.select();
-    const okCopy = document.execCommand("copy");
-    area.remove();
-    toast(okCopy ? "Скопировано" : "Скопируй вручную: буфер недоступен без HTTPS", !okCopy);
-  }
+// sinceLabel — «когда нода последний раз выходила на связь». Панель считает
+// ноду живой, если та отмечалась недавно: своего пинга у панели нет, а врать
+// зелёным кружком нельзя.
+function sinceLabel(iso) {
+  if (!iso) return "никогда";
+  const d = new Date(iso);
+  if (isNaN(d)) return "—";
+  const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return "сейчас";
+  if (mins < 60) return mins + " мин";
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + " ч";
+  return Math.floor(hours / 24) + " дн";
 }
 
-function linkRow(label, value) {
-  return el("div", {},
-    el("div", { class: "muted", text: label }),
-    el("div", { class: "linkbox" },
-      el("div", { class: "mono", text: value }),
-      el("button", { class: "tiny", onclick: () => copy(value) }, "Копировать")
-    )
-  );
+function nodeAlive(node) {
+  if (!node.enabled || !node.last_seen) return false;
+  return Date.now() - new Date(node.last_seen).getTime() < 10 * 60 * 1000;
 }
 
-/* ---------- окно с выданными ссылками ---------- */
-
-function showLinks(title, links, issued, hasVP1) {
-  const body = $("modal-body");
-  body.replaceChildren();
-  body.append(el("h2", { text: title }));
-
-  if (issued && issued.some((i) => i.kind === "vp1")) {
-    body.append(el("div", { class: "note", text:
-      "Приватный ключ vp1 показывается один раз — панель его не хранит. " +
-      "Если покупатель его потеряет, выпусти новый через «Ещё доступ»." }));
-  } else if (hasVP1 && !links.account) {
-    // Продавец видит доступ vp1 в списке, но ссылки на него здесь нет.
-    // Без объяснения это выглядит как поломка, хотя это осознанное свойство.
-    body.append(el("div", { class: "note", text:
-      "Ссылки для нашего клиента здесь нет: приватный ключ vp1 показывался " +
-      "один раз и в панели не хранится. Чтобы выдать доступ заново, нажми " +
-      "«Ещё доступ» — старый ключ можно потом отозвать." }));
-  }
-
-  if (links.account) body.append(linkRow("Наш клиент", links.account));
-  if (links.subscription) body.append(linkRow("Подписка для v2rayNG, Hiddify и подобных", links.subscription));
-  (links.stock || []).forEach((link, i) => {
-    body.append(linkRow("Прямая ссылка " + (i + 1), link));
-  });
-
-  if (!links.account && !(links.stock || []).length) {
-    body.append(el("p", { class: "muted", text: "Ссылок нет: сначала добавь хотя бы одну ноду." }));
-  }
-  $("modal").showModal();
+function keyShort(user) {
+  const cred = (user.credentials || [])[0];
+  if (!cred || !cred.secret) return "—";
+  return cred.secret.slice(0, 4) + "…" + cred.secret.slice(-4);
 }
 
-/* ---------- подписчики ---------- */
-
-function usageCell(user) {
-  const used = user.used || 0;
-  const limit = user.traffic_limit || 0;
-  const wrap = el("div", {});
-  wrap.append(el("div", { class: "mono", text: limit ? bytes(used) + " из " + bytes(limit) : bytes(used) }));
-
-  if (limit) {
-    const share = Math.min(1, used / limit);
-    const cls = share >= 1 ? "bad" : share > 0.85 ? "warn" : "";
-    wrap.append(el("div", { class: "bar" }, el("i", { class: cls, style: "width:" + (share * 100).toFixed(1) + "%" })));
-  }
-  return wrap;
+function daysLeft(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return Math.ceil((d.getTime() - Date.now()) / 86400000);
 }
 
-function kindTags(user) {
-  const seen = [];
-  for (const c of user.credentials || []) if (!seen.includes(c.kind)) seen.push(c.kind);
-  return el("div", { class: "row" }, seen.map((k) => el("span", { class: "tag", text: k })));
+/* ────────────────────────────────────────────────────────────────────────────
+   Значения для шаблона
+   ──────────────────────────────────────────────────────────────────────── */
+
+// Разделы: только те, за которыми есть данные. «Тарифы», «Платежи»,
+// «Рассылка», «Логи и аудит» в дизайне нарисованы, но панель о них ничего не
+// знает — пункта меню, который ведёт в выдуманное, здесь нет.
+const PAGES = {
+  dash:    ["Панель", "Обзор за 30 дней"],
+  clients: ["Клиенты", ""],
+  keys:    ["Ключи ботов", ""],
+  nodes:   ["Ноды", ""],
+  stats:   ["Статистика", "Трафик за 30 дней"],
+  look:    ["Вид", "Тема панели · 27 готовых видов"],
+};
+
+function setState(patch) {
+  Object.assign(state, patch);
+  if ("preset" in patch || "acc" in patch || "density" in patch) saveLook();
+  render();
 }
 
-// found отбирает подписчиков по строке поиска.
-//
-// Искать надо по всему, чем продавец может помнить человека: по метке, по
-// номеру и по ключу из телеграма — покупатель, который написал, называет себя
-// как угодно, но не «подписчик №147».
-function found() {
-  const query = ($("users-search").value || "").trim().toLowerCase();
-  if (!query) {
-    return state.users;
-  }
-  return state.users.filter((u) =>
-    (u.label || "").toLowerCase().includes(query) ||
-    (u.external_id || "").toLowerCase().includes(query) ||
-    String(u.id) === query.replace("#", "")
-  );
-}
+function renderVals() {
+  const t = theme();
+  const d = DENSITY[state.density] || DENSITY.normal;
+  const page = state.page;
 
-function renderUsers() {
-  const host = $("users-body");
-  host.replaceChildren();
-  $("users-count").textContent = state.users.length ? "· " + state.users.length : "";
+  const vars = Object.entries(t).map(([k, v]) => "--" + k + ":" + v).join(";")
+    + ";--r:" + d.r + "px;--pad:" + d.pad + "px;--gap:" + d.gap + "px";
 
-  if (!state.users.length) {
-    host.append(el("div", { class: "empty", text: "Пока никого. Выдай первый доступ выше." }));
-    return;
-  }
+  const card = "flex:1;min-width:0;padding:" + d.pad + "px;border-radius:" + d.r
+    + "px;background:" + t.surf + ";border:1px solid " + t.line;
 
-  const shown = found();
-  if (!shown.length) {
-    host.append(el("div", { class: "empty", text: "Никого не нашлось" }));
-    return;
-  }
+  const users = state.users || [];
+  const nodes = state.nodes || [];
+  const byDay = (state.stats && state.stats.by_day) || [];
+  const byNode = (state.stats && state.stats.by_node) || [];
+  const total = (state.stats && state.stats.total) || 0;
 
-  const rows = shown.map((user) => {
-    const until = untilText(user.expires_at);
-    return el("tr", {},
-      el("td", {},
-        el("div", { text: user.label || "без метки" }),
-        el("div", { class: "muted", text: "#" + user.id })
-      ),
-      el("td", {}, user.enabled
-        ? el("span", { class: "tag ok", text: "активен" })
-        : el("span", { class: "tag bad", text: "отключён" })),
-      el("td", {}, usageCell(user)),
-      el("td", {}, el("span", { class: "tag " + until.cls, text: until.text })),
-      el("td", {}, kindTags(user)),
-      el("td", { class: "actions" },
-        el("button", { class: "tiny", onclick: () => openLinks(user) }, "Ссылки"),
-        " ",
-        el("button", { class: "tiny", onclick: () => extend(user, 30) }, "+30 дней"),
-        " ",
-        el("button", { class: "tiny", onclick: () => toggle(user) }, user.enabled ? "Отключить" : "Включить"),
-        " ",
-        el("button", { class: "tiny", onclick: () => addKind(user) }, "Ещё доступ"),
-        " ",
-        el("button", { class: "tiny", onclick: () => rotateSub(user) }, "Сменить подписку"),
-        " ",
-        el("button", { class: "tiny danger", onclick: () => removeUser(user) }, "Удалить")
-      )
-    );
-  });
+  const activeUsers = users.filter((u) => u.enabled).length;
+  const expiring = users.filter((u) => {
+    const left = daysLeft(u.expires_at);
+    return u.enabled && left !== null && left >= 0 && left <= 7;
+  }).length;
+  const liveNodes = nodes.filter(nodeAlive).length;
 
-  host.append(el("table", {},
-    el("thead", {}, el("tr", {},
-      el("th", { text: "Подписчик" }), el("th", { text: "Статус" }),
-      el("th", { text: "Трафик" }), el("th", { text: "Подписка" }),
-      el("th", { text: "Доступы" }), el("th", {})
-    )),
-    el("tbody", {}, rows)
-  ));
-}
-
-async function createUser() {
-  const kinds = Array.from(document.querySelectorAll(".kinds input:checked")).map((i) => i.value);
-  if (!kinds.length) { toast("Выбери хотя бы один вид доступа", true); return; }
-
-  const days = Number($("nu-days").value) || 0;
-  const gb = Number($("nu-gb").value) || 0;
-  const body = {
-    label: $("nu-label").value.trim(),
-    traffic_limit: Math.round(gb * 1024 * 1024 * 1024),
-    max_ips: Number($("nu-ips").value) || 0,
-    kinds: kinds,
+  const subFor = {
+    dash: "Обзор за 30 дней",
+    clients: users.length + " " + plural(users.length, "клиент", "клиента", "клиентов")
+      + " · " + activeUsers + " активных",
+    keys: "Токены для ботов и интеграций",
+    nodes: nodes.length + " " + plural(nodes.length, "нода", "ноды", "нод")
+      + " · " + liveNodes + " на связи",
+    stats: "Трафик за 30 дней · " + bytes(total),
+    look: "Тема панели · 27 готовых видов",
   };
-  if (days > 0) body.expires_at = new Date(Date.now() + days * 86400000).toISOString();
 
-  try {
-    const res = await api("POST", "/api/v1/users", body);
-    $("nu-label").value = "";
-    await load();
-    showLinks("Доступ выдан — отправь покупателю", res.links || {}, res.issued);
-  } catch (err) { toast(err.message, true); }
-}
-
-async function openLinks(user) {
-  try {
-    const links = await api("GET", "/api/v1/users/" + user.id + "/links");
-    const hasVP1 = (user.credentials || []).some((c) => c.kind === "vp1");
-    showLinks(user.label || ("Подписчик #" + user.id), links, null, hasVP1);
-  } catch (err) { toast(err.message, true); }
-}
-
-async function addKind(user) {
-  const kind = prompt("Какой доступ выпустить: vp1, vless или trojan?", "vless");
-  if (!kind) return;
-  try {
-    const res = await api("POST", "/api/v1/users/" + user.id + "/credentials", { kind: kind.trim(), label: "" });
-    await load();
-    showLinks("Новый доступ выдан", res.links || {}, res.issued);
-  } catch (err) { toast(err.message, true); }
-}
-
-// extend продлевает силами панели, а не браузера.
-//
-// Считать новый срок здесь нельзя — ровно это мы запрещаем ботам в
-// документации. Страница знает срок на момент последнего обновления: если
-// минуту назад покупатель продлился через бота, вычисленная в браузере дата
-// окажется старее настоящей, и клик «+30 дней» молча отберёт у человека
-// оплаченный месяц. extend_by прибавляет к тому, что в базе прямо сейчас.
-async function extend(user, days) {
-  try {
-    await api("PATCH", "/api/v1/users/" + user.id, { extend_by: days + "d", enabled: true });
-    toast("Продлено на " + days + " " + plural(days, "день", "дня", "дней"));
-    await load();
-  } catch (err) { toast(err.message, true); }
-}
-
-// rotateSub меняет адрес подписки, когда ссылку раздали знакомым.
-//
-// Отзывать за это весь доступ — терять покупателя. Но и бесплатным это не
-// бывает: в прежней ссылке покупателя зашит путь /sub/<токен>, и приложение
-// по нему больше не достучится. Поэтому сразу выдаём новый набор и показываем
-// ссылку — её надо переслать человеку.
-async function rotateSub(user) {
-  if (!confirm(
-    "Сменить адрес подписки у " + (user.label || ("#" + user.id)) + "?\n\n" +
-    "Старая ссылка перестанет работать сразу — вместе со ссылкой доступа, " +
-    "которая у покупателя на устройстве. Панель выдаст новую, её надо ему переслать."
-  )) return;
-
-  try {
-    await api("POST", "/api/v1/users/" + user.id + "/sub-token");
-    const res = await api("POST", "/api/v1/users/" + user.id + "/credentials", { kind: "vp1", label: "" });
-    showLinks("Новый доступ для " + (user.label || ("#" + user.id)), res.links, res.issued, true);
-    await load();
-  } catch (err) { toast(err.message, true); }
-}
-
-async function toggle(user) {
-  try {
-    await api("PATCH", "/api/v1/users/" + user.id, { enabled: !user.enabled });
-    await load();
-  } catch (err) { toast(err.message, true); }
-}
-
-async function removeUser(user) {
-  if (!confirm("Удалить " + (user.label || ("#" + user.id)) + " вместе со статистикой?")) return;
-  try {
-    await api("DELETE", "/api/v1/users/" + user.id);
-    await load();
-  } catch (err) { toast(err.message, true); }
-}
-
-/* ---------- ноды ---------- */
-
-// healthCell показывает, сколько людей реально доходит до ноды.
-//
-// Панель стоит за границей и блокировку сама не увидит. Пока продавец не
-// видит этих цифр, он узнаёт о проблеме из обращений в поддержку.
-function healthCell(node) {
-  const h = node.health || {};
-  const total = (h.ok || 0) + (h.failed || 0);
-  if (!total) return el("span", { class: "muted", text: "нет отчётов" });
-
-  const box = el("div", {});
-  box.append(el("span", {
-    class: node.degraded ? "tag bad" : "tag ok",
-    text: (h.ok || 0) + " из " + total + " доходят",
+  const nav = Object.entries(PAGES).map(([k, [label]]) => ({
+    k, label,
+    onClick: () => setState({ page: k }),
+    style: "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:" + d.r
+      + "px;font-size:13px;cursor:pointer;color:" + (page === k ? t.fg : t.dim)
+      + ";background:" + (page === k ? t.surf2 : "transparent"),
+    dot: "width:7px;height:7px;border-radius:2px;background:" + (page === k ? t.acc : t.dim),
   }));
-  if (h.median_latency_ms) {
-    box.append(el("div", { class: "muted", text: h.median_latency_ms + " мс" }));
-  }
-  return box;
-}
 
-function renderNodes() {
-  const host = $("nodes-body");
-  host.replaceChildren();
-  $("nodes-count").textContent = state.nodes.length ? "· " + state.nodes.length : "";
+  // ── обзор ────────────────────────────────────────────────────────────────
+  const kpis = [
+    ["АКТИВНЫЕ КЛЮЧИ", String(activeUsers), users.length + " всего", true],
+    ["ТРАФИК · 30 Д", bytes(total), "по всем нодам", true],
+    ["НОДЫ НА СВЯЗИ", liveNodes + " / " + nodes.length, liveNodes === nodes.length ? "все отвечают" : "не все отвечают", liveNodes === nodes.length],
+    ["ИСТЕКАЮТ", String(expiring), "в ближайшие 7 дней", expiring === 0],
+  ].map(([label, value, delta, good]) => ({
+    label, value, delta, style: card,
+    deltaStyle: "font-size:12px;margin-top:6px;color:" + (good ? t.acc : t.dim),
+  }));
 
-  if (!state.nodes.length) {
-    host.append(el("div", { class: "empty", text: "Нод нет. Без них подписка пустая." }));
-    return;
-  }
-
-  const rows = state.nodes.map((node) => {
-    const seen = agoText(node.last_seen);
-    return el("tr", {},
-      el("td", {},
-        el("div", { text: node.name || "без имени" }),
-        el("div", { class: "muted", text: node.country || "страна не указана" }),
-        el("div", { class: "muted mono", text: node.address })
-      ),
-      el("td", {},
-        el("div", { class: "mono", text: node.sni || "—" }),
-        node.reality_public_key ? el("span", { class: "tag ok", text: "reality" }) : null,
-        node.ws_path ? el("span", { class: "tag ok", text: "за CDN" }) : null
-      ),
-      el("td", {}, healthCell(node),
-      ),
-      el("td", {}, el("span", { class: "tag " + seen.cls, text: seen.text })),
-      el("td", {}, node.enabled
-        ? el("span", { class: "tag ok", text: "включена" })
-        : el("span", { class: "tag bad", text: "выключена" })),
-      el("td", { class: "actions" },
-        el("button", { class: "tiny", onclick: () => editNode(node) }, "Изменить"),
-        el("button", { class: "tiny", onclick: () => toggleNode(node) },
-          node.enabled ? "Выключить" : "Включить"),
-        el("button", { class: "tiny danger", onclick: () => removeNode(node) }, "Удалить")
-      )
-    );
+  const peak = byDay.reduce((m, x) => Math.max(m, x.up + x.down), 0) || 1;
+  const lolli = byDay.map((x) => {
+    const sum = x.up + x.down;
+    const h = Math.max(4, Math.round((sum / peak) * 100));
+    const top = h > 88;
+    return {
+      title: dayLabel(x.day) + " · " + bytes(sum),
+      colStyle: "flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:" + h + "%",
+      dotStyle: "width:" + (top ? 8 : 6) + "px;height:" + (top ? 8 : 6) + "px;border-radius:50%;flex:none;background:"
+        + (sum === 0 ? "transparent" : top ? t.acc : t.fg) + ";border:1px solid " + (sum === 0 ? t.line : top ? t.acc : t.fg),
+      stemStyle: "width:1px;flex:1;background:" + t.line,
+    };
   });
 
-  host.append(el("table", {},
-    el("thead", {}, el("tr", {},
-      el("th", { text: "Нода" }), el("th", { text: "SNI" }),
-      el("th", { text: "Связь" }), el("th", { text: "Доходят" }),
-      el("th", { text: "Статус" }), el("th", {})
-    )),
-    el("tbody", {}, rows)
-  ));
-}
+  const dashNodes = nodes.slice(0, 5).map((n) => {
+    const alive = nodeAlive(n);
+    return {
+      name: n.name || n.address,
+      load: alive ? sinceLabel(n.last_seen) : n.enabled ? "молчит" : "выключена",
+      rowStyle: "display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:" + d.r + "px;background:" + t.surf2,
+      dotStyle: "width:8px;height:8px;border-radius:50%;flex:none;background:" + (alive ? t.acc : t.warn),
+    };
+  });
 
-async function inviteNode() {
-  try {
-    const res = await api("POST", "/api/v1/nodes/invite", { label: "" });
+  const clientRow = "2fr 1.2fr 1fr 1fr 0.9fr";
+  const dashHead = "display:grid;grid-template-columns:" + clientRow
+    + ";gap:12px;padding:0 12px;font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:.14em;color:" + t.dim;
 
-    const modalBody = $("modal-body");
-    modalBody.replaceChildren();
-    modalBody.append(
-      el("h2", { text: "Команда для нового сервера" }),
-      el("div", { class: "note", text:
-        "Приглашение одноразовое и живёт час. Оно даёт единственное право — " +
-        "один раз назваться нодой, поэтому его не страшно передать тому, кто " +
-        "ставит сервер." })
-    );
-    modalBody.append(linkRow("Вставь на сервере от root", res.command));
-    modalBody.append(el("p", { class: "muted", text:
-      "Если 443 занят — поставь PORT=8443 перед sh. Другой сайт прикрытия — " +
-      "DEST=www.icloud.com:443. Своё имя ноды — NAME=amsterdam-1, страна — " +
-      "COUNTRY=Нидерланды. Имя и страну можно поправить и потом, здесь же." }));
-    $("modal").showModal();
-  } catch (err) { toast(err.message, true); }
-}
+  function clientStatus(u) {
+    if (!u.enabled) return ["Отключён", "dim"];
+    const left = daysLeft(u.expires_at);
+    if (left !== null && left < 0) return ["Истёк", "warn"];
+    if (left !== null && left <= 7) return ["Истекает", "warn"];
+    return ["Активен", "ok"];
+  }
 
-async function createNode() {
-  const body = {
-    name: $("nn-name").value.trim(),
-    country: $("nn-country").value.trim(),
-    address: $("nn-address").value.trim(),
-    sni: $("nn-sni").value.trim(),
-    public_key: $("nn-key").value.trim(),
-    reality_public_key: $("nn-pbk").value.trim(),
-    reality_short_id: $("nn-sid").value.trim(),
-    ws_path: $("nn-wspath").value.trim(),
+  const clients = users.slice(0, 4).map((u) => {
+    const [status, st] = clientStatus(u);
+    return {
+      name: u.label || ("#" + u.id),
+      key: keyShort(u),
+      until: shortDate(u.expires_at),
+      traffic: bytes(u.used),
+      status,
+      rowStyle: "display:grid;grid-template-columns:" + clientRow
+        + ";gap:12px;align-items:center;padding:11px 12px;border-radius:" + d.r + "px;background:" + t.surf2,
+      badgeStyle: "justify-self:start;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
+        + (st === "ok" ? t.acc : st === "warn" ? t.warn : t.dim) + ";background:"
+        + (st === "ok" ? t.accSoft : st === "warn" ? "rgba(242,160,61,.13)" : t.surf),
+    };
+  });
+
+  // ── таблицы ──────────────────────────────────────────────────────────────
+  const TABLES = {
+    clients: {
+      cols: ["КЛИЕНТ", "КЛЮЧ", "ДО", "УСТРОЙСТВ", "ТРАФИК", "СТАТУС"],
+      grid: "2fr 1.4fr 1.2fr 1fr 1fr 0.9fr",
+      rows: users.map((u) => {
+        const [status, st] = clientStatus(u);
+        return [u.label || ("#" + u.id), keyShort(u), shortDate(u.expires_at),
+          String(u.max_ips || "—"), bytes(u.used), status, st];
+      }),
+      empty: "Ни одного клиента. Заводит их бот продавца через API.",
+    },
+    keys: {
+      cols: ["ИМЯ", "ПРАВА", "СОЗДАН", "ПОСЛЕДНИЙ ВХОД", "СТАТУС"],
+      grid: "1.6fr 1.4fr 1.2fr 1.2fr 0.9fr",
+      rows: ((state.keys || [])).map((k) => [
+        k.name, (k.scopes || []).join(", ") || "все", shortDate(k.created_at),
+        k.last_used_at ? shortDate(k.last_used_at) : "ни разу",
+        k.revoked_at ? "Отозван" : "Активен", k.revoked_at ? "dim" : "ok",
+      ]),
+      empty: "Ключей для ботов пока нет.",
+    },
   };
-  if (!body.address) { toast("Нужен адрес вида host:port", true); return; }
 
-  try {
-    const res = await api("POST", "/api/v1/nodes", body);
-    ["nn-name", "nn-country", "nn-address", "nn-sni", "nn-key", "nn-pbk", "nn-sid", "nn-wspath"].forEach((id) => { $(id).value = ""; });
-    await load();
+  const tbl = TABLES[page] || TABLES.clients;
+  const tableCols = tbl.cols;
+  const tableHead = "display:grid;grid-template-columns:" + tbl.grid
+    + ";gap:12px;padding:0 12px;font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:.14em;color:" + t.dim;
+  const tableRows = tbl.rows.map((r) => {
+    const st = r[r.length - 1], cells = r.slice(0, -1);
+    const col = st === "ok" ? t.acc : st === "warn" ? t.warn : t.dim;
+    const soft = st === "ok" ? t.accSoft : st === "warn" ? "rgba(242,160,61,.13)" : t.surf;
+    return {
+      style: "display:grid;grid-template-columns:" + tbl.grid
+        + ";gap:12px;align-items:center;padding:11px 12px;border-radius:" + d.r + "px;background:" + t.surf2,
+      cells: cells.map((text, i) => ({
+        text,
+        style: i === cells.length - 1
+          ? "justify-self:start;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:" + col + ";background:" + soft
+          : (i === 0 ? "font-size:13px;color:" + t.fg + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+            : "font-family:JetBrains Mono,monospace;font-size:12px;color:" + t.dim),
+      })),
+    };
+  });
 
-    const modalBody = $("modal-body");
-    modalBody.replaceChildren();
-    modalBody.append(
-      el("h2", { text: "Нода добавлена" }),
-      el("div", { class: "note", text:
-        "Токен показывается один раз: в базе лежит только его хеш. Положи его в " +
-        "переменную VEIL_NODE_TOKEN, а не в строку запуска — в строке его видит " +
-        "любой пользователь системы через ps." }),
-      linkRow("Токен ноды", res.token),
-      linkRow("Запусти на сервере", "marvia-node -panel " + location.origin +
-        " -key-file node.key -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org")
-    );
-    $("modal").showModal();
-  } catch (err) { toast(err.message, true); }
+  const KPI = {
+    clients: [
+      ["ВСЕГО", String(users.length), "заведено", true],
+      ["АКТИВНЫХ", String(activeUsers), users.length ? Math.round((activeUsers / users.length) * 100) + "% от всех" : "—", true],
+      ["ИСТЕКАЮТ", String(expiring), "7 дней", expiring === 0],
+    ],
+    keys: [
+      ["КЛЮЧЕЙ", String((state.keys || []).length), "для ботов", true],
+    ],
+    stats: [
+      ["ТРАФИК", bytes(total), "за 30 дней", true],
+      ["НОД С ТРАФИКОМ", String(byNode.length), "из " + nodes.length, true],
+      ["В СУТКИ", bytes(byDay.length ? total / byDay.length : 0), "в среднем", true],
+    ],
+  };
+  const pageKpis = (KPI[page] || []).map(([label, value, delta, good]) => ({
+    label, value, delta, style: card,
+    deltaStyle: "font-size:12px;margin-top:6px;color:" + (good ? t.acc : t.dim),
+  }));
+
+  // ── ноды ─────────────────────────────────────────────────────────────────
+  const nodeTraffic = {};
+  for (const x of byNode) nodeTraffic[x.name] = (x.up || 0) + (x.down || 0);
+  const nodePeak = Object.values(nodeTraffic).reduce((m, v) => Math.max(m, v), 0) || 1;
+
+  const nodeCards = nodes.map((n) => {
+    const alive = nodeAlive(n);
+    const st = alive ? "ok" : "warn";
+    const traffic = nodeTraffic[n.name] || 0;
+    const f = traffic / nodePeak;
+    return {
+      name: n.name || n.address,
+      host: n.address + (n.country ? " · " + n.country : ""),
+      load: bytes(traffic),
+      share: total ? Math.round((traffic / total) * 100) + "%" : "0%",
+      seen: alive ? sinceLabel(n.last_seen) : n.enabled ? "молчит" : "выкл",
+      state: alive ? "НА СВЯЗИ" : n.enabled ? "МОЛЧИТ" : "ВЫКЛЮЧЕНА",
+      style: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf
+        + ";border:1px solid " + (st === "warn" ? t.warn : t.line) + ";display:flex;flex-direction:column;gap:14px",
+      badge: "flex:none;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
+        + (st === "ok" ? t.acc : t.warn) + ";background:" + (st === "ok" ? t.accSoft : "rgba(242,160,61,.13)"),
+      track: "height:6px;border-radius:3px;background:" + t.surf2 + ";overflow:hidden",
+      fill: "width:" + Math.round(f * 100) + "%;height:100%;background:" + (st === "ok" ? t.acc : t.warn),
+    };
+  });
+
+  // ── статистика ───────────────────────────────────────────────────────────
+  const dayBars = byDay.map((x) => {
+    const sum = x.up + x.down;
+    const h = Math.max(2, Math.round((sum / peak) * 100));
+    return {
+      month: dayLabel(x.day).slice(0, 2),
+      title: x.day + " · " + bytes(sum),
+      col: "flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;height:100%",
+      bar: "height:" + h + "%;border-radius:" + Math.min(d.r, 10) + "px " + Math.min(d.r, 10)
+        + "px 4px 4px;background:linear-gradient(180deg," + t.acc + "," + mix(t.acc, t.surf, 0.55) + ")",
+      label: "font-family:JetBrains Mono,monospace;font-size:9px;letter-spacing:.1em;text-align:center;color:" + t.dim,
+    };
+  });
+
+  const shareRows = byNode.map((x) => {
+    const traffic = (x.up || 0) + (x.down || 0);
+    const f = total ? traffic / total : 0;
+    return {
+      name: x.name,
+      pct: Math.round(f * 100) + "%",
+      track: "height:8px;border-radius:4px;background:" + t.surf2 + ";overflow:hidden",
+      fill: "width:" + Math.round(f * 100) + "%;height:100%;border-radius:4px;background:" + t.acc,
+    };
+  });
+
+  // ── вид ──────────────────────────────────────────────────────────────────
+  const accents = Object.values(PRESETS).map((p) => p.acc)
+    .filter((c, i, a) => a.indexOf(c) === i)
+    .map((c) => ({
+      c,
+      onClick: () => setState({ acc: c }),
+      style: "width:26px;height:26px;border-radius:8px;cursor:pointer;background:" + c
+        + ";outline:2px solid " + (state.acc === c ? t.fg : "transparent") + ";outline-offset:2px",
+    }));
+
+  const looks = LOOKS.map(([name, key, dens]) => {
+    const on = state.preset === key && state.density === dens;
+    const lt = theme({ preset: key, acc: null });
+    const lr = DENSITY[dens].r;
+    return {
+      name,
+      sub: { compact: "плотно", normal: "обычно", roomy: "просторно" }[dens],
+      onClick: () => setState({ preset: key, acc: null, density: dens }),
+      wrap: "min-width:0;display:flex;flex-direction:column;gap:7px;cursor:pointer;padding:4px;border-radius:"
+        + (d.r + 4) + "px;border:" + (on ? "2px solid " + t.acc : "1px solid " + t.line)
+        + ";background:" + (on ? t.accSoft : "transparent"),
+      canvas: "position:relative;height:104px;border-radius:" + Math.max(d.r - 3, 6) + "px;overflow:hidden;background:" + lt.bg,
+      side: "position:absolute;left:0;top:0;bottom:0;width:26%;background:" + lt.surf + ";border-right:1px solid " + lt.line,
+      navA: "position:absolute;left:5%;top:9%;width:17%;height:5%;border-radius:3px;background:" + lt.acc,
+      navB: "position:absolute;left:5%;top:19%;width:15%;height:4%;border-radius:3px;background:" + lt.fg + ";opacity:.35",
+      navC: "position:absolute;left:5%;top:27%;width:15%;height:4%;border-radius:3px;background:" + lt.fg + ";opacity:.2",
+      kpiA: "position:absolute;left:31%;top:10%;width:20%;height:22%;border-radius:" + Math.round(lr * 0.3) + "px;background:" + lt.surf,
+      kpiB: "position:absolute;left:54%;top:10%;width:20%;height:22%;border-radius:" + Math.round(lr * 0.3) + "px;background:" + lt.surf,
+      kpiC: "position:absolute;left:77%;top:10%;width:18%;height:22%;border-radius:" + Math.round(lr * 0.3)
+        + "px;background:" + lt.accSoft + ";border:1px solid " + lt.acc,
+      chart: "position:absolute;left:31%;top:38%;right:5%;bottom:8%;border-radius:" + Math.round(lr * 0.3)
+        + "px;background:" + lt.surf2 + ";background-image:linear-gradient(180deg,transparent 62%," + lt.acc + " 62%)",
+      label: "display:flex;align-items:baseline;justify-content:space-between;gap:6px;padding:0 3px",
+      name2: "font-size:12px;color:" + (on ? t.acc : t.fg),
+      sub2: "font-family:JetBrains Mono,monospace;font-size:9px;color:" + t.dim,
+    };
+  });
+
+  const ghostBtn = "padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;color:" + t.dim
+    + ";background:" + t.surf2;
+
+  return {
+    vars,
+    host: location.host,
+    hostBadge: "padding:3px 9px;border-radius:6px;background:" + t.accSoft
+      + ";font-family:JetBrains Mono,monospace;font-size:10px;color:" + t.acc,
+    ghostBtn,
+    reloadLabel: state.loading ? "Обновляю…" : "Обновить",
+    doReload: () => { if (!state.loading) loadAll(); },
+    doLogout: logout,
+
+    nav,
+    pageTitle: PAGES[page][0],
+    pageSub: subFor[page] || PAGES[page][1],
+
+    hasError: !!state.error,
+    errText: state.error || "",
+    errStyle: "padding:12px 14px;border-radius:" + d.r + "px;font-size:13px;color:" + t.warn
+      + ";background:rgba(242,160,61,.13);border:1px solid " + t.warn,
+    emptyStyle: "padding:14px 12px;font-size:13px;color:" + t.dim,
+
+    isDash: page === "dash",
+    isTable: page === "clients" || page === "keys",
+    isNodesPage: page === "nodes",
+    isStatsPage: page === "stats",
+    isLook: page === "look",
+
+    kpis, lolli, nodes: dashNodes, clients, dashHead,
+    totalTraffic: bytes(total),
+    firstDay: byDay.length ? dayLabel(byDay[0].day) : "",
+    lastDay: byDay.length ? dayLabel(byDay[byDay.length - 1].day) : "",
+    noNodes: nodes.length === 0,
+    noClients: users.length === 0,
+    allClients: "font-size:12px;cursor:pointer;color:" + t.acc,
+    allClientsLabel: "Все " + users.length + " " + plural(users.length, "клиент", "клиента", "клиентов") + " →",
+    goClients: () => setState({ page: "clients" }),
+
+    pageKpis, tableCols, tableHead, tableRows,
+    noTableRows: tableRows.length === 0,
+    emptyTable: tbl.empty,
+
+    nodeCards,
+    dayBars, shareRows,
+    noShare: shareRows.length === 0,
+    accents, looks,
+  };
 }
 
-// editNode — имя и страна ноды.
-//
-// Хостер называет машину vm-4823917-ubuntu, и ровно это видит покупатель в
-// списке серверов. Страну пишет продавец: по адресу она определяется неверно —
-// у хостеров адреса числятся то в Нидерландах, то в США.
-function editNode(node) {
-  const name = el("input", { value: node.name || "", placeholder: "Амстердам-1" });
-  const country = el("input", { value: node.country || "", placeholder: "Нидерланды" });
+/* ────────────────────────────────────────────────────────────────────────────
+   Отрисовка
+   ──────────────────────────────────────────────────────────────────────── */
 
-  const save = el("button", { class: "primary", onclick: async () => {
-    const body = { name: name.value.trim(), country: country.value.trim() };
-    if (!body.name) { toast("Имя не может быть пустым", true); return; }
-    try {
-      await api("PATCH", "/api/v1/nodes/" + node.id, body);
-      $("modal").close();
-      await load();
-      toast("Сохранено");
-    } catch (err) { toast(err.message, true); }
-  } }, "Сохранить");
+const shell = document.getElementById("shell");
 
-  const body = $("modal-body");
-  body.replaceChildren();
-  body.append(
-    el("h2", { text: "Нода " + node.address }),
-    el("label", { class: "field" }, el("span", { text: "Имя" }), name),
-    el("label", { class: "field" }, el("span", { text: "Страна и город — как их увидит покупатель" }), country),
-    el("div", { class: "note", text:
-      "Страна встаёт первой в названии сервера: чужие приложения — Happ, " +
-      "Hiddify, v2rayNG — подбирают флажок по тексту названия, больше им её " +
-      "передать нечем." }),
-    el("div", { class: "row", style: "margin-top:1rem" }, save)
-  );
-  $("modal").showModal();
+function render() {
+  const app = document.getElementById("app");
+  const vals = renderVals();
+
+  app.setAttribute("style", vals.vars + ";height:100%");
+  app.classList.toggle("busy", state.loading);
+  document.body.style.background = theme().bg;
+
+  const frag = document.createDocumentFragment();
+  buildInto(shell.content, frag, vals);
+  app.replaceChildren(frag);
 }
 
-// toggleNode выводит ноду из работы, не теряя её статистику.
-//
-// При подозрении на блокировку это первое действие: нода исчезает из подписок
-// покупателей, но остаётся в панели, и решение отменяется тем же нажатием.
-async function toggleNode(node) {
-  try {
-    await api("PATCH", "/api/v1/nodes/" + node.id, { enabled: !node.enabled });
-    await load();
-    toast(node.enabled ? "Нода выключена: из подписок ушла" : "Нода включена");
-  } catch (err) { toast(err.message, true); }
+/* ────────────────────────────────────────────────────────────────────────────
+   Вход
+   ──────────────────────────────────────────────────────────────────────── */
+
+function enter(token) {
+  state.token = token;
+  document.getElementById("login").hidden = true;
+  document.getElementById("app").hidden = false;
+  loadAll();
 }
 
-async function removeNode(node) {
-  if (!confirm("Удалить ноду " + (node.name || node.address) + "? Её статистика тоже пропадёт.")) return;
-  try {
-    await api("DELETE", "/api/v1/nodes/" + node.id);
-    await load();
-  } catch (err) { toast(err.message, true); }
-}
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("login-err");
+  const token = document.getElementById("login-token").value.trim();
+  if (!token) { err.textContent = "Токен пустой"; return; }
 
-/* ---------- загрузка и вход ---------- */
-
-async function load() {
-  const [users, nodes] = await Promise.all([
-    api("GET", "/api/v1/users"),
-    api("GET", "/api/v1/nodes"),
-  ]);
-  state.users = (users && users.users) || [];
-  state.nodes = (nodes && nodes.nodes) || [];
-
-  const active = state.users.filter((u) => u.enabled).length;
-  const alive = state.nodes.filter((n) => n.last_seen && (Date.now() - new Date(n.last_seen)) < 120000).length;
-  $("summary").textContent =
-    active + " из " + state.users.length + " активны · нод на связи " + alive + " из " + state.nodes.length;
-
-  renderUsers();
-  renderNodes();
-
-  // Статистика — первая вкладка, и она должна быть заполнена к тому моменту,
-  // когда человек на неё посмотрит, а не после того, как он её нажмёт.
-  if (!$("tab-stats").hidden) loadStats();
-}
-
-function logout() {
-  state.token = "";
-  localStorage.removeItem("veil.token");
-  $("app").hidden = true;
-  $("gate").hidden = false;
-}
-
-async function enter(token) {
+  err.textContent = "Проверяю…";
   state.token = token;
   try {
-    await load();
-    localStorage.setItem("veil.token", token);
-    $("gate").hidden = true;
-    $("app").hidden = false;
-  } catch (err) {
-    state.token = "";
-    toast(err.message, true);
+    // Проверяем токен самой дешёвой ручкой: узнать версию может только тот,
+    // кто уже вошёл, так что отказ здесь — это отказ везде.
+    await api("/api/v1/version");
+    try { localStorage.setItem(TOKEN_KEY, token); } catch (_) { /* приватное окно */ }
+    err.textContent = "";
+    enter(token);
+  } catch (e2) {
+    state.token = null;
+    err.textContent = e2.message === "токен не подошёл" ? "Токен не подошёл" : e2.message;
   }
-}
-
-/* ---------- сборка страницы ---------- */
-
-$("tokenSubmit").addEventListener("click", () => {
-  const token = $("tokenInput").value.trim();
-  if (token) enter(token);
-});
-$("tokenInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("tokenSubmit").click(); });
-$("logout").addEventListener("click", logout);
-$("refresh").addEventListener("click", () => load().catch((e) => toast(e.message, true)));
-$("modal-close").addEventListener("click", () => $("modal").close());
-$("nu-create").addEventListener("click", createUser);
-$("nn-invite").addEventListener("click", inviteNode);
-$("nn-create").addEventListener("click", createNode);
-
-/* ---------- хозяйство: ключи, копия базы, приложения ---------- */
-
-// loadHousehold подтягивает всё для вкладки разом.
-//
-// Отдельно от общего обновления: на этой вкладке продавец бывает раз в
-// месяц, а ходить за списком ключей на каждом обновлении незачем.
-// ------------------------------------------------------------- статистика
-
-// Столбики, а не кривая: у нас суточные значения, а линия между ними врёт —
-// обещает, что между днями что-то происходило плавно.
-function renderChart(days) {
-  const host = $("stats-chart");
-  host.replaceChildren();
-
-  const max = Math.max(...days.map((d) => d.up + d.down), 1);
-
-  const chart = el("div", { class: "chart" });
-  for (const d of days) {
-    const total = d.up + d.down;
-    const height = total ? Math.max(2, Math.round((total / max) * 100)) : 0;
-    // Подсказка обычным title: своя всплывашка на графике, который смотрят
-    // раз в неделю, — это код, который потом чинить.
-    chart.append(el("div", {
-      class: total ? "day" : "day empty",
-      title: d.day + " — " + bytes(total),
-    }, el("i", { class: "bar", style: "height:" + (total ? height : 2) + "%" })));
-  }
-  host.append(chart);
-
-  host.append(el("div", { class: "chart-axis" },
-    el("span", { text: days[0].day }),
-    el("span", { text: "всего " + bytes(days.reduce((s, d) => s + d.up + d.down, 0)) }),
-    el("span", { text: days[days.length - 1].day })));
-}
-
-function renderStatsNodes(nodes) {
-  const host = $("stats-nodes");
-  host.replaceChildren();
-
-  if (!nodes.length) {
-    host.append(el("div", { class: "empty", text: "За этот период через ноды ничего не прошло." }));
-    return;
-  }
-
-  const max = Math.max(...nodes.map((n) => n.up + n.down), 1);
-  for (const n of nodes) {
-    const total = n.up + n.down;
-    host.append(el("div", { class: "node-bar" },
-      el("span", { class: "who", text: n.country ? n.country + " · " + n.name : n.name }),
-      el("span", { class: "track" }, el("i", { class: "fill", style: "width:" + Math.max(2, (total / max) * 100) + "%" })),
-      el("span", { class: "amount", text: bytes(total) })));
-  }
-}
-
-async function loadStats(days) {
-  const period = days || Number(document.querySelector("#stats-periods button.active").dataset.days) || 30;
-  try {
-    const res = await api("GET", "/api/v1/stats?days=" + period);
-
-    const active = state.users.filter((u) => u.enabled).length;
-    const todayUsage = res.by_day.length ? res.by_day[res.by_day.length - 1] : { up: 0, down: 0 };
-
-    $("stats-tiles").replaceChildren(
-      el("div", { class: "tile" },
-        el("div", { class: "name", text: "Люди" }),
-        el("div", { class: "value", text: String(state.users.length) }),
-        el("div", { class: "note", text: "у " + active + " доступ работает" })),
-      el("div", { class: "tile" },
-        el("div", { class: "name", text: "Трафик за сутки" }),
-        el("div", { class: "value", text: bytes(todayUsage.up + todayUsage.down) }),
-        el("div", { class: "note", text: "с полуночи по UTC" })),
-      el("div", { class: "tile" },
-        el("div", { class: "name", text: "За " + period + " дней" }),
-        el("div", { class: "value", text: bytes(res.total) }),
-        el("div", { class: "note", text: res.by_node.length + " " + plural(res.by_node.length, "нода", "ноды", "нод") })));
-
-    renderChart(res.by_day);
-    renderStatsNodes(res.by_node);
-  } catch (err) { toast(err.message, true); }
-}
-
-async function loadHousehold() {
-  await Promise.all([loadKeys(), loadApps()]);
-}
-
-async function loadKeys() {
-  const host = $("keys-body");
-  try {
-    const res = await api("GET", "/api/v1/keys");
-    const keys = res.keys || [];
-    host.replaceChildren();
-
-    if (!keys.length) {
-      host.append(el("div", { class: "empty", text: "Ключей нет. Боту нужен свой — выпусти его здесь." }));
-      return;
-    }
-
-    const rows = keys.map((key) => el("tr", {},
-      el("td", {}, el("div", { text: key.name }),
-        el("div", { class: "muted", text: (key.scopes || []).join(", ") })),
-      el("td", { class: "muted", text: key.last_used_at ? "пользовались " + agoText(key.last_used_at).text : "ни разу не пользовались" }),
-      el("td", { class: "actions" },
-        el("button", { class: "tiny danger", onclick: () => revokeKey(key) }, "Отозвать"))
-    ));
-
-    host.append(el("table", {},
-      el("thead", {}, el("tr", {},
-        el("th", { text: "Ключ" }), el("th", { text: "Когда пользовались" }), el("th", {}))),
-      el("tbody", {}, ...rows)));
-  } catch (err) {
-    host.replaceChildren(el("div", { class: "empty", text: err.message }));
-  }
-}
-
-async function createKey() {
-  const name = $("nk-name").value.trim();
-  if (!name) { toast("Дай ключу название — по нему его потом отзывать", true); return; }
-
-  const scopes = Array.from(document.querySelectorAll("#tab-keys .kinds input:checked")).map((i) => i.value);
-  if (!scopes.length) { toast("Выбери хотя бы одно право", true); return; }
-
-  try {
-    const res = await api("POST", "/api/v1/keys", { name, scopes });
-    $("nk-name").value = "";
-    // Секрет показывается один раз: в базе остаётся только хеш.
-    showKeySecret(res.key, res.secret);
-    await loadKeys();
-  } catch (err) { toast(err.message, true); }
-}
-
-function showKeySecret(key, secret) {
-  const body = $("modal-body");
-  body.replaceChildren(
-    el("h2", { text: "Ключ «" + (key ? key.name : "") + "» выпущен" }),
-    el("p", { class: "muted", text: "Секрет показывается один раз — в базе остаётся только хеш. Вставь его боту сейчас." }),
-    linkRow("Ключ", secret),
-    el("p", { class: "muted", text: "Все запросы бота идут с заголовком Authorization: Bearer " + secret.slice(0, 6) + "…" })
-  );
-  $("modal").showModal();
-}
-
-async function revokeKey(key) {
-  if (!confirm("Отозвать ключ «" + key.name + "»? Бот, который им пользуется, сразу перестанет работать.")) return;
-  try {
-    await api("DELETE", "/api/v1/keys/" + key.id);
-    toast("Ключ отозван");
-    await loadKeys();
-  } catch (err) { toast(err.message, true); }
-}
-
-async function loadApps() {
-  const host = $("apps-body");
-  try {
-    const res = await api("GET", "/api/v1/apps");
-    const apps = res.apps || [];
-    host.replaceChildren();
-
-    if (!apps.length) {
-      host.append(el("div", { class: "empty", text: res.hint || "Приложений нет" }));
-      return;
-    }
-
-    const rows = apps.map((app) => el("tr", {},
-      el("td", {}, el("div", { text: app.name === "android" ? "Android" : "Windows" }),
-        el("div", { class: "muted mono", text: app.file })),
-      el("td", { class: "muted", text: bytes(app.size) }),
-      el("td", { class: "muted mono", text: (app.sha256 || "").slice(0, 16) + "…" })
-    ));
-
-    host.append(el("table", {},
-      el("thead", {}, el("tr", {},
-        el("th", { text: "Приложение" }), el("th", { text: "Размер" }), el("th", { text: "sha256" }))),
-      el("tbody", {}, ...rows)));
-  } catch (err) {
-    host.replaceChildren(el("div", { class: "empty", text: err.message }));
-  }
-}
-
-// Копию скачиваем через fetch, а не ссылкой: токен живёт в заголовке, и в
-// адресе ему делать нечего — адреса попадают в журналы прокси и в историю.
-async function downloadBackup() {
-  const btn = $("backup-get");
-  btn.disabled = true;
-  btn.textContent = "Снимаю копию…";
-  try {
-    const res = await fetch("/api/v1/backup", { headers: { "Authorization": "Bearer " + state.token } });
-    if (!res.ok) throw new Error("код " + res.status);
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = el("a", { href: url, download: "panel-" + new Date().toISOString().slice(0, 10) + ".db" });
-    document.body.append(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    toast("Копия скачана");
-  } catch (err) {
-    toast(err.message, true);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Скачать копию базы";
-  }
-}
-
-$("nk-create").addEventListener("click", createKey);
-$("users-search").addEventListener("input", renderUsers);
-$("backup-get").addEventListener("click", downloadBackup);
-
-document.querySelectorAll(".tabs button").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b === btn));
-    ["stats", "users", "nodes", "keys"].forEach((name) => {
-      $("tab-" + name).hidden = btn.dataset.tab !== name;
-    });
-    if (btn.dataset.tab === "keys") loadHousehold();
-    if (btn.dataset.tab === "stats") loadStats();
-  });
 });
 
-document.querySelectorAll("#stats-periods button").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll("#stats-periods button").forEach((b) => b.classList.toggle("active", b === btn));
-    loadStats(Number(btn.dataset.days));
-  });
-});
+loadLook();
 
-if (state.token) enter(state.token);
+let saved = null;
+try { saved = localStorage.getItem(TOKEN_KEY); } catch (_) { /* приватное окно */ }
+if (saved) enter(saved);
 </script>
 </body>
 </html>

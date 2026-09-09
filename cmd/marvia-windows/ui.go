@@ -81,6 +81,7 @@ func serveUI(ctl *Controller, log *journal) (string, *http.Server, error) {
 	mux.HandleFunc("POST "+prefix+"/api/account", u.setAccount)
 	mux.HandleFunc("POST "+prefix+"/api/connect", u.connect)
 	mux.HandleFunc("POST "+prefix+"/api/disconnect", u.disconnect)
+	mux.HandleFunc("POST "+prefix+"/api/proxy/off", u.dropProxy)
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -138,6 +139,15 @@ func (u *ui) connect(w http.ResponseWriter, _ *http.Request) {
 func (u *ui) disconnect(w http.ResponseWriter, _ *http.Request) {
 	u.ctl.Disconnect()
 	writeJSON(w, http.StatusOK, map[string]any{})
+}
+
+// dropProxy снимает системный прокси — по нажатию человека, не сам.
+func (u *ui) dropProxy(w http.ResponseWriter, _ *http.Request) {
+	if err := u.ctl.DropProxy(); err != nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, u.ctl.Status())
 }
 
 func writeJSON(w http.ResponseWriter, code int, payload any) {

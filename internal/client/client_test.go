@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/veilproject/veil/internal/client"
 	"github.com/veilproject/veil/internal/mux"
+	"github.com/veilproject/veil/internal/relay"
 	"github.com/veilproject/veil/internal/transport"
 	"github.com/veilproject/veil/internal/vp1"
 )
@@ -217,6 +219,10 @@ type testNode struct {
 	info      client.Node
 	clientKey vp1.KeyPair
 	opts      client.Options
+
+	// sampled — сколько байт нода согласилась отдать на замер скорости.
+	// Нужно, чтобы проверить потолок: за эти байты платит продавец.
+	sampled atomic.Int64
 }
 
 func startTestNode(t *testing.T) *testNode {
@@ -243,31 +249,34 @@ func startTestNode(t *testing.T) *testNode {
 
 	guard := vp1.NewReplayGuard(vp1.ClockSkew)
 
+	node := &testNode{}
+
 	go func() {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
 				return
 			}
-			go serveNodeConn(conn, serverKey, guard)
+			go serveNodeConn(conn, serverKey, guard, &node.sampled)
 		}
 	}()
 
-	return &testNode{
-		info: client.Node{
-			Name:      "test",
-			Address:   tcp.Addr().String(),
-			SNI:       "node.example",
-			PublicKey: vp1.EncodeKey(serverKey.Public),
-		},
-		clientKey: clientKey,
-		// В бою доверие системное; здесь подсовываем свой сертификат,
-		// чтобы проверка шла по-настоящему, а не отключалась.
-		opts: client.Options{RootCAs: pool},
+	// Поля заполняем по одному: внутри счётчик, а его копировать нельзя.
+	node.info = client.Node{
+		Name:      "test",
+		Address:   tcp.Addr().String(),
+		SNI:       "node.example",
+		PublicKey: vp1.EncodeKey(serverKey.Public),
 	}
+	node.clientKey = clientKey
+	// В бою доверие системное; здесь подсовываем свой сертификат, чтобы
+	// проверка шла по-настоящему, а не отключалась.
+	node.opts = client.Options{RootCAs: pool}
+
+	return node
 }
 
-func serveNodeConn(conn net.Conn, key vp1.KeyPair, guard *vp1.ReplayGuard) {
+func serveNodeConn(conn net.Conn, key vp1.KeyPair, guard *vp1.ReplayGuard, sampled *atomic.Int64) {
 	tunnel, _, err := vp1.ServerHandshake(conn, key, guard, vp1.AllowAll)
 	if err != nil {
 		_ = conn.Close()
@@ -289,8 +298,40 @@ func serveNodeConn(conn net.Conn, key vp1.KeyPair, guard *vp1.ReplayGuard) {
 		go func() {
 			defer stream.Close()
 
-			addr, err := vp1.ReadRequest(stream)
+			addr, kind, err := vp1.ReadRequestOf(stream)
 			if err != nil {
+				return
+			}
+
+			// Датаграммы отдаём тому же коду, что работает в бою: копия
+			// здесь проверяла бы копию, а не ноду.
+			if kind == vp1.KindProbe {
+				size, err := vp1.ReadSampleRequest(stream)
+				if err != nil {
+					return
+				}
+				sampled.Store(int64(size))
+				if err := vp1.WriteStatus(stream, vp1.StatusOK); err != nil {
+					return
+				}
+				if err := vp1.GrantSample(stream, size); err != nil {
+					return
+				}
+				_ = vp1.WriteSample(stream, size)
+				return
+			}
+
+			if kind == vp1.KindUDP {
+				socket, err := net.DialTimeout("udp", addr.String(), 10*time.Second)
+				if err != nil {
+					_ = vp1.WriteStatus(stream, vp1.StatusUnreachable)
+					return
+				}
+				if err := vp1.WriteStatus(stream, vp1.StatusOK); err != nil {
+					_ = socket.Close()
+					return
+				}
+				relay.Datagrams(vp1.Datagrams(stream), socket, 10*time.Second)
 				return
 			}
 			upstream, err := net.DialTimeout("tcp", addr.String(), 10*time.Second)
