@@ -18,7 +18,7 @@
 
 ```bash
 curl -X POST https://panel.example.com/api/v1/keys \
-  -H "Authorization: Bearer $VEIL_ADMIN_TOKEN" \
+  -H "Authorization: Bearer $MARVIA_ADMIN_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"name": "телеграм-бот", "scopes": ["users"]}'
 ```
@@ -54,7 +54,7 @@ Authorization: Bearer vk_…
 
 ```bash
 curl -X POST https://panel.example.com/api/v1/users \
-  -H "Authorization: Bearer $VEIL_KEY" \
+  -H "Authorization: Bearer $MARVIA_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
         "external_id":   "tg:584930221",
@@ -111,7 +111,7 @@ Idempotency-Key: <номер платежа>
 
 ```bash
 curl -X POST https://panel.example.com/api/v1/users \
-  -H "Authorization: Bearer $VEIL_KEY" \
+  -H "Authorization: Bearer $MARVIA_KEY" \
   -H 'Idempotency-Key: charge_1a2b3c' \
   -d '{"external_id": "tg:584930221", "expires_at": "30d"}'
 ```
@@ -131,7 +131,7 @@ curl -X POST https://panel.example.com/api/v1/users \
 
 ```bash
 curl -X PATCH https://panel.example.com/api/v1/users/17 \
-  -H "Authorization: Bearer $VEIL_KEY" \
+  -H "Authorization: Bearer $MARVIA_KEY" \
   -d '{"extend_by": "30d"}'
 ```
 
@@ -151,7 +151,7 @@ curl -X PATCH https://panel.example.com/api/v1/users/17 \
 
 ```bash
 curl "https://panel.example.com/api/v1/users?external_id=tg:584930221" \
-  -H "Authorization: Bearer $VEIL_KEY"
+  -H "Authorization: Bearer $MARVIA_KEY"
 ```
 
 Нет такого — `404`. Есть — список из одного.
@@ -228,7 +228,7 @@ curl -X POST .../api/v1/users/17/credentials -d '{"kind": "vless"}'
 а по ней отдаётся список нод и секреты vless с trojan.
 
 ```bash
-curl -X POST .../api/v1/users/17/sub-token -H "Authorization: Bearer $VEIL_KEY"
+curl -X POST .../api/v1/users/17/sub-token -H "Authorization: Bearer $MARVIA_KEY"
 ```
 
 Старый адрес умирает сразу. Дальше **обязательно** выдай покупателю новый

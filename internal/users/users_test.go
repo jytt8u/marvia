@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 func newKey(t *testing.T) (raw []byte, encoded string) {

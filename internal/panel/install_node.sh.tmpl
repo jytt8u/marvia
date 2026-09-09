@@ -107,8 +107,8 @@ NODE_TOKEN=$(printf '%s' "$RESP" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
 # Секреты уезжают в файл окружения, а не в строку запуска. В строке запуска
 # их видел бы любой пользователь системы через ps.
 cat > "$DIR/env" <<ENVEOF
-VEIL_NODE_TOKEN=$NODE_TOKEN
-VEIL_REALITY_KEY=$REALITY_KEY
+MARVIA_NODE_TOKEN=$NODE_TOKEN
+MARVIA_REALITY_KEY=$REALITY_KEY
 ENVEOF
 chmod 600 "$DIR/env"
 

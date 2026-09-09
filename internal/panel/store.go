@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/veilproject/veil/internal/users"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/users"
+	"github.com/jytt8u/marvia/internal/vp1"
 
 	_ "modernc.org/sqlite" // чистый Go, без cgo: нода и панель кросс-компилируются одной командой
 )

@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/mux"
-	"github.com/veilproject/veil/internal/tunnel"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/mux"
+	"github.com/jytt8u/marvia/internal/tunnel"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // testServer — нода без маскировки: только VP1 и мультиплексирование.

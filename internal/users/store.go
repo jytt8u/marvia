@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // DecodePublicKey разбирает публичный ключ клиента из base64.

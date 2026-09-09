@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/transport"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/transport"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 const wsPath = "/assets/app.js"

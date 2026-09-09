@@ -28,8 +28,8 @@ import (
 	"github.com/xjasonlyu/tun2socks/v2/core/device/iobased"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 
-	"github.com/veilproject/veil/internal/relay"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/relay"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 const (

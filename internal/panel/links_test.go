@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/veilproject/veil/internal/client"
-	"github.com/veilproject/veil/internal/panel"
+	"github.com/jytt8u/marvia/internal/client"
+	"github.com/jytt8u/marvia/internal/panel"
 )
 
 // TestAccountSchemeMatchesClient — панель и клиент называют схему одинаково.

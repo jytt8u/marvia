@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/jytt8u/marvia/internal/envvar"
 )
 
 // Способы оплаты.
@@ -31,13 +33,13 @@ const (
 
 // Config — всё, что продавец настраивает руками.
 type Config struct {
-	// Token — токен бота от @BotFather. Пусто — берём из VEIL_BOT_TOKEN.
+	// Token — токен бота от @BotFather. Пусто — берём из MARVIA_BOT_TOKEN.
 	Token string `json:"telegram_token"`
 
 	// Panel — адрес панели, например https://panel.example.com.
 	Panel string `json:"panel"`
 
-	// Key — ключ доступа к панели с правом users. Пусто — из VEIL_PANEL_KEY.
+	// Key — ключ доступа к панели с правом users. Пусто — из MARVIA_PANEL_KEY.
 	//
 	// Именно ключ, а не админский токен: бот стоит на сервере, доступном из
 	// интернета, и при утечке ключ отзывается одним запросом, не выкидывая
@@ -114,10 +116,10 @@ func LoadConfig(path string) (Config, error) {
 	}
 
 	if c.Token == "" {
-		c.Token = os.Getenv("VEIL_BOT_TOKEN")
+		c.Token = envvar.Get("MARVIA_BOT_TOKEN")
 	}
 	if c.Key == "" {
-		c.Key = os.Getenv("VEIL_PANEL_KEY")
+		c.Key = envvar.Get("MARVIA_PANEL_KEY")
 	}
 	if c.Payment == "" {
 		c.Payment = PayStars
@@ -128,10 +130,10 @@ func LoadConfig(path string) (Config, error) {
 
 func (c Config) check() error {
 	if c.Token == "" {
-		return errors.New("не задан токен бота: telegram_token в настройках или VEIL_BOT_TOKEN")
+		return errors.New("не задан токен бота: telegram_token в настройках или MARVIA_BOT_TOKEN")
 	}
 	if c.Key == "" {
-		return errors.New("не задан ключ панели: panel_key в настройках или VEIL_PANEL_KEY")
+		return errors.New("не задан ключ панели: panel_key в настройках или MARVIA_PANEL_KEY")
 	}
 	if !strings.HasPrefix(c.Panel, "http://") && !strings.HasPrefix(c.Panel, "https://") {
 		return errors.New("panel: нужен адрес панели вида https://panel.example.com")

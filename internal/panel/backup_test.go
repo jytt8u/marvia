@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/veilproject/veil/internal/panel"
+	"github.com/jytt8u/marvia/internal/panel"
 )
 
 // Копия базы — единственное, что отделяет продавца от потери всего бизнеса.

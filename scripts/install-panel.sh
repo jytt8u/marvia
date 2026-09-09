@@ -244,7 +244,7 @@ ADMIN_TOKEN=$("$DIR/marvia-panel" -new-token)
 
 # Токен уезжает в файл окружения, а не в строку запуска: в строке его видел
 # бы любой пользователь системы через ps.
-printf 'VEIL_ADMIN_TOKEN=%s\n' "$ADMIN_TOKEN" > "$DIR/env"
+printf 'MARVIA_ADMIN_TOKEN=%s\n' "$ADMIN_TOKEN" > "$DIR/env"
 chmod 600 "$DIR/env"
 
 BASE="https://$DOMAIN"

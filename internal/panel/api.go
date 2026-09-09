@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/veilproject/veil/internal/routes"
-	"github.com/veilproject/veil/internal/users"
+	"github.com/jytt8u/marvia/internal/routes"
+	"github.com/jytt8u/marvia/internal/users"
 )
 
 // API — HTTP-интерфейс панели.

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/client"
+	"github.com/jytt8u/marvia/internal/client"
 )
 
 // Кончившаяся подписка обязана называться своим именем.

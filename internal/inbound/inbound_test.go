@@ -7,10 +7,10 @@ import (
 	"net"
 	"testing"
 
-	"github.com/veilproject/veil/internal/inbound"
-	"github.com/veilproject/veil/internal/rewind"
-	"github.com/veilproject/veil/internal/users"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/inbound"
+	"github.com/jytt8u/marvia/internal/rewind"
+	"github.com/jytt8u/marvia/internal/users"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // feed отдаёт данные через соединение, обёрнутое в rewind.

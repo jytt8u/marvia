@@ -95,8 +95,8 @@ func TestConfigRejects(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			// Переменные окружения не должны спасать заведомо плохой файл.
-			t.Setenv("VEIL_BOT_TOKEN", "")
-			t.Setenv("VEIL_PANEL_KEY", "")
+			t.Setenv("MARVIA_BOT_TOKEN", "")
+			t.Setenv("MARVIA_PANEL_KEY", "")
 
 			_, err := LoadConfig(write(t, c.body))
 			if err == nil {
@@ -114,8 +114,8 @@ func TestConfigRejects(t *testing.T) {
 // Файл настроек продавец редактирует, копирует и показывает; секреты в нём
 // утекают тем же путём, что и он сам.
 func TestSecretsFromEnv(t *testing.T) {
-	t.Setenv("VEIL_BOT_TOKEN", "123:из-окружения")
-	t.Setenv("VEIL_PANEL_KEY", "vk_из-окружения")
+	t.Setenv("MARVIA_BOT_TOKEN", "123:из-окружения")
+	t.Setenv("MARVIA_PANEL_KEY", "vk_из-окружения")
 
 	cfg, err := LoadConfig(write(t, `{
 	  "panel": "https://panel.example.com",
@@ -135,10 +135,10 @@ func TestSecretsFromEnv(t *testing.T) {
 // что именно от него нужно.
 func TestExampleConfigIsValid(t *testing.T) {
 	body := strings.ReplaceAll(ExampleConfig,
-		"укажи токен от @BotFather или задай VEIL_BOT_TOKEN", "123:abc")
+		"укажи токен от @BotFather или задай MARVIA_BOT_TOKEN", "123:abc")
 
-	t.Setenv("VEIL_BOT_TOKEN", "")
-	t.Setenv("VEIL_PANEL_KEY", "")
+	t.Setenv("MARVIA_BOT_TOKEN", "")
+	t.Setenv("MARVIA_PANEL_KEY", "")
 
 	cfg, err := LoadConfig(write(t, body))
 	if err != nil {

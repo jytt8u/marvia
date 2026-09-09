@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/client"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/client"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // Сколько протокол вывозит сам по себе.

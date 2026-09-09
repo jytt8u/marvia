@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/veilproject/veil/internal/users"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/users"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // ErrUnknownKind — попросили выпустить учётные данные неизвестного вида.
