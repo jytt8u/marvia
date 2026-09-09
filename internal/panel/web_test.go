@@ -67,6 +67,13 @@ func TestEmbeddedFontsAreThere(t *testing.T) {
 		"web/fonts/spectral-400-cyrillic.woff2",
 		"web/fonts/spectral-600-latin.woff2",
 		"web/fonts/spectral-600-cyrillic.woff2",
+		// Ими набрана нынешняя страница: моноширинный — цифры и метки,
+		// Unbounded — заголовки, Chakra Petch — надпись MARVIA PARTNER.
+		"web/fonts/jetbrains-latin.woff2",
+		"web/fonts/jetbrains-cyrillic.woff2",
+		"web/fonts/unbounded-latin.woff2",
+		"web/fonts/unbounded-cyrillic.woff2",
+		"web/fonts/chakra-petch-latin.woff2",
 	}
 
 	for _, path := range want {
@@ -80,5 +87,57 @@ func TestEmbeddedFontsAreThere(t *testing.T) {
 		if len(raw) < 4 || string(raw[:4]) != "wOF2" {
 			t.Errorf("%s не похож на woff2, первые байты %q", path, raw[:min(4, len(raw))])
 		}
+	}
+}
+
+// Маршрут картинок — то же слабое место, что и у шрифтов: имя приходит из
+// адреса и подставляется в путь. Проверяем не «работает ли хороший случай»,
+// а что плохие не проходят.
+
+func TestAssetNameAcceptsOurFiles(t *testing.T) {
+	if !assetName("marvia-mark.png") {
+		t.Error("свой файл отвергнут: marvia-mark.png")
+	}
+}
+
+func TestAssetNameRejectsPaths(t *testing.T) {
+	bad := map[string]string{
+		"выход из каталога":  "../index.html.png",
+		"точки внутри":       "..%2findex.png",
+		"косая":              "assets/mark.png",
+		"обратная косая":     `..\index.png`,
+		"чужое расширение":   "index.html",
+		"без расширения":     "marvia-mark",
+		"пусто":              "",
+		"верхний регистр":    "Marvia-Mark.PNG",
+		"пробел":             "marvia mark.png",
+		"ноль-байт":          "marvia\x00.png",
+		"юникодная косая":    "marvia∕mark.png",
+		"слишком длинное":    string(make([]byte, 80)) + ".png",
+		"только расширение":  ".png",
+		"подчёркивание":      "marvia_mark.png",
+		"двойное расширение": "mark.png.png",
+	}
+
+	for what, name := range bad {
+		if assetName(name) {
+			t.Errorf("%s: имя %q прошло проверку", what, name)
+		}
+	}
+}
+
+// TestEmbeddedAssetIsThere — знак действительно попал в сборку.
+//
+// Директива go:embed молча ничего не кладёт, если каталог переехал: сборка
+// проходит, а панель отдаёт 404 и рисуется без знака.
+func TestEmbeddedAssetIsThere(t *testing.T) {
+	raw, err := webFS.ReadFile("web/assets/marvia-mark.png")
+	if err != nil {
+		t.Fatalf("нет в сборке: %v", err)
+	}
+	// PNG начинается с \x89PNG. Проверяем, что это картинка, а не страница
+	// ошибки, скачанная вместо неё.
+	if len(raw) < 4 || string(raw[:4]) != "\x89PNG" {
+		t.Errorf("не похож на png, первые байты %q", raw[:min(4, len(raw))])
 	}
 }

@@ -109,6 +109,7 @@ func (a *API) Handler() http.Handler {
 	// панель не отвечала страницей на случайные пути сканеров.
 	mux.HandleFunc("GET /{$}", a.ServeApp)
 	mux.HandleFunc("GET /fonts/{name}", a.ServeFont)
+	mux.HandleFunc("GET /assets/{name}", a.ServeAsset)
 
 	// Версия — с авторизацией. Продавцу она нужна, когда он пишет в поддержку;
 	// постороннему сканеру знать её незачем.
