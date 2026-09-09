@@ -88,18 +88,17 @@ jobs:
 
           cd dist && sha256sum *.tar.gz install-panel.sh marvia-windows.exe > SHA256SUMS && cat SHA256SUMS
 
-      # Релиз уезжает в отдельный публичный репозиторий.
+      # Релиз выкладывается сюда же.
       #
-      # Исходники закрыты, а установщик панели должен работать у любого
-      # продавца без токенов и логинов: у закрытого репозитория файлы релиза по
-      # ссылке не отдаются, и `curl … | sh` там не живёт в принципе. Токен нужен
-      # свой: GITHUB_TOKEN действует только на текущий репозиторий.
-      - name: Выложить в публичный репозиторий сборок
+      # Раньше сборки уезжали в отдельный публичный репозиторий: исходники были
+      # закрыты, а у закрытого репозитория файлы релиза по ссылке не отдаются —
+      # «скачай и запусти» там не работает в принципе. Теперь репозиторий один
+      # и он публичный, поэтому чужой токен больше не нужен: GITHUB_TOKEN
+      # действует ровно на тот репозиторий, где идёт сборка.
+      - name: Выложить релиз
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          repository: jytt8u/marvia-releases
-          token: ${{ secrets.RELEASES_TOKEN }}
           files: |
             dist/marvia_linux_amd64.tar.gz
             dist/marvia_linux_arm64.tar.gz
@@ -110,7 +109,7 @@ jobs:
             Установка панели на чистый сервер:
 
             ```
-            curl -fsSL https://github.com/jytt8u/marvia-releases/releases/latest/download/install-panel.sh -o install-panel.sh
+            curl -fsSL https://github.com/jytt8u/marvia/releases/latest/download/install-panel.sh -o install-panel.sh
             sh install-panel.sh --domain панель.твой-домен --email ты@почта
             ```
 

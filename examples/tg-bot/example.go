@@ -17,8 +17,8 @@ const ExampleConfig = `{
   "manual_note": "Переведи на карту 0000 0000 0000 0000 и пришли скриншот.",
 
   "downloads": {
-    "android": "https://github.com/jytt8u/marvia-releases/releases/latest/download/marvia-android.apk",
-    "windows": "https://github.com/jytt8u/marvia-releases/releases/latest/download/marvia-windows.exe"
+    "android": "https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk",
+    "windows": "https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe"
   },
 
   "tariffs": [
