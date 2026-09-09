@@ -21,6 +21,7 @@ import (
 //
 //go:embed web/index.html
 //go:embed web/fonts
+//go:embed web/assets
 var webFS embed.FS
 
 // noncePlaceholder заменяется на одноразовое значение при каждой отдаче.
@@ -45,7 +46,9 @@ func (a *API) ServeApp(w http.ResponseWriter, _ *http.Request) {
 		fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	page := strings.Replace(string(raw), noncePlaceholder, nonce, 1)
+	// Скрипт на странице один, но замена всё равно сквозная: так добавление
+	// второго не превратится в молчаливо заблокированную страницу.
+	page := strings.ReplaceAll(string(raw), noncePlaceholder, nonce)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Security-Policy", strings.Join([]string{
@@ -58,7 +61,7 @@ func (a *API) ServeApp(w http.ResponseWriter, _ *http.Request) {
 		// нарисован прямо в странице; сеть для картинок панели не нужна
 		// вовсе, а единственный внешний адрес в интерфейсе — это уже утечка
 		// того, что панель открыли, и откуда.
-		"img-src data:",
+		"img-src 'self' data:",
 		"connect-src 'self'",
 		"form-action 'none'",
 		"frame-ancestors 'none'",
@@ -119,6 +122,57 @@ func fontName(name string) bool {
 	}
 
 	base := name[:len(name)-len(".woff2")]
+	if base == "" {
+		return false
+	}
+
+	for _, c := range base {
+		switch {
+		case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// ServeAsset отдаёт вшитую картинку панели.
+//
+// Лежит внутри бинарника по той же причине, что и шрифты: панель для обхода
+// блокировок не должна зависеть от чужого адреса, чтобы просто нарисоваться,
+// а каждое обращение наружу сообщало бы стороннему хосту, что панель открыли
+// и откуда. Знак вынесен файлом, а не вписан в страницу шестнадцатеричной
+// строкой, чтобы разметку можно было читать глазами и сличать с дизайном.
+func (a *API) ServeAsset(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if !assetName(name) {
+		fail(w, http.StatusNotFound, "нет такого файла")
+		return
+	}
+
+	raw, err := webFS.ReadFile("web/assets/" + name)
+	if err != nil {
+		fail(w, http.StatusNotFound, "нет такого файла")
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = w.Write(raw)
+}
+
+// assetName проверяет имя по списку допустимых знаков, как и у шрифтов.
+//
+// Имя приходит снаружи и подставляется в путь — ровно то место, где в чужих
+// панелях находят чтение любого файла. Поэтому проверяем не «похоже ли на
+// наше», а что ничего, кроме наших имён, не пройдёт.
+func assetName(name string) bool {
+	if !strings.HasSuffix(name, ".png") || len(name) > 64 {
+		return false
+	}
+
+	base := name[:len(name)-len(".png")]
 	if base == "" {
 		return false
 	}
