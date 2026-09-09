@@ -30,7 +30,7 @@ import (
 
 const (
 	// adapterName — как интерфейс будет называться в настройках сети.
-	adapterName = "Veil"
+	adapterName = "Marvia"
 
 	// tunnelAddress — адрес компьютера внутри туннеля. Наружу не выходит.
 	tunnelAddress = "10.19.84.2/32"
@@ -52,7 +52,7 @@ func main() {
 	// командной строки от администратора он не обязан.
 	if !elevated() && !*noElevate {
 		if err := relaunchElevated(); err != nil {
-			alert("Veil", "Не получилось запросить права администратора:\n"+err.Error()+
+			alert("Marvia", "Не получилось запросить права администратора:\n"+err.Error()+
 				"\n\nБез них Windows не даст создать сетевой адаптер.")
 			os.Exit(1)
 		}
@@ -60,7 +60,7 @@ func main() {
 	}
 
 	if err := run(*dns, uint32(*mtu), *urlFile); err != nil {
-		alert("Veil", err.Error())
+		alert("Marvia", err.Error())
 		os.Exit(1)
 	}
 }

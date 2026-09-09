@@ -32,6 +32,13 @@ const (
 	// Ограничение не ради экономии: пачка одновременных хендшейков — сама по
 	// себе примета, по которой поведенческий анализ узнаёт туннель.
 	maxParallelProbes = 4
+
+	// SpeedTimeout — сколько ждём замера скорости одной ноды.
+	//
+	// Короче, чем ожидание хендшейка: замер необязателен. Не успели — нода
+	// просто сравнится по задержке, и это лучше, чем задержать человека на
+	// экране подключения ради точности, которой он не заметит.
+	SpeedTimeout = 6 * time.Second
 )
 
 // Measurement — результат замера одной ноды.
@@ -40,6 +47,11 @@ type Measurement struct {
 	Latency time.Duration
 	Err     error
 
+	// Fetch — за сколько нода отдала пробную порцию: круг до неё, разгон и
+	// сама передача вместе. Ноль, если не мерили: живая нода одна, или она
+	// старой версии и такого не умеет.
+	Fetch time.Duration
+
 	// dialer остаётся живым только у победителя: переустанавливать
 	// соединение сразу после удачного замера — лишний круг по сети.
 	dialer *Dialer
@@ -47,6 +59,32 @@ type Measurement struct {
 
 // OK сообщает, годится ли нода.
 func (m Measurement) OK() bool { return m.Err == nil }
+
+// Cost — во что обходится эта нода.
+//
+// Порция у всех нод одна и та же, поэтому сравнивать можно прямо время: в нём
+// уже и круг до ноды, и разгон, и сама передача. Разбирать его на задержку и
+// скорость незачем — человек ждёт сумму.
+//
+// Где порцию не мерили, остаётся задержка — как было до сих пор.
+func (m Measurement) Cost() time.Duration {
+	if m.Fetch <= 0 {
+		return m.Latency
+	}
+	return m.Fetch
+}
+
+// Speed — сколько это даёт в байтах в секунду, для показа человеку.
+//
+// Число заниженное: в него входит круг до ноды, а порция маленькая. Для
+// сравнения нод это неважно — все меряются одинаково, — но выдавать его за
+// скорость канала нельзя.
+func (m Measurement) Speed() float64 {
+	if m.Fetch <= 0 {
+		return 0
+	}
+	return float64(vp1.DefaultSpeedSample) / m.Fetch.Seconds()
+}
 
 // Probe измеряет одну ноду.
 func Probe(ctx context.Context, node Node, key vp1.KeyPair, opts Options) Measurement {
@@ -94,6 +132,8 @@ func SelectBest(ctx context.Context, nodes []Node, key vp1.KeyPair, opts Options
 	}
 	wg.Wait()
 
+	measureSpeeds(ctx, results)
+
 	// Сортируем копию: порядок замеров должен совпадать с порядком нод,
 	// иначе отчёт панели уедет не про те ноды.
 	ranked := make([]Measurement, len(results))
@@ -102,7 +142,7 @@ func SelectBest(ctx context.Context, nodes []Node, key vp1.KeyPair, opts Options
 		if ranked[a].OK() != ranked[b].OK() {
 			return ranked[a].OK()
 		}
-		return ranked[a].Latency < ranked[b].Latency
+		return ranked[a].Cost() < ranked[b].Cost()
 	})
 
 	winner := ranked[0]
@@ -135,4 +175,47 @@ func (d *Dialer) Warmup(ctx context.Context) error {
 		return err
 	}
 	return stream.Close()
+}
+
+// measureSpeeds доспрашивает у живых нод, с какой скоростью они отдают данные.
+//
+// Только когда живых больше одной. Смысл замера — выбрать, а выбирать не из
+// чего: единственную ноду мы возьмём в любом случае, и тратить на неё трафик
+// продавца незачем.
+//
+// Неудача замера не выбрасывает ноду. Старая нода такого не умеет и закроет
+// поток — это не повод считать её мёртвой: она только что ответила на
+// хендшейк. Останется без скорости, и сравнится по задержке, как раньше.
+func measureSpeeds(ctx context.Context, results []Measurement) {
+	alive := 0
+	for _, m := range results {
+		if m.OK() && m.dialer != nil {
+			alive++
+		}
+	}
+	if alive < 2 {
+		return
+	}
+
+	var wg sync.WaitGroup
+	for i := range results {
+		if !results[i].OK() || results[i].dialer == nil {
+			continue
+		}
+
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+
+			speedCtx, cancel := context.WithTimeout(ctx, SpeedTimeout)
+			defer cancel()
+
+			fetch, err := results[i].dialer.MeasureFetch(speedCtx, vp1.DefaultSpeedSample)
+			if err != nil {
+				return
+			}
+			results[i].Fetch = fetch
+		}(i)
+	}
+	wg.Wait()
 }
