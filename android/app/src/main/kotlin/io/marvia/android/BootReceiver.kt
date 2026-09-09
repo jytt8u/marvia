@@ -1,4 +1,4 @@
-package io.veil.android
+package io.marvia.android
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -43,7 +43,7 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         try {
-            ContextCompat.startForegroundService(context, Intent(context, VeilVpnService::class.java))
+            ContextCompat.startForegroundService(context, Intent(context, MarviaVpnService::class.java))
         } catch (t: Throwable) {
             // На части прошивок запуск службы сразу после загрузки запрещён.
             // Это не повод падать: человек включит руками, как раньше.

@@ -67,7 +67,7 @@
             выгрузит нас из памяти вместе с туннелем.
         -->
         <service
-            android:name=".VeilVpnService"
+            android:name=".MarviaVpnService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
             android:permission="android.permission.BIND_VPN_SERVICE">

@@ -19,11 +19,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/veilproject/veil/internal/relay"
-	"github.com/veilproject/veil/internal/socks5"
-	"github.com/veilproject/veil/internal/transport"
-	"github.com/veilproject/veil/internal/tunnel"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/envvar"
+	"github.com/jytt8u/marvia/internal/relay"
+	"github.com/jytt8u/marvia/internal/socks5"
+	"github.com/jytt8u/marvia/internal/transport"
+	"github.com/jytt8u/marvia/internal/tunnel"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 const dialTimeout = 15 * time.Second
@@ -102,10 +103,10 @@ func run(opts clientOptions) error {
 
 	pubStr := opts.serverPub
 	if pubStr == "" {
-		pubStr = os.Getenv("VEIL_SERVER_PUBKEY")
+		pubStr = envvar.Get("MARVIA_SERVER_PUBKEY")
 	}
 	if pubStr == "" {
-		return errors.New("не задан публичный ключ сервера: укажи -pubkey или VEIL_SERVER_PUBKEY")
+		return errors.New("не задан публичный ключ сервера: укажи -pubkey или MARVIA_SERVER_PUBKEY")
 	}
 	serverPub, err := vp1.DecodeKey(strings.TrimSpace(pubStr))
 	if err != nil {
@@ -327,7 +328,7 @@ func (d *tunnelDialer) dial(ctx context.Context) (net.Conn, error) {
 // многопользовательском режиме ключ станет обязательным.
 func loadClientKey(keyStr string) (vp1.KeyPair, bool, error) {
 	if keyStr == "" {
-		keyStr = os.Getenv("VEIL_CLIENT_KEY")
+		keyStr = envvar.Get("MARVIA_CLIENT_KEY")
 	}
 	if keyStr == "" {
 		pair, err := vp1.GenerateKeyPair()

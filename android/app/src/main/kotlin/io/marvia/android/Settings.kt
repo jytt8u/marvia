@@ -1,4 +1,4 @@
-package io.veil.android
+package io.marvia.android
 
 import android.content.ActivityNotFoundException
 import android.content.Context

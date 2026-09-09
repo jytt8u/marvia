@@ -43,7 +43,7 @@ GOOS=linux GOARCH=amd64 go build -o bin/linux/ ./...
 **2. Нода**
 
 ```bash
-VEIL_SERVER_KEY=<приватный ключ> ./bin/marvia-node -listen :443 -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org
+MARVIA_SERVER_KEY=<приватный ключ> ./bin/marvia-node -listen :443 -tls-cert fullchain.pem -tls-key privkey.pem -cover https://example.org
 ```
 
 Ключ передавай переменной окружения или `-key-file`: значение флага `-key`
@@ -63,7 +63,7 @@ VEIL_SERVER_KEY=<приватный ключ> ./bin/marvia-node -listen :443 -tl
 ```
 
 ```bash
-VEIL_REALITY_KEY=<приватный ключ> ./bin/marvia-node -listen :443 \
+MARVIA_REALITY_KEY=<приватный ключ> ./bin/marvia-node -listen :443 \
   -reality-dest www.samsung.com:443 -reality-sni www.samsung.com \
   -panel https://panel.example.com -panel-token <токен ноды>
 ```
@@ -425,7 +425,7 @@ cd android && ./gradlew assembleRelease
 
 Готовый пакет — `android/app/build/outputs/apk/release/app-release.apk`, 14 МБ.
 
-Ключ подписи лежит **вне репозитория**: путь берётся из `VEIL_RELEASE_KEYS`, по
+Ключ подписи лежит **вне репозитория**: путь берётся из `MARVIA_RELEASE_KEYS`, по
 умолчанию — `veil-keys/veil-release.properties` рядом с каталогом проекта. Файла
 нет — сборка выйдет неподписанной и честно об этом скажет, а не подпишется
 молча отладочным ключом.
@@ -606,7 +606,7 @@ marvia-panel -version
 По сети версия отдаётся **только с авторизацией**:
 
 ```bash
-curl https://panel.example.com/api/v1/version -H "Authorization: Bearer $VEIL_ADMIN_TOKEN"
+curl https://panel.example.com/api/v1/version -H "Authorization: Bearer $MARVIA_ADMIN_TOKEN"
 ```
 
 В открытом `/healthz` её нет намеренно: точная версия говорит сканеру, какие
@@ -690,7 +690,7 @@ curl https://panel.example.com/api/v1/version -H "Authorization: Bearer $VEIL_AD
 **Копия на том же сервере не спасает от потери сервера.** Забрать её к себе:
 
 ```bash
-curl https://panel.example.com/api/v1/backup -H "Authorization: Bearer $VEIL_ADMIN_TOKEN" -o panel.db
+curl https://panel.example.com/api/v1/backup -H "Authorization: Bearer $MARVIA_ADMIN_TOKEN" -o panel.db
 ```
 
 Ручка отдаёт свежий снимок, а не файл с диска. Только админским токеном:
@@ -727,7 +727,7 @@ curl https://panel.example.com/api/v1/backup -H "Authorization: Bearer $VEIL_ADM
 
 ```bash
 curl -X POST https://panel.example.com/api/v1/nodes/invite \
-  -H "Authorization: Bearer $VEIL_ADMIN_TOKEN"
+  -H "Authorization: Bearer $MARVIA_ADMIN_TOKEN"
 ```
 
 ```json
@@ -818,7 +818,7 @@ curl -fsSL https://panel.example.com/install/<приглашение> | PORT=844
 
 ```bash
 curl -X PATCH https://panel.example.com/api/v1/nodes/3 \
-  -H "Authorization: Bearer $VEIL_ADMIN_TOKEN" \
+  -H "Authorization: Bearer $MARVIA_ADMIN_TOKEN" \
   -d '{"name": "Амстердам-1", "country": "Нидерланды"}'
 ```
 
@@ -835,7 +835,7 @@ curl -X PATCH https://panel.example.com/api/v1/nodes/3 \
 
 ```bash
 curl -X PATCH https://panel.example.com/api/v1/nodes/3 \
-  -H "Authorization: Bearer $VEIL_ADMIN_TOKEN" -d '{"enabled": false}'
+  -H "Authorization: Bearer $MARVIA_ADMIN_TOKEN" -d '{"enabled": false}'
 ```
 
 Расход по ней по-прежнему виден, покупатели её больше не получают, и решение
@@ -972,7 +972,7 @@ curl -X PATCH https://panel.example.com/api/v1/nodes/3 \
 по-разному на «ключ не найден» и «квота кончилась» нельзя: эта разница видна
 снаружи и превращается в способ прощупать ноду.
 
-Ключ клиента задаётся флагом `-key` или переменной `VEIL_CLIENT_KEY`. Без него
+Ключ клиента задаётся флагом `-key` или переменной `MARVIA_CLIENT_KEY`. Без него
 клиент генерирует временный при каждом запуске — удобно для отладки, но нода
 тогда не отличает одного клиента от другого.
 
@@ -984,7 +984,7 @@ curl -X PATCH https://panel.example.com/api/v1/nodes/3 \
 
 ```bash
 ./bin/marvia-panel -new-token                  # выпустить админский токен
-VEIL_ADMIN_TOKEN=<токен> ./bin/marvia-panel -db veil.db -sub-base https://sub.example.com
+MARVIA_ADMIN_TOKEN=<токен> ./bin/marvia-panel -db marvia-panel.db -sub-base https://sub.example.com
 ```
 
 Панель отдаёт голый HTTP и **обязана стоять за обратным прокси с TLS**: по её
@@ -1049,7 +1049,7 @@ Store, объясняя это блокировкой международных
 видно продавцу:
 
 ```bash
-curl https://panel.example.com/api/v1/apps -H "Authorization: Bearer $VEIL_ADMIN_TOKEN"
+curl https://panel.example.com/api/v1/apps -H "Authorization: Bearer $MARVIA_ADMIN_TOKEN"
 ```
 
 В ответе размер и sha256 каждого файла — чтобы сверить, что лежит именно то,
@@ -1143,7 +1143,7 @@ id. Повторный запрос с тем же ключом **ничего �
 
 ```bash
 curl -X POST https://panel.example.com/api/v1/users \
-  -H "Authorization: Bearer $VEIL_ADMIN_TOKEN" \
+  -H "Authorization: Bearer $MARVIA_ADMIN_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"label":"заказ 1043","traffic_limit":107374182400,"max_ips":3,"kinds":["vp1","vless","trojan"]}'
 ```

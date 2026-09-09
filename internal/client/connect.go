@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // ErrPanel помечает неудачу, случившуюся до нод: до панели не достучались.

@@ -15,10 +15,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/veilproject/veil/internal/client"
-	"github.com/veilproject/veil/internal/tunbridge"
-	"github.com/veilproject/veil/internal/vp1"
-	"github.com/veilproject/veil/internal/wintun"
+	"github.com/jytt8u/marvia/internal/client"
+	"github.com/jytt8u/marvia/internal/tunbridge"
+	"github.com/jytt8u/marvia/internal/vp1"
+	"github.com/jytt8u/marvia/internal/wintun"
 )
 
 // State — что сейчас с туннелем.

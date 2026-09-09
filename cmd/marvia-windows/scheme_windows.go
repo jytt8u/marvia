@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/sys/windows/registry"
 
-	"github.com/veilproject/veil/internal/client"
+	"github.com/jytt8u/marvia/internal/client"
 )
 
 // Ссылка marvia:// из телеграма должна открывать программу.
