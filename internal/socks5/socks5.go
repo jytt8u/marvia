@@ -13,7 +13,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 const version byte = 0x05

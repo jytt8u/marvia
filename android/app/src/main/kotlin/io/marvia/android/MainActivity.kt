@@ -1,4 +1,4 @@
-package io.veil.android
+package io.marvia.android
 
 import android.Manifest
 import android.content.Intent
@@ -21,8 +21,8 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import io.veil.android.databinding.ActivityMainBinding
-import io.veil.mobile.Mobile
+import io.marvia.android.databinding.ActivityMainBinding
+import io.marvia.mobile.Mobile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
             launchService()
         } else {
             // Вид пустой: фразу мы уже написали сами, переводить нечего.
-            VeilState.set(TunnelState.Failed("", getString(R.string.consent_denied)))
+            MarviaState.set(TunnelState.Failed("", getString(R.string.consent_denied)))
         }
     }
 
@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
                 showBypassSummary()
                 // Исключения читаются при поднятии туннеля: менять маршруты
                 // у работающего VPN нельзя, его надо пересобрать.
-                if (VeilState.state.value is TunnelState.On) {
+                if (MarviaState.state.value is TunnelState.On) {
                     Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
                 }
             }
@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                VeilState.state.collect { render(it) }
+                MarviaState.state.collect { render(it) }
             }
         }
 
@@ -333,9 +333,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toggle() {
-        if (VeilState.state.value is TunnelState.On) {
+        if (MarviaState.state.value is TunnelState.On) {
             startService(
-                Intent(this, VeilVpnService::class.java).setAction(VeilVpnService.ACTION_STOP),
+                Intent(this, MarviaVpnService::class.java).setAction(MarviaVpnService.ACTION_STOP),
             )
             return
         }
@@ -357,7 +357,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun launchService() {
-        ContextCompat.startForegroundService(this, Intent(this, VeilVpnService::class.java))
+        ContextCompat.startForegroundService(this, Intent(this, MarviaVpnService::class.java))
     }
 
     private fun saveKey() {
@@ -374,7 +374,7 @@ class MainActivity : AppCompatActivity() {
         try {
             Mobile.checkAccountLink(link)
         } catch (t: Throwable) {
-            ui.keyLayout.error = VeilVpnService.reasonOf(t)
+            ui.keyLayout.error = MarviaVpnService.reasonOf(t)
             return
         }
 
@@ -382,7 +382,7 @@ class MainActivity : AppCompatActivity() {
         store.accountLink = link
         hideKeyboard()
         Toast.makeText(this, R.string.key_saved, Toast.LENGTH_SHORT).show()
-        render(VeilState.state.value)
+        render(MarviaState.state.value)
     }
 
     private fun hideKeyboard() {

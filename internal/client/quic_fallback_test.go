@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/client"
-	"github.com/veilproject/veil/internal/transport"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/client"
+	"github.com/jytt8u/marvia/internal/transport"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // Откат с QUIC на TCP — то, ради чего вся развилка и написана.

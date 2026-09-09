@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/veilproject/veil/internal/rewind"
+	"github.com/jytt8u/marvia/internal/rewind"
 )
 
 // Protocol — что нода собирается разбирать в этом соединении.

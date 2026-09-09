@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/panel"
+	"github.com/jytt8u/marvia/internal/panel"
 )
 
 // Бота проверяем против настоящей панели, а не против заглушки.

@@ -174,7 +174,7 @@ func (s *Store) KeepBackups(ctx context.Context, dir string, keep int, every tim
 // Только админским токеном: в копии лежит всё, включая секреты покупателей.
 // Ключ бота, который может её скачать, — это ключ, который может всё.
 func (a *API) downloadBackup(w http.ResponseWriter, r *http.Request) {
-	dir, err := os.MkdirTemp("", "veil-backup")
+	dir, err := os.MkdirTemp("", "marvia-backup")
 	if err != nil {
 		fail(w, http.StatusInternalServerError, err.Error())
 		return

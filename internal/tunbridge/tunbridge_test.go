@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/tunbridge"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/tunbridge"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // dnsMessage собирает похожее на запрос сообщение нужной длины.

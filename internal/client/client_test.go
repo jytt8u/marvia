@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/client"
-	"github.com/veilproject/veil/internal/mux"
-	"github.com/veilproject/veil/internal/relay"
-	"github.com/veilproject/veil/internal/transport"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/client"
+	"github.com/jytt8u/marvia/internal/mux"
+	"github.com/jytt8u/marvia/internal/relay"
+	"github.com/jytt8u/marvia/internal/transport"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 func TestParseAccountLink(t *testing.T) {

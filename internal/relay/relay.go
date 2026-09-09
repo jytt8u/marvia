@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // closeWriter — соединение, умеющее закрывать только исходящую половину.
