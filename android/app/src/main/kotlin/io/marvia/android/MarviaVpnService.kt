@@ -1,4 +1,4 @@
-package io.veil.android
+package io.marvia.android
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -11,7 +11,7 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import io.veil.mobile.Mobile
+import io.marvia.mobile.Mobile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,10 +20,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import io.veil.mobile.Tunnel as Core
+import io.marvia.mobile.Tunnel as Core
 
 /**
- * VeilVpnService — то, ради чего приложение существует.
+ * MarviaVpnService — то, ради чего приложение существует.
  *
  * Обязанностей у него ровно две, и обе платформенные: выпросить у системы
  * сетевой интерфейс и не дать себя выгрузить из памяти. Всё остальное — выбор
@@ -31,7 +31,7 @@ import io.veil.mobile.Tunnel as Core
  * что работает на сервере. Ни строчки сетевой логики здесь нет и быть не
  * должно: продублированная логика расходится, и расходится она молча.
  */
-class VeilVpnService : VpnService() {
+class MarviaVpnService : VpnService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var worker: Job? = null
@@ -82,7 +82,7 @@ class VeilVpnService : VpnService() {
         }
 
         Journal.add("включаю туннель")
-        VeilState.set(TunnelState.Connecting)
+        MarviaState.set(TunnelState.Connecting)
 
         worker = scope.launch {
             val descriptor = try {
@@ -116,7 +116,7 @@ class VeilVpnService : VpnService() {
                 leftBytes = started.trafficLeft(),
             )
             Journal.add("подключено через " + node)
-            VeilState.set(TunnelState.On(node, subscription = subscription))
+            MarviaState.set(TunnelState.On(node, subscription = subscription))
             goForeground(getString(R.string.status_on), getString(R.string.detail_node, node))
 
             watch(started, node, subscription)
@@ -196,7 +196,7 @@ class VeilVpnService : VpnService() {
             val last = started.lastError()
             if (last != shown) {
                 shown = last
-                VeilState.set(TunnelState.On(node, last, subscription))
+                MarviaState.set(TunnelState.On(node, last, subscription))
             }
         }
     }
@@ -237,7 +237,7 @@ class VeilVpnService : VpnService() {
             }
         }
 
-        VeilState.set(state)
+        MarviaState.set(state)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -275,12 +275,12 @@ class VeilVpnService : VpnService() {
         val stop = PendingIntent.getService(
             this,
             1,
-            Intent(this, VeilVpnService::class.java).setAction(ACTION_STOP),
+            Intent(this, MarviaVpnService::class.java).setAction(ACTION_STOP),
             flags,
         )
 
         val notification = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_stat_veil)
+            .setSmallIcon(R.drawable.ic_stat_marvia)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(open)
@@ -303,7 +303,7 @@ class VeilVpnService : VpnService() {
     }
 
     companion object {
-        const val ACTION_STOP = "io.veil.android.action.STOP"
+        const val ACTION_STOP = "io.marvia.android.action.STOP"
 
         private const val TAG = "Veil"
         private const val CHANNEL = "veil.tunnel"

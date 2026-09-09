@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // Датаграммы проверяем на границах, а не на содержимом.

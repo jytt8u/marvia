@@ -30,12 +30,12 @@ if (-not $env:ANDROID_NDK_HOME) {
 $env:PATH = "$env:PATH;$(go env GOPATH)\bin"
 
 if (-not $SkipCore) {
-    Write-Host '== ядро -> android/app/libs/veil.aar'
+    Write-Host '== ядро -> android/app/libs/marvia.aar'
     gomobile bind `
         -target=android/arm64,android/arm `
         -androidapi 24 `
-        -javapkg=io.veil `
-        -o android/app/libs/veil.aar `
+        -javapkg=io.marvia `
+        -o android/app/libs/marvia.aar `
         ./mobile
     if ($LASTEXITCODE -ne 0) { throw 'Не собралась библиотека ядра' }
 }

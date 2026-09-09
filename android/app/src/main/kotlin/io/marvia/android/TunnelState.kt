@@ -1,4 +1,4 @@
-package io.veil.android
+package io.marvia.android
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,14 +57,14 @@ sealed interface TunnelState {
 }
 
 /**
- * VeilState — единственное место, где живёт состояние туннеля.
+ * MarviaState — единственное место, где живёт состояние туннеля.
  *
  * Служба и экран работают в одном процессе, поэтому широковещательные
  * сообщения между ними были бы лишним слоем: один пишет, другой читает.
  * Экран может быть закрыт и открыт заново — состояние переживает это, потому
  * что принадлежит процессу, а не экрану.
  */
-object VeilState {
+object MarviaState {
     private val current = MutableStateFlow<TunnelState>(TunnelState.Off)
 
     val state: StateFlow<TunnelState> = current.asStateFlow()

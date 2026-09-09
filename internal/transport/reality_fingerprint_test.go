@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jytt8u/marvia/internal/transport"
+	"github.com/jytt8u/marvia/internal/vp1"
 	utls "github.com/refraction-networking/utls"
-	"github.com/veilproject/veil/internal/transport"
-	"github.com/veilproject/veil/internal/vp1"
 )
 
 // TestRealityClientAcrossFingerprints — проверка на всех отпечатках сразу.

@@ -1,4 +1,4 @@
-module github.com/veilproject/veil
+module github.com/jytt8u/marvia
 
 go 1.26.5
 

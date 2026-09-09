@@ -31,10 +31,10 @@ $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
 if (-not $env:ANDROID_HOME) { $env:ANDROID_HOME = 'D:\android-sdk' }
-if (-not $env:VEIL_RELEASE_KEYS) { $env:VEIL_RELEASE_KEYS = 'D:\veil-keys\veil-release.properties' }
+if (-not $env:MARVIA_RELEASE_KEYS) { $env:MARVIA_RELEASE_KEYS = 'D:\veil-keys\veil-release.properties' }
 
-if (-not (Test-Path $env:VEIL_RELEASE_KEYS)) {
-    throw "нет ключа подписи: $env:VEIL_RELEASE_KEYS. Неподписанный APK не поставится."
+if (-not (Test-Path $env:MARVIA_RELEASE_KEYS)) {
+    throw "нет ключа подписи: $env:MARVIA_RELEASE_KEYS. Неподписанный APK не поставится."
 }
 
 if (-not $SkipCore) {
@@ -46,9 +46,9 @@ if (-not $SkipCore) {
         $env:ANDROID_NDK_HOME = $ndk.FullName
     }
 
-    Write-Host '== ядро -> android/app/libs/veil.aar'
+    Write-Host '== ядро -> android/app/libs/marvia.aar'
     gomobile bind '-target=android/arm64,android/arm' '-androidapi' '24' `
-        '-javapkg=io.veil' '-o' 'android/app/libs/veil.aar' './mobile'
+        '-javapkg=io.marvia' '-o' 'android/app/libs/marvia.aar' './mobile'
     if ($LASTEXITCODE -ne 0) { throw 'не собралась библиотека ядра' }
 }
 

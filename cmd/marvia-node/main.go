@@ -24,11 +24,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/veilproject/veil/internal/fallback"
-	"github.com/veilproject/veil/internal/nodesync"
-	"github.com/veilproject/veil/internal/transport"
-	"github.com/veilproject/veil/internal/users"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/envvar"
+	"github.com/jytt8u/marvia/internal/fallback"
+	"github.com/jytt8u/marvia/internal/nodesync"
+	"github.com/jytt8u/marvia/internal/transport"
+	"github.com/jytt8u/marvia/internal/users"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 const (
@@ -104,7 +105,7 @@ func main() {
 	flag.StringVar(&opts.usersFile, "users", "", "файл пользователей: JSON с лимитами либо просто список ключей (пусто — пускать всех)")
 	flag.StringVar(&opts.usageFile, "usage", "", "файл для расхода трафика (по умолчанию — рядом с файлом пользователей)")
 	flag.StringVar(&opts.panelURL, "panel", "", "адрес панели, например https://panel.example.com (вместо -users)")
-	flag.StringVar(&opts.panelToken, "panel-token", "", "токен этой ноды (по умолчанию — из VEIL_NODE_TOKEN)")
+	flag.StringVar(&opts.panelToken, "panel-token", "", "токен этой ноды (по умолчанию — из MARVIA_NODE_TOKEN)")
 
 	flag.StringVar(&opts.certFile, "tls-cert", "", "файл сертификата PEM")
 	flag.StringVar(&opts.keyPEMFile, "tls-key", "", "файл приватного ключа сертификата PEM")
@@ -113,7 +114,7 @@ func main() {
 
 	flag.StringVar(&opts.realityDest, "reality-dest", "", "настоящий сайт для маскировки REALITY, например www.samsung.com:443")
 	flag.StringVar(&opts.realitySNI, "reality-sni", "", "имена в SNI через запятую (по умолчанию — хост из -reality-dest)")
-	flag.StringVar(&opts.realityKey, "reality-key", "", "приватный ключ REALITY в base64 (по умолчанию — из VEIL_REALITY_KEY)")
+	flag.StringVar(&opts.realityKey, "reality-key", "", "приватный ключ REALITY в base64 (по умолчанию — из MARVIA_REALITY_KEY)")
 	flag.StringVar(&opts.realityShortIDs, "reality-short-id", "", "короткие идентификаторы клиентов через запятую, шестнадцатеричные")
 
 	flag.StringVar(&opts.wsPath, "ws-path", "", "путь туннеля WebSocket, например /assets/app.js (режим для работы за CDN)")
@@ -318,10 +319,10 @@ func setupUsers(ctx context.Context, opts serverOptions) (*users.Registry, strin
 func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, string, error) {
 	token := opts.panelToken
 	if token == "" {
-		token = os.Getenv("VEIL_NODE_TOKEN")
+		token = envvar.Get("MARVIA_NODE_TOKEN")
 	}
 	if token == "" {
-		return nil, "", errors.New("не задан токен ноды: укажи -panel-token или VEIL_NODE_TOKEN")
+		return nil, "", errors.New("не задан токен ноды: укажи -panel-token или MARVIA_NODE_TOKEN")
 	}
 
 	client := nodesync.New(opts.panelURL, token)
@@ -422,10 +423,10 @@ func listenReality(inner net.Listener, opts serverOptions) (net.Listener, error)
 
 	keyStr := opts.realityKey
 	if keyStr == "" {
-		keyStr = os.Getenv("VEIL_REALITY_KEY")
+		keyStr = envvar.Get("MARVIA_REALITY_KEY")
 	}
 	if keyStr == "" {
-		return nil, errors.New("не задан ключ REALITY: укажи -reality-key или VEIL_REALITY_KEY (выпустить: marvia-keygen -reality)")
+		return nil, errors.New("не задан ключ REALITY: укажи -reality-key или MARVIA_REALITY_KEY (выпустить: marvia-keygen -reality)")
 	}
 	key, err := vp1.DecodeKey(strings.TrimSpace(keyStr))
 	if err != nil {
@@ -497,13 +498,13 @@ func loadFallback(site, title string) (*fallback.Handler, error) {
 }
 
 // loadStaticKey достаёт приватный ключ из флага, файла или переменной
-// окружения VEIL_SERVER_KEY.
+// окружения MARVIA_SERVER_KEY.
 //
 // Порядок такой не случайно: ключ во флаге виден в выводе ps любому
 // пользователю машины. Для боевой ноды — файл или переменная окружения.
 func loadStaticKey(keyStr, keyFile string) (vp1.KeyPair, error) {
 	if keyStr == "" {
-		keyStr = os.Getenv("VEIL_SERVER_KEY")
+		keyStr = envvar.Get("MARVIA_SERVER_KEY")
 	}
 	if keyStr == "" && keyFile != "" {
 		raw, err := os.ReadFile(keyFile)
@@ -513,7 +514,7 @@ func loadStaticKey(keyStr, keyFile string) (vp1.KeyPair, error) {
 		keyStr = strings.TrimSpace(string(raw))
 	}
 	if keyStr == "" {
-		return vp1.KeyPair{}, errors.New("не задан приватный ключ: укажи -key, -key-file или VEIL_SERVER_KEY (сгенерировать: marvia-keygen)")
+		return vp1.KeyPair{}, errors.New("не задан приватный ключ: укажи -key, -key-file или MARVIA_SERVER_KEY (сгенерировать: marvia-keygen)")
 	}
 
 	priv, err := vp1.DecodeKey(strings.TrimSpace(keyStr))

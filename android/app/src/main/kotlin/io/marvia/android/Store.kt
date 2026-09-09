@@ -1,7 +1,7 @@
-package io.veil.android
+package io.marvia.android
 
 import android.content.Context
-import io.veil.mobile.Mobile
+import io.marvia.mobile.Mobile
 import java.io.File
 
 /**

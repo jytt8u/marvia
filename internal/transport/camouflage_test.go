@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/veilproject/veil/internal/fallback"
-	"github.com/veilproject/veil/internal/rewind"
-	"github.com/veilproject/veil/internal/transport"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/fallback"
+	"github.com/jytt8u/marvia/internal/rewind"
+	"github.com/jytt8u/marvia/internal/transport"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 const coverDomain = "cover.example"

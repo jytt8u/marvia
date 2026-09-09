@@ -7,14 +7,14 @@ import (
 	"net"
 	"time"
 
-	"github.com/veilproject/veil/internal/fallback"
-	"github.com/veilproject/veil/internal/inbound"
-	"github.com/veilproject/veil/internal/metered"
-	"github.com/veilproject/veil/internal/mux"
-	"github.com/veilproject/veil/internal/relay"
-	"github.com/veilproject/veil/internal/rewind"
-	"github.com/veilproject/veil/internal/users"
-	"github.com/veilproject/veil/internal/vp1"
+	"github.com/jytt8u/marvia/internal/fallback"
+	"github.com/jytt8u/marvia/internal/inbound"
+	"github.com/jytt8u/marvia/internal/metered"
+	"github.com/jytt8u/marvia/internal/mux"
+	"github.com/jytt8u/marvia/internal/relay"
+	"github.com/jytt8u/marvia/internal/rewind"
+	"github.com/jytt8u/marvia/internal/users"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // classifyTimeout — сколько ждём, пока гость обозначит себя.

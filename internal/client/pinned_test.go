@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/veilproject/veil/internal/client"
+	"github.com/jytt8u/marvia/internal/client"
 )
 
 const testKey = "YH3odubQhSmWQfCRwteeGN6pehcHq3DDcX_uGCvfl_Q"

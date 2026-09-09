@@ -23,12 +23,12 @@ fi
 export PATH="$PATH:$(go env GOPATH)/bin"
 
 if [ "${1:-}" != "--skip-core" ]; then
-    echo "== ядро -> android/app/libs/veil.aar"
+    echo "== ядро -> android/app/libs/marvia.aar"
     gomobile bind \
         -target=android/arm64,android/arm \
         -androidapi 24 \
-        -javapkg=io.veil \
-        -o android/app/libs/veil.aar \
+        -javapkg=io.marvia \
+        -o android/app/libs/marvia.aar \
         ./mobile
 fi
 
