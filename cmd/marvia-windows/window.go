@@ -23,7 +23,7 @@ func showWindow(url string) error {
 		Debug:     false,
 		AutoFocus: true,
 		WindowOptions: webview2.WindowOptions{
-			Title:  "Veil",
+			Title:  "Marvia",
 			Width:  980,
 			Height: 640,
 			Center: true,

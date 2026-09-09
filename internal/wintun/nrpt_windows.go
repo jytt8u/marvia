@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"net/netip"
 
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
 )
 
 // Прописать резолвер на своём адаптере недостаточно, и это главная утечка
@@ -85,20 +84,36 @@ func clearNRPT() error {
 // Без этого правило подействует только после перезагрузки, а нам оно нужно
 // прямо сейчас — и снять его тоже нужно сразу, иначе человек останется с
 // резолвером, до которого больше нет дороги.
+//
+// Права просим ровно те, что нужны, и это не педантизм.
+// // Удобные обёртки открывают и диспетчер, и службу с полным доступом. На
+// Dnscache это упирается в отказ, причём у администратора тоже: у службы свой
+// список прав, и полного доступа в нём нет ни у кого. Проявлялось это
+// обиднее всего — программа успевала создать сетевой адаптер, чего без прав
+// не сделать, и всё равно падала здесь с «Access is denied», из-за чего
+// казалось, что прав нет вовсе.
 func reloadDNS() error {
-	manager, err := mgr.Connect()
+	manager, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT)
 	if err != nil {
 		return fmt.Errorf("служба кэша имён: %w", err)
 	}
-	defer manager.Disconnect()
+	defer windows.CloseServiceHandle(manager)
 
-	service, err := manager.OpenService("Dnscache")
+	name, err := windows.UTF16PtrFromString("Dnscache")
 	if err != nil {
 		return fmt.Errorf("служба кэша имён: %w", err)
 	}
-	defer service.Close()
 
-	if _, err := service.Control(svc.ParamChange); err != nil {
+	// SERVICE_PAUSE_CONTINUE — единственное право, которым разрешено послать
+	// службе «перечитай настройки».
+	service, err := windows.OpenService(manager, name, windows.SERVICE_PAUSE_CONTINUE)
+	if err != nil {
+		return fmt.Errorf("служба кэша имён: %w", err)
+	}
+	defer windows.CloseServiceHandle(service)
+
+	var status windows.SERVICE_STATUS
+	if err := windows.ControlService(service, windows.SERVICE_CONTROL_PARAMCHANGE, &status); err != nil {
 		return fmt.Errorf("служба кэша имён не перечитала правила: %w", err)
 	}
 	return nil

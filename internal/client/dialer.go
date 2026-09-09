@@ -1,10 +1,12 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sync/atomic"
 	"time"
@@ -32,6 +34,13 @@ type Dialer struct {
 // Четыре секунды: этого хватает на честное рукопожатие даже на плохой
 // мобильной сети, но человек не успевает решить, что приложение зависло.
 const quicAttempt = 4 * time.Second
+
+// clockGrain — во что упирается точность замера.
+//
+// Windows меряет время грубо. Всё, что быстрее одной миллисекунды, для нас
+// неотличимо, и притворяться, что мы видим микросекунды, значит выдавать шум
+// за измерение.
+const clockGrain = time.Millisecond
 
 // Options — необязательные настройки дозвона.
 //
@@ -180,19 +189,119 @@ func tcpDialer(node Node, serverName string, opts Options) (func(context.Context
 
 // DialTarget открывает поток до цели через туннель.
 func (d *Dialer) DialTarget(ctx context.Context, target vp1.Address) (net.Conn, error) {
+	return d.open(ctx, target, vp1.KindTCP, nil)
+}
+
+// DialDatagrams открывает поток датаграмм до цели.
+//
+// Отдельный метод, а не флаг в DialTarget: вернувшееся соединение живёт по
+// другим правилам — границы датаграмм в нём сохраняются, и обращаться с ним
+// как с потоком байтов нельзя.
+func (d *Dialer) DialDatagrams(ctx context.Context, target vp1.Address) (net.Conn, error) {
+	stream, err := d.open(ctx, target, vp1.KindUDP, nil)
+	if err != nil {
+		return nil, err
+	}
+	return vp1.Datagrams(stream), nil
+}
+
+// MeasureFetch узнаёт, за сколько нода отдаёт порцию данных.
+//
+// Возвращает время целиком: от просьбы до последнего байта, вместе с кругом до
+// ноды и разгоном TCP. Именно это человек и ждёт, открывая страницу.
+//
+// Отсчёт нарочно не с первого байта, хотя так казалось точнее. Первая попытка
+// так и делала — и на живой ноде показала 884 Мбит/с при канале в 155. Пока мы
+// доходили до чтения, нода уже успевала прислать всю порцию, и та лежала в
+// буфере ядра: часы мерили не сеть, а скорость памяти. Замер с начала запроса
+// такого обмана не допускает.
+//
+// Цель в запросе не участвует — наружу нода не пойдёт, отдаст своё, — но адрес
+// в протоколе обязателен, поэтому шлём заведомо пустой.
+func (d *Dialer) MeasureFetch(ctx context.Context, size int) (time.Duration, error) {
+	// Размер уходит вместе с запросом, до ответа ноды. Отправлять его после
+	// статуса нельзя: обе стороны встанут ждать друг друга.
+	var ask bytes.Buffer
+	if err := vp1.RequestSample(&ask, size); err != nil {
+		return 0, err
+	}
+
+	start := time.Now()
+
+	stream, err := d.open(ctx, vp1.Address{Type: vp1.AtypIPv4, Host: "0.0.0.0", Port: 0}, vp1.KindProbe, ask.Bytes())
+	if err != nil {
+		return 0, err
+	}
+	defer stream.Close()
+
+	granted, err := vp1.ReadGrant(stream)
+	if err != nil {
+		return 0, err
+	}
+
+	read, err := io.CopyN(io.Discard, stream, int64(granted))
+	if err != nil {
+		return 0, fmt.Errorf("замер оборван: %w", err)
+	}
+	if read <= 0 {
+		return 0, errors.New("замер пустой")
+	}
+
+	took := time.Since(start)
+
+	// Часы у Windows грубые: всё, что быстрее тика, для нас неотличимо, и
+	// притворяться, что мы видим микросекунды, значит выдавать шум за замер.
+	return max(took, clockGrain), nil
+}
+
+// Granted — сколько байт нода согласилась отдать на последний замер.
+//
+// Нужно проверке потолка: клиент может попросить сколько угодно, а решает нода.
+func (d *Dialer) Granted(ctx context.Context, size int) (int, error) {
+	var ask bytes.Buffer
+	if err := vp1.RequestSample(&ask, size); err != nil {
+		return 0, err
+	}
+
+	stream, err := d.open(ctx, vp1.Address{Type: vp1.AtypIPv4, Host: "0.0.0.0", Port: 0}, vp1.KindProbe, ask.Bytes())
+	if err != nil {
+		return 0, err
+	}
+	defer stream.Close()
+
+	return vp1.ReadGrant(stream)
+}
+
+// open открывает поток нужного вида.
+//
+// Хвост дописывается сразу за запросом, до чтения статуса: если чего-то ждёт
+// нода, а мы уже сели ждать её ответа, встанут обе стороны.
+func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind, tail []byte) (net.Conn, error) {
 	stream, err := d.pool.Open(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := vp1.WriteRequest(stream, target); err != nil {
+	if err := vp1.WriteRequestOf(stream, target, kind); err != nil {
 		_ = stream.Close()
 		return nil, fmt.Errorf("запрос на %s: %w", target, err)
+	}
+	if len(tail) > 0 {
+		if _, err := stream.Write(tail); err != nil {
+			_ = stream.Close()
+			return nil, fmt.Errorf("запрос на %s: %w", target, err)
+		}
 	}
 
 	status, err := vp1.ReadStatus(stream)
 	if err != nil {
 		_ = stream.Close()
+		// Старая нода не знает про датаграммы: она видит незнакомый тип
+		// адреса и закрывает поток, не ответив. Обрыв ровно здесь и ровно на
+		// запросе датаграмм — это она, а не сеть.
+		if kind == vp1.KindUDP && closedEarly(err) {
+			return nil, vp1.ErrDatagramsUnsupported
+		}
 		return nil, fmt.Errorf("ответ ноды по %s: %w", target, err)
 	}
 	if status != vp1.StatusOK {
@@ -217,4 +326,12 @@ func (d *Dialer) withSubscription(s Subscription) *Dialer {
 		d.sub = s
 	}
 	return d
+}
+
+// closedEarly отличает «собеседник закрыл поток, не ответив» от прочих бед.
+func closedEarly(err error) bool {
+	return errors.Is(err, io.EOF) ||
+		errors.Is(err, io.ErrUnexpectedEOF) ||
+		errors.Is(err, net.ErrClosed) ||
+		errors.Is(err, io.ErrClosedPipe)
 }

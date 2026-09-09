@@ -199,12 +199,21 @@ func serveStream(stream net.Conn, peer net.Addr, client string) {
 	defer stream.Close()
 
 	_ = stream.SetReadDeadline(time.Now().Add(requestTimeout))
-	addr, err := vp1.ReadRequest(stream)
+	addr, kind, err := vp1.ReadRequestOf(stream)
 	if err != nil {
 		log.Printf("[%s] клиент %s: чтение запроса: %v", peer, client, err)
 		return
 	}
 	_ = stream.SetReadDeadline(time.Time{})
+
+	switch kind {
+	case vp1.KindUDP:
+		serveDatagrams(stream, addr, peer, client)
+		return
+	case vp1.KindProbe:
+		serveSample(stream, peer, client)
+		return
+	}
 
 	target, err := net.DialTimeout("tcp", addr.String(), dialTimeout)
 	if err != nil {
@@ -223,6 +232,80 @@ func serveStream(stream net.Conn, peer net.Addr, client string) {
 	if err := relay.Bidirectional(stream, target); err != nil {
 		log.Printf("[%s] клиент %s -> %s: обрыв: %v", peer, client, addr, err)
 	}
+}
+
+// serveSample отдаёт клиенту порцию байт, чтобы тот померил скорость.
+//
+// Клиент выбирает ноду сам, с устройства, и до появления этого замера выбирал
+// по задержке. Задержка и скорость — разные вещи: нода может отвечать быстро и
+// при этом еле качать, и человек получит именно вторую. Дать ему померить —
+// дешевле, чем объяснять, почему у него всё тормозит на «самой быстрой» ноде.
+//
+// Байты настоящие, и платит за них продавец. Поэтому потолок жёсткий и
+// проверяется здесь, а не только на клиенте: чужой клиент попросить может
+// сколько угодно.
+func serveSample(stream net.Conn, peer net.Addr, client string) {
+	_ = stream.SetReadDeadline(time.Now().Add(requestTimeout))
+	size, err := vp1.ReadSampleRequest(stream)
+	if err != nil {
+		log.Printf("[%s] клиент %s: замер: %v", peer, client, err)
+		return
+	}
+	_ = stream.SetReadDeadline(time.Time{})
+
+	if err := vp1.WriteStatus(stream, vp1.StatusOK); err != nil {
+		return
+	}
+
+	// Сколько отдадим на самом деле — иначе клиенту оставалось бы читать до
+	// конца потока и верить, что конец наступит.
+	if err := vp1.GrantSample(stream, size); err != nil {
+		return
+	}
+
+	// Срок на отдачу: без него медленный или залипший клиент держал бы поток
+	// и трафик ноды сколько захочет.
+	_ = stream.SetWriteDeadline(time.Now().Add(sampleTimeout))
+	if err := vp1.WriteSample(stream, size); err != nil {
+		log.Printf("[%s] клиент %s: замер оборван: %v", peer, client, err)
+	}
+}
+
+// sampleTimeout — сколько отводим на отдачу замера.
+//
+// Не влезли — значит нода и правда медленная, и это ответ, а не сбой.
+const sampleTimeout = 20 * time.Second
+
+// udpIdleTimeout — сколько держим поток датаграмм без единого пакета.
+//
+// У UDP нет конца разговора, закрывать поток некому. Полторы минуты выбраны
+// по QUIC: он шлёт своё подтверждение жизни куда чаще, так что живое
+// соединение сюда не попадёт, а брошенное не будет висеть до отключения
+// человека от туннеля.
+const udpIdleTimeout = 90 * time.Second
+
+// serveDatagrams обслуживает поток датаграмм до одной цели.
+//
+// Цель фиксируется запросом и дальше не меняется: поток на неё и заведён.
+// Поэтому проверять адрес источника у пришедших ответов не нужно — сокет
+// подключённый, ядро само отбросит чужие.
+func serveDatagrams(stream net.Conn, addr vp1.Address, peer net.Addr, client string) {
+	target, err := net.DialTimeout("udp", addr.String(), dialTimeout)
+	if err != nil {
+		log.Printf("[%s] клиент %s: не открыли udp до %s: %v", peer, client, addr, err)
+		_ = vp1.WriteStatus(stream, vp1.StatusUnreachable)
+		return
+	}
+	defer target.Close()
+
+	if err := vp1.WriteStatus(stream, vp1.StatusOK); err != nil {
+		log.Printf("[%s] клиент %s: отправка статуса: %v", peer, client, err)
+		return
+	}
+
+	log.Printf("[%s] клиент %s -> %s (udp)", peer, client, addr)
+
+	relay.Datagrams(vp1.Datagrams(stream), target, udpIdleTimeout)
 }
 
 // startAccounting запускает учёт трафика и присмотр за подпиской.
