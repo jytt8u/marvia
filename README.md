@@ -169,8 +169,6 @@ WireGuard:
 событий, интерфейса на других языках. Версия начинается с нуля осознанно: до
 1.0 API и форматы могут меняться.
 
-Что доделывается и в каком порядке — [docs/release-plan.md](docs/release-plan.md).
-
 ---
 
 ## Панель
@@ -198,7 +196,6 @@ WireGuard:
 | [docs/architecture.md](docs/architecture.md) | на чём всё держится и почему устроено так |
 | [docs/protocol.md](docs/protocol.md) | VP1: хендшейк, кадры, добивка, что видно снаружи |
 | [docs/bot.md](docs/bot.md) | справочник для автора телеграм-бота |
-| [docs/release-plan.md](docs/release-plan.md) | что доделать и в каком порядке публиковать |
 
 ## Сборка из исходников
 
