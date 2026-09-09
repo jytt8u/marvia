@@ -229,6 +229,7 @@
         <div style="{{ hostBadge }}">{{ host }}</div>
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="{{ ghostBtn }}" onClick="{{ doBackup }}">Копия базы</div>
         <div style="{{ ghostBtn }}" onClick="{{ doReload }}">{{ reloadLabel }}</div>
         <div style="{{ ghostBtn }}" onClick="{{ doLogout }}">Выход</div>
       </div>
@@ -257,6 +258,30 @@
 
         <sc-if value="{{ hasError }}">
           <div style="{{ errStyle }}">{{ errText }}</div>
+        </sc-if>
+
+        <!--
+          С чего начать. Показывается, пока путь от пустой панели до первой
+          продажи не пройден: нет ноды — продавать нечего, нет покупателя —
+          некому, нет ключа — бот не сможет выдавать сам.
+
+          Установщик панели последней строкой обещает «вкладка Ноды →
+          Добавить ноду», и до сих пор продавец упирался в то, что этой кнопки
+          нет. Здесь она стоит первой.
+        -->
+        <sc-if value="{{ showStart }}">
+          <div style="{{ startBox }}">
+            <div style="font-size: 15px; font-weight: 600; color: var(--fg);">С чего начать</div>
+            <sc-for list="{{ startSteps }}" as="s">
+              <div style="{{ s.row }}" onClick="{{ s.onClick }}">
+                <div style="{{ s.mark }}">{{ s.num }}</div>
+                <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                  <div style="font-size: 13px; color: var(--fg);">{{ s.title }}</div>
+                  <div style="font-size: 12px; line-height: 1.45; color: var(--dim);">{{ s.note }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
         </sc-if>
 
         <sc-if value="{{ isDash }}">
@@ -363,7 +388,7 @@
           <div style="flex: 1; min-height: 0; overflow-y: auto;">
             <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap, 12px); align-content: start;">
               <sc-for list="{{ nodeCards }}" as="nc">
-                <div style="{{ nc.style }}">
+                <div style="{{ nc.style }}" onClick="{{ nc.onClick }}">
                   <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
                     <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
                       <div style="font-size: 16px; font-weight: 600; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ nc.name }}</div>
@@ -790,6 +815,16 @@ function showLinks(title, links, fresh) {
         + "Перешли покупателю сейчас — потом останется только выпустить новую." }));
   }
 
+  // Панель, поднятая без -sub-base, честно ставит в ссылки заглушку вместо
+  // своего адреса. Молча отдать такую продавцу — значит дать ему отправить
+  // покупателю ссылку в никуда и разбираться потом, почему «не работает».
+  if (JSON.stringify(links).includes("ПОДСТАВЬ-АДРЕС-ПАНЕЛИ")) {
+    parts.unshift(el("div", { cls: "note",
+      text: "Внимание: вместо адреса панели в ссылках стоит заглушка — служба запущена "
+        + "без -sub-base. Отправлять их покупателю нельзя. Поправь строку запуска "
+        + "(-sub-base https://твой-домен) и перезапусти панель." }));
+  }
+
   sheet(title, parts, [btn("Закрыть", "go", closeSheet)]);
 }
 
@@ -888,6 +923,181 @@ function userSheet(user) {
     })),
     btn("Закрыть", "", closeSheet),
   ]);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Ноды
+   ──────────────────────────────────────────────────────────────────────── */
+
+// newNodeSheet — то, о чём установщик панели говорит последней строкой:
+// «открой панель, вкладка Ноды → Добавить ноду». До сих пор этой кнопки не
+// было, и продавец на первом же шаге упирался в curl.
+//
+// Панель отдаёт не инструкцию, а готовую строку: приглашение уже внутри,
+// бинарники нода возьмёт у самой панели. На чистом сервере не нужно ни
+// флагов, ни файлов для правки.
+function newNodeSheet() {
+  act(async () => {
+    const res = await api("/api/v1/nodes/invite", "POST", { label: "" });
+    const cmd = res.command;
+
+    sheet("Новая нода", [
+      el("div", { cls: "note", text: "Вставь эту строку на чистом сервере — от root. Всё остальное нода сделает сама: выпустит ключи, запишется в панель, поднимет службу и проверит себя." }),
+      el("pre", { text: cmd }),
+      btn("Скопировать", "go", async () => {
+        try {
+          await navigator.clipboard.writeText(cmd);
+          toast("Скопировано");
+        } catch (_) {
+          toast("Браузер не дал скопировать — выдели и скопируй руками", true);
+        }
+      }),
+      el("div", { cls: "note", text: "Приглашение живёт час и срабатывает один раз: оно даёт право только назваться нодой, не более. Дальше нода работает своим токеном." }),
+      el("div", { cls: "note", text: "Порт, сайт прикрытия и имя можно задать переменными перед sh, например: PORT=8443 DEST=www.icloud.com:443 NAME=amsterdam-1 COUNTRY=Нидерланды" }),
+    ], [btn("Готово", "", () => { closeSheet(); loadAll(); })]);
+  });
+}
+
+function nodeSheet(node) {
+  const alive = nodeAlive(node);
+
+  const facts = [
+    ["Адрес", node.address],
+    ["Прикрытие", node.sni || "—"],
+    ["Состояние", node.enabled ? (alive ? "на связи" : "включена, но молчит") : "выключена"],
+    ["Последний раз на связи", sinceLabel(node.last_seen)],
+  ].map(([k, v]) => el("div", { cls: "note", text: k + ": " + v }));
+
+  // Имя и страну пишет продавец, а не хостер и не панель. Хостер зовёт машину
+  // vm-4823917-ubuntu, и ровно это видит покупатель в списке серверов; а адреса
+  // у хостеров числятся то в Нидерландах, то в США, так что определять страну
+  // по адресу значит врать покупателю, выбравшему Финляндию.
+  const form = [
+    field("Имя", "nd-name", "text", node.name || "", "Видно покупателю в списке серверов"),
+    field("Страна", "nd-country", "text", node.country || "", "Тоже видно покупателю; встаёт первой в названии"),
+  ];
+
+  sheet(node.name || node.address, facts.concat(form), [
+    btn("Сохранить", "go", () => act(async () => {
+      await api("/api/v1/nodes/" + node.id, "PATCH", { name: val("nd-name"), country: val("nd-country") });
+      closeSheet();
+      toast("Сохранено");
+      await loadAll();
+    })),
+    btn(node.enabled ? "Выключить" : "Включить", "", () => act(async () => {
+      await api("/api/v1/nodes/" + node.id, "PATCH", { enabled: !node.enabled });
+      closeSheet();
+      toast(node.enabled ? "Нода убрана из подписок" : "Нода вернулась в подписки");
+      await loadAll();
+    })),
+    btn("Удалить", "bad", () => act(async () => {
+      const yes = await ask("Удалить " + (node.name || node.address) + "?",
+        "Вместе со всей накопленной по ней статистикой, и обратно это не отыграть. "
+        + "Если нода под подозрением на блокировку — выключи её: она уйдёт из подписок, "
+        + "но расход останется виден, и решение отменяется одним нажатием.", "Удалить");
+      if (!yes) return;
+      await api("/api/v1/nodes/" + node.id, "DELETE");
+      closeSheet();
+      toast("Удалена");
+      await loadAll();
+    })),
+    btn("Закрыть", "", closeSheet),
+  ]);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Ключи для ботов
+   ──────────────────────────────────────────────────────────────────────── */
+
+// Права намеренно грубые: те же три, что в панели. Права, которые нельзя
+// объяснить одной строкой, продавец раздаёт наугад — а наугад он раздаст все.
+const SCOPES = [
+  ["users", "заводить и продлевать покупателей — это всё, что нужно боту"],
+  ["nodes", "добавлять и выключать ноды"],
+  ["read", "только смотреть"],
+];
+
+function newKeySheet() {
+  const scopes = el("label", { cls: "kinds", text: "Права" });
+  for (const [scope, note] of SCOPES) {
+    const input = el("input", { type: "checkbox", value: scope });
+    if (scope === "users") input.checked = true;
+    scopes.append(el("span", {}, input, el("span", { text: scope + " · " + note })));
+  }
+
+  const box = sheet("Новый ключ для бота", [
+    el("div", { cls: "note", text: "Ключ — это то, чем твой телеграм-бот ходит в панель. Админский токен боту не давай: им входят в панель и им выпускают ключи." }),
+    field("Название", "nk-name", "text", "", "Чтобы потом понять, чей это ключ"),
+    scopes,
+  ], [
+    btn("Выпустить", "go", () => act(async () => {
+      const picked = Array.from(box.querySelectorAll(".kinds input:checked")).map((i) => i.value);
+      if (!picked.length) { toast("Выбери хотя бы одно право", true); return; }
+      const name = val("nk-name");
+      if (!name) { toast("Без названия ключ потом не опознать", true); return; }
+
+      const res = await api("/api/v1/keys", "POST", { name, scopes: picked });
+      await loadAll();
+
+      const secret = res.secret;
+      sheet("Ключ выпущен", [
+        el("div", { cls: "note", text: "Показывается один раз: в базе лежит только его отпечаток. Вставь его боту сейчас." }),
+        el("pre", { text: secret }),
+        btn("Скопировать", "go", async () => {
+          try {
+            await navigator.clipboard.writeText(secret);
+            toast("Скопировано");
+          } catch (_) {
+            toast("Браузер не дал скопировать — выдели и скопируй руками", true);
+          }
+        }),
+      ], [btn("Готово", "", closeSheet)]);
+    })),
+    btn("Отмена", "", closeSheet),
+  ]);
+}
+
+function keySheet(key) {
+  sheet(key.name, [
+    el("div", { cls: "note", text: "Права: " + ((key.scopes || []).join(", ") || "все") }),
+    el("div", { cls: "note", text: "Выпущен: " + shortDate(key.created_at) }),
+    el("div", { cls: "note", text: "Последний вход: " + (key.last_used_at ? shortDate(key.last_used_at) : "ни разу") }),
+  ], [
+    btn("Отозвать", "bad", () => act(async () => {
+      const yes = await ask("Отозвать ключ «" + key.name + "»?",
+        "Бот, который им ходит, перестанет работать сразу. Выпусти новый и вставь его боту, "
+        + "прежде чем отзывать этот.", "Отозвать");
+      if (!yes) return;
+      await api("/api/v1/keys/" + key.id, "DELETE");
+      closeSheet();
+      toast("Отозван");
+      await loadAll();
+    })),
+    btn("Закрыть", "", closeSheet),
+  ]);
+}
+
+// downloadBackup забирает копию базы браузером, а не ссылкой.
+//
+// Ручка требует админский токен в заголовке, а обычная ссылка его не несёт:
+// нажатие на <a href="/api/v1/backup"> получило бы 401. Поэтому качаем сами и
+// отдаём файл уже из памяти.
+function downloadBackup() {
+  act(async () => {
+    toast("Снимаю копию…");
+    const res = await fetch("/api/v1/backup", { headers: { Authorization: "Bearer " + state.token } });
+    if (!res.ok) throw new Error("копия не снялась: код " + res.status);
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const a = el("a", { href: url, download: "marvia-panel-" + stamp + ".db" });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast("Копия базы скачана");
+  });
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -1101,6 +1311,14 @@ function setState(patch) {
   render();
 }
 
+// CTA — какая кнопка стоит в углу раздела. Разделы без действия остаются без
+// кнопки: пустой угол честнее нажимаемой заглушки.
+const CTA = {
+  clients: ["+ Клиент", () => newUserSheet()],
+  nodes: ["+ Нода", () => newNodeSheet()],
+  keys: ["+ Ключ", () => newKeySheet()],
+};
+
 function renderVals() {
   const t = theme();
   const d = DENSITY[state.density] || DENSITY.normal;
@@ -1149,7 +1367,11 @@ function renderVals() {
   const kpis = [
     ["АКТИВНЫЕ КЛЮЧИ", String(activeUsers), users.length + " всего", true],
     ["ТРАФИК · 30 Д", bytes(total), "по всем нодам", true],
-    ["НОДЫ НА СВЯЗИ", liveNodes + " / " + nodes.length, liveNodes === nodes.length ? "все отвечают" : "не все отвечают", liveNodes === nodes.length],
+    // При нуле нод «все отвечают» — формально верно и совершенно бесполезно:
+    // отвечать некому, и продавать пока нечего.
+    ["НОДЫ НА СВЯЗИ", liveNodes + " / " + nodes.length,
+      nodes.length === 0 ? "ни одной ноды" : liveNodes === nodes.length ? "все отвечают" : "не все отвечают",
+      nodes.length > 0 && liveNodes === nodes.length],
     ["ИСТЕКАЮТ", String(expiring), "в ближайшие 7 дней", expiring === 0],
   ].map(([label, value, delta, good]) => ({
     label, value, delta, style: card,
@@ -1232,7 +1454,8 @@ function renderVals() {
         k.last_used_at ? shortDate(k.last_used_at) : "ни разу",
         k.revoked_at ? "Отозван" : "Активен", k.revoked_at ? "dim" : "ok",
       ]),
-      empty: "Ключей для ботов пока нет.",
+      empty: "Ключей для ботов пока нет. Ими бот ходит в панель вместо админского токена.",
+      onRow: (i) => () => keySheet((state.keys || [])[i]),
     },
   };
 
@@ -1289,6 +1512,7 @@ function renderVals() {
     const traffic = nodeTraffic[n.name] || 0;
     const f = traffic / nodePeak;
     return {
+      onClick: () => nodeSheet(n),
       name: n.name || n.address,
       host: n.address + (n.country ? " · " + n.country : ""),
       load: bytes(traffic),
@@ -1370,6 +1594,28 @@ function renderVals() {
   const ghostBtn = "padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;color:" + t.dim
     + ";background:" + t.surf2;
 
+  // ── с чего начать ────────────────────────────────────────────────────────
+  //
+  // Путь от пустой панели до первой продажи — три шага, и до сих пор нигде не
+  // было сказано, в каком порядке. Показываем, пока хоть один не пройден, и
+  // убираем сам собой, когда пройдены все: постоянная подсказка на рабочем
+  // экране быстро становится мусором.
+  const steps = [
+    [nodes.length > 0, "Добавь ноду", "Панель выдаст готовую строку для чистого сервера — вставить и всё.", () => setState({ page: "nodes" })],
+    [users.length > 0, "Заведи покупателя", "Появится ссылка, которую он вставит в приложение.", () => setState({ page: "clients" })],
+    [(state.keys || []).length > 0, "Выпусти ключ для бота", "Тогда бот продаёт сам, а ты не заходишь сюда на каждую оплату.", () => setState({ page: "keys" })],
+  ];
+  const startSteps = steps.map(([done, title, note, onClick], i) => ({
+    num: done ? "✓" : String(i + 1),
+    title, note,
+    onClick: done ? null : onClick,
+    row: "display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border-radius:" + d.r
+      + "px;background:" + t.surf2 + (done ? ";opacity:.55" : ";cursor:pointer"),
+    mark: "flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;"
+      + "justify-content:center;font-family:JetBrains Mono,monospace;font-size:11px;background:"
+      + (done ? t.acc : t.surf) + ";color:" + (done ? t.accFg : t.dim),
+  }));
+
   return {
     vars,
     host: location.host,
@@ -1379,6 +1625,7 @@ function renderVals() {
     reloadLabel: state.loading ? "Обновляю…" : "Обновить",
     doReload: () => { if (!state.loading) loadAll(); },
     doLogout: logout,
+    doBackup: downloadBackup,
 
     nav,
     pageTitle: PAGES[page][0],
@@ -1387,9 +1634,14 @@ function renderVals() {
     // Кнопка действия есть только там, где действие вправду работает.
     // Нарисованная кнопка — это обещание, и «Скачать журнал» на разделе,
     // которого нет, стоит дороже пустого угла.
-    hasCta: page === "clients",
-    pageCta: "+ Клиент",
-    doCta: newUserSheet,
+    showStart: page === "dash" && steps.some(([done]) => !done),
+    startSteps,
+    startBox: "display:flex;flex-direction:column;gap:8px;padding:" + d.pad + "px;border-radius:"
+      + d.r + "px;background:" + t.surf + ";border:1px solid " + t.acc,
+
+    hasCta: !!CTA[page],
+    pageCta: (CTA[page] || ["", null])[0],
+    doCta: (CTA[page] || ["", null])[1],
     ctaStyle: "height:40px;padding:0 18px;border-radius:" + d.r + "px;background:" + t.acc
       + ";color:" + t.accFg + ";display:flex;align-items:center;font-size:13px;font-weight:600;cursor:pointer",
 
