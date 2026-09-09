@@ -120,7 +120,7 @@ func FetchSubscription(ctx context.Context, subURL string, pinned []netip.Addr) 
 
 	resp, err := subscriptionClient(pinned).Do(req)
 	if err != nil {
-		return Subscription{}, fmt.Errorf("запрос подписки: %w", err)
+		return Subscription{}, fmt.Errorf("запрос подписки: %w", withoutSecret(err))
 	}
 	defer resp.Body.Close()
 
