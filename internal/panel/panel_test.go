@@ -288,7 +288,7 @@ func TestAddCredentialOfKind(t *testing.T) {
 }
 
 // TestSubscriptionCarriesOnlyStockLinks: подписку читают чужие приложения, и
-// незнакомая схема veil:// ломает часть из них целиком.
+// незнакомая схема marvia:// ломает часть из них целиком.
 func TestSubscriptionCarriesOnlyStockLinks(t *testing.T) {
 	h := newHarness(t)
 	h.createNode("alpha")
@@ -315,7 +315,7 @@ func TestSubscriptionCarriesOnlyStockLinks(t *testing.T) {
 	}
 	body := string(decoded)
 
-	if strings.Contains(body, "veil://") {
+	if strings.Contains(body, "marvia://") {
 		t.Fatalf("в подписку для чужих клиентов попала наша схема: %q", body)
 	}
 	// Две ноды на два набора доступа.
@@ -361,7 +361,7 @@ func TestSubscriptionJSONForOwnClient(t *testing.T) {
 	if len(out.Nodes) != 1 {
 		t.Fatalf("нод в ответе %d, ожидалась 1", len(out.Nodes))
 	}
-	if !strings.HasPrefix(out.Nodes[0].Link, "veil://") {
+	if !strings.HasPrefix(out.Nodes[0].Link, "marvia://") {
 		t.Fatalf("ссылка не той схемы: %q", out.Nodes[0].Link)
 	}
 	if out.TrafficLimit != 1000 {
