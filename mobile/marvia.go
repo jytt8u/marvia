@@ -129,7 +129,7 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 
 	// Имя ноды переписываем при переезде: иначе окно будет показывать ту,
 	// через которую трафик давно не идёт.
-	dialer, err := connect(accountLink, cacheDir, t.switched)
+	dialer, err := connect(accountLink, cacheDir, client.Events{OnSwitch: t.switched, OnTrouble: t.trouble})
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 // Вынесено отдельно не ради красоты: так эту часть можно проверить тестом, не
 // выдумывая дескриптор интерфейса. Выдуманный дескриптор в тесте — это номер,
 // который на Linux принадлежит чему-то настоящему.
-func connect(accountLink, cacheDir string, onSwitch func(client.Node)) (*client.Supervisor, error) {
+func connect(accountLink, cacheDir string, events client.Events) (*client.Supervisor, error) {
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
 		return nil, fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))
@@ -184,7 +184,7 @@ func connect(accountLink, cacheDir string, onSwitch func(client.Node)) (*client.
 		Account:   account,
 		Key:       key,
 		CachePath: cachePath(cacheDir),
-	}, onSwitch)
+	}, events)
 
 	// Отчёт уходит в любом случае, в том числе когда не подключилось ни к
 	// одной ноде: продавцу важнее всего узнать именно про такой случай.
@@ -247,6 +247,17 @@ func (t *Tunnel) switched(n client.Node) {
 	t.mu.Lock()
 	t.nodeName = n.Title()
 	t.lastError = ""
+	t.mu.Unlock()
+}
+
+// trouble — нода замолчала, а переехать не на что.
+//
+// Единственный случай, когда человеку про переезд надо сказать. Удачный он
+// замечать не должен: в этом весь смысл. А вот «сейчас не работает ничего»
+// лучше прочитать у нас, чем выяснять самому, почему интернет наполовину.
+func (t *Tunnel) trouble(reason string) {
+	t.mu.Lock()
+	t.lastError = reason
 	t.mu.Unlock()
 }
 
