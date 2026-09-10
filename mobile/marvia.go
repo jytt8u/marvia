@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jytt8u/marvia/internal/client"
 	"github.com/jytt8u/marvia/internal/tunbridge"
@@ -37,6 +38,12 @@ const DefaultDNS = "1.1.1.1:53"
 // Наружу вынесено не ради красоты: приложению это имя нужно, чтобы стереть
 // кэш вместе со ссылкой доступа, когда человек удаляет ключ.
 const CacheName = "subscription.json"
+
+// Сколько живёт сообщение о неудаче, прежде чем погаснуть.
+//
+// Минута: достаточно, чтобы человек успел прочитать, и мало, чтобы старая
+// неудача не висела рядом с работающим туннелем.
+const errorLifetime = time.Minute
 
 // Виды неудач.
 //
@@ -92,9 +99,18 @@ type Tunnel struct {
 	dialer *client.Supervisor
 	bridge *tunbridge.Bridge
 
-	nodeName  string
+	nodeName string
+	running  bool
+
+	// Последняя неудача и когда она случилась.
+	//
+	// Время нужно, чтобы забывать: отдельный неудавшийся поток — обычное дело
+	// в интернете, а не поломка туннеля. Цель могла быть недоступна, заблокирована
+	// или просто не иметь IPv6, до которого ноде не дотянуться. Показывать такое
+	// рядом с надписью «Подключено» и не стирать значит приучить не читать эту
+	// строку вовсе — а она понадобится, когда сломается что-то настоящее.
 	lastError string
-	running   bool
+	lastErrAt time.Time
 }
 
 // Start поднимает туннель поверх сетевого интерфейса, полученного от системы.
@@ -234,6 +250,7 @@ func (t *Tunnel) note(err error) {
 	}
 	t.mu.Lock()
 	t.lastError = err.Error()
+	t.lastErrAt = time.Now()
 	t.mu.Unlock()
 }
 
@@ -258,6 +275,9 @@ func (t *Tunnel) switched(n client.Node) {
 func (t *Tunnel) trouble(reason string) {
 	t.mu.Lock()
 	t.lastError = reason
+	// Время ставим обязательно: без него сообщение считалось бы старым с
+	// рождения и гасло бы, не успев показаться.
+	t.lastErrAt = time.Now()
 	t.mu.Unlock()
 }
 
@@ -305,6 +325,13 @@ func (t *Tunnel) NodeName() string {
 func (t *Tunnel) LastError() string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	// Забываем старое. Настоящая беда о себе напомнит: надзор, не сумевший
+	// переехать, ставит её заново каждые двадцать секунд, и строка не гаснет.
+	// А единственный неудавшийся поток погаснет — ему там и место.
+	if t.lastError != "" && time.Since(t.lastErrAt) > errorLifetime {
+		t.lastError = ""
+	}
 	return t.lastError
 }
 
