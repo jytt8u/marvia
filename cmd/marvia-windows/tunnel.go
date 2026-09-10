@@ -38,26 +38,6 @@ const (
 	StateStalled State = "stalled"
 )
 
-// Как сторож проверяет, что нода жива.
-const (
-	// Раз в полминуты: чаще — лишний трафик и лишние потоки на ноде, реже —
-	// человек успевает решить, что сломался его интернет.
-	watchEvery = 30 * time.Second
-
-	// Дольше этого ответа не ждём: живая нода отвечает за доли секунды, а
-	// мёртвая не ответит и за минуту.
-	watchTimeout = 8 * time.Second
-
-	// Сколько проверок подряд должны провалиться. Одиночный промах — это
-	// моргнувший Wi-Fi, и объявлять по нему разрыв значит приучить не верить
-	// надписи вовсе.
-	watchMisses = 3
-
-	// Сколько байт просим на проверку. Килобайт раз в полминуты — три
-	// мегабайта в сутки; за правдивую надпись это недорого.
-	watchSample = 1024
-)
-
 // Status — всё, что показывает окно.
 type Status struct {
 	State   State  `json:"state"`
@@ -106,7 +86,7 @@ type Controller struct {
 	leftBytes  int64
 	account    string
 
-	dialer  *client.Dialer
+	dialer  *client.Supervisor
 	adapter *wintun.Adapter
 	bridge  *tunbridge.Bridge
 	cancel  context.CancelFunc
@@ -263,12 +243,15 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 	// Список нод по возможности берём из кэша: каждый поход в панель — это
 	// запрос имени её домена, а он с недавних пор уходит провайдеру открытым
 	// текстом. Подробности в internal/client/cache.go.
-	dialer, measurements, err := client.Connect(ctx, client.ConnectConfig{
+	// Supervise, а не Connect: за нодой дальше следят и меняют её, если она
+	// замолчала. Свой сторож здесь больше не нужен — он умел заметить разрыв,
+	// но не умел его вылечить.
+	dialer, measurements, err := client.Supervise(ctx, client.ConnectConfig{
 		Account:   account,
 		Key:       key,
 		CachePath: cachePath(),
 		Log:       c.log.add,
-	})
+	}, client.Events{OnSwitch: c.moved, OnTrouble: c.stall})
 
 	go func() {
 		_ = client.SendReports(context.Background(), account.SubscriptionURL, client.ReportsFrom(measurements))
@@ -337,84 +320,7 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 
 	c.log.add("%s", sayf("logTunnelUp", node.Name))
 
-	// Сторож живёт на том же контексте, что и подключение: «отключиться»
-	// гасит и его, отдельного выключателя заводить не надо.
-	go c.watch(ctx, dialer)
 	return nil
-}
-
-// watch следит, что нода всё ещё отвечает.
-//
-// Состояние «подключено» ставилось один раз и больше не проверялось: нода
-// умирала, а окно оставалось зелёным. Человек в это время перезагружает
-// роутер и звонит провайдеру — виноватым оказывается кто угодно, кроме нас.
-//
-// Проверяем тем же замером, каким выбирали ноду: он проходит весь путь —
-// сессия, поток, ответ ноды, — и потому ловит не только оборванный провод, но
-// и ноду, которая жива, а обслуживать перестала.
-func (c *Controller) watch(ctx context.Context, dialer *client.Dialer) {
-	ticker := time.NewTicker(watchEvery)
-	defer ticker.Stop()
-
-	misses := 0
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-		}
-
-		probe, cancel := context.WithTimeout(ctx, watchTimeout)
-		_, err := dialer.MeasureFetch(probe, watchSample)
-		cancel()
-
-		// Отключились, пока шла проверка: её итог уже никого не касается.
-		if ctx.Err() != nil {
-			return
-		}
-
-		if err == nil {
-			if misses >= watchMisses {
-				c.log.add("%s", say("logNodeBack"))
-				c.unstall()
-			}
-			misses = 0
-			continue
-		}
-
-		misses++
-		if misses != watchMisses {
-			continue
-		}
-
-		c.log.add("%s", sayf("logNodeSilent", watchMisses, err))
-		c.stall(say("nodeSilent"))
-	}
-}
-
-// stall говорит, что связь потеряна, но туннель не разбирает.
-//
-// Разобрать было бы соблазнительно — «всё равно не работает», — но тогда
-// маршруты снимутся, и трафик пойдёт мимо туннеля открыто ровно в тот момент,
-// когда человек об этом не знает. Для средства обхода блокировок это хуже,
-// чем отсутствие связи. Пусть не работает ничего, но видно, что именно.
-func (c *Controller) stall(reason string) {
-	c.mu.Lock()
-	if c.state == StateConnected {
-		c.state = StateStalled
-		c.reason = reason
-	}
-	c.mu.Unlock()
-}
-
-// unstall возвращает надпись обратно, когда нода ожила.
-func (c *Controller) unstall() {
-	c.mu.Lock()
-	if c.state == StateStalled {
-		c.state = StateConnected
-		c.reason = ""
-	}
-	c.mu.Unlock()
 }
 
 // Disconnect убирает туннель и всё, что под него настраивалось.
@@ -448,6 +354,38 @@ func (c *Controller) Disconnect() {
 	if bridge != nil || adapter != nil {
 		c.log.add("%s", say("logTunnelDown"))
 	}
+}
+
+// moved — ядро переехало на другую ноду.
+//
+// Имя переписываем обязательно: иначе окно продолжит показывать ноду, через
+// которую трафик давно не идёт. Состояние возвращаем в «подключено» — если до
+// этого висело «связь потеряна», то она уже нашлась.
+func (c *Controller) moved(node client.Node) {
+	c.mu.Lock()
+	c.node = node
+	if c.state == StateStalled {
+		c.state = StateConnected
+		c.reason = ""
+	}
+	c.mu.Unlock()
+
+	c.log.add("переехали на %s", node.Title())
+}
+
+// stall — нода замолчала, а переехать не на что.
+//
+// Туннель при этом намеренно не разбираем. Соблазн был — всё равно не
+// работает, — но тогда снимутся маршруты, и трафик пойдёт мимо туннеля
+// открыто ровно в тот момент, когда человек об этом не знает. Для средства
+// обхода блокировок это хуже, чем отсутствие связи.
+func (c *Controller) stall(reason string) {
+	c.mu.Lock()
+	if c.state == StateConnected {
+		c.state = StateStalled
+		c.reason = reason
+	}
+	c.mu.Unlock()
 }
 
 func (c *Controller) finish(state State, reason string) {
@@ -601,7 +539,7 @@ func writeAccount(link string) error {
 //
 // Человек заплатил и вправе это видеть, не спрашивая продавца. А продавец
 // вправе не отвечать на такое вручную каждому.
-func subscriptionOf(dialer *client.Dialer) (until string, limit, left int64) {
+func subscriptionOf(dialer *client.Supervisor) (until string, limit, left int64) {
 	if dialer == nil {
 		return "", 0, 0
 	}
