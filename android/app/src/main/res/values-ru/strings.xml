@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Marvia</string>
+
+    <string name="status_off">Отключено</string>
+    <string name="status_connecting">Подключаюсь…</string>
+    <string name="status_on">Подключено</string>
+    <string name="status_failed">Не подключилось</string>
+
+    <string name="detail_off">Трафик идёт напрямую</string>
+    <string name="detail_connecting">Выбираю самую быструю ноду</string>
+    <string name="detail_no_key">Вставь ключ доступа</string>
+    <string name="detail_node">Нода: %1$s</string>
+    <string name="detail_node_warning">Нода: %1$s · %2$s</string>
+
+    <!-- Подписка: до какого числа и сколько трафика осталось. -->
+    <string name="sub_until">До %1$s</string>
+    <string name="sub_until_left">До %1$s · осталось %2$s</string>
+    <string name="sub_left">Осталось %1$s</string>
+    <string name="sub_unlimited">Без ограничений</string>
+    <string name="size_gb">%1$s ГБ</string>
+    <string name="size_mb">%1$d МБ</string>
+
+    <string name="action_connect">Подключиться</string>
+    <string name="action_disconnect">Отключиться</string>
+    <string name="action_save">Сохранить ключ</string>
+
+    <string name="key_hint">Ключ доступа</string>
+    <string name="key_helper">Ссылка вида marvia://… — её выдаёт бот при оплате</string>
+    <string name="key_saved">Ключ сохранён</string>
+    <string name="key_empty">Поле пустое</string>
+
+    <!--
+        Ссылку приложению может подсунуть любое другое приложение или страница,
+        не только бот продавца. Пока ключа нет, менять нечего — берём молча.
+        Когда ключ уже стоит, подмена увела бы весь трафик на чужие серверы,
+        поэтому спрашиваем.
+    -->
+    <string name="key_replace_title">Заменить ключ доступа?</string>
+    <string name="key_replace_body">Ссылка пришла из другого приложения. После замены трафик пойдёт через серверы того, кто её выдал. Соглашайся, только если ссылку прислал твой продавец.</string>
+    <string name="key_replace_yes">Заменить</string>
+    <string name="key_replace_no">Оставить прежний</string>
+
+    <!--
+        Байпас. Значок VPN в шторке остаётся всегда — его рисует Android, пока
+        поднят туннель. Но госуслуги ломает не значок, а зарубежный адрес
+        ноды, и вот его исключение из туннеля и чинит.
+    -->
+    <string name="bypass_open">Приложения мимо туннеля</string>
+    <string name="bypass_title">Что не пускать в туннель</string>
+    <string name="bypass_none">Все приложения идут через туннель</string>
+    <string name="bypass_some">Мимо туннеля: %1$d</string>
+    <string name="bypass_hint">Госуслуги, банки и всё государственное не отвечают на запросы из-за границы. Отправь их мимо — у них останется обычный интернет с российским адресом.</string>
+    <string name="bypass_preset">Госуслуги и банки</string>
+    <string name="bypass_save">Сохранить</string>
+    <string name="bypass_restart">Изменения применятся при следующем подключении</string>
+    <string name="bypass_loading">Смотрю, что установлено…</string>
+
+    <!--
+        Российские сайты мимо туннеля. Предлагаем при первом удачном
+        подключении: про эту возможность человек вспоминает ровно тогда, когда
+        у него не открылись госуслуги, — то есть уже разозлившись.
+    -->
+    <string name="bypass_ru_title">Российские сайты — мимо туннеля?</string>
+    <string name="bypass_ru_body">Госуслуги, банки и почта не отвечают на запросы из-за границы. Если увести их мимо, они будут открываться как обычно, а всё остальное пойдёт через туннель.</string>
+    <string name="bypass_ru_yes">Увести мимо</string>
+    <string name="bypass_ru_no">Не надо</string>
+    <string name="bypass_ru_on">Российские сайты мимо</string>
+
+    <!--
+        Настройки. Здесь нет ручек протокола: их место внутри, а не на экране
+        человека, который не может выбрать между ними осознанно.
+    -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_apps">Приложения мимо туннеля</string>
+    <string name="settings_autostart_off">Включаться после перезагрузки: нет</string>
+    <string name="settings_autostart_on">Включаться после перезагрузки: да</string>
+    <string name="settings_autostart_short">автозапуск</string>
+    <string name="settings_autostart_saved">После перезагрузки телефона туннель поднимется сам</string>
+    <string name="settings_autostart_off_saved">После перезагрузки придётся включить руками</string>
+    <string name="settings_always_on">Постоянный VPN в системе</string>
+    <string name="settings_always_on_missing">На этом телефоне нет такого раздела настроек</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_journal">Журнал</string>
+    <string name="theme_system">Как в системе</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="journal_send">Отправить продавцу</string>
+
+    <string name="consent_denied">Без разрешения системы туннель поднять нельзя</string>
+    <string name="error_no_interface">Система не выдала сетевой интерфейс</string>
+
+    <!--
+        Фразы под виды неудач из ядра. Задача каждой — сказать человеку, что
+        делать дальше, а не что именно сломалось внутри.
+    -->
+    <!--
+        Кончившаяся подписка — самая частая беда и единственная, где человеку
+        надо не чинить, а заплатить. Раньше он читал «ни один сервер не
+        отвечает», шёл к продавцу с «у вас всё сломалось», и продавец
+        разбирался с каждым таким вручную.
+    -->
+    <string name="fail_expired">Подписка кончилась. Продли её у продавца — доступ включится сразу</string>
+    <string name="fail_quota">Кончился оплаченный трафик. Напиши продавцу, чтобы добавил</string>
+
+    <string name="fail_account">Ключ доступа не подошёл. Возьми новый у продавца</string>
+    <string name="fail_panel">Не получается получить список серверов. Проверь, есть ли интернет</string>
+    <string name="fail_nodes">Ни один сервер сейчас не отвечает. Попробуй позже или напиши продавцу</string>
+    <string name="fail_system">Телефон не дал создать подключение. Попробуй ещё раз</string>
+
+    <string name="notification_channel">Туннель</string>
+    <string name="notification_channel_desc">Показывает, работает ли туннель</string>
+    <string name="notification_stop">Отключить</string>
+    <!--
+        Строки журнала. Журнал человек отправляет продавцу, то есть читает его
+        не только он, — поэтому он такой же перевод, как и всё остальное.
+    -->
+    <string name="log_header">Marvia · журнал</string>
+    <string name="log_bypassed">исключено приложений: %1$d</string>
+    <string name="log_bypass_local">, российские подсети мимо: %1$s</string>
+    <string name="log_yes">да</string>
+    <string name="log_no">нет</string>
+    <string name="log_tunnel_on">включаю туннель</string>
+    <string name="log_connected">подключено через %1$s</string>
+    <string name="log_failed">не поднялся: %1$s — %2$s</string>
+</resources>

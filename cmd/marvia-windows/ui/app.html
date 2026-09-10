@@ -258,33 +258,35 @@
 
     <button class="tab" data-tab="home" aria-selected="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v9M6.5 6.5a8 8 0 1 0 11 0"/></svg>
-      Главная
+      <span data-t="tabHome">Главная</span>
     </button>
     <button class="tab" data-tab="key">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="12" r="3.6"/><path d="M11.6 12H21M17.5 12v3.4M20.4 12v2.6"/></svg>
-      Ключ доступа
+      <span data-t="tabKey">Ключ доступа</span>
     </button>
     <button class="tab" data-tab="log">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg>
-      Журнал
+      <span data-t="tabLog">Журнал</span>
     </button>
     <button class="tab" data-tab="about">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 11.2v5M12 7.9h.01"/></svg>
-      О программе
+      <span data-t="tabAbout">О программе</span>
     </button>
+
+    <button class="tab lang" id="lang" type="button"></button>
 
     <div class="spacer"></div>
 
     <div class="speeds">
       <div class="speed">
         <svg viewBox="0 0 24 24" fill="none" stroke="#21c48a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
-        <span class="total" id="t-down">0 Б</span>
-        <b id="s-down">0 Б/с</b>
+        <span class="total" id="t-down">0</span>
+        <b id="s-down">0</b>
       </div>
       <div class="speed">
         <svg viewBox="0 0 24 24" fill="none" stroke="#4d7cfe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
-        <span class="total" id="t-up">0 Б</span>
-        <b id="s-up">0 Б/с</b>
+        <span class="total" id="t-up">0</span>
+        <b id="s-up">0</b>
       </div>
     </div>
   </aside>
@@ -294,20 +296,17 @@
 
     <!-- -------------------------------------------------------- главная -->
     <section class="page" data-tab="home" data-open>
-      <div id="elev-warn" class="warn" hidden>
-        Программа запущена без прав администратора — Windows не даст создать
-        сетевой адаптер. Закрой окно и запусти заново, согласившись на запрос прав.
-      </div>
+      <div id="elev-warn" class="warn" data-t="elevWarn" hidden></div>
 
       <div class="center">
-        <button class="power" id="power" data-state="idle" title="Подключиться">
+        <button class="power" id="power" data-state="idle" title="">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
             <path d="M12 3.2v9.2"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/>
           </svg>
         </button>
 
-        <div class="status" id="status">Отключено</div>
-        <div class="detail" id="detail">Трафик идёт напрямую</div>
+        <div class="status" id="status"></div>
+        <div class="detail" id="detail"></div>
 
         <!--
           Подписка: до какого числа и сколько трафика осталось. Человек
@@ -327,7 +326,7 @@
         <div class="first-key" id="first-key" hidden>
           <textarea id="first-account" rows="2" spellcheck="false" placeholder="marvia://…"></textarea>
           <div class="row">
-            <button class="primary" id="first-save">Сохранить ключ</button>
+            <button class="primary" id="first-save" data-t="keySaveFirst"></button>
             <span id="first-msg" class="hint" style="margin:0"></span>
           </div>
         </div>
@@ -337,8 +336,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2.5 19.5 5.5v6C19.5 16 16.3 19.9 12 21.2 7.7 19.9 4.5 16 4.5 11.5v-6z"/></svg>
           </div>
           <div>
-            <div class="name" id="node-name">Нода не выбрана</div>
-            <div class="sub" id="node-addr">подключись — она выберется сама, по замерам</div>
+            <div class="name" id="node-name"></div>
+            <div class="sub" id="node-addr"></div>
           </div>
           <div class="ping" id="node-ping"></div>
         </div>
@@ -346,29 +345,19 @@
         <div class="leak" id="proxy-warn" hidden>
           <div class="head">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v5M12 17.5v.01"/><path d="M10.3 3.9 2.4 17.4A2 2 0 0 0 4.1 20.4h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-            <span class="title">Часть трафика идёт мимо туннеля</span>
+            <span class="title" data-t="proxyTitle"></span>
           </div>
           <div class="body" id="proxy-text"></div>
-          <div class="body" id="proxy-care">
-            Если прокси ставил не ты — на рабочем компьютере или под родительским
-            контролем — не трогай его: без него перестанут открываться рабочие
-            ресурсы.
-          </div>
-          <div class="act">
-            <button id="proxy-off">Убрать прокси</button>
-            <span class="said" id="proxy-msg"></span>
-          </div>
-        </div>
-      </div>
+          <div class="body" id="proxy-care" data-t="proxyCare"></div>
     </section>
 
     <!-- ----------------------------------------------------------- ключ -->
     <section class="page" data-tab="key">
-      <h2>Ключ доступа</h2>
-      <p class="lead">Ссылка вида marvia://… — её присылает бот после оплаты.</p>
+      <h2 data-t="keyTitle"></h2>
+      <p class="lead" data-t="keyLead"></p>
       <textarea id="account" rows="3" spellcheck="false" placeholder="marvia://…"></textarea>
       <div class="row">
-        <button class="primary" id="save">Сохранить</button>
+        <button class="primary" id="save" data-t="keySave"></button>
         <span id="save-msg" class="hint" style="margin:0"></span>
       </div>
       <p class="hint">
@@ -379,25 +368,16 @@
 
     <!-- --------------------------------------------------------- журнал -->
     <section class="page" data-tab="log">
-      <h2>Журнал</h2>
-      <p class="lead">Что программа делала. Пригодится, если что-то не заработало.</p>
-      <pre class="log" id="log">пусто</pre>
+      <h2 data-t="logTitle"></h2>
+      <p class="lead" data-t="logLead"></p>
+      <pre class="log" id="log"></pre>
     </section>
 
     <!-- ----------------------------------------------------- о программе -->
     <section class="page" data-tab="about">
-      <h2>О программе</h2>
-      <p class="about">
-        Marvia забирает весь трафик компьютера и уводит его через ноду,
-        замаскированную под обычный сайт. <b>Ноду программа выбирает сама</b> — по
-        замерам с этой машины, а не по мнению панели: панель стоит за границей и
-        видит ноду живой тогда, когда для тебя она уже мертва.
-      </p>
-      <p class="about">
-        Соединение до самой ноды идёт <b>мимо туннеля</b>, отдельным маршрутом.
-        Иначе получился бы круг: пакеты, которыми программа разговаривает с
-        нодой, попадали бы в тот самый туннель, который к этой ноде и ведёт.
-      </p>
+      <h2 data-t="aboutTitle"></h2>
+      <p class="about" data-html="about1"></p>
+      <p class="about" data-html="about2"></p>
       <p class="about">
         При выходе маршруты снимаются сами — снимаются именно свои, поимённо.
         Сбросить таблицу маршрутов целиком было бы проще, но это быстрый способ
@@ -411,6 +391,179 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
+
+/* ----------------------------------------------------------------- язык */
+
+/*
+  Клиент ставят там же, где панель, — не только в России. Держим два языка и
+  переключатель, а язык при первом запуске берём у системы.
+
+  Надписи собраны в один словарь, а не рассыпаны по разметке: иначе перевод
+  отстаёт молча, и человек видит вперемешку два языка. Статику разметка
+  помечает data-t, длинные абзацы — data-html: там внутри выделения.
+
+  Язык уходит и в программу: часть сообщений — «нужны права администратора»,
+  «нода не отвечает» — приходит оттуда, и английская кнопка с русской ошибкой
+  под ней выглядит хуже, чем честно русское окно.
+*/
+
+const LANG_KEY = "marvia-lang";
+
+const T = {
+  ru: {
+    lang: "ru", switchTo: "EN", switchTitle: "Switch to English",
+
+    tabHome: "Туннель", tabKey: "Ключ доступа", tabLog: "Журнал", tabAbout: "О программе",
+    down: "Приём", up: "Отдача",
+
+    state: {
+      idle: "Отключено", connecting: "Подключаюсь", connected: "Подключено",
+      failed: "Не подключилось", stalled: "Связь потеряна",
+    },
+    detail: {
+      idle: "трафик идёт напрямую",
+      noKey: "вставь ключ доступа, его присылает бот после оплаты",
+      connecting: "выбираю самую быструю ноду",
+      connected: "весь трафик компьютера идёт через туннель",
+      stalled: "нода перестала отвечать",
+      unknown: "причина неизвестна",
+    },
+    power: { on: "Подключиться", off: "Отключиться", cancel: "Отменить" },
+
+    noNode: "Нода не выбрана",
+    noNodeSub: "подключись — она выберется сама, по замерам",
+
+    keyTitle: "Ключ доступа",
+    keyLead: "Ссылка вида marvia://… — её присылает бот после оплаты.",
+    keySave: "Сохранить", keySaveFirst: "Сохранить ключ", keySaved: "Сохранено",
+
+    logTitle: "Журнал",
+    logLead: "Что программа делала. Пригодится, если что-то не заработало.",
+    logEmpty: "пусто",
+
+    aboutTitle: "О программе",
+    about1: "Marvia забирает весь трафик компьютера и уводит его через ноду, "
+      + "замаскированную под обычный сайт. <b>Ноду программа выбирает сама</b> — по "
+      + "замерам с этой машины, а не по мнению панели: панель стоит за границей и "
+      + "видит ноду живой тогда, когда для тебя она уже мертва.",
+    about2: "Соединение до самой ноды идёт <b>мимо туннеля</b>, отдельным маршрутом. "
+      + "Иначе получился бы круг: пакеты, которыми программа разговаривает с "
+      + "нодой, попадали бы в тот самый туннель, который к этой ноде и ведёт.",
+
+    proxyTitle: "Часть трафика идёт мимо туннеля",
+    proxyCare: "Если прокси ставил не ты — на рабочем компьютере или под родительским "
+      + "контролем — не трогай его: без него перестанут открываться рабочие ресурсы.",
+    proxyOff: "Убрать прокси",
+    proxyEnv: "Его поставила программа через переменные окружения — убрать можно только в ней.",
+    proxyRemoving: "убираю…",
+    proxyGone: "Убрал. Браузер подхватит это после перезапуска.",
+
+    elevWarn: "Программа запущена без прав администратора — Windows не даст создать сетевой адаптер. Закрой окно и запусти заново, согласившись на запрос прав.",
+    noLink: "Нет связи с программой",
+    err: "ошибка ",
+    until: "до ", left: "осталось ", ms: " мс", perSec: "/с",
+    bytes: ["Б", "КБ", "МБ", "ГБ", "ТБ"],
+  },
+
+  en: {
+    lang: "en", switchTo: "RU", switchTitle: "Переключить на русский",
+
+    tabHome: "Tunnel", tabKey: "Access key", tabLog: "Log", tabAbout: "About",
+    down: "Down", up: "Up",
+
+    state: {
+      idle: "Disconnected", connecting: "Connecting", connected: "Connected",
+      failed: "Could not connect", stalled: "Connection lost",
+    },
+    detail: {
+      idle: "traffic goes directly",
+      noKey: "paste the access key — the bot sends it after payment",
+      connecting: "picking the fastest node",
+      connected: "all traffic from this computer goes through the tunnel",
+      stalled: "the node stopped responding",
+      unknown: "reason unknown",
+    },
+    power: { on: "Connect", off: "Disconnect", cancel: "Cancel" },
+
+    noNode: "No node picked",
+    noNodeSub: "connect — it picks itself, by measurement",
+
+    keyTitle: "Access key",
+    keyLead: "A marvia://… link — the bot sends it after payment.",
+    keySave: "Save", keySaveFirst: "Save the key", keySaved: "Saved",
+
+    logTitle: "Log",
+    logLead: "What the program did. Useful when something did not work.",
+    logEmpty: "empty",
+
+    aboutTitle: "About",
+    about1: "Marvia takes all traffic from this computer and routes it through a node "
+      + "disguised as an ordinary website. <b>The program picks the node itself</b> — by "
+      + "measuring from this machine, not by what the panel thinks: the panel sits abroad "
+      + "and sees a node alive when for you it is already dead.",
+    about2: "The connection to the node itself goes <b>outside the tunnel</b>, by its own route. "
+      + "Otherwise it would be a loop: the packets the program uses to talk to the node "
+      + "would go into the very tunnel that leads to that node.",
+
+    proxyTitle: "Some traffic bypasses the tunnel",
+    proxyCare: "If you did not set the proxy — on a work computer or under parental "
+      + "controls — leave it alone: without it work resources stop opening.",
+    proxyOff: "Remove the proxy",
+    proxyEnv: "A program set it through environment variables — only that program can remove it.",
+    proxyRemoving: "removing…",
+    proxyGone: "Removed. The browser picks this up after a restart.",
+
+    elevWarn: "The program is running without administrator rights — Windows will not let it create a network adapter. Close this window and start again, accepting the rights prompt.",
+    noLink: "No connection to the program",
+    err: "error ",
+    until: "until ", left: "left ", ms: " ms", perSec: "/s",
+    bytes: ["B", "KB", "MB", "GB", "TB"],
+  },
+};
+
+let lang = "ru";
+const L = () => T[lang];
+
+function pickLang() {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved && T[saved]) return saved;
+  } catch (_) { /* хранилище недоступно */ }
+
+  const want = (navigator.languages || [navigator.language || ""]).join(",").toLowerCase();
+  return /\b(ru|be|uk|kk|ky|uz|tg|hy|az)\b/.test(want) ? "ru" : "en";
+}
+
+// paintStatic заполняет всё, что не меняется от состояния: заголовки вкладок,
+// подписи кнопок, тексты «о программе».
+function paintStatic() {
+  const d = L();
+  document.documentElement.lang = d.lang;
+
+  for (const node of document.querySelectorAll("[data-t]")) {
+    const v = d[node.dataset.t];
+    if (typeof v === "string") node.textContent = v;
+  }
+  // Внутри этих абзацев есть выделения, поэтому они идут разметкой. Источник
+  // свой, из словаря — чужого текста сюда не попадает.
+  for (const node of document.querySelectorAll("[data-html]")) {
+    const v = d[node.dataset.html];
+    if (typeof v === "string") node.innerHTML = v;
+  }
+
+  $("lang").textContent = d.switchTo;
+  $("lang").title = d.switchTitle;
+}
+
+async function setLang(next) {
+  if (!T[next]) return;
+  lang = next;
+  try { localStorage.setItem(LANG_KEY, next); } catch (_) { /* хранилище недоступно */ }
+  paintStatic();
+  // Программе язык нужен для своих сообщений: они приходят готовой строкой.
+  try { await api("POST", "api/lang", { lang: next }); } catch (_) { /* переживём */ }
+  tick();
+}
 
 /* --------------------------------------------------------------- вкладки */
 
@@ -453,7 +606,7 @@ function showProxy(s) {
   button.hidden = s.proxy_env;
   $("proxy-care").hidden = s.proxy_env;
   $("proxy-msg").textContent = s.proxy_env
-    ? "Его поставила программа через переменные окружения — убрать можно только в ней."
+    ? L().proxyEnv
     : "";
 }
 
@@ -462,12 +615,12 @@ async function dropProxy() {
   const said = $("proxy-msg");
 
   button.disabled = true;
-  said.textContent = "убираю…";
+  said.textContent = L().proxyRemoving;
   try {
     const after = await api("POST", "api/proxy/off");
     render(after);
     if (!after.proxy) {
-      said.textContent = "Убрал. Браузер подхватит это после перезапуска.";
+      said.textContent = L().proxyGone;
     }
   } catch (e) {
     said.textContent = e.message;
@@ -490,14 +643,14 @@ async function api(method, path, body) {
   });
   const text = await res.text();
   const data = text ? JSON.parse(text) : {};
-  if (!res.ok) throw new Error(data.error || ("ошибка " + res.status));
+  if (!res.ok) throw new Error(data.error || (L().err + res.status));
   return data;
 }
 
 /* -------------------------------------------------------------- величины */
 
 function bytes(n) {
-  const units = ["Б", "КБ", "МБ", "ГБ", "ТБ"];
+  const units = L().bytes;
   let i = 0;
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
   return (i === 0 ? Math.round(n) : n.toFixed(1)) + " " + units[i];
@@ -505,13 +658,7 @@ function bytes(n) {
 
 /* ------------------------------------------------------------- отрисовка */
 
-const titles = {
-  idle: "Отключено",
-  connecting: "Подключаюсь",
-  connected: "Подключено",
-  failed: "Не подключилось",
-  stalled: "Связь потеряна",
-};
+// Названия состояний живут в словаре: их видит человек, а не программа.
 
 let prev = null;
 
@@ -544,9 +691,9 @@ function render(s) {
   // человек полторы минуты смотрел на замершее окно и не мог ничего сделать.
   $("power").disabled = !s.elevated;
   $("power").title =
-    s.state === "connecting" ? "Отменить"
-    : s.state === "connected" || s.state === "stalled" ? "Отключиться"
-    : "Подключиться";
+    s.state === "connecting" ? L().power.cancel
+    : s.state === "connected" || s.state === "stalled" ? L().power.off
+    : L().power.on;
   $("elev-warn").hidden = s.elevated;
 
   const detail = $("detail");
@@ -557,12 +704,12 @@ function render(s) {
   const said = complaintNow();
   detail.classList.toggle("bad", s.state === "failed" || s.state === "stalled" || said !== null);
   if (said !== null) detail.textContent = said;
-  else if (s.state === "failed") detail.textContent = s.reason || "причина неизвестна";
-  else if (s.state === "stalled") detail.textContent = s.reason || "нода перестала отвечать";
-  else if (s.state === "connecting") detail.textContent = "выбираю самую быструю ноду";
-  else if (s.state === "connected") detail.textContent = "весь трафик компьютера идёт через туннель";
-  else if (!s.has_account) detail.textContent = "вставь ключ доступа, его присылает бот после оплаты";
-  else detail.textContent = "трафик идёт напрямую";
+  else if (s.state === "failed") detail.textContent = s.reason || L().detail.unknown;
+  else if (s.state === "stalled") detail.textContent = s.reason || L().detail.stalled;
+  else if (s.state === "connecting") detail.textContent = L().detail.connecting;
+  else if (s.state === "connected") detail.textContent = L().detail.connected;
+  else if (!s.has_account) detail.textContent = L().detail.noKey;
+  else detail.textContent = L().detail.idle;
 
   // Поле ключа на первом экране — только пока ключа нет.
   $("first-key").hidden = s.has_account;
@@ -570,18 +717,18 @@ function render(s) {
   // Подписка: до какого числа и сколько осталось.
   const sub = $("subscription");
   const parts = [];
-  if (s.until) parts.push("до " + s.until);
-  if (s.limit_bytes > 0) parts.push("осталось " + bytes(s.left_bytes || 0));
+  if (s.until) parts.push(L().until + s.until);
+  if (s.limit_bytes > 0) parts.push(L().left + bytes(s.left_bytes || 0));
   sub.hidden = parts.length === 0;
   sub.textContent = parts.join(" · ");
 
   if (s.node) {
     $("node-name").textContent = s.node;
     $("node-addr").textContent = s.address;
-    $("node-ping").textContent = s.ping_ms ? s.ping_ms + " мс" : "";
+    $("node-ping").textContent = s.ping_ms ? s.ping_ms + L().ms : "";
   } else {
-    $("node-name").textContent = "Нода не выбрана";
-    $("node-addr").textContent = "подключись — она выберется сама, по замерам";
+    $("node-name").textContent = L().noNode;
+    $("node-addr").textContent = L().noNodeSub;
     $("node-ping").textContent = "";
   }
 
@@ -592,8 +739,8 @@ function render(s) {
   const now = Date.now();
   if (prev && now > prev.t) {
     const dt = (now - prev.t) / 1000;
-    $("s-down").textContent = bytes(Math.max(0, (s.down - prev.down) / dt)) + "/с";
-    $("s-up").textContent = bytes(Math.max(0, (s.up - prev.up) / dt)) + "/с";
+    $("s-down").textContent = bytes(Math.max(0, (s.down - prev.down) / dt)) + L().perSec;
+    $("s-up").textContent = bytes(Math.max(0, (s.up - prev.up) / dt)) + L().perSec;
   }
   prev = { t: now, up: s.up || 0, down: s.down || 0 };
 
@@ -629,7 +776,7 @@ $("save").addEventListener("click", async () => {
   msg.style.margin = "0";
   try {
     await api("POST", "api/account", { link: $("account").value });
-    msg.textContent = "Сохранено";
+    msg.textContent = L().keySaved;
     await tick();
   } catch (err) {
     msg.className = "hint bad";
@@ -649,7 +796,7 @@ $("first-save").addEventListener("click", async () => {
     const link = $("first-account").value;
     await api("POST", "api/account", { link });
     $("account").value = link;
-    msg.textContent = "Сохранено";
+    msg.textContent = L().keySaved;
     await tick();
   } catch (err) {
     msg.className = "hint bad";
@@ -663,11 +810,19 @@ async function tick() {
   try {
     render(await api("GET", "api/state"));
     const log = await api("GET", "api/log");
-    $("log").textContent = (log.lines || []).join("\n") || "пусто";
+    $("log").textContent = (log.lines || []).join("\n") || L().logEmpty;
   } catch (err) {
-    $("status").textContent = "Нет связи с программой";
+    $("status").textContent = L().noLink;
   }
 }
+
+lang = pickLang();
+paintStatic();
+$("lang").addEventListener("click", () => setLang(lang === "ru" ? "en" : "ru"));
+
+// Программе язык сообщаем сразу: её сообщения приходят готовой строкой, и до
+// первого такого сообщения она должна знать, на каком языке его собирать.
+api("POST", "api/lang", { lang }).catch(() => {});
 
 api("GET", "api/account").then((a) => { $("account").value = a.link || ""; }).catch(() => {});
 tick();
