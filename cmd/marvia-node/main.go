@@ -332,7 +332,21 @@ func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, 
 	first, cancel := context.WithTimeout(ctx, panelFirstFetchTimeout)
 	list, err := client.FetchUsers(first)
 	cancel()
-	if err != nil {
+
+	switch {
+	case errors.Is(err, nodesync.ErrNodeDisabled):
+		// Продавец выключил ноду в панели — это решение, а не сбой, и он вправе
+		// отменить его одним нажатием. Поэтому поднимаемся с пустым списком:
+		// никого не пускаем, но живём и продолжаем спрашивать панель. Включат
+		// обратно — начнём обслуживать сами, без похода по SSH.
+		//
+		// Раньше нода на этом ответе выходила с ошибкой, systemd поднимал её
+		// заново, и всё повторялось по кругу. На живой машине счётчик дошёл до
+		// семи с лишним тысяч перезапусков, и каждый бил запросом по панели.
+		log.Printf("нода выключена в панели: поднимаюсь, никого не пускаю, жду включения")
+		list = nil
+
+	case err != nil:
 		return nil, "", fmt.Errorf("панель %s: %w", opts.panelURL, err)
 	}
 
