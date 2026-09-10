@@ -71,18 +71,27 @@ base="https://github.com/$REPO/releases/latest/download"
 say ''
 say "качаю свежий релиз ($arch)"
 
-curl -fsSL -o "$tmp/marvia.tar.gz" "$base/marvia_linux_$arch.tar.gz" \
+# Имя сохраняем такое же, как в SHA256SUMS: sha256sum -c ищет файл по имени
+# из списка, а не по тому, куда мы его положили.
+archive="marvia_linux_$arch.tar.gz"
+
+curl -fsSL -o "$tmp/$archive" "$base/$archive" \
 	|| die 'не скачался архив релиза'
 curl -fsSL -o "$tmp/SHA256SUMS" "$base/SHA256SUMS" \
 	|| die 'не скачались контрольные суммы'
 
 # Сверяем до распаковки. Скачанный не тем бинарником сервер — это ровно та
 # беда, ради которой суммы и публикуются.
-( cd "$tmp" && grep " marvia_linux_$arch.tar.gz\$" SHA256SUMS | sha256sum -c - >/dev/null 2>&1 ) \
-	|| die 'контрольная сумма не сошлась — скачалось не то, ничего не трогаю'
+if ! ( cd "$tmp" && grep "[ *]$archive\$" SHA256SUMS | sha256sum -c - >/dev/null 2>&1 ); then
+	# Печатаем, что именно сказал sha256sum: без этого «сумма не сошлась»
+	# одинаково означает и подмену файла, и нашу же опечатку в имени, и
+	# отсутствие строки в списке — а чинить это три разных дела.
+	( cd "$tmp" && grep "[ *]$archive\$" SHA256SUMS | sha256sum -c - 2>&1 | head -3 | sed 's/^/    /' ) || true
+	die 'контрольная сумма не сошлась — скачалось не то, ничего не трогаю'
+fi
 ok 'контрольная сумма сошлась'
 
-tar -xzf "$tmp/marvia.tar.gz" -C "$tmp" || die 'архив не распаковался'
+tar -xzf "$tmp/$archive" -C "$tmp" || die 'архив не распаковался'
 
 # ─────────────────────────────────────────────── подмена
 
