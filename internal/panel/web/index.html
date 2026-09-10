@@ -1899,15 +1899,23 @@ function dayLabel(day) {
 // ноду живой, если та отмечалась недавно: своего пинга у панели нет, а врать
 // зелёным кружком нельзя.
 function sinceLabel(iso) {
-  if (!iso) return d18.time.never;
+  // Словарь берём через L(), а не через d18 — и вот почему.
+  //
+  // d18 — локальная переменная внутри renderVals, снаружи такого имени нет.
+  // Обращение к нему отсюда роняло всю отрисовку — но только когда на связь
+  // выходила хотя бы одна нода: без нод эта функция не вызывается. На пустой
+  // панели всё выглядело здоровым, а у продавца с нодами страница навсегда
+  // замирала на «Обновляю…».
+  const w = L();
+  if (!iso) return w.time.never;
   const d = new Date(iso);
   if (isNaN(d)) return "—";
   const mins = Math.floor((Date.now() - d.getTime()) / 60000);
-  if (mins < 1) return d18.time.now;
-  if (mins < 60) return mins + d18.time.min;
+  if (mins < 1) return w.time.now;
+  if (mins < 60) return mins + w.time.min;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return hours + d18.time.hour;
-  return Math.floor(hours / 24) + d18.time.day;
+  if (hours < 24) return hours + w.time.hour;
+  return Math.floor(hours / 24) + w.time.day;
 }
 
 function nodeAlive(node) {
