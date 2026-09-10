@@ -1,8 +1,10 @@
 package mobile
 
 import (
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jytt8u/marvia/internal/client"
 )
@@ -84,5 +86,40 @@ func TestCheckAccountLinkStaysPlain(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "\n") {
 		t.Errorf("сообщение разбито на строки, а должно быть одной: %q", err)
+	}
+}
+
+// Неудача обязана гаснуть.
+//
+// Один неудавшийся поток — обычное дело: цель недоступна, заблокирована или у
+// неё только IPv6, до которого ноде не дотянуться. Такое сообщение висело
+// рядом с «Подключено» вечно, пока всё работало, — и приучало не читать эту
+// строку вовсе.
+func TestLastErrorFades(t *testing.T) {
+	tun := &Tunnel{}
+	tun.note(errors.New("поток до цели: цель недоступна"))
+
+	if tun.LastError() == "" {
+		t.Fatal("свежая неудача не показана")
+	}
+
+	// Отматываем время вместо ожидания: тест, который ждёт минуту, перестают
+	// запускать.
+	tun.mu.Lock()
+	tun.lastErrAt = time.Now().Add(-2 * errorLifetime)
+	tun.mu.Unlock()
+
+	if got := tun.LastError(); got != "" {
+		t.Errorf("старая неудача всё ещё висит: %q", got)
+	}
+}
+
+// А настоящая беда гаснуть не должна: надзор ставит её заново, пока не пройдёт.
+func TestTroubleStaysWhileItLasts(t *testing.T) {
+	tun := &Tunnel{}
+	tun.trouble("нода не отвечает, и переехать не на что")
+
+	if tun.LastError() == "" {
+		t.Fatal("сообщение о неудачном переезде не показано")
 	}
 }
