@@ -1,6 +1,7 @@
 package panel
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -170,5 +171,53 @@ func TestPageStartsWithDoctype(t *testing.T) {
 	// И ровно один раз: второй DOCTYPE означает, что в файл что-то вклеилось.
 	if n := strings.Count(string(raw), want); n != 1 {
 		t.Errorf("DOCTYPE встречается %d раз, ожидался один", n)
+	}
+}
+
+// Словарь d18 живёт только внутри renderVals.
+//
+// Это не вкусовщина, а единственное место, где такую ошибку можно поймать
+// заранее. JavaScript не жалуется на неизвестное имя при загрузке файла: он
+// падает в тот миг, когда до строки дошло исполнение. Функция sinceLabel
+// обращалась к d18 снаружи и вызывалась только при живой ноде — на пустой
+// панели всё выглядело здоровым, а у продавца с нодами страница навсегда
+// замирала на «Обновляю…», потому что render() падал целиком.
+//
+// В разметке шаблона d18.* законен: туда его подставляет сам renderVals.
+// Поэтому смотрим только на текст скрипта.
+func TestDictionaryStaysInsideRenderVals(t *testing.T) {
+	raw, err := webFS.ReadFile("web/index.html")
+	if err != nil {
+		t.Fatalf("страница не читается: %v", err)
+	}
+	lines := strings.Split(string(raw), "\n")
+
+	scriptAt, valsAt, renderAt := -1, -1, -1
+	for i, l := range lines {
+		switch {
+		case scriptAt < 0 && strings.HasPrefix(l, "<script"):
+			scriptAt = i
+		case valsAt < 0 && strings.HasPrefix(l, "function renderVals()"):
+			valsAt = i
+		case valsAt >= 0 && renderAt < 0 && strings.HasPrefix(l, "function render()"):
+			renderAt = i
+		}
+	}
+	if scriptAt < 0 || valsAt < 0 || renderAt < 0 {
+		t.Fatalf("не нашёл границы: script=%d renderVals=%d render=%d", scriptAt, valsAt, renderAt)
+	}
+
+	// \b перед d18 отсекает шестнадцатеричные цвета вида #1fd18d, точка
+	// после — обращение к полю, а не совпадение внутри другого слова.
+	use := regexp.MustCompile(`\bd18\.`)
+
+	for i := scriptAt; i < len(lines); i++ {
+		if i >= valsAt && i < renderAt {
+			continue // законная область
+		}
+		if use.MatchString(lines[i]) {
+			t.Errorf("строка %d обращается к d18 вне renderVals — снаружи такого имени нет: %s",
+				i+1, strings.TrimSpace(lines[i]))
+		}
 	}
 }
