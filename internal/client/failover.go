@@ -58,6 +58,24 @@ var (
 	retryAfter = 20 * time.Second
 )
 
+// Events — то, о чём надзор сообщает наружу.
+//
+// Оба обработчика необязательны и оба зовутся из сторожевой горутины, поэтому
+// внутри нельзя ни блокироваться надолго, ни трогать туннель: своё состояние
+// поправить и выйти.
+type Events struct {
+	// OnSwitch — переехали на другую ноду. Окну надо переписать имя: иначе
+	// оно будет показывать ту, через которую трафик давно не идёт.
+	OnSwitch func(Node)
+
+	// OnTrouble — нода замолчала, а переехать не вышло: не ответила ни одна.
+	//
+	// Это единственный случай, когда человеку надо сказать. Удачный переезд
+	// он замечать не должен — в этом и смысл, — а вот «сейчас не работает
+	// ничего» лучше прочитать у нас, чем выяснять самому.
+	OnTrouble func(reason string)
+}
+
 // Supervisor — дозвон, который сам меняет ноду, когда текущая замолчала.
 //
 // Подставляется мосту вместо *Dialer: методы те же, а внутри живёт текущий
@@ -70,9 +88,7 @@ type Supervisor struct {
 	cfg ConnectConfig
 	log func(string, ...any)
 
-	// onSwitch зовётся после удачного переезда: окну надо переписать имя
-	// ноды, иначе оно будет показывать ту, которой уже нет.
-	onSwitch func(Node)
+	events Events
 
 	cancel context.CancelFunc
 	done   chan struct{}
@@ -82,7 +98,7 @@ type Supervisor struct {
 //
 // Первое подключение ничем не отличается от прежнего Connect: те же кэш,
 // подписка и замеры. Разница начинается после — с этой минуты за нодой следят.
-func Supervise(ctx context.Context, cfg ConnectConfig, onSwitch func(Node)) (*Supervisor, []Measurement, error) {
+func Supervise(ctx context.Context, cfg ConnectConfig, events Events) (*Supervisor, []Measurement, error) {
 	dialer, m, err := Connect(ctx, cfg)
 	if err != nil {
 		return nil, m, err
@@ -98,12 +114,12 @@ func Supervise(ctx context.Context, cfg ConnectConfig, onSwitch func(Node)) (*Su
 	watchCtx, cancel := context.WithCancel(context.Background())
 
 	s := &Supervisor{
-		dialer:   dialer,
-		cfg:      cfg,
-		log:      logf,
-		onSwitch: onSwitch,
-		cancel:   cancel,
-		done:     make(chan struct{}),
+		dialer: dialer,
+		cfg:    cfg,
+		log:    logf,
+		events: events,
+		cancel: cancel,
+		done:   make(chan struct{}),
 	}
 
 	go s.watch(watchCtx)
@@ -224,6 +240,13 @@ func (s *Supervisor) watch(ctx context.Context) {
 			continue
 		}
 
+		// Переехать не вышло — молчать об этом нельзя. Удачный переезд человек
+		// замечать не должен, а «не отвечает ни одна нода» лучше прочитать у
+		// нас, чем гадать, почему интернет наполовину.
+		if s.events.OnTrouble != nil {
+			s.events.OnTrouble("нода не отвечает, и переехать не на что")
+		}
+
 		// Переехать не вышло — подождём и попробуем снова. Счётчик не
 		// сбрасываем: следующая же неудачная проверка снова приведёт сюда.
 		select {
@@ -282,8 +305,8 @@ func (s *Supervisor) move(ctx context.Context, dead *Dialer) bool {
 		s.log("переехали на %s", fresh.Node().Title())
 	}
 
-	if s.onSwitch != nil {
-		s.onSwitch(fresh.Node())
+	if s.events.OnSwitch != nil {
+		s.events.OnSwitch(fresh.Node())
 	}
 	return true
 }
