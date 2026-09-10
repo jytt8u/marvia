@@ -216,3 +216,33 @@ func fragmentOf(t *testing.T, link string) string {
 	}
 	return u.Fragment
 }
+
+// Выключенная нода получает 403, и это отличимо от всего остального.
+//
+// Реакция на «тебя выключили» принципиально другая, чем на «панель сломалась»:
+// нода на этом ответе поднимается пустой и ждёт, а не падает. Иначе выключение
+// становится необратимым — на живой машине оно вылилось в семь тысяч
+// перезапусков подряд, и остановил их человек, а не программа.
+func TestDisabledNodeGetsForbidden(t *testing.T) {
+	h := newHarness(t)
+	created := h.createNode("на выключение")
+
+	if code := h.do(http.MethodPatch, "/api/v1/nodes/1", adminToken,
+		map[string]any{"enabled": false}, nil); code != http.StatusOK {
+		t.Fatalf("выключение ноды: код %d", code)
+	}
+
+	if code := h.do(http.MethodGet, "/api/v1/node/users", created.Token, nil, nil); code != http.StatusForbidden {
+		t.Fatalf("выключенная нода получила %d, ожидался 403", code)
+	}
+
+	// И обратно: включили — снова обслуживаем. Это то самое «отменяется тем же
+	// запросом», которое обещает README и чего до сих пор не было.
+	if code := h.do(http.MethodPatch, "/api/v1/nodes/1", adminToken,
+		map[string]any{"enabled": true}, nil); code != http.StatusOK {
+		t.Fatalf("включение обратно: код %d", code)
+	}
+	if code := h.do(http.MethodGet, "/api/v1/node/users", created.Token, nil, nil); code != http.StatusOK {
+		t.Fatalf("включённая нода получила %d, ожидался 200", code)
+	}
+}
