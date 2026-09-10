@@ -101,6 +101,21 @@
   }
   #login .err { font-size: 12px; color: #f2a03d; min-height: 16px; }
 
+  /* Переключатель языка на входе: до проверки токена панели ещё нет, а
+     прочитать, что от тебя хотят, надо уже здесь. */
+  #login .lang {
+    margin-left: auto;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #1c2e21;
+    background: transparent;
+    color: #6c8a76;
+    font: 600 11px/1 "JetBrains Mono", monospace;
+    letter-spacing: .08em;
+    cursor: pointer;
+  }
+  #login .lang:hover { color: #eaf5ee; border-color: #46e07a; }
+
   #app { height: 100%; }
   #app.busy { opacity: .55; }
 
@@ -209,13 +224,12 @@
     <div class="mark">
       <img src="assets/marvia-mark.png" alt="">
       <div class="word">MARVIA PARTNER</div>
+      <button type="button" id="login-lang" class="lang"></button>
     </div>
-    <p>Панель открывается админским токеном — тем, что задан ноде переменной
-       <code>VEIL_ADMIN_TOKEN</code>.</p>
-    <input id="login-token" type="password" autocomplete="current-password"
-           placeholder="админский токен" spellcheck="false">
+    <p id="login-hint"></p>
+    <input id="login-token" type="password" autocomplete="current-password" spellcheck="false">
     <div class="err" id="login-err"></div>
-    <button type="submit">Войти</button>
+    <button type="submit" id="login-enter"></button>
   </form>
 </div>
 
@@ -239,9 +253,10 @@
         <div style="{{ hostBadge }}">{{ host }}</div>
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="{{ ghostBtn }}" onClick="{{ doBackup }}">Копия базы</div>
+        <div style="{{ ghostBtn }}" onClick="{{ doLang }}" title="{{ d18.switchTitle }}">{{ d18.switchTo }}</div>
+        <div style="{{ ghostBtn }}" onClick="{{ doBackup }}">{{ d18.head.backup }}</div>
         <div style="{{ ghostBtn }}" onClick="{{ doReload }}">{{ reloadLabel }}</div>
-        <div style="{{ ghostBtn }}" onClick="{{ doLogout }}">Выход</div>
+        <div style="{{ ghostBtn }}" onClick="{{ doLogout }}">{{ d18.head.logout }}</div>
       </div>
     </div>
 
@@ -273,7 +288,7 @@
         -->
         <sc-if value="{{ hasSearch }}">
           <input id="q" type="text" style="{{ searchStyle }}" value="{{ q }}"
-                 placeholder="Поиск по имени или номеру у бота" autocomplete="off" spellcheck="false"
+                 placeholder="{{ d18.search }}" autocomplete="off" spellcheck="false"
                  onInput="{{ doSearch }}">
         </sc-if>
 
@@ -292,7 +307,7 @@
         -->
         <sc-if value="{{ showStart }}">
           <div style="{{ startBox }}">
-            <div style="font-size: 15px; font-weight: 600; color: var(--fg);">С чего начать</div>
+            <div style="font-size: 15px; font-weight: 600; color: var(--fg);">{{ d18.start.title }}</div>
             <sc-for list="{{ startSteps }}" as="s">
               <div style="{{ s.row }}" onClick="{{ s.onClick }}">
                 <div style="{{ s.mark }}">{{ s.num }}</div>
@@ -319,7 +334,7 @@
             <div style="display: flex; gap: var(--gap, 12px); height: 210px;">
               <div style="flex: 1.6; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--line, #1c2e21); display: flex; flex-direction: column; gap: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">Трафик · 30 дней</div>
+                  <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">{{ d18.dash.traffic }}</div>
                   <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim, #6c8a76);">{{ totalTraffic }}</div>
                 </div>
                 <div style="flex: 1; display: flex; align-items: flex-end; gap: 4px; padding-top: 10px;">
@@ -333,7 +348,7 @@
                 <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .12em; color: var(--dim, #6c8a76);"><span>{{ firstDay }}</span><span>{{ lastDay }}</span></div>
               </div>
               <div style="flex: 1; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--line, #1c2e21); display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
-                <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">Ноды</div>
+                <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">{{ d18.dash.nodes }}</div>
                 <sc-for list="{{ nodes }}" as="n">
                   <div style="{{ n.rowStyle }}">
                     <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
@@ -344,17 +359,17 @@
                   </div>
                 </sc-for>
                 <sc-if value="{{ noNodes }}">
-                  <div style="{{ emptyStyle }}">Ни одной ноды. Заведи первую — панель отдаст установщик.</div>
+                  <div style="{{ emptyStyle }}">{{ d18.dash.noNodes }}</div>
                 </sc-if>
               </div>
             </div>
             <div style="flex: 1; min-height: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--line, #1c2e21); display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">Клиенты</div>
+                <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">{{ d18.dash.clients }}</div>
                 <div style="{{ allClients }}" onClick="{{ goClients }}">{{ allClientsLabel }}</div>
               </div>
               <div style="{{ dashHead }}">
-                <div>КЛИЕНТ</div><div>КЛЮЧ</div><div>ДО</div><div>ТРАФИК</div><div>СТАТУС</div>
+                <div>{{ d18.col.client }}</div><div>{{ d18.col.key }}</div><div>{{ d18.col.until }}</div><div>{{ d18.col.traffic }}</div><div>{{ d18.col.status }}</div>
               </div>
               <sc-for list="{{ clients }}" as="c">
                 <div style="{{ c.rowStyle }}" onClick="{{ c.onClick }}">
@@ -366,7 +381,7 @@
                 </div>
               </sc-for>
               <sc-if value="{{ noClients }}">
-                <div style="{{ emptyStyle }}">Ни одного клиента. Заведи первого через бота или API.</div>
+                <div style="{{ emptyStyle }}">{{ d18.dash.noClients }}</div>
               </sc-if>
             </div>
           </div>
@@ -403,9 +418,9 @@
               </div>
               <sc-if value="{{ hasPages }}">
                 <div style="{{ pagerRow }}">
-                  <div style="{{ prevStyle }}" onClick="{{ prevPage }}">Назад</div>
+                  <div style="{{ prevStyle }}" onClick="{{ prevPage }}">{{ d18.table.prev }}</div>
                   <div style="{{ pagerInfo }}">{{ pagerText }}</div>
-                  <div style="{{ nextStyle }}" onClick="{{ nextPage }}">Вперёд</div>
+                  <div style="{{ nextStyle }}" onClick="{{ nextPage }}">{{ d18.table.next }}</div>
                 </div>
               </sc-if>
             </div>
@@ -426,15 +441,15 @@
                   </div>
                   <div style="display: flex; gap: 18px;">
                     <div style="display: flex; flex-direction: column; gap: 3px;">
-                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">ТРАФИК · 30 Д</div>
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">{{ d18.col.traffic30 }}</div>
                       <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--fg);">{{ nc.load }}</div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 3px;">
-                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">ДОЛЯ</div>
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">{{ d18.col.share }}</div>
                       <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--fg);">{{ nc.share }}</div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 3px;">
-                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">НА СВЯЗИ</div>
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">{{ d18.col.online }}</div>
                       <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--acc);">{{ nc.seen }}</div>
                     </div>
                   </div>
@@ -442,7 +457,7 @@
                 </div>
               </sc-for>
               <sc-if value="{{ noNodes }}">
-                <div style="{{ emptyStyle }}">Ни одной ноды. Установщик раздаёт сама панель — заведи ноду и получишь команду.</div>
+                <div style="{{ emptyStyle }}">{{ d18.nodesPage.empty }}</div>
               </sc-if>
             </div>
           </div>
@@ -462,7 +477,7 @@
             <div style="flex: 1; min-height: 0; display: flex; gap: var(--gap, 12px);">
               <div style="flex: 1.5; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div style="font-size: 14px; font-weight: 600; color: var(--fg);">Трафик по дням</div>
+                  <div style="font-size: 14px; font-weight: 600; color: var(--fg);">{{ d18.statsPage.byDay }}</div>
                   <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ totalTraffic }}</div>
                 </div>
                 <div style="flex: 1; display: flex; align-items: flex-end; gap: 3px;">
@@ -475,7 +490,7 @@
                 </div>
               </div>
               <div style="flex: 1; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; overflow-y: auto;">
-                <div style="font-size: 14px; font-weight: 600; color: var(--fg);">Доля нод</div>
+                <div style="font-size: 14px; font-weight: 600; color: var(--fg);">{{ d18.statsPage.byNode }}</div>
                 <sc-for list="{{ shareRows }}" as="sr">
                   <div style="display: flex; flex-direction: column; gap: 6px;">
                     <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--fg);"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ sr.name }}</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); flex: none;">{{ sr.pct }}</span></div>
@@ -483,7 +498,7 @@
                   </div>
                 </sc-for>
                 <sc-if value="{{ noShare }}">
-                  <div style="{{ emptyStyle }}">Трафика за период ещё нет.</div>
+                  <div style="{{ emptyStyle }}">{{ d18.statsPage.noShare }}</div>
                 </sc-if>
               </div>
             </div>
@@ -510,7 +525,7 @@
                 <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ ap.file }}</div>
                 <div style="display: flex; gap: 18px; flex-wrap: wrap;">
                   <div style="display: flex; flex-direction: column; gap: 3px;">
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">РАЗМЕР</div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">{{ d18.col.size }}</div>
                     <div style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--fg);">{{ ap.size }}</div>
                   </div>
                   <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
@@ -529,7 +544,7 @@
         <sc-if value="{{ isLook }}">
           <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--gap, 12px); overflow: hidden;">
             <div style="display: flex; align-items: center; gap: 14px; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line);">
-              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim); flex: none;">АКЦЕНТ</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim); flex: none;">{{ d18.look.accent }}</div>
               <div style="display: flex; flex-wrap: wrap; gap: 7px;">
                 <sc-for list="{{ accents }}" as="a">
                   <div style="{{ a.style }}" onClick="{{ a.onClick }}"></div>
@@ -684,6 +699,9 @@ const LOOK_KEY = "marvia-look";
 
 const state = {
   token: null,
+  // Язык ставится до первой отрисовки: словарь спрашивают все, включая
+  // экран входа, а он рисуется раньше панели.
+  lang: "ru",
   page: "dash",
   preset: "steel",
   acc: null,
@@ -710,14 +728,14 @@ async function api(path, method, body) {
   });
   if (res.status === 401) {
     logout();
-    throw new Error("токен не подошёл");
+    throw new Error(L().err.badToken);
   }
   if (res.status === 204) return null;
 
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { /* не JSON */ }
-  if (!res.ok) throw new Error((data && data.error) || ("код " + res.status));
+  if (!res.ok) throw new Error((data && data.error) || L().err.code(res.status));
   return data;
 }
 
@@ -837,8 +855,8 @@ function ask(title, text, danger) {
   return new Promise((resolve) => {
     const done = (v) => { closeSheet(); resolve(v); };
     sheet(title, [el("div", { cls: "note", text })], [
-      btn(danger || "Да", "bad", () => done(true)),
-      btn("Отмена", "", () => done(false)),
+      btn(danger || L().act.yes, "bad", () => done(true)),
+      btn(L().act.cancel, "", () => done(false)),
     ]);
   });
 }
@@ -853,22 +871,23 @@ function ask(title, text, danger) {
 // базы не даёт доступа ни к одному покупателю. Значит показать ссылку можно
 // ровно один раз, сразу после выдачи, и об этом надо предупредить.
 function showLinks(title, links, fresh) {
+  const d = L();
   const parts = [];
   const add = (label, text) => {
     parts.push(el("div", { cls: "note", text: label }));
     parts.push(el("pre", { text }));
-    parts.push(btn("Скопировать", "", async () => {
+    parts.push(btn(d.act.copy, "", async () => {
       try {
         await navigator.clipboard.writeText(text);
-        toast("Скопировано");
+        toast(d.act.copied);
       } catch (_) {
-        toast("Браузер не дал скопировать — выдели и скопируй руками", true);
+        toast(d.act.noCopy, true);
       }
     }));
   };
 
-  if (links.account) add("Ссылка доступа — для нашего приложения", links.account);
-  if (links.subscription) add("Подписка", links.subscription);
+  if (links.account) add(d.links.account, links.account);
+  if (links.subscription) add(d.links.subscription, links.subscription);
 
   // stock приходит плоским списком: по ссылке на каждую пару «нода + вид
   // доступа». Вид достаём из схемы, ноду — из хвоста после решётки: иначе
@@ -880,26 +899,21 @@ function showLinks(title, links, fresh) {
     if (hash >= 0) {
       try { where = " · " + decodeURIComponent(link.slice(hash + 1)); } catch (_) { /* кривой хвост */ }
     }
-    add(kind + where + " — для v2rayNG, Hiddify и прочих", link);
+    add(d.links.stock(kind, where), link);
   }
 
   if (fresh) {
-    parts.unshift(el("div", { cls: "note",
-      text: "Секретная часть показывается один раз: панель её не хранит. "
-        + "Перешли покупателю сейчас — потом останется только выпустить новую." }));
+    parts.unshift(el("div", { cls: "note", text: d.links.once }));
   }
 
   // Панель, поднятая без -sub-base, честно ставит в ссылки заглушку вместо
   // своего адреса. Молча отдать такую продавцу — значит дать ему отправить
   // покупателю ссылку в никуда и разбираться потом, почему «не работает».
   if (JSON.stringify(links).includes("ПОДСТАВЬ-АДРЕС-ПАНЕЛИ")) {
-    parts.unshift(el("div", { cls: "note",
-      text: "Внимание: вместо адреса панели в ссылках стоит заглушка — служба запущена "
-        + "без -sub-base. Отправлять их покупателю нельзя. Поправь строку запуска "
-        + "(-sub-base https://твой-домен) и перезапусти панель." }));
+    parts.unshift(el("div", { cls: "note", text: d.links.stub }));
   }
 
-  sheet(title, parts, [btn("Закрыть", "go", closeSheet)]);
+  sheet(title, parts, [btn(d.act.close, "go", closeSheet)]);
 }
 
 async function act(fn) {
@@ -911,23 +925,24 @@ async function act(fn) {
 }
 
 function newUserSheet() {
-  const kinds = el("label", { cls: "kinds", text: "Виды доступа" });
-  for (const [kind, note] of [["vp1", "наше приложение"], ["vless", "чужие клиенты"], ["trojan", "чужие клиенты"]]) {
+  const d = L();
+  const kinds = el("label", { cls: "kinds", text: d.user.kinds });
+  for (const kind of ["vp1", "vless", "trojan"]) {
     const input = el("input", { type: "checkbox", value: kind });
     if (kind === "vp1") input.checked = true;
-    kinds.append(el("span", {}, input, el("span", { text: kind + " · " + note })));
+    kinds.append(el("span", {}, input, el("span", { text: kind + " · " + d.user.kindNote[kind] })));
   }
 
-  const box = sheet("Новый клиент", [
-    field("Имя или метка", "nu-label", "text", "", "Видно только тебе — по нему ищут в списке"),
-    field("Срок, дней", "nu-days", "number", 30, "0 — бессрочно"),
-    field("Лимит трафика, ГБ", "nu-gb", "number", 100, "0 — без лимита"),
-    field("Устройств", "nu-ips", "number", 3, "0 — без ограничения"),
+  const box = sheet(d.user.newTitle, [
+    field(d.user.newLabel[0], "nu-label", "text", "", d.user.newLabel[1]),
+    field(d.user.newDays[0], "nu-days", "number", 30, d.user.newDays[1]),
+    field(d.user.newGB[0], "nu-gb", "number", 100, d.user.newGB[1]),
+    field(d.user.newIPs[0], "nu-ips", "number", 3, d.user.newIPs[1]),
     kinds,
   ], [
-    btn("Завести", "go", () => act(async () => {
+    btn(d.user.create, "go", () => act(async () => {
       const picked = Array.from(box.querySelectorAll(".kinds input:checked")).map((i) => i.value);
-      if (!picked.length) { toast("Выбери хотя бы один вид доступа", true); return; }
+      if (!picked.length) { toast(d.user.pickKind, true); return; }
 
       const body = {
         label: val("nu-label"),
@@ -940,9 +955,9 @@ function newUserSheet() {
 
       const res = await api("/api/v1/users", "POST", body);
       await loadAll();
-      showLinks("Доступ выдан — отправь покупателю", res.links || {}, true);
+      showLinks(d.user.issuedTitle, res.links || {}, true);
     })),
-    btn("Отмена", "", closeSheet),
+    btn(d.act.cancel, "", closeSheet),
   ]);
 }
 
@@ -950,11 +965,14 @@ function userSheet(user) {
   const name = user.label || ("#" + user.id);
   const left = daysLeft(user.expires_at);
 
+  const d = L();
   const facts = [
-    ["Состояние", user.enabled ? "включён" : "отключён"],
-    ["Срок", user.expires_at ? shortDate(user.expires_at) + (left === null ? "" : " · " + left + " " + plural(left, "день", "дня", "дней")) : "бессрочно"],
-    ["Израсходовано", bytes(user.used) + (user.traffic_limit ? " из " + bytes(user.traffic_limit) : " · без лимита")],
-    ["Устройств", user.max_ips ? String(user.max_ips) : "без ограничения"],
+    [d.user.state, user.enabled ? d.user.on : d.user.off],
+    [d.user.term, user.expires_at
+      ? shortDate(user.expires_at) + (left === null ? "" : d.user.days(left))
+      : d.time.forever],
+    [d.user.used, bytes(user.used) + (user.traffic_limit ? d.user.of + bytes(user.traffic_limit) : d.user.noLimit)],
+    [d.user.devices, user.max_ips ? String(user.max_ips) : d.user.noDeviceLimit],
   ].map(([k, v]) => el("div", { cls: "note", text: k + ": " + v }));
 
   // Доступы — списком с отзывом поштучно.
@@ -963,22 +981,16 @@ function userSheet(user) {
   // старое приложение, которое он не хочет менять. Отзывать всё разом, когда
   // утёк один, значит наказывать человека за чужую беду.
   const creds = user.credentials || [];
-  facts.push(el("div", { cls: "note", text: creds.length ? "Доступы:" : "Доступов нет" }));
+  facts.push(el("div", { cls: "note", text: creds.length ? d.user.creds : d.user.noCreds }));
   for (const c of creds) {
     facts.push(el("div", { cls: "line" },
-      el("div", { cls: "note", text: c.kind + " · выдан " + shortDate(c.created_at) }),
-      btn("Отозвать", "bad", () => act(async () => {
-        const last = creds.length === 1;
-        const yes = await ask("Отозвать доступ " + c.kind + "?",
-          last
-            ? "Это единственный доступ покупателя — после отзыва он не подключится ничем, "
-              + "пока не выдашь новый. Сама запись и срок останутся."
-            : "Перестанет работать только он. Остальные доступы покупателя останутся живы.",
-          "Отозвать");
-        if (!yes) return;
+      el("div", { cls: "note", text: c.kind + d.user.issued + shortDate(c.created_at) }),
+      btn(d.key.revoke, "bad", () => act(async () => {
+        const [title, text, word] = d.user.askRevoke(c.kind, creds.length === 1);
+        if (!await ask(title, text, word)) return;
         await api("/api/v1/credentials/" + c.id, "DELETE");
         closeSheet();
-        toast("Доступ отозван");
+        toast(d.user.credRevoked);
         await loadAll();
       }))));
   }
@@ -993,51 +1005,46 @@ function userSheet(user) {
       row.append(btn("+ " + kind, "", () => act(async () => {
         const res = await api("/api/v1/users/" + user.id + "/credentials", "POST", { kind, label: "" });
         await loadAll();
-        showLinks("Доступ " + kind + " выдан — отправь покупателю", res.links || {}, true);
+        showLinks(d.user.issuedKind(kind), res.links || {}, true);
       })));
     }
-    facts.push(el("div", { cls: "note", text: "Выдать ещё:" }));
+    facts.push(el("div", { cls: "note", text: d.user.addMore }));
     facts.push(row);
   }
 
   sheet(name, facts, [
-    btn("+30 дней", "go", () => act(async () => {
+    btn(d.user.extend, "go", () => act(async () => {
       await api("/api/v1/users/" + user.id, "PATCH", { extend_by: "30d", enabled: true });
       closeSheet();
-      toast("Продлено на 30 дней");
+      toast(d.user.extended);
       await loadAll();
     })),
-    btn("Ссылки", "", () => act(async () => {
+    btn(d.user.links, "", () => act(async () => {
       const links = await api("/api/v1/users/" + user.id + "/links");
       showLinks(name, links, false);
     })),
-    btn(user.enabled ? "Отключить" : "Включить", "", () => act(async () => {
+    btn(user.enabled ? d.user.disable : d.user.enable, "", () => act(async () => {
       await api("/api/v1/users/" + user.id, "PATCH", { enabled: !user.enabled });
       closeSheet();
       await loadAll();
     })),
-    btn("Сменить адрес подписки", "bad", () => act(async () => {
-      const yes = await ask("Сменить адрес подписки?",
-        "Старая ссылка перестанет работать сразу — вместе с той, что у покупателя "
-        + "на устройстве. Панель выдаст новую, её надо ему переслать. "
-        + "Это то, что делают, когда ссылку раздали знакомым: отзывать весь доступ "
-        + "за это — терять покупателя.", "Сменить");
-      if (!yes) return;
+    btn(d.user.rotate, "bad", () => act(async () => {
+      const [title, text, word] = d.user.askRotate;
+      if (!await ask(title, text, word)) return;
       await api("/api/v1/users/" + user.id + "/sub-token", "POST");
       const res = await api("/api/v1/users/" + user.id + "/credentials", "POST", { kind: "vp1", label: "" });
-      showLinks("Новый доступ для " + name, res.links || {}, true);
+      showLinks(d.links.newFor(name), res.links || {}, true);
       await loadAll();
     })),
-    btn("Удалить", "bad", () => act(async () => {
-      const yes = await ask("Удалить " + name + "?",
-        "Вместе с ключами и накопленной статистикой. Отменить нельзя.", "Удалить");
-      if (!yes) return;
+    btn(d.user.remove, "bad", () => act(async () => {
+      const [title, text] = d.user.askRemove(name);
+      if (!await ask(title, text, d.user.remove)) return;
       await api("/api/v1/users/" + user.id, "DELETE");
       closeSheet();
-      toast("Удалён");
+      toast(d.user.removed);
       await loadAll();
     })),
-    btn("Закрыть", "", closeSheet),
+    btn(d.act.close, "", closeSheet),
   ]);
 }
 
@@ -1057,31 +1064,33 @@ function newNodeSheet() {
     const res = await api("/api/v1/nodes/invite", "POST", { label: "" });
     const cmd = res.command;
 
-    sheet("Новая нода", [
-      el("div", { cls: "note", text: "Вставь эту строку на чистом сервере — от root. Всё остальное нода сделает сама: выпустит ключи, запишется в панель, поднимет службу и проверит себя." }),
+    const d = L();
+    sheet(d.node.newTitle, [
+      el("div", { cls: "note", text: d.node.paste }),
       el("pre", { text: cmd }),
-      btn("Скопировать", "go", async () => {
+      btn(d.act.copy, "go", async () => {
         try {
           await navigator.clipboard.writeText(cmd);
-          toast("Скопировано");
+          toast(d.act.copied);
         } catch (_) {
-          toast("Браузер не дал скопировать — выдели и скопируй руками", true);
+          toast(d.act.noCopy, true);
         }
       }),
-      el("div", { cls: "note", text: "Приглашение живёт час и срабатывает один раз: оно даёт право только назваться нодой, не более. Дальше нода работает своим токеном." }),
-      el("div", { cls: "note", text: "Порт, сайт прикрытия и имя можно задать переменными перед sh, например: PORT=8443 DEST=www.icloud.com:443 NAME=amsterdam-1 COUNTRY=Нидерланды" }),
-    ], [btn("Готово", "", () => { closeSheet(); loadAll(); })]);
+      el("div", { cls: "note", text: d.node.invite }),
+      el("div", { cls: "note", text: d.node.vars }),
+    ], [btn(d.act.done, "", () => { closeSheet(); loadAll(); })]);
   });
 }
 
 function nodeSheet(node) {
   const alive = nodeAlive(node);
 
+  const d = L();
   const facts = [
-    ["Адрес", node.address],
-    ["Прикрытие", node.sni || "—"],
-    ["Состояние", node.enabled ? (alive ? "на связи" : "включена, но молчит") : "выключена"],
-    ["Последний раз на связи", sinceLabel(node.last_seen)],
+    [d.node.address, node.address],
+    [d.node.cover, node.sni || "—"],
+    [d.node.state, node.enabled ? (alive ? d.node.online : d.node.silentOn) : d.node.offState],
+    [d.node.lastSeen, sinceLabel(node.last_seen)],
   ].map(([k, v]) => el("div", { cls: "note", text: k + ": " + v }));
 
   // Имя и страну пишет продавец, а не хостер и не панель. Хостер зовёт машину
@@ -1089,35 +1098,32 @@ function nodeSheet(node) {
   // у хостеров числятся то в Нидерландах, то в США, так что определять страну
   // по адресу значит врать покупателю, выбравшему Финляндию.
   const form = [
-    field("Имя", "nd-name", "text", node.name || "", "Видно покупателю в списке серверов"),
-    field("Страна", "nd-country", "text", node.country || "", "Тоже видно покупателю; встаёт первой в названии"),
+    field(d.node.name[0], "nd-name", "text", node.name || "", d.node.name[1]),
+    field(d.node.country[0], "nd-country", "text", node.country || "", d.node.country[1]),
   ];
 
   sheet(node.name || node.address, facts.concat(form), [
-    btn("Сохранить", "go", () => act(async () => {
+    btn(d.node.save, "go", () => act(async () => {
       await api("/api/v1/nodes/" + node.id, "PATCH", { name: val("nd-name"), country: val("nd-country") });
       closeSheet();
-      toast("Сохранено");
+      toast(d.node.saved);
       await loadAll();
     })),
-    btn(node.enabled ? "Выключить" : "Включить", "", () => act(async () => {
+    btn(node.enabled ? d.node.disable : d.node.enable, "", () => act(async () => {
       await api("/api/v1/nodes/" + node.id, "PATCH", { enabled: !node.enabled });
       closeSheet();
-      toast(node.enabled ? "Нода убрана из подписок" : "Нода вернулась в подписки");
+      toast(node.enabled ? d.node.disabled : d.node.enabled);
       await loadAll();
     })),
-    btn("Удалить", "bad", () => act(async () => {
-      const yes = await ask("Удалить " + (node.name || node.address) + "?",
-        "Вместе со всей накопленной по ней статистикой, и обратно это не отыграть. "
-        + "Если нода под подозрением на блокировку — выключи её: она уйдёт из подписок, "
-        + "но расход останется виден, и решение отменяется одним нажатием.", "Удалить");
-      if (!yes) return;
+    btn(d.node.remove, "bad", () => act(async () => {
+      const [title, text, word] = d.node.askRemove(node.name || node.address);
+      if (!await ask(title, text, word)) return;
       await api("/api/v1/nodes/" + node.id, "DELETE");
       closeSheet();
-      toast("Удалена");
+      toast(d.node.removed);
       await loadAll();
     })),
-    btn("Закрыть", "", closeSheet),
+    btn(d.act.close, "", closeSheet),
   ]);
 }
 
@@ -1127,69 +1133,66 @@ function nodeSheet(node) {
 
 // Права намеренно грубые: те же три, что в панели. Права, которые нельзя
 // объяснить одной строкой, продавец раздаёт наугад — а наугад он раздаст все.
-const SCOPES = [
-  ["users", "заводить и продлевать покупателей — это всё, что нужно боту"],
-  ["nodes", "добавлять и выключать ноды"],
-  ["read", "только смотреть"],
-];
+const SCOPES = ["users", "nodes", "read"];
 
 function newKeySheet() {
-  const scopes = el("label", { cls: "kinds", text: "Права" });
-  for (const [scope, note] of SCOPES) {
+  const d = L();
+  const scopes = el("label", { cls: "kinds", text: d.key.rights });
+  for (const scope of SCOPES) {
     const input = el("input", { type: "checkbox", value: scope });
     if (scope === "users") input.checked = true;
-    scopes.append(el("span", {}, input, el("span", { text: scope + " · " + note })));
+    scopes.append(el("span", {}, input, el("span", { text: scope + " · " + d.key.scopeNote[scope] })));
   }
 
-  const box = sheet("Новый ключ для бота", [
-    el("div", { cls: "note", text: "Ключ — это то, чем твой телеграм-бот ходит в панель. Админский токен боту не давай: им входят в панель и им выпускают ключи." }),
-    field("Название", "nk-name", "text", "", "Чтобы потом понять, чей это ключ"),
+  const box = sheet(d.key.newTitle, [
+    el("div", { cls: "note", text: d.key.what }),
+    field(d.key.name[0], "nk-name", "text", "", d.key.name[1]),
     scopes,
   ], [
-    btn("Выпустить", "go", () => act(async () => {
+    btn(d.key.issue, "go", () => act(async () => {
       const picked = Array.from(box.querySelectorAll(".kinds input:checked")).map((i) => i.value);
-      if (!picked.length) { toast("Выбери хотя бы одно право", true); return; }
+      if (!picked.length) { toast(d.key.pickScope, true); return; }
       const name = val("nk-name");
-      if (!name) { toast("Без названия ключ потом не опознать", true); return; }
+      if (!name) { toast(d.key.needName, true); return; }
 
       const res = await api("/api/v1/keys", "POST", { name, scopes: picked });
       await loadAll();
 
       const secret = res.secret;
-      sheet("Ключ выпущен", [
-        el("div", { cls: "note", text: "Показывается один раз: в базе лежит только его отпечаток. Вставь его боту сейчас." }),
+      sheet(d.key.issued, [
+        el("div", { cls: "note", text: d.key.once }),
         el("pre", { text: secret }),
-        btn("Скопировать", "go", async () => {
+        btn(d.act.copy, "go", async () => {
           try {
             await navigator.clipboard.writeText(secret);
-            toast("Скопировано");
+            toast(d.act.copied);
           } catch (_) {
-            toast("Браузер не дал скопировать — выдели и скопируй руками", true);
+            toast(d.act.noCopy, true);
           }
         }),
-      ], [btn("Готово", "", closeSheet)]);
+      ], [btn(d.act.done, "", closeSheet)]);
     })),
-    btn("Отмена", "", closeSheet),
+    btn(d.act.cancel, "", closeSheet),
   ]);
 }
 
 function keySheet(key) {
+  const d = L();
   sheet(key.name, [
-    el("div", { cls: "note", text: "Права: " + ((key.scopes || []).join(", ") || "все") }),
-    el("div", { cls: "note", text: "Выпущен: " + shortDate(key.created_at) }),
-    el("div", { cls: "note", text: "Последний вход: " + (key.last_used_at ? shortDate(key.last_used_at) : "ни разу") }),
+    el("div", { cls: "note", text: d.key.rightsAre((key.scopes || []).join(", ")) }),
+    el("div", { cls: "note", text: d.key.createdAt(shortDate(key.created_at)) }),
+    el("div", { cls: "note",
+      text: d.key.lastUse(key.last_used_at ? shortDate(key.last_used_at) : d.key.never) }),
   ], [
-    btn("Отозвать", "bad", () => act(async () => {
-      const yes = await ask("Отозвать ключ «" + key.name + "»?",
-        "Бот, который им ходит, перестанет работать сразу. Выпусти новый и вставь его боту, "
-        + "прежде чем отзывать этот.", "Отозвать");
-      if (!yes) return;
+    btn(d.key.revoke, "bad", () => act(async () => {
+      const [title, text, word] = d.key.askRevoke(key.name);
+      if (!await ask(title, text, word)) return;
       await api("/api/v1/keys/" + key.id, "DELETE");
       closeSheet();
-      toast("Отозван");
+      toast(d.key.revoked);
       await loadAll();
     })),
-    btn("Закрыть", "", closeSheet),
+    btn(d.act.close, "", closeSheet),
   ]);
 }
 
@@ -1200,9 +1203,9 @@ function keySheet(key) {
 // отдаём файл уже из памяти.
 function downloadBackup() {
   act(async () => {
-    toast("Снимаю копию…");
+    toast(L().backup.taking);
     const res = await fetch("/api/v1/backup", { headers: { Authorization: "Bearer " + state.token } });
-    if (!res.ok) throw new Error("копия не снялась: код " + res.status);
+    if (!res.ok) throw new Error(L().backup.failed(res.status));
 
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -1212,7 +1215,7 @@ function downloadBackup() {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
-    toast("Копия базы скачана");
+    toast(L().backup.done);
   });
 }
 
@@ -1223,33 +1226,33 @@ function downloadBackup() {
    ──────────────────────────────────────────────────────────────────────── */
 
 const PRESETS = {
-  emerald:  { label: "Изумруд", bg: "#06100c", fg: "#e8f6ef", acc: "#1fd18d" },
-  jade:     { label: "Нефрит", bg: "#071310", fg: "#e3f5f0", acc: "#33d6c0" },
-  teal:     { label: "Лагуна", bg: "#04100f", fg: "#dff5f3", acc: "#00d4c8" },
-  ice:      { label: "Лёд", bg: "#060c14", fg: "#e2f0fb", acc: "#54c8ff" },
-  cobalt:   { label: "Кобальт", bg: "#070a18", fg: "#e6eaff", acc: "#5c7cff" },
-  ultra:    { label: "Ультра", bg: "#05061a", fg: "#e4e7ff", acc: "#3d5bff" },
-  plum:     { label: "Слива", bg: "#0b0714", fg: "#efe7fb", acc: "#a86dff" },
-  orchid:   { label: "Орхидея", bg: "#100716", fg: "#f7e8fb", acc: "#e46ce0" },
-  fuchsia:  { label: "Фуксия", bg: "#120616", fg: "#fbe6f6", acc: "#ff5ecd" },
-  rose:     { label: "Роза", bg: "#120709", fg: "#fbe8ec", acc: "#ff5f7e" },
-  crimson:  { label: "Кармин", bg: "#130508", fg: "#fbe3e6", acc: "#ff3b52" },
-  ember:    { label: "Угли", bg: "#120902", fg: "#fbeadc", acc: "#ff7a3d" },
-  amber:    { label: "Янтарь", bg: "#100c04", fg: "#f8f0dd", acc: "#ffc247" },
-  gold:     { label: "Золото", bg: "#0f0d05", fg: "#f7f1dc", acc: "#e8c25a" },
-  citrus:   { label: "Цитрус", bg: "#0c0f05", fg: "#f0f5dd", acc: "#c9e64b" },
-  lime:     { label: "Лайм", bg: "#080f06", fg: "#ecf7e2", acc: "#8ff04f" },
-  olive:    { label: "Олива", bg: "#0a0d07", fg: "#eaf1de", acc: "#96bf5c" },
-  sand:     { label: "Песок", bg: "#100d09", fg: "#f5ede1", acc: "#d9a97a" },
-  copper:   { label: "Медь", bg: "#110a06", fg: "#f8e9dd", acc: "#e08b4c" },
-  steel:    { label: "Серый", bg: "#0c0e11", fg: "#f1f4f7", acc: "#c3ccd6" },
-  slate:    { label: "Графит", bg: "#0e1013", fg: "#eef1f4", acc: "#8fa3b8" },
-  mono:     { label: "Моно", bg: "#0a0a0a", fg: "#fafafa", acc: "#fafafa" },
-  oled:     { label: "OLED", bg: "#000000", fg: "#ffffff", acc: "#3dffc0" },
-  midnight: { label: "Полночь", bg: "#03050a", fg: "#dfe8f5", acc: "#4d8cff" },
-  daylight: { label: "Дневная", bg: "#f3f5f7", fg: "#0d1013", acc: "#046b4a" },
-  paper:    { label: "Бумага", bg: "#f7f4ee", fg: "#14120e", acc: "#8a4b1f" },
-  linen:    { label: "Лён", bg: "#f4f1ea", fg: "#171512", acc: "#3f6b4a" },
+  emerald:  { bg: "#06100c", fg: "#e8f6ef", acc: "#1fd18d" },
+  jade:     { bg: "#071310", fg: "#e3f5f0", acc: "#33d6c0" },
+  teal:     { bg: "#04100f", fg: "#dff5f3", acc: "#00d4c8" },
+  ice:      { bg: "#060c14", fg: "#e2f0fb", acc: "#54c8ff" },
+  cobalt:   { bg: "#070a18", fg: "#e6eaff", acc: "#5c7cff" },
+  ultra:    { bg: "#05061a", fg: "#e4e7ff", acc: "#3d5bff" },
+  plum:     { bg: "#0b0714", fg: "#efe7fb", acc: "#a86dff" },
+  orchid:   { bg: "#100716", fg: "#f7e8fb", acc: "#e46ce0" },
+  fuchsia:  { bg: "#120616", fg: "#fbe6f6", acc: "#ff5ecd" },
+  rose:     { bg: "#120709", fg: "#fbe8ec", acc: "#ff5f7e" },
+  crimson:  { bg: "#130508", fg: "#fbe3e6", acc: "#ff3b52" },
+  ember:    { bg: "#120902", fg: "#fbeadc", acc: "#ff7a3d" },
+  amber:    { bg: "#100c04", fg: "#f8f0dd", acc: "#ffc247" },
+  gold:     { bg: "#0f0d05", fg: "#f7f1dc", acc: "#e8c25a" },
+  citrus:   { bg: "#0c0f05", fg: "#f0f5dd", acc: "#c9e64b" },
+  lime:     { bg: "#080f06", fg: "#ecf7e2", acc: "#8ff04f" },
+  olive:    { bg: "#0a0d07", fg: "#eaf1de", acc: "#96bf5c" },
+  sand:     { bg: "#100d09", fg: "#f5ede1", acc: "#d9a97a" },
+  copper:   { bg: "#110a06", fg: "#f8e9dd", acc: "#e08b4c" },
+  steel:    { bg: "#0c0e11", fg: "#f1f4f7", acc: "#c3ccd6" },
+  slate:    { bg: "#0e1013", fg: "#eef1f4", acc: "#8fa3b8" },
+  mono:     { bg: "#0a0a0a", fg: "#fafafa", acc: "#fafafa" },
+  oled:     { bg: "#000000", fg: "#ffffff", acc: "#3dffc0" },
+  midnight: { bg: "#03050a", fg: "#dfe8f5", acc: "#4d8cff" },
+  daylight: { bg: "#f3f5f7", fg: "#0d1013", acc: "#046b4a" },
+  paper:    { bg: "#f7f4ee", fg: "#14120e", acc: "#8a4b1f" },
+  linen:    { bg: "#f4f1ea", fg: "#171512", acc: "#3f6b4a" },
 };
 
 const DENSITY = {
@@ -1258,17 +1261,21 @@ const DENSITY = {
   roomy:   { r: 22, pad: 20, gap: 16 },
 };
 
+// Виды: тема плюс плотность. Названия лежат в словаре под теми же номерами —
+// порядок здесь и там обязан совпадать, иначе «Изумруд» окажется подписан
+// «Нефритом». Держать имя рядом с ключом значило бы иметь два списка,
+// расходящихся при первом же переводе.
 const LOOKS = [
-  ["Серый (из коробки)", "steel", "normal"],
-  ["Изумруд", "emerald", "normal"], ["Нефрит", "jade", "normal"], ["Лагуна", "teal", "normal"],
-  ["Лёд", "ice", "normal"], ["Кобальт", "cobalt", "normal"], ["Ультра", "ultra", "roomy"],
-  ["Слива", "plum", "roomy"], ["Орхидея", "orchid", "normal"], ["Фуксия", "fuchsia", "normal"],
-  ["Роза", "rose", "roomy"], ["Кармин", "crimson", "compact"], ["Угли", "ember", "normal"],
-  ["Янтарь", "amber", "roomy"], ["Золото", "gold", "roomy"], ["Цитрус", "citrus", "normal"],
-  ["Лайм", "lime", "normal"], ["Олива", "olive", "normal"], ["Песок", "sand", "roomy"],
-  ["Медь", "copper", "roomy"], ["Сталь", "steel", "compact"], ["Графит", "slate", "compact"],
-  ["Моно", "mono", "compact"], ["OLED", "oled", "compact"], ["Полночь", "midnight", "normal"],
-  ["Дневная", "daylight", "normal"], ["Бумага", "paper", "roomy"], ["Лён", "linen", "roomy"],
+  ["steel", "normal"],
+  ["emerald", "normal"], ["jade", "normal"], ["teal", "normal"],
+  ["ice", "normal"], ["cobalt", "normal"], ["ultra", "roomy"],
+  ["plum", "roomy"], ["orchid", "normal"], ["fuchsia", "normal"],
+  ["rose", "roomy"], ["crimson", "compact"], ["ember", "normal"],
+  ["amber", "roomy"], ["gold", "roomy"], ["citrus", "normal"],
+  ["lime", "normal"], ["olive", "normal"], ["sand", "roomy"],
+  ["copper", "roomy"], ["steel", "compact"], ["slate", "compact"],
+  ["mono", "compact"], ["oled", "compact"], ["midnight", "normal"],
+  ["daylight", "normal"], ["paper", "roomy"], ["linen", "roomy"],
 ];
 
 function hex(h) {
@@ -1341,18 +1348,21 @@ function loadLook() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Человеческие форматы
+   Язык
+
+   Панель ставят там, где блокировки, и это не только Россия. Держим два языка
+   и переключатель: русский терять нельзя — на нём сегодня все покупатели, —
+   а без английского панель не открыть тем, ради кого её и делают.
+
+   Все надписи собраны здесь, а не рассыпаны по коду. Так видно сразу, что
+   перевод отстал: недостающий ключ бросается в глаза в словаре, а не всплывает
+   у продавца на экране.
    ──────────────────────────────────────────────────────────────────────── */
 
-function bytes(n) {
-  if (!n) return "0";
-  const units = ["Б", "КБ", "МБ", "ГБ", "ТБ", "ПБ"];
-  let i = 0, v = n;
-  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
-  return (v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)) + " " + units[i];
-}
+const LANG_KEY = "marvia-lang";
 
-function plural(n, one, few, many) {
+// Русские формы числительных: один клиент, два клиента, пять клиентов.
+function pluralRU(n, one, few, many) {
   const a = Math.abs(n) % 100, b = a % 10;
   if (a > 10 && a < 20) return many;
   if (b > 1 && b < 5) return few;
@@ -1360,31 +1370,505 @@ function plural(n, one, few, many) {
   return many;
 }
 
+const TEXTS = {
+  ru: {
+    lang: "ru",
+    // Что написано на самом переключателе — название другого языка, а не
+    // текущего: человек нажимает на то, куда хочет попасть.
+    switchTo: "EN",
+    switchTitle: "Switch to English",
+
+    login: {
+      hint: "Панель открывается админским токеном — тем, что задан ноде переменной MARVIA_ADMIN_TOKEN.",
+      token: "админский токен",
+      enter: "Войти",
+      empty: "Токен пустой",
+      checking: "Проверяю…",
+      wrong: "Токен не подошёл",
+    },
+
+    head: { backup: "Копия базы", reload: "Обновить", reloading: "Обновляю…", logout: "Выход" },
+
+    nav: {
+      dash: "Панель", clients: "Клиенты", keys: "Ключи ботов",
+      nodes: "Ноды", stats: "Статистика", apps: "Приложения", look: "Вид",
+    },
+    sub: {
+      dash: "Обзор за 30 дней",
+      keys: "Токены для ботов и интеграций",
+      look: "Тема панели · 27 готовых видов",
+      appsEmpty: "ничего не выложено",
+      appsSome: "покупатель качает их с домена панели, а не из магазина",
+      clients: (shown, total, active, filtered) => filtered
+        ? "найдено " + shown + " из " + total
+        : total + " " + pluralRU(total, "клиент", "клиента", "клиентов") + " · " + active + " активных",
+      nodes: (total, live) => total + " " + pluralRU(total, "нода", "ноды", "нод") + " · " + live + " на связи",
+      stats: (traffic) => "Трафик за 30 дней · " + traffic,
+    },
+
+    cta: { clients: "+ Клиент", nodes: "+ Нода", keys: "+ Ключ" },
+    search: "Поиск по имени или номеру у бота",
+
+    start: {
+      title: "С чего начать",
+      node: ["Добавь ноду", "Панель выдаст готовую строку для чистого сервера — вставить и всё."],
+      client: ["Заведи покупателя", "Появится ссылка, которую он вставит в приложение."],
+      key: ["Выпусти ключ для бота", "Тогда бот продаёт сам, а ты не заходишь сюда на каждую оплату."],
+    },
+
+    kpi: {
+      activeKeys: "АКТИВНЫЕ КЛЮЧИ", traffic30: "ТРАФИК · 30 Д", nodesLive: "НОДЫ НА СВЯЗИ",
+      expiring: "ИСТЕКАЮТ", total: "ВСЕГО", active: "АКТИВНЫХ", keysCount: "КЛЮЧЕЙ",
+      trafficTotal: "ТРАФИК", nodesWithTraffic: "НОД С ТРАФИКОМ", perDay: "В СУТКИ",
+      ofAll: "заведено", forBots: "для ботов", forPeriod: "за 30 дней", onAverage: "в среднем",
+      byAllNodes: "по всем нодам", allAnswer: "все отвечают", notAllAnswer: "не все отвечают",
+      noNodes: "ни одной ноды", inSevenDays: "в ближайшие 7 дней", sevenDays: "7 дней",
+      outOf: (n) => "из " + n, share: (p) => p + "% от всех", allTotal: (n) => n + " всего",
+    },
+
+    dash: {
+      traffic: "Трафик · 30 дней", nodes: "Ноды", clients: "Клиенты",
+      noNodes: "Ни одной ноды. Заведи первую — панель отдаст установщик.",
+      noClients: "Ни одного клиента. Заведи первого через бота или API.",
+      allClients: (n) => "Все " + n + " " + pluralRU(n, "клиент", "клиента", "клиентов") + " →",
+    },
+
+    col: {
+      client: "КЛИЕНТ", key: "КЛЮЧ", until: "ДО", traffic: "ТРАФИК", status: "СТАТУС",
+      devices: "УСТРОЙСТВ", name: "ИМЯ", rights: "ПРАВА", created: "СОЗДАН", lastSeen: "ПОСЛЕДНИЙ ВХОД",
+      size: "РАЗМЕР", share: "ДОЛЯ", online: "НА СВЯЗИ", traffic30: "ТРАФИК · 30 Д",
+    },
+
+    status: { active: "Активен", expiring: "Истекает", expired: "Истёк", off: "Отключён", revoked: "Отозван" },
+
+    table: {
+      noClients: "Ни одного клиента. Заводи кнопкой сверху или через бота.",
+      noFound: "По запросу никого нет.",
+      noKeys: "Ключей для ботов пока нет. Ими бот ходит в панель вместо админского токена.",
+      prev: "Назад", next: "Вперёд", range: (from, to, total) => from + "–" + to + " из " + total,
+    },
+
+    nodesPage: {
+      empty: "Ни одной ноды. Установщик раздаёт сама панель — заведи ноду и получишь команду.",
+      online: "НА СВЯЗИ", silent: "МОЛЧИТ", off: "ВЫКЛЮЧЕНА",
+      silentShort: "молчит", offShort: "выкл",
+    },
+
+    statsPage: {
+      byDay: "Трафик по дням", byNode: "Доля нод", noShare: "Трафика за период ещё нет.",
+    },
+
+    appsPage: {
+      laid: "ВЫЛОЖЕНО",
+      empty: "Приложения пока не выложены: покупателям их раздаёт сама панель со своего домена.",
+    },
+
+    look: { accent: "АКЦЕНТ", compact: "плотно", normal: "обычно", roomy: "просторно" },
+
+    themes: [
+      "Серый (из коробки)", "Изумруд", "Нефрит", "Лагуна", "Лёд", "Кобальт", "Ультра",
+      "Слива", "Орхидея", "Фуксия", "Роза", "Кармин", "Угли", "Янтарь", "Золото",
+      "Цитрус", "Лайм", "Олива", "Песок", "Медь", "Сталь", "Графит", "Моно", "OLED",
+      "Полночь", "Дневная", "Бумага", "Лён",
+    ],
+
+    time: { now: "сейчас", min: " мин", hour: " ч", day: " дн", never: "никогда", forever: "бессрочно" },
+    bytes: ["Б", "КБ", "МБ", "ГБ", "ТБ", "ПБ"],
+
+    act: {
+      copy: "Скопировать", copied: "Скопировано",
+      noCopy: "Браузер не дал скопировать — выдели и скопируй руками",
+      close: "Закрыть", cancel: "Отмена", done: "Готово", yes: "Да",
+    },
+
+    user: {
+      state: "Состояние", on: "включён", off: "отключён",
+      term: "Срок", used: "Израсходовано", noLimit: " · без лимита", of: " из ",
+      devices: "Устройств", noDeviceLimit: "без ограничения",
+      creds: "Доступы:", noCreds: "Доступов нет", issued: " · выдан ",
+      addMore: "Выдать ещё:",
+      extend: "+30 дней", extended: "Продлено на 30 дней",
+      links: "Ссылки", disable: "Отключить", enable: "Включить",
+      rotate: "Сменить адрес подписки", remove: "Удалить", removed: "Удалён",
+      days: (n) => " · " + n + " " + pluralRU(n, "день", "дня", "дней"),
+      askRemove: (name) => ["Удалить " + name + "?", "Вместе с ключами и накопленной статистикой. Отменить нельзя."],
+      askRotate: ["Сменить адрес подписки?",
+        "Старая ссылка перестанет работать сразу — вместе с той, что у покупателя на устройстве. "
+        + "Панель выдаст новую, её надо ему переслать. Это то, что делают, когда ссылку раздали "
+        + "знакомым: отзывать весь доступ за это — терять покупателя.", "Сменить"],
+      askRevoke: (kind, last) => ["Отозвать доступ " + kind + "?",
+        last
+          ? "Это единственный доступ покупателя — после отзыва он не подключится ничем, пока не выдашь новый. "
+            + "Сама запись и срок останутся."
+          : "Перестанет работать только он. Остальные доступы покупателя останутся живы.", "Отозвать"],
+      credRevoked: "Доступ отозван",
+      newTitle: "Новый клиент",
+      newLabel: ["Имя или метка", "Видно только тебе — по нему ищут в списке"],
+      newDays: ["Срок, дней", "0 — бессрочно"],
+      newGB: ["Лимит трафика, ГБ", "0 — без лимита"],
+      newIPs: ["Устройств", "0 — без ограничения"],
+      kinds: "Виды доступа",
+      kindNote: { vp1: "наше приложение", vless: "чужие клиенты", trojan: "чужие клиенты" },
+      create: "Завести", pickKind: "Выбери хотя бы один вид доступа",
+      issuedTitle: "Доступ выдан — отправь покупателю",
+      issuedKind: (kind) => "Доступ " + kind + " выдан — отправь покупателю",
+    },
+
+    links: {
+      once: "Секретная часть показывается один раз: панель её не хранит. "
+        + "Перешли покупателю сейчас — потом останется только выпустить новую.",
+      account: "Ссылка доступа — для нашего приложения",
+      subscription: "Подписка",
+      stock: (kind, where) => kind + where + " — для v2rayNG, Hiddify и прочих",
+      someKind: "доступ",
+      stub: "Внимание: вместо адреса панели в ссылках стоит заглушка — служба запущена без -sub-base. "
+        + "Отправлять их покупателю нельзя. Поправь строку запуска (-sub-base https://твой-домен) "
+        + "и перезапусти панель.",
+      newFor: (name) => "Новый доступ для " + name,
+    },
+
+    node: {
+      newTitle: "Новая нода",
+      paste: "Вставь эту строку на чистом сервере — от root. Всё остальное нода сделает сама: "
+        + "выпустит ключи, запишется в панель, поднимет службу и проверит себя.",
+      invite: "Приглашение живёт час и срабатывает один раз: оно даёт право только назваться нодой, "
+        + "не более. Дальше нода работает своим токеном.",
+      vars: "Порт, сайт прикрытия и имя можно задать переменными перед sh, например: "
+        + "PORT=8443 DEST=www.icloud.com:443 NAME=amsterdam-1 COUNTRY=Нидерланды",
+      address: "Адрес", cover: "Прикрытие", state: "Состояние", lastSeen: "Последний раз на связи",
+      online: "на связи", silentOn: "включена, но молчит", offState: "выключена",
+      name: ["Имя", "Видно покупателю в списке серверов"],
+      country: ["Страна", "Тоже видно покупателю; встаёт первой в названии"],
+      save: "Сохранить", saved: "Сохранено",
+      disable: "Выключить", enable: "Включить",
+      disabled: "Нода убрана из подписок", enabled: "Нода вернулась в подписки",
+      remove: "Удалить", removed: "Удалена",
+      askRemove: (name) => ["Удалить " + name + "?",
+        "Вместе со всей накопленной по ней статистикой, и обратно это не отыграть. "
+        + "Если нода под подозрением на блокировку — выключи её: она уйдёт из подписок, "
+        + "но расход останется виден, и решение отменяется одним нажатием.", "Удалить"],
+    },
+
+    key: {
+      newTitle: "Новый ключ для бота",
+      what: "Ключ — это то, чем твой телеграм-бот ходит в панель. Админский токен боту не давай: "
+        + "им входят в панель и им выпускают ключи.",
+      name: ["Название", "Чтобы потом понять, чей это ключ"],
+      rights: "Права",
+      scopeNote: {
+        users: "заводить и продлевать покупателей — это всё, что нужно боту",
+        nodes: "добавлять и выключать ноды",
+        read: "только смотреть",
+      },
+      issue: "Выпустить", pickScope: "Выбери хотя бы одно право",
+      needName: "Без названия ключ потом не опознать",
+      issued: "Ключ выпущен",
+      once: "Показывается один раз: в базе лежит только его отпечаток. Вставь его боту сейчас.",
+      rightsAre: (list) => "Права: " + (list || "все"),
+      allRights: "все",
+      createdAt: (d) => "Выпущен: " + d,
+      lastUse: (d) => "Последний вход: " + d,
+      never: "ни разу",
+      revoke: "Отозвать", revoked: "Отозван",
+      askRevoke: (name) => ["Отозвать ключ «" + name + "»?",
+        "Бот, который им ходит, перестанет работать сразу. Выпусти новый и вставь его боту, "
+        + "прежде чем отзывать этот.", "Отозвать"],
+    },
+
+    backup: { taking: "Снимаю копию…", done: "Копия базы скачана", failed: (code) => "копия не снялась: код " + code },
+    err: { badToken: "токен не подошёл", code: (n) => "код " + n },
+  },
+
+  en: {
+    lang: "en",
+    switchTo: "RU",
+    switchTitle: "Переключить на русский",
+
+    login: {
+      hint: "The panel opens with the admin token — the one you set for the service in MARVIA_ADMIN_TOKEN.",
+      token: "admin token",
+      enter: "Sign in",
+      empty: "Token is empty",
+      checking: "Checking…",
+      wrong: "Token was not accepted",
+    },
+
+    head: { backup: "Backup", reload: "Refresh", reloading: "Refreshing…", logout: "Sign out" },
+
+    nav: {
+      dash: "Overview", clients: "Clients", keys: "Bot keys",
+      nodes: "Nodes", stats: "Statistics", apps: "Apps", look: "Look",
+    },
+    sub: {
+      dash: "Last 30 days",
+      keys: "Tokens for bots and integrations",
+      look: "Panel theme · 27 ready looks",
+      appsEmpty: "nothing published yet",
+      appsSome: "buyers download them from your panel, not from a store",
+      clients: (shown, total, active, filtered) => filtered
+        ? "found " + shown + " of " + total
+        : total + (total === 1 ? " client" : " clients") + " · " + active + " active",
+      nodes: (total, live) => total + (total === 1 ? " node" : " nodes") + " · " + live + " online",
+      stats: (traffic) => "Traffic over 30 days · " + traffic,
+    },
+
+    cta: { clients: "+ Client", nodes: "+ Node", keys: "+ Key" },
+    search: "Search by name or bot id",
+
+    start: {
+      title: "Where to start",
+      node: ["Add a node", "The panel hands you a ready command for a clean server — just paste it."],
+      client: ["Add a buyer", "You get a link they paste into the app."],
+      key: ["Issue a bot key", "Then the bot sells on its own and you stop opening this for every payment."],
+    },
+
+    kpi: {
+      activeKeys: "ACTIVE KEYS", traffic30: "TRAFFIC · 30 D", nodesLive: "NODES ONLINE",
+      expiring: "EXPIRING", total: "TOTAL", active: "ACTIVE", keysCount: "KEYS",
+      trafficTotal: "TRAFFIC", nodesWithTraffic: "NODES WITH TRAFFIC", perDay: "PER DAY",
+      ofAll: "created", forBots: "for bots", forPeriod: "over 30 days", onAverage: "on average",
+      byAllNodes: "across all nodes", allAnswer: "all responding", notAllAnswer: "not all responding",
+      noNodes: "no nodes yet", inSevenDays: "within 7 days", sevenDays: "7 days",
+      outOf: (n) => "of " + n, share: (p) => p + "% of all", allTotal: (n) => n + " total",
+    },
+
+    dash: {
+      traffic: "Traffic · 30 days", nodes: "Nodes", clients: "Clients",
+      noNodes: "No nodes yet. Add the first one — the panel hands you the installer.",
+      noClients: "No clients yet. Add the first one through the bot or the API.",
+      allClients: (n) => "All " + n + (n === 1 ? " client" : " clients") + " →",
+    },
+
+    col: {
+      client: "CLIENT", key: "KEY", until: "UNTIL", traffic: "TRAFFIC", status: "STATUS",
+      devices: "DEVICES", name: "NAME", rights: "RIGHTS", created: "CREATED", lastSeen: "LAST SEEN",
+      size: "SIZE", share: "SHARE", online: "ONLINE", traffic30: "TRAFFIC · 30 D",
+    },
+
+    status: { active: "Active", expiring: "Expiring", expired: "Expired", off: "Disabled", revoked: "Revoked" },
+
+    table: {
+      noClients: "No clients yet. Add one with the button above, or through the bot.",
+      noFound: "Nothing matches that search.",
+      noKeys: "No bot keys yet. A bot uses one instead of the admin token.",
+      prev: "Back", next: "Next", range: (from, to, total) => from + "–" + to + " of " + total,
+    },
+
+    nodesPage: {
+      empty: "No nodes yet. The panel serves the installer itself — add a node and you get the command.",
+      online: "ONLINE", silent: "SILENT", off: "DISABLED",
+      silentShort: "silent", offShort: "off",
+    },
+
+    statsPage: {
+      byDay: "Traffic by day", byNode: "Share by node", noShare: "No traffic in this period yet.",
+    },
+
+    appsPage: {
+      laid: "PUBLISHED",
+      empty: "No apps published yet: the panel serves them to buyers from your own domain.",
+    },
+
+    look: { accent: "ACCENT", compact: "compact", normal: "normal", roomy: "roomy" },
+
+    themes: [
+      "Grey (default)", "Emerald", "Jade", "Lagoon", "Ice", "Cobalt", "Ultra",
+      "Plum", "Orchid", "Fuchsia", "Rose", "Crimson", "Ember", "Amber", "Gold",
+      "Citrus", "Lime", "Olive", "Sand", "Copper", "Steel", "Slate", "Mono", "OLED",
+      "Midnight", "Daylight", "Paper", "Linen",
+    ],
+
+    time: { now: "just now", min: " min", hour: " h", day: " d", never: "never", forever: "no expiry" },
+    bytes: ["B", "KB", "MB", "GB", "TB", "PB"],
+
+    act: {
+      copy: "Copy", copied: "Copied",
+      noCopy: "The browser refused to copy — select the text and copy it by hand",
+      close: "Close", cancel: "Cancel", done: "Done", yes: "Yes",
+    },
+
+    user: {
+      state: "State", on: "enabled", off: "disabled",
+      term: "Expires", used: "Used", noLimit: " · no limit", of: " of ",
+      devices: "Devices", noDeviceLimit: "unlimited",
+      creds: "Access:", noCreds: "No access issued", issued: " · issued ",
+      addMore: "Issue more:",
+      extend: "+30 days", extended: "Extended by 30 days",
+      links: "Links", disable: "Disable", enable: "Enable",
+      rotate: "Rotate subscription address", remove: "Delete", removed: "Deleted",
+      days: (n) => " · " + n + (n === 1 ? " day" : " days"),
+      askRemove: (name) => ["Delete " + name + "?", "Together with their keys and collected statistics. This cannot be undone."],
+      askRotate: ["Rotate the subscription address?",
+        "The old link stops working immediately — including the one already on the buyer's device. "
+        + "The panel issues a new one and you have to send it to them. This is what you do when a link "
+        + "has been shared around: revoking all access for that costs you the buyer.", "Rotate"],
+      askRevoke: (kind, last) => ["Revoke " + kind + " access?",
+        last
+          ? "This is the buyer's only access — after revoking, nothing will connect until you issue a new one. "
+            + "The record and the expiry date stay."
+          : "Only this one stops working. The buyer's other access stays alive.", "Revoke"],
+      credRevoked: "Access revoked",
+      newTitle: "New client",
+      newLabel: ["Name or label", "Only you see it — you search the list by it"],
+      newDays: ["Days", "0 — no expiry"],
+      newGB: ["Traffic limit, GB", "0 — no limit"],
+      newIPs: ["Devices", "0 — unlimited"],
+      kinds: "Access kinds",
+      kindNote: { vp1: "our app", vless: "third-party clients", trojan: "third-party clients" },
+      create: "Create", pickKind: "Pick at least one kind of access",
+      issuedTitle: "Access issued — send it to the buyer",
+      issuedKind: (kind) => kind + " access issued — send it to the buyer",
+    },
+
+    links: {
+      once: "The secret part is shown once: the panel does not keep it. "
+        + "Send it to the buyer now — afterwards you can only issue a new one.",
+      account: "Access link — for our app",
+      subscription: "Subscription",
+      stock: (kind, where) => kind + where + " — for v2rayNG, Hiddify and the like",
+      someKind: "access",
+      stub: "Careful: the links carry a placeholder instead of the panel address — the service was started "
+        + "without -sub-base. Do not send them to a buyer. Fix the command line "
+        + "(-sub-base https://your-domain) and restart the panel.",
+      newFor: (name) => "New access for " + name,
+    },
+
+    node: {
+      newTitle: "New node",
+      paste: "Paste this on a clean server, as root. The node does the rest itself: issues keys, "
+        + "registers with the panel, starts the service and checks itself.",
+      invite: "The invitation lives for an hour and works once: it grants the right to register as a node, "
+        + "nothing more. After that the node works with its own token.",
+      vars: "Port, cover site and name can be set with variables before sh, for example: "
+        + "PORT=8443 DEST=www.icloud.com:443 NAME=amsterdam-1 COUNTRY=Netherlands",
+      address: "Address", cover: "Cover site", state: "State", lastSeen: "Last seen",
+      online: "online", silentOn: "enabled, but silent", offState: "disabled",
+      name: ["Name", "The buyer sees it in the server list"],
+      country: ["Country", "The buyer sees it too; it comes first in the name"],
+      save: "Save", saved: "Saved",
+      disable: "Disable", enable: "Enable",
+      disabled: "Node removed from subscriptions", enabled: "Node is back in subscriptions",
+      remove: "Delete", removed: "Deleted",
+      askRemove: (name) => ["Delete " + name + "?",
+        "Together with all statistics collected for it, and this cannot be undone. "
+        + "If you suspect the node is blocked, disable it instead: it leaves subscriptions, "
+        + "but its traffic stays visible and one click brings it back.", "Delete"],
+    },
+
+    key: {
+      newTitle: "New bot key",
+      what: "A key is what your Telegram bot uses to reach the panel. Do not give the bot the admin token: "
+        + "that one signs into the panel and issues keys.",
+      name: ["Name", "So you can tell later whose key it is"],
+      rights: "Rights",
+      scopeNote: {
+        users: "create and extend buyers — that is all a bot needs",
+        nodes: "add and disable nodes",
+        read: "read only",
+      },
+      issue: "Issue", pickScope: "Pick at least one right",
+      needName: "Without a name you will not recognise this key later",
+      issued: "Key issued",
+      once: "Shown once: only its fingerprint is stored. Put it into the bot now.",
+      rightsAre: (list) => "Rights: " + (list || "all"),
+      allRights: "all",
+      createdAt: (d) => "Issued: " + d,
+      lastUse: (d) => "Last seen: " + d,
+      never: "never",
+      revoke: "Revoke", revoked: "Revoked",
+      askRevoke: (name) => ["Revoke the key “" + name + "”?",
+        "The bot using it stops working immediately. Issue a new one and put it into the bot "
+        + "before revoking this one.", "Revoke"],
+    },
+
+    backup: { taking: "Taking a copy…", done: "Database copy downloaded", failed: (code) => "the copy failed: code " + code },
+    err: { badToken: "token was not accepted", code: (n) => "code " + n },
+  },
+};
+
+// L — словарь текущего языка. Нужен обработчикам окон: они живут вне
+// renderVals и своей области видимости не имеют.
+function L() { return TEXTS[state.lang] || TEXTS.ru; }
+
+// pickLang выбирает язык при первом заходе.
+//
+// Спрашивать человека на пустом экране незачем: браузер уже знает, на каком
+// языке он читает. Русский берём и для языков бывшего СССР — панель на них не
+// переведена, а английский там понимают хуже русского.
+function pickLang() {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved && TEXTS[saved]) return saved;
+  } catch (_) { /* приватное окно */ }
+
+  const want = (navigator.languages || [navigator.language || ""]).join(",").toLowerCase();
+  return /\b(ru|be|uk|kk|ky|uz|tg|hy|az)\b/.test(want) ? "ru" : "en";
+}
+
+function setLang(lang) {
+  if (!TEXTS[lang]) return;
+  state.lang = lang;
+  try { localStorage.setItem(LANG_KEY, lang); } catch (_) { /* приватное окно */ }
+  document.documentElement.lang = lang;
+  paintLogin();
+  // Панель перерисовываем только когда она есть: до входа рисовать нечего.
+  if (state.token) render();
+}
+
+// paintLogin переписывает экран входа: он живёт вне шаблона, потому что до
+// проверки токена показывать панель нечего.
+function paintLogin() {
+  const d = L();
+  document.getElementById("login-hint").textContent = d.login.hint;
+  document.getElementById("login-token").placeholder = d.login.token;
+  document.getElementById("login-enter").textContent = d.login.enter;
+  document.getElementById("login-lang").textContent = d.switchTo;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Человеческие форматы
+   ──────────────────────────────────────────────────────────────────────── */
+
+function bytes(n) {
+  if (!n) return "0";
+  const units = L().bytes;
+  let i = 0, v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return (v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)) + " " + units[i];
+}
+
+// shortDate отдаёт дату так, как её пишут на языке интерфейса.
+//
+// Своей раскладки не изобретаем: 09.10.2026 и 10/09/2026 — это один и тот же
+// день, и человек, привыкший к своей записи, читает чужую с ошибкой ровно там,
+// где ошибиться дороже всего — в сроке подписки.
 function shortDate(iso) {
-  if (!iso) return "бессрочно";
+  if (!iso) return L().time.forever;
   const d = new Date(iso);
   if (isNaN(d)) return "—";
-  return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + d.getFullYear();
+  return d.toLocaleDateString(L().lang, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function dayLabel(day) {
   const p = day.split("-");
-  return p.length === 3 ? p[2] + "." + p[1] : day;
+  if (p.length !== 3) return day;
+  // На оси графика год не нужен, а порядок дня и месяца — нужен.
+  return L().lang === "en" ? p[1] + "." + p[2] : p[2] + "." + p[1];
 }
 
 // sinceLabel — «когда нода последний раз выходила на связь». Панель считает
 // ноду живой, если та отмечалась недавно: своего пинга у панели нет, а врать
 // зелёным кружком нельзя.
 function sinceLabel(iso) {
-  if (!iso) return "никогда";
+  if (!iso) return d18.time.never;
   const d = new Date(iso);
   if (isNaN(d)) return "—";
   const mins = Math.floor((Date.now() - d.getTime()) / 60000);
-  if (mins < 1) return "сейчас";
-  if (mins < 60) return mins + " мин";
+  if (mins < 1) return d18.time.now;
+  if (mins < 60) return mins + d18.time.min;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return hours + " ч";
-  return Math.floor(hours / 24) + " дн";
+  if (hours < 24) return hours + d18.time.hour;
+  return Math.floor(hours / 24) + d18.time.day;
 }
 
 function nodeAlive(node) {
@@ -1412,15 +1896,9 @@ function daysLeft(iso) {
 // Разделы: только те, за которыми есть данные. «Тарифы», «Платежи»,
 // «Рассылка», «Логи и аудит» в дизайне нарисованы, но панель о них ничего не
 // знает — пункта меню, который ведёт в выдуманное, здесь нет.
-const PAGES = {
-  dash:    ["Панель", "Обзор за 30 дней"],
-  clients: ["Клиенты", ""],
-  keys:    ["Ключи ботов", ""],
-  nodes:   ["Ноды", ""],
-  stats:   ["Статистика", "Трафик за 30 дней"],
-  apps:    ["Приложения", ""],
-  look:    ["Вид", "Тема панели · 27 готовых видов"],
-};
+// Порядок разделов в меню. Названия берутся из словаря по этому же ключу:
+// держать их здесь значило бы иметь два места, где они разъезжаются.
+const PAGES = ["dash", "clients", "keys", "nodes", "stats", "apps", "look"];
 
 // Сколько строк на странице. Полсотни — столько влезает в экран прокруткой и
 // столько человек ещё готов просмотреть глазами, не листая.
@@ -1439,15 +1917,19 @@ function setState(patch) {
 // CTA — какая кнопка стоит в углу раздела. Разделы без действия остаются без
 // кнопки: пустой угол честнее нажимаемой заглушки.
 const CTA = {
-  clients: ["+ Клиент", () => newUserSheet()],
-  nodes: ["+ Нода", () => newNodeSheet()],
-  keys: ["+ Ключ", () => newKeySheet()],
+  clients: () => newUserSheet(),
+  nodes: () => newNodeSheet(),
+  keys: () => newKeySheet(),
 };
 
 function renderVals() {
   const t = theme();
   const d = DENSITY[state.density] || DENSITY.normal;
   const page = state.page;
+
+  // Словарь зовём d18, а не t: t здесь уже занято темой, и перепутать их —
+  // значит получить цвет вместо надписи в самом неожиданном месте.
+  const d18 = L();
 
   const vars = Object.entries(t).map(([k, v]) => "--" + k + ":" + v).join(";")
     + ";--r:" + d.r + "px;--pad:" + d.pad + "px;--gap:" + d.gap + "px";
@@ -1476,23 +1958,17 @@ function renderVals() {
     : users;
 
   const subFor = {
-    dash: "Обзор за 30 дней",
-    clients: q
-      ? "найдено " + shown.length + " из " + users.length
-      : users.length + " " + plural(users.length, "клиент", "клиента", "клиентов")
-      + " · " + activeUsers + " активных",
-    keys: "Токены для ботов и интеграций",
-    nodes: nodes.length + " " + plural(nodes.length, "нода", "ноды", "нод")
-      + " · " + liveNodes + " на связи",
-    stats: "Трафик за 30 дней · " + bytes(total),
-    apps: (((state.apps && state.apps.apps) || []).length === 0
-      ? "ничего не выложено"
-      : "покупатель качает их с домена панели, а не из магазина"),
-    look: "Тема панели · 27 готовых видов",
+    dash: d18.sub.dash,
+    clients: d18.sub.clients(shown.length, users.length, activeUsers, !!q),
+    keys: d18.sub.keys,
+    nodes: d18.sub.nodes(nodes.length, liveNodes),
+    stats: d18.sub.stats(bytes(total)),
+    apps: ((state.apps && state.apps.apps) || []).length === 0 ? d18.sub.appsEmpty : d18.sub.appsSome,
+    look: d18.sub.look,
   };
 
-  const nav = Object.entries(PAGES).map(([k, [label]]) => ({
-    k, label,
+  const nav = PAGES.map((k) => ({
+    k, label: d18.nav[k],
     onClick: () => setState({ page: k }),
     style: "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:" + d.r
       + "px;font-size:13px;cursor:pointer;color:" + (page === k ? t.fg : t.dim)
@@ -1502,14 +1978,14 @@ function renderVals() {
 
   // ── обзор ────────────────────────────────────────────────────────────────
   const kpis = [
-    ["АКТИВНЫЕ КЛЮЧИ", String(activeUsers), users.length + " всего", true],
-    ["ТРАФИК · 30 Д", bytes(total), "по всем нодам", true],
+    [d18.kpi.activeKeys, String(activeUsers), d18.kpi.allTotal(users.length), true],
+    [d18.kpi.traffic30, bytes(total), d18.kpi.byAllNodes, true],
     // При нуле нод «все отвечают» — формально верно и совершенно бесполезно:
     // отвечать некому, и продавать пока нечего.
-    ["НОДЫ НА СВЯЗИ", liveNodes + " / " + nodes.length,
-      nodes.length === 0 ? "ни одной ноды" : liveNodes === nodes.length ? "все отвечают" : "не все отвечают",
+    [d18.kpi.nodesLive, liveNodes + " / " + nodes.length,
+      nodes.length === 0 ? d18.kpi.noNodes : liveNodes === nodes.length ? d18.kpi.allAnswer : d18.kpi.notAllAnswer,
       nodes.length > 0 && liveNodes === nodes.length],
-    ["ИСТЕКАЮТ", String(expiring), "в ближайшие 7 дней", expiring === 0],
+    [d18.kpi.expiring, String(expiring), d18.kpi.inSevenDays, expiring === 0],
   ].map(([label, value, delta, good]) => ({
     label, value, delta, style: card,
     deltaStyle: "font-size:12px;margin-top:6px;color:" + (good ? t.acc : t.dim),
@@ -1533,7 +2009,7 @@ function renderVals() {
     const alive = nodeAlive(n);
     return {
       name: n.name || n.address,
-      load: alive ? sinceLabel(n.last_seen) : n.enabled ? "молчит" : "выключена",
+      load: alive ? sinceLabel(n.last_seen) : n.enabled ? d18.nodesPage.silentShort : d18.nodesPage.offShort,
       rowStyle: "display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:" + d.r + "px;background:" + t.surf2,
       dotStyle: "width:8px;height:8px;border-radius:50%;flex:none;background:" + (alive ? t.acc : t.warn),
     };
@@ -1544,11 +2020,11 @@ function renderVals() {
     + ";gap:12px;padding:0 12px;font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:.14em;color:" + t.dim;
 
   function clientStatus(u) {
-    if (!u.enabled) return ["Отключён", "dim"];
+    if (!u.enabled) return [d18.status.off, "dim"];
     const left = daysLeft(u.expires_at);
-    if (left !== null && left < 0) return ["Истёк", "warn"];
-    if (left !== null && left <= 7) return ["Истекает", "warn"];
-    return ["Активен", "ok"];
+    if (left !== null && left < 0) return [d18.status.expired, "warn"];
+    if (left !== null && left <= 7) return [d18.status.expiring, "warn"];
+    return [d18.status.active, "ok"];
   }
 
   const clients = users.slice(0, 4).map((u) => {
@@ -1571,27 +2047,27 @@ function renderVals() {
   // ── таблицы ──────────────────────────────────────────────────────────────
   const TABLES = {
     clients: {
-      cols: ["КЛИЕНТ", "КЛЮЧ", "ДО", "УСТРОЙСТВ", "ТРАФИК", "СТАТУС"],
+      cols: [d18.col.client, d18.col.key, d18.col.until, d18.col.devices, d18.col.traffic, d18.col.status],
       grid: "2fr 1.4fr 1.2fr 1fr 1fr 0.9fr",
       rows: shown.map((u) => {
         const [status, st] = clientStatus(u);
         return [u.label || ("#" + u.id), keyShort(u), shortDate(u.expires_at),
           String(u.max_ips || "—"), bytes(u.used), status, st];
       }),
-      empty: q ? "По запросу никого нет." : "Ни одного клиента. Заводи кнопкой сверху или через бота.",
+      empty: q ? d18.table.noFound : d18.table.noClients,
       // Строка открывает карточку подписчика. Индекс тот же, что у rows:
       // список строится из shown одним проходом.
       onRow: (i) => () => userSheet(shown[i]),
     },
     keys: {
-      cols: ["ИМЯ", "ПРАВА", "СОЗДАН", "ПОСЛЕДНИЙ ВХОД", "СТАТУС"],
+      cols: [d18.col.name, d18.col.rights, d18.col.created, d18.col.lastSeen, d18.col.status],
       grid: "1.6fr 1.4fr 1.2fr 1.2fr 0.9fr",
       rows: ((state.keys || [])).map((k) => [
-        k.name, (k.scopes || []).join(", ") || "все", shortDate(k.created_at),
-        k.last_used_at ? shortDate(k.last_used_at) : "ни разу",
-        k.revoked_at ? "Отозван" : "Активен", k.revoked_at ? "dim" : "ok",
+        k.name, (k.scopes || []).join(", ") || d18.key.allRights, shortDate(k.created_at),
+        k.last_used_at ? shortDate(k.last_used_at) : d18.key.never,
+        k.revoked_at ? d18.status.revoked : d18.status.active, k.revoked_at ? "dim" : "ok",
       ]),
-      empty: "Ключей для ботов пока нет. Ими бот ходит в панель вместо админского токена.",
+      empty: d18.table.noKeys,
       onRow: (i) => () => keySheet((state.keys || [])[i]),
     },
   };
@@ -1630,17 +2106,17 @@ function renderVals() {
 
   const KPI = {
     clients: [
-      ["ВСЕГО", String(users.length), "заведено", true],
-      ["АКТИВНЫХ", String(activeUsers), users.length ? Math.round((activeUsers / users.length) * 100) + "% от всех" : "—", true],
-      ["ИСТЕКАЮТ", String(expiring), "7 дней", expiring === 0],
+      [d18.kpi.total, String(users.length), d18.kpi.ofAll, true],
+      [d18.kpi.active, String(activeUsers), users.length ? d18.kpi.share(Math.round((activeUsers / users.length) * 100)) : "—", true],
+      [d18.kpi.expiring, String(expiring), d18.kpi.sevenDays, expiring === 0],
     ],
     keys: [
-      ["КЛЮЧЕЙ", String((state.keys || []).length), "для ботов", true],
+      [d18.kpi.keysCount, String((state.keys || []).length), d18.kpi.forBots, true],
     ],
     stats: [
-      ["ТРАФИК", bytes(total), "за 30 дней", true],
-      ["НОД С ТРАФИКОМ", String(byNode.length), "из " + nodes.length, true],
-      ["В СУТКИ", bytes(byDay.length ? total / byDay.length : 0), "в среднем", true],
+      [d18.col.traffic, bytes(total), d18.kpi.forPeriod, true],
+      [d18.kpi.nodesWithTraffic, String(byNode.length), d18.kpi.outOf(nodes.length), true],
+      [d18.kpi.perDay, bytes(byDay.length ? total / byDay.length : 0), d18.kpi.onAverage, true],
     ],
   };
   const pageKpis = (KPI[page] || []).map(([label, value, delta, good]) => ({
@@ -1664,8 +2140,8 @@ function renderVals() {
       host: n.address + (n.country ? " · " + n.country : ""),
       load: bytes(traffic),
       share: total ? Math.round((traffic / total) * 100) + "%" : "0%",
-      seen: alive ? sinceLabel(n.last_seen) : n.enabled ? "молчит" : "выкл",
-      state: alive ? "НА СВЯЗИ" : n.enabled ? "МОЛЧИТ" : "ВЫКЛЮЧЕНА",
+      seen: alive ? sinceLabel(n.last_seen) : n.enabled ? d18.nodesPage.silentShort : d18.nodesPage.offShort,
+      state: alive ? d18.nodesPage.online : n.enabled ? d18.nodesPage.silent : d18.nodesPage.off,
       style: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf
         + ";border:1px solid " + (st === "warn" ? t.warn : t.line) + ";display:flex;flex-direction:column;gap:14px",
       badge: "flex:none;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
@@ -1710,13 +2186,14 @@ function renderVals() {
         + ";outline:2px solid " + (state.acc === c ? t.fg : "transparent") + ";outline-offset:2px",
     }));
 
-  const looks = LOOKS.map(([name, key, dens]) => {
+  const looks = LOOKS.map(([key, dens], i) => {
+    const name = d18.themes[i];
     const on = state.preset === key && state.density === dens;
     const lt = theme({ preset: key, acc: null });
     const lr = DENSITY[dens].r;
     return {
       name,
-      sub: { compact: "плотно", normal: "обычно", roomy: "просторно" }[dens],
+      sub: d18.look[dens],
       onClick: () => setState({ preset: key, acc: null, density: dens }),
       wrap: "min-width:0;display:flex;flex-direction:column;gap:7px;cursor:pointer;padding:4px;border-radius:"
         + (d.r + 4) + "px;border:" + (on ? "2px solid " + t.acc : "1px solid " + t.line)
@@ -1751,7 +2228,7 @@ function renderVals() {
     // Половины отпечатка хватает, чтобы сверить с тем, что скачивал, и она
     // влезает в строку. Целиком он всё равно нечитаем глазами.
     sum: (ap.sha256 || "").slice(0, 16) + "…",
-    state: "ВЫЛОЖЕНО",
+    state: d18.appsPage.laid,
     style: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf
       + ";border:1px solid " + t.line + ";display:flex;flex-direction:column;gap:12px",
     badge: "flex:none;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
@@ -1765,9 +2242,9 @@ function renderVals() {
   // убираем сам собой, когда пройдены все: постоянная подсказка на рабочем
   // экране быстро становится мусором.
   const steps = [
-    [nodes.length > 0, "Добавь ноду", "Панель выдаст готовую строку для чистого сервера — вставить и всё.", () => setState({ page: "nodes" })],
-    [users.length > 0, "Заведи покупателя", "Появится ссылка, которую он вставит в приложение.", () => setState({ page: "clients" })],
-    [(state.keys || []).length > 0, "Выпусти ключ для бота", "Тогда бот продаёт сам, а ты не заходишь сюда на каждую оплату.", () => setState({ page: "keys" })],
+    [nodes.length > 0, ...d18.start.node, () => setState({ page: "nodes" })],
+    [users.length > 0, ...d18.start.client, () => setState({ page: "clients" })],
+    [(state.keys || []).length > 0, ...d18.start.key, () => setState({ page: "keys" })],
   ];
   const startSteps = steps.map(([done, title, note, onClick], i) => ({
     num: done ? "✓" : String(i + 1),
@@ -1782,18 +2259,21 @@ function renderVals() {
 
   return {
     vars,
+    // Словарь целиком: шаблон достаёт из него надписи путём через точку.
+    d18,
     host: location.host,
     hostBadge: "padding:3px 9px;border-radius:6px;background:" + t.accSoft
       + ";font-family:JetBrains Mono,monospace;font-size:10px;color:" + t.acc,
     ghostBtn,
-    reloadLabel: state.loading ? "Обновляю…" : "Обновить",
+    reloadLabel: state.loading ? d18.head.reloading : d18.head.reload,
     doReload: () => { if (!state.loading) loadAll(); },
+    doLang: () => setLang(state.lang === "ru" ? "en" : "ru"),
     doLogout: logout,
     doBackup: downloadBackup,
 
     nav,
-    pageTitle: PAGES[page][0],
-    pageSub: subFor[page] || PAGES[page][1],
+    pageTitle: d18.nav[page],
+    pageSub: subFor[page] || "",
 
     // Кнопка действия есть только там, где действие вправду работает.
     // Нарисованная кнопка — это обещание, и «Скачать журнал» на разделе,
@@ -1804,8 +2284,8 @@ function renderVals() {
       + d.r + "px;background:" + t.surf + ";border:1px solid " + t.acc,
 
     hasCta: !!CTA[page],
-    pageCta: (CTA[page] || ["", null])[0],
-    doCta: (CTA[page] || ["", null])[1],
+    pageCta: d18.cta[page] || "",
+    doCta: CTA[page] || null,
     ctaStyle: "height:40px;padding:0 18px;border-radius:" + d.r + "px;background:" + t.acc
       + ";color:" + t.accFg + ";display:flex;align-items:center;font-size:13px;font-weight:600;cursor:pointer",
 
@@ -1834,7 +2314,7 @@ function renderVals() {
     appCards,
     appsHint: laid.length === 0,
     appsHintText: (state.apps && state.apps.hint)
-      || "Приложения пока не выложены: покупателям их раздаёт сама панель со своего домена.",
+      || d18.appsPage.empty,
     hintBox: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf
       + ";border:1px solid " + t.line + ";font-size:13px;line-height:1.5;color:" + t.dim,
 
@@ -1845,7 +2325,7 @@ function renderVals() {
     noNodes: nodes.length === 0,
     noClients: users.length === 0,
     allClients: "font-size:12px;cursor:pointer;color:" + t.acc,
-    allClientsLabel: "Все " + users.length + " " + plural(users.length, "клиент", "клиента", "клиентов") + " →",
+    allClientsLabel: d18.dash.allClients(users.length),
     goClients: () => setState({ page: "clients" }),
 
     pageKpis, tableCols, tableHead, tableRows,
@@ -1853,7 +2333,7 @@ function renderVals() {
     emptyTable: tbl.empty,
 
     hasPages: totalRows > ROWS,
-    pagerText: (from + 1) + "–" + Math.min(from + ROWS, totalRows) + " из " + totalRows,
+    pagerText: d18.table.range(from + 1, Math.min(from + ROWS, totalRows), totalRows),
     prevPage: curPage > 1 ? () => setState({ rowsPage: curPage - 1 }) : null,
     nextPage: curPage < lastPage ? () => setState({ rowsPage: curPage + 1 }) : null,
     pagerRow: "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px",
@@ -1920,9 +2400,9 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const err = document.getElementById("login-err");
   const token = document.getElementById("login-token").value.trim();
-  if (!token) { err.textContent = "Токен пустой"; return; }
+  if (!token) { err.textContent = L().login.empty; return; }
 
-  err.textContent = "Проверяю…";
+  err.textContent = L().login.checking;
   state.token = token;
   try {
     // Проверяем токен самой дешёвой ручкой: узнать версию может только тот,
@@ -1933,9 +2413,15 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
     enter(token);
   } catch (e2) {
     state.token = null;
-    err.textContent = e2.message === "токен не подошёл" ? "Токен не подошёл" : e2.message;
+    err.textContent = e2.message === L().err.badToken ? L().login.wrong : e2.message;
   }
 });
+
+state.lang = pickLang();
+document.documentElement.lang = state.lang;
+document.getElementById("login-lang").addEventListener("click",
+  () => setLang(state.lang === "ru" ? "en" : "ru"));
+paintLogin();
 
 loadLook();
 
