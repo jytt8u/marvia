@@ -3,6 +3,8 @@ package mobile
 import (
 	"strings"
 	"testing"
+
+	"github.com/jytt8u/marvia/internal/client"
 )
 
 // TestConnectNamesFailureKind следит за тем, что вид неудачи действительно
@@ -51,7 +53,7 @@ func TestConnectNamesFailureKind(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Каталог пустой: кэша в нём ещё нет, и подключение обязано идти
 			// ровно тем же путём, каким шло до появления кэша.
-			_, err := connect(tc.link, t.TempDir(), nil)
+			_, err := connect(tc.link, t.TempDir(), client.Events{})
 			if err == nil {
 				t.Fatalf("ожидалась ошибка, но подключение прошло")
 			}
