@@ -1,6 +1,9 @@
 package panel
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // Маршрут шрифтов читает вшитый файл по имени из адреса.
 //
@@ -139,5 +142,33 @@ func TestEmbeddedAssetIsThere(t *testing.T) {
 	// ошибки, скачанная вместо неё.
 	if len(raw) < 4 || string(raw[:4]) != "\x89PNG" {
 		t.Errorf("не похож на png, первые байты %q", raw[:min(4, len(raw))])
+	}
+}
+
+// Страница обязана начинаться с DOCTYPE.
+//
+// Проверка выглядит нелепой ровно до первого раза, когда она срабатывает.
+// Правка скриптом дважды вписалась в начало файла вместо нужного места, и
+// строка кода уехала на страницу продавца — он увидел её над панелью. Браузер
+// при этом молчит: документ без DOCTYPE он не отвергает, а переключается в
+// режим совместимости, и вёрстка едет незаметно.
+func TestPageStartsWithDoctype(t *testing.T) {
+	raw, err := webFS.ReadFile("web/index.html")
+	if err != nil {
+		t.Fatalf("страница не читается: %v", err)
+	}
+
+	const want = "<!DOCTYPE html>"
+	if !strings.HasPrefix(string(raw), want) {
+		head := string(raw)
+		if len(head) > 120 {
+			head = head[:120]
+		}
+		t.Fatalf("страница начинается не с %s, а с %q", want, head)
+	}
+
+	// И ровно один раз: второй DOCTYPE означает, что в файл что-то вклеилось.
+	if n := strings.Count(string(raw), want); n != 1 {
+		t.Errorf("DOCTYPE встречается %d раз, ожидался один", n)
 	}
 }
