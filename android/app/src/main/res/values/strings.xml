@@ -95,7 +95,7 @@
     <string name="theme_dark">Dark</string>
     <string name="journal_send">Send to the seller</string>
 
-    <string name="consent_denied">The tunnel cannot start without the system's permission</string>
+    <string name="consent_denied">The tunnel cannot start without permission from the system</string>
     <string name="error_no_interface">The system did not give out a network interface</string>
 
     <!--
