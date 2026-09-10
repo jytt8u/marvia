@@ -87,7 +87,9 @@ func fail(kind string, err error) error {
 type Tunnel struct {
 	mu sync.Mutex
 
-	dialer *client.Dialer
+	// Не просто дозвон, а надзор над ним: он сам меняет ноду, когда текущая
+	// замолчала, и подменяет её под мостом. Мост об этом не знает.
+	dialer *client.Supervisor
 	bridge *tunbridge.Bridge
 
 	nodeName  string
@@ -123,12 +125,16 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 		dns = DefaultDNS
 	}
 
-	dialer, err := connect(accountLink, cacheDir)
+	t := &Tunnel{running: true}
+
+	// Имя ноды переписываем при переезде: иначе окно будет показывать ту,
+	// через которую трафик давно не идёт.
+	dialer, err := connect(accountLink, cacheDir, t.switched)
 	if err != nil {
 		return nil, err
 	}
-
-	t := &Tunnel{dialer: dialer, nodeName: dialer.Node().Title(), running: true}
+	t.dialer = dialer
+	t.nodeName = dialer.Node().Title()
 
 	bridgeOwnsFD = true
 	bridge, err := tunbridge.Start(tunbridge.Config{
@@ -152,7 +158,7 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 // Вынесено отдельно не ради красоты: так эту часть можно проверить тестом, не
 // выдумывая дескриптор интерфейса. Выдуманный дескриптор в тесте — это номер,
 // который на Linux принадлежит чему-то настоящему.
-func connect(accountLink, cacheDir string) (*client.Dialer, error) {
+func connect(accountLink, cacheDir string, onSwitch func(client.Node)) (*client.Supervisor, error) {
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
 		return nil, fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))
@@ -170,11 +176,15 @@ func connect(accountLink, cacheDir string) (*client.Dialer, error) {
 	// Список нод при этом по возможности берём из кэша: каждый поход в панель
 	// — это запрос имени её домена, а он с недавних пор уходит провайдеру
 	// открытым текстом. Подробности в internal/client/cache.go.
-	dialer, measurements, err := client.Connect(context.Background(), client.ConnectConfig{
+	// Supervise, а не Connect: подключение то же самое, но за нодой дальше
+	// следят и меняют её, если она замолчала. Без этого туннель, чью ноду
+	// заблокировали, не рвётся — он глохнет, и телефон продолжает показывать
+	// «Подключено», пока у человека наполовину не грузится всё подряд.
+	dialer, measurements, err := client.Supervise(context.Background(), client.ConnectConfig{
 		Account:   account,
 		Key:       key,
 		CachePath: cachePath(cacheDir),
-	})
+	}, onSwitch)
 
 	// Отчёт уходит в любом случае, в том числе когда не подключилось ни к
 	// одной ноде: продавцу важнее всего узнать именно про такой случай.
@@ -224,6 +234,19 @@ func (t *Tunnel) note(err error) {
 	}
 	t.mu.Lock()
 	t.lastError = err.Error()
+	t.mu.Unlock()
+}
+
+// switched зовётся надзором после переезда на другую ноду.
+//
+// Имя переписываем обязательно: иначе окно продолжит показывать ноду, через
+// которую трафик давно не идёт, и человек, глядя на «Финляндия», будет думать
+// про Финляндию, когда он уже в Дубае. Прежнюю ошибку заодно стираем —
+// переезд её и лечил.
+func (t *Tunnel) switched(n client.Node) {
+	t.mu.Lock()
+	t.nodeName = n.Title()
+	t.lastError = ""
 	t.mu.Unlock()
 }
 
