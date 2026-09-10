@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,6 +41,13 @@ func New(baseURL, token string) *Client {
 	}
 }
 
+// ErrNodeDisabled — панель говорит, что нода выключена.
+//
+// Отдельная ошибка, потому что реакция на неё принципиально другая: не
+// падать, а ждать. Продавец выключил ноду сам и включит обратно тем же
+// нажатием — нода обязана дожить до этого нажатия.
+var ErrNodeDisabled = errors.New("нода выключена в панели")
+
 // FetchUsers забирает список пользователей для этой ноды.
 func (c *Client) FetchUsers(ctx context.Context) ([]users.User, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/api/v1/node/users", nil)
@@ -54,6 +62,15 @@ func (c *Client) FetchUsers(ctx context.Context) ([]users.User, error) {
 	}
 	defer resp.Body.Close()
 
+	// Отключённую ноду отличаем от всего остального отдельной ошибкой.
+	//
+	// Это не сбой, а решение продавца: он убрал ноду из подписок и вправе
+	// вернуть её одним нажатием. Нода, которая от такого ответа умирает,
+	// делает решение необратимым — и на живой машине это вылилось в семь с
+	// лишним тысяч перезапусков подряд, каждый со своим запросом к панели.
+	if resp.StatusCode == http.StatusForbidden {
+		return nil, ErrNodeDisabled
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("панель ответила %s", resp.Status)
 	}
