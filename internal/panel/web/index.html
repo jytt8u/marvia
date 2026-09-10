@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+    state.apps = apps || null;
+    state.known = true;<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
@@ -715,17 +716,41 @@ const state = {
   rowsPage: 1,
   loading: false,
   error: null,
+
+  // Знаем ли мы уже, что в панели. До первого успешного ответа не знаем —
+  // и обязаны это говорить, а не рисовать нули. Продавец, открывший панель и
+  // увидевший «ни одного клиента», решает, что потерял базу.
+  known: false,
 };
 
+// Сколько ждём ответа панели.
+//
+// Без предела запрос, который не вернулся, вешает страницу навсегда: панель
+// показывает «Обновляю…» и нули, продавец видит «ни одного клиента» и решает,
+// что потерял базу. Так и случилось на живой панели. Полминуты — с запасом на
+// медленную ручку и на канал из-за границы.
+const API_TIMEOUT = 30000;
+
 async function api(path, method, body) {
-  const res = await fetch(path, {
-    method: method || "GET",
-    headers: Object.assign(
-      { Authorization: "Bearer " + state.token },
-      body ? { "Content-Type": "application/json" } : {}
-    ),
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(path, {
+      method: method || "GET",
+      signal: AbortSignal.timeout(API_TIMEOUT),
+      headers: Object.assign(
+        { Authorization: "Bearer " + state.token },
+        body ? { "Content-Type": "application/json" } : {}
+      ),
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    // AbortSignal.timeout бросает TimeoutError. Отличать его от обрыва сети
+    // важно: это разные беды и чинятся по-разному.
+    if (err && err.name === "TimeoutError") {
+      throw new Error(L().err.slow(path, Math.round(API_TIMEOUT / 1000)));
+    }
+    throw new Error(L().err.noPanel(path));
+  }
   if (res.status === 401) {
     logout();
     throw new Error(L().err.badToken);
@@ -756,6 +781,9 @@ async function loadAll() {
     state.stats = stats || null;
     state.keys = (keys && keys.keys) || [];
     state.apps = apps || null;
+
+    // Теперь мы действительно знаем, что в панели, и можем показывать числа.
+    state.known = true;
   } catch (err) {
     state.error = err.message;
   } finally {
@@ -1576,7 +1604,13 @@ const TEXTS = {
     },
 
     backup: { taking: "Снимаю копию…", done: "Копия базы скачана", failed: (code) => "копия не снялась: код " + code },
-    err: { badToken: "токен не подошёл", code: (n) => "код " + n },
+    err: {
+      badToken: "токен не подошёл",
+      code: (n) => "код " + n,
+      slow: (path, sec) => "панель не ответила за " + sec + " с на " + path,
+      noPanel: (path) => "панель не отвечает на " + path,
+      unknown: "пока не знаю",
+    },
   },
 
   en: {
@@ -1782,7 +1816,13 @@ const TEXTS = {
     },
 
     backup: { taking: "Taking a copy…", done: "Database copy downloaded", failed: (code) => "the copy failed: code " + code },
-    err: { badToken: "token was not accepted", code: (n) => "code " + n },
+    err: {
+      badToken: "token was not accepted",
+      code: (n) => "code " + n,
+      slow: (path, sec) => "the panel did not answer " + path + " within " + sec + " s",
+      noPanel: (path) => "the panel is not answering " + path,
+      unknown: "not known yet",
+    },
   },
 };
 
@@ -1977,15 +2017,25 @@ function renderVals() {
   }));
 
   // ── обзор ────────────────────────────────────────────────────────────────
+  // Пока не знаем — прочерк, а не ноль.
+  //
+  // Ноль здесь читается как утверждение: «клиентов нет», «трафика нет». Если
+  // панель на самом деле ещё не ответила, это ложь, и ложь дорогая: продавец
+  // видит пустую панель и думает, что потерял базу.
+  const num = (v) => (state.known ? String(v) : "—");
+  const size = (v) => (state.known ? bytes(v) : "—");
+
   const kpis = [
-    [d18.kpi.activeKeys, String(activeUsers), d18.kpi.allTotal(users.length), true],
-    [d18.kpi.traffic30, bytes(total), d18.kpi.byAllNodes, true],
+    [d18.kpi.activeKeys, num(activeUsers), state.known ? d18.kpi.allTotal(users.length) : d18.err.unknown, true],
+    [d18.kpi.traffic30, size(total), d18.kpi.byAllNodes, true],
     // При нуле нод «все отвечают» — формально верно и совершенно бесполезно:
     // отвечать некому, и продавать пока нечего.
-    [d18.kpi.nodesLive, liveNodes + " / " + nodes.length,
-      nodes.length === 0 ? d18.kpi.noNodes : liveNodes === nodes.length ? d18.kpi.allAnswer : d18.kpi.notAllAnswer,
-      nodes.length > 0 && liveNodes === nodes.length],
-    [d18.kpi.expiring, String(expiring), d18.kpi.inSevenDays, expiring === 0],
+    [d18.kpi.nodesLive, state.known ? liveNodes + " / " + nodes.length : "—",
+      !state.known ? d18.err.unknown
+        : nodes.length === 0 ? d18.kpi.noNodes
+        : liveNodes === nodes.length ? d18.kpi.allAnswer : d18.kpi.notAllAnswer,
+      state.known && nodes.length > 0 && liveNodes === nodes.length],
+    [d18.kpi.expiring, num(expiring), d18.kpi.inSevenDays, expiring === 0],
   ].map(([label, value, delta, good]) => ({
     label, value, delta, style: card,
     deltaStyle: "font-size:12px;margin-top:6px;color:" + (good ? t.acc : t.dim),
@@ -2322,14 +2372,16 @@ function renderVals() {
     totalTraffic: bytes(total),
     firstDay: byDay.length ? dayLabel(byDay[0].day) : "",
     lastDay: byDay.length ? dayLabel(byDay[byDay.length - 1].day) : "",
-    noNodes: nodes.length === 0,
-    noClients: users.length === 0,
+    // «Ни одной ноды» говорим только когда действительно знаем. Иначе пусто —
+    // пусть лучше будет пустое место, чем неверное утверждение.
+    noNodes: state.known && nodes.length === 0,
+    noClients: state.known && users.length === 0,
     allClients: "font-size:12px;cursor:pointer;color:" + t.acc,
-    allClientsLabel: d18.dash.allClients(users.length),
+    allClientsLabel: state.known ? d18.dash.allClients(users.length) : "",
     goClients: () => setState({ page: "clients" }),
 
     pageKpis, tableCols, tableHead, tableRows,
-    noTableRows: tableRows.length === 0,
+    noTableRows: state.known && tableRows.length === 0,
     emptyTable: tbl.empty,
 
     hasPages: totalRows > ROWS,
