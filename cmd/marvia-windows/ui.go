@@ -82,6 +82,7 @@ func serveUI(ctl *Controller, log *journal) (string, *http.Server, error) {
 	mux.HandleFunc("POST "+prefix+"/api/connect", u.connect)
 	mux.HandleFunc("POST "+prefix+"/api/disconnect", u.disconnect)
 	mux.HandleFunc("POST "+prefix+"/api/proxy/off", u.dropProxy)
+	mux.HandleFunc("POST "+prefix+"/api/lang", u.setLang)
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -117,14 +118,14 @@ func (u *ui) setAccount(w http.ResponseWriter, r *http.Request) {
 		Link string `json:"link"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&body); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "не разобрал запрос"})
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": say("badRequest")})
 		return
 	}
 	if err := u.ctl.SetAccount(strings.TrimSpace(body.Link)); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return
 	}
-	u.log.add("ключ доступа сохранён")
+	u.log.add("%s", say("logKeySaved"))
 	writeJSON(w, http.StatusOK, map[string]any{})
 }
 
@@ -155,4 +156,21 @@ func writeJSON(w http.ResponseWriter, code int, payload any) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+// setLang запоминает язык, выбранный в окне.
+//
+// Выбирает его окно, а не программа: язык там берётся у браузера, то есть у
+// системы, и человек может его переключить. Программе он нужен затем, что
+// часть сообщений — ошибки и строки журнала — собирается здесь.
+func (u *ui) setLang(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Lang string `json:"lang"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": say("badRequest")})
+		return
+	}
+	setUILang(body.Lang)
+	writeJSON(w, http.StatusOK, map[string]any{})
 }

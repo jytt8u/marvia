@@ -170,12 +170,12 @@ func (c *Controller) DropProxy() error {
 	left := c.proxy
 	c.mu.Unlock()
 
-	c.log.add("системный прокси снят")
+	c.log.add("%s", say("logProxyGone"))
 
 	// Переменные окружения остаются жить в уже запущенных программах: они
 	// прочитали их при старте, и наша правка реестра до них не дойдёт.
 	if left.Found() && left.FromEnv {
-		return errors.New("прокси остался в переменных окружения — его убирает та программа, которая поставила")
+		return errors.New(say("proxyInEnv"))
 	}
 	return nil
 }
@@ -215,11 +215,11 @@ func (c *Controller) Connect() error {
 	}
 	if c.account == "" {
 		c.mu.Unlock()
-		return errors.New("не задана ссылка доступа")
+		return errors.New(say("noAccount"))
 	}
 	if !elevated() {
 		c.mu.Unlock()
-		return errors.New("нужны права администратора: без них Windows не даст создать сетевой адаптер")
+		return errors.New(say("needAdmin"))
 	}
 
 	account := c.account
@@ -244,7 +244,7 @@ func (c *Controller) connect(ctx context.Context, link string) {
 			c.finish(StateIdle, "")
 			return
 		}
-		c.log.add("не подключилось: %v", err)
+		c.log.add("%s", sayf("logNoConnect", err))
 		c.finish(StateFailed, err.Error())
 	}
 }
@@ -253,11 +253,11 @@ func (c *Controller) connect(ctx context.Context, link string) {
 func (c *Controller) raise(ctx context.Context, link string) error {
 	account, err := client.ParseAccountLink(link)
 	if err != nil {
-		return fmt.Errorf("ссылка доступа: %w", err)
+		return fmt.Errorf("%s: %w", say("accountLink"), err)
 	}
 	key, err := vp1.KeyPairFromPrivate(account.PrivateKey)
 	if err != nil {
-		return fmt.Errorf("личный ключ: %w", err)
+		return fmt.Errorf("%s: %w", say("privateKey"), err)
 	}
 
 	// Список нод по возможности берём из кэша: каждый поход в панель — это
@@ -280,7 +280,7 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 
 	node := dialer.Node()
 	ping := latencyOf(measurements, node)
-	c.log.add("выбрана нода %s, задержка %d мс", node.Name, ping.Milliseconds())
+	c.log.add("%s", sayf("logNodePicked", node.Name, ping.Milliseconds()))
 
 	// Адреса ноды выясняем до того, как заберём себе трафик: после этого
 	// запросы имён пойдут в туннель, которого ещё нет.
@@ -301,7 +301,7 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 		return err
 	}
 
-	c.log.add("создаю сетевой адаптер и настраиваю маршруты")
+	c.log.add("%s", say("logAdapter"))
 	adapter, err := wintun.Open(wintun.Config{
 		Name:    adapterName,
 		MTU:     c.mtu,
@@ -319,12 +319,12 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 		MTU:      c.mtu,
 		Dialer:   &countingDialer{inner: dialer, up: &c.up, down: &c.down},
 		DNS:      c.dns,
-		OnError:  func(err error) { c.log.add("соединение: %v", err) },
+		OnError:  func(err error) { c.log.add("%s", sayf("logConn", err)) },
 	})
 	if err != nil {
 		_ = adapter.Close()
 		_ = dialer.Close()
-		return fmt.Errorf("сетевой мост: %w", err)
+		return fmt.Errorf("%s: %w", say("bridge"), err)
 	}
 
 	c.mu.Lock()
@@ -335,7 +335,7 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 	c.reason = ""
 	c.mu.Unlock()
 
-	c.log.add("туннель поднят: весь трафик идёт через %s", node.Name)
+	c.log.add("%s", sayf("logTunnelUp", node.Name))
 
 	// Сторож живёт на том же контексте, что и подключение: «отключиться»
 	// гасит и его, отдельного выключателя заводить не надо.
@@ -375,7 +375,7 @@ func (c *Controller) watch(ctx context.Context, dialer *client.Dialer) {
 
 		if err == nil {
 			if misses >= watchMisses {
-				c.log.add("нода снова отвечает")
+				c.log.add("%s", say("logNodeBack"))
 				c.unstall()
 			}
 			misses = 0
@@ -387,8 +387,8 @@ func (c *Controller) watch(ctx context.Context, dialer *client.Dialer) {
 			continue
 		}
 
-		c.log.add("нода не отвечает на %d проверки подряд: %v", watchMisses, err)
-		c.stall("нода не отвечает — туннель поднят, но трафик через неё не идёт")
+		c.log.add("%s", sayf("logNodeSilent", watchMisses, err))
+		c.stall(say("nodeSilent"))
 	}
 }
 
@@ -439,14 +439,14 @@ func (c *Controller) Disconnect() {
 	}
 	if adapter != nil {
 		if err := adapter.Close(); err != nil {
-			c.log.add("при уборке: %v", err)
+			c.log.add("%s", sayf("logCleanup", err))
 		}
 	}
 	if dialer != nil {
 		_ = dialer.Close()
 	}
 	if bridge != nil || adapter != nil {
-		c.log.add("туннель убран, маршруты сняты")
+		c.log.add("%s", say("logTunnelDown"))
 	}
 }
 

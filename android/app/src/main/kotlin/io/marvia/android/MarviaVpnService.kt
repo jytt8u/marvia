@@ -81,7 +81,7 @@ class MarviaVpnService : VpnService() {
             return
         }
 
-        Journal.add("включаю туннель")
+        Journal.add(getString(R.string.log_tunnel_on))
         MarviaState.set(TunnelState.Connecting)
 
         worker = scope.launch {
@@ -115,7 +115,7 @@ class MarviaVpnService : VpnService() {
                 limitBytes = started.trafficLimit(),
                 leftBytes = started.trafficLeft(),
             )
-            Journal.add("подключено через " + node)
+            Journal.add(getString(R.string.log_connected, node))
             MarviaState.set(TunnelState.On(node, subscription = subscription))
             goForeground(getString(R.string.status_on), getString(R.string.detail_node, node))
 
@@ -221,7 +221,7 @@ class MarviaVpnService : VpnService() {
             // В журнал — чтобы причину можно было достать с чужого телефона,
             // где экран уже закрыли и пересказывают по памяти.
             Log.w(TAG, "туннель не поднялся (${state.kind}): ${state.detail}")
-            Journal.add("не поднялся: " + state.kind + " — " + state.detail)
+            Journal.add(getString(R.string.log_failed, state.kind, state.detail))
         }
 
         worker?.cancel()
