@@ -44,13 +44,14 @@ object Journal {
      */
     @Synchronized
     fun report(context: Context): String = buildString {
-        append("Marvia · журнал\n")
+        append(context.getString(R.string.log_header)).append('\n')
         append(Build.MANUFACTURER).append(' ').append(Build.MODEL)
         append(", Android ").append(Build.VERSION.RELEASE).append('\n')
 
         val store = Store(context)
-        append("исключено приложений: ").append(store.bypassed.size)
-        append(", российские подсети мимо: ").append(if (store.bypassRussian) "да" else "нет")
+        val local = context.getString(if (store.bypassRussian) R.string.log_yes else R.string.log_no)
+        append(context.getString(R.string.log_bypassed, store.bypassed.size))
+        append(context.getString(R.string.log_bypass_local, local))
         append('\n').append('\n')
 
         for (line in lines) {

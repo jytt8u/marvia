@@ -1,34 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Английский лежит в values по умолчанию, русский — в values-ru.
+
+    Так задумано в Android: values — запасной вариант для всех, у кого нет
+    своей папки. Держать в нём русский значило бы показывать русские надписи
+    человеку с турецким или персидским телефоном — а это ровно те, ради кого
+    приложение и делается.
+-->
 <resources>
     <string name="app_name">Marvia</string>
 
-    <string name="status_off">Отключено</string>
-    <string name="status_connecting">Подключаюсь…</string>
-    <string name="status_on">Подключено</string>
-    <string name="status_failed">Не подключилось</string>
+    <string name="status_off">Disconnected</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_on">Connected</string>
+    <string name="status_failed">Could not connect</string>
 
-    <string name="detail_off">Трафик идёт напрямую</string>
-    <string name="detail_connecting">Выбираю самую быструю ноду</string>
-    <string name="detail_no_key">Вставь ключ доступа</string>
-    <string name="detail_node">Нода: %1$s</string>
-    <string name="detail_node_warning">Нода: %1$s · %2$s</string>
+    <string name="detail_off">Traffic goes directly</string>
+    <string name="detail_connecting">Picking the fastest node</string>
+    <string name="detail_no_key">Paste your access key</string>
+    <string name="detail_node">Node: %1$s</string>
+    <string name="detail_node_warning">Node: %1$s · %2$s</string>
 
     <!-- Подписка: до какого числа и сколько трафика осталось. -->
-    <string name="sub_until">До %1$s</string>
-    <string name="sub_until_left">До %1$s · осталось %2$s</string>
-    <string name="sub_left">Осталось %1$s</string>
-    <string name="sub_unlimited">Без ограничений</string>
-    <string name="size_gb">%1$s ГБ</string>
-    <string name="size_mb">%1$d МБ</string>
+    <string name="sub_until">Until %1$s</string>
+    <string name="sub_until_left">Until %1$s · %2$s left</string>
+    <string name="sub_left">%1$s left</string>
+    <string name="sub_unlimited">Unlimited</string>
+    <string name="size_gb">%1$s GB</string>
+    <string name="size_mb">%1$d MB</string>
 
-    <string name="action_connect">Подключиться</string>
-    <string name="action_disconnect">Отключиться</string>
-    <string name="action_save">Сохранить ключ</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="action_save">Save the key</string>
 
-    <string name="key_hint">Ключ доступа</string>
-    <string name="key_helper">Ссылка вида marvia://… — её выдаёт бот при оплате</string>
-    <string name="key_saved">Ключ сохранён</string>
-    <string name="key_empty">Поле пустое</string>
+    <string name="key_hint">Access key</string>
+    <string name="key_helper">A marvia://… link — the bot sends it on payment</string>
+    <string name="key_saved">Key saved</string>
+    <string name="key_empty">The field is empty</string>
 
     <!--
         Ссылку приложению может подсунуть любое другое приложение или страница,
@@ -36,59 +44,59 @@
         Когда ключ уже стоит, подмена увела бы весь трафик на чужие серверы,
         поэтому спрашиваем.
     -->
-    <string name="key_replace_title">Заменить ключ доступа?</string>
-    <string name="key_replace_body">Ссылка пришла из другого приложения. После замены трафик пойдёт через серверы того, кто её выдал. Соглашайся, только если ссылку прислал твой продавец.</string>
-    <string name="key_replace_yes">Заменить</string>
-    <string name="key_replace_no">Оставить прежний</string>
+    <string name="key_replace_title">Replace the access key?</string>
+    <string name="key_replace_body">This link came from another app. After replacing it, your traffic goes through the servers of whoever issued it. Agree only if the link came from your seller.</string>
+    <string name="key_replace_yes">Replace</string>
+    <string name="key_replace_no">Keep the old one</string>
 
     <!--
         Байпас. Значок VPN в шторке остаётся всегда — его рисует Android, пока
-        поднят туннель. Но госуслуги ломает не значок, а зарубежный адрес
+        поднят туннель. Но местные сервисы ломает не значок, а зарубежный адрес
         ноды, и вот его исключение из туннеля и чинит.
     -->
-    <string name="bypass_open">Приложения мимо туннеля</string>
-    <string name="bypass_title">Что не пускать в туннель</string>
-    <string name="bypass_none">Все приложения идут через туннель</string>
-    <string name="bypass_some">Мимо туннеля: %1$d</string>
-    <string name="bypass_hint">Госуслуги, банки и всё государственное не отвечают на запросы из-за границы. Отправь их мимо — у них останется обычный интернет с российским адресом.</string>
-    <string name="bypass_preset">Госуслуги и банки</string>
-    <string name="bypass_save">Сохранить</string>
-    <string name="bypass_restart">Изменения применятся при следующем подключении</string>
-    <string name="bypass_loading">Смотрю, что установлено…</string>
+    <string name="bypass_open">Apps outside the tunnel</string>
+    <string name="bypass_title">What to keep out of the tunnel</string>
+    <string name="bypass_none">Every app goes through the tunnel</string>
+    <string name="bypass_some">Outside the tunnel: %1$d</string>
+    <string name="bypass_hint">Government services, banks and other local sites often refuse requests coming from abroad. Send them outside — they keep an ordinary connection with a local address.</string>
+    <string name="bypass_preset">Government services and banks</string>
+    <string name="bypass_save">Save</string>
+    <string name="bypass_restart">Changes apply on the next connection</string>
+    <string name="bypass_loading">Looking at what is installed…</string>
 
     <!--
-        Российские сайты мимо туннеля. Предлагаем при первом удачном
-        подключении: про эту возможность человек вспоминает ровно тогда, когда
-        у него не открылись госуслуги, — то есть уже разозлившись.
+        Местные сайты мимо туннеля. Предлагаем при первом удачном подключении:
+        про эту возможность человек вспоминает ровно тогда, когда у него не
+        открылся банк, — то есть уже разозлившись.
     -->
-    <string name="bypass_ru_title">Российские сайты — мимо туннеля?</string>
-    <string name="bypass_ru_body">Госуслуги, банки и почта не отвечают на запросы из-за границы. Если увести их мимо, они будут открываться как обычно, а всё остальное пойдёт через туннель.</string>
-    <string name="bypass_ru_yes">Увести мимо</string>
-    <string name="bypass_ru_no">Не надо</string>
-    <string name="bypass_ru_on">Российские сайты мимо</string>
+    <string name="bypass_ru_title">Local sites outside the tunnel?</string>
+    <string name="bypass_ru_body">Government services, banks and mail often refuse requests from abroad. Sent outside, they open as usual, while everything else keeps going through the tunnel.</string>
+    <string name="bypass_ru_yes">Send them outside</string>
+    <string name="bypass_ru_no">No need</string>
+    <string name="bypass_ru_on">Local sites outside</string>
 
     <!--
         Настройки. Здесь нет ручек протокола: их место внутри, а не на экране
         человека, который не может выбрать между ними осознанно.
     -->
-    <string name="settings_title">Настройки</string>
-    <string name="settings_apps">Приложения мимо туннеля</string>
-    <string name="settings_autostart_off">Включаться после перезагрузки: нет</string>
-    <string name="settings_autostart_on">Включаться после перезагрузки: да</string>
-    <string name="settings_autostart_short">автозапуск</string>
-    <string name="settings_autostart_saved">После перезагрузки телефона туннель поднимется сам</string>
-    <string name="settings_autostart_off_saved">После перезагрузки придётся включить руками</string>
-    <string name="settings_always_on">Постоянный VPN в системе</string>
-    <string name="settings_always_on_missing">На этом телефоне нет такого раздела настроек</string>
-    <string name="settings_theme">Тема</string>
-    <string name="settings_journal">Журнал</string>
-    <string name="theme_system">Как в системе</string>
-    <string name="theme_light">Светлая</string>
-    <string name="theme_dark">Тёмная</string>
-    <string name="journal_send">Отправить продавцу</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_apps">Apps outside the tunnel</string>
+    <string name="settings_autostart_off">Start after reboot: no</string>
+    <string name="settings_autostart_on">Start after reboot: yes</string>
+    <string name="settings_autostart_short">autostart</string>
+    <string name="settings_autostart_saved">The tunnel will come up by itself after a reboot</string>
+    <string name="settings_autostart_off_saved">After a reboot you will have to turn it on by hand</string>
+    <string name="settings_always_on">Always-on VPN in the system</string>
+    <string name="settings_always_on_missing">This phone has no such settings screen</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_journal">Log</string>
+    <string name="theme_system">Follow the system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="journal_send">Send to the seller</string>
 
-    <string name="consent_denied">Без разрешения системы туннель поднять нельзя</string>
-    <string name="error_no_interface">Система не выдала сетевой интерфейс</string>
+    <string name="consent_denied">The tunnel cannot start without the system's permission</string>
+    <string name="error_no_interface">The system did not give out a network interface</string>
 
     <!--
         Фразы под виды неудач из ядра. Задача каждой — сказать человеку, что
@@ -100,15 +108,28 @@
         отвечает», шёл к продавцу с «у вас всё сломалось», и продавец
         разбирался с каждым таким вручную.
     -->
-    <string name="fail_expired">Подписка кончилась. Продли её у продавца — доступ включится сразу</string>
-    <string name="fail_quota">Кончился оплаченный трафик. Напиши продавцу, чтобы добавил</string>
+    <string name="fail_expired">Your subscription has ended. Renew it with your seller — access comes back at once</string>
+    <string name="fail_quota">You are out of paid traffic. Ask your seller to add more</string>
 
-    <string name="fail_account">Ключ доступа не подошёл. Возьми новый у продавца</string>
-    <string name="fail_panel">Не получается получить список серверов. Проверь, есть ли интернет</string>
-    <string name="fail_nodes">Ни один сервер сейчас не отвечает. Попробуй позже или напиши продавцу</string>
-    <string name="fail_system">Телефон не дал создать подключение. Попробуй ещё раз</string>
+    <string name="fail_account">The access key was not accepted. Get a new one from your seller</string>
+    <string name="fail_panel">Cannot fetch the server list. Check that you have internet</string>
+    <string name="fail_nodes">No server is responding right now. Try later or write to your seller</string>
+    <string name="fail_system">The phone would not create the connection. Try again</string>
 
-    <string name="notification_channel">Туннель</string>
-    <string name="notification_channel_desc">Показывает, работает ли туннель</string>
-    <string name="notification_stop">Отключить</string>
+    <string name="notification_channel">Tunnel</string>
+    <string name="notification_channel_desc">Shows whether the tunnel is running</string>
+    <string name="notification_stop">Disconnect</string>
+
+    <!--
+        Строки журнала. Журнал человек отправляет продавцу, то есть читает его
+        не только он, — поэтому он такой же перевод, как и всё остальное.
+    -->
+    <string name="log_header">Marvia · log</string>
+    <string name="log_bypassed">apps outside the tunnel: %1$d</string>
+    <string name="log_bypass_local">, local subnets outside: %1$s</string>
+    <string name="log_yes">yes</string>
+    <string name="log_no">no</string>
+    <string name="log_tunnel_on">turning the tunnel on</string>
+    <string name="log_connected">connected through %1$s</string>
+    <string name="log_failed">did not come up: %1$s — %2$s</string>
 </resources>
