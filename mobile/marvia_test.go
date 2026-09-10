@@ -51,7 +51,7 @@ func TestConnectNamesFailureKind(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Каталог пустой: кэша в нём ещё нет, и подключение обязано идти
 			// ровно тем же путём, каким шло до появления кэша.
-			_, err := connect(tc.link, t.TempDir())
+			_, err := connect(tc.link, t.TempDir(), nil)
 			if err == nil {
 				t.Fatalf("ожидалась ошибка, но подключение прошло")
 			}
