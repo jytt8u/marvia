@@ -244,6 +244,73 @@ func (s *Supervisor) noticed(ctx context.Context, err error) {
 	}
 }
 
+// Select переводит туннель на ноду, выбранную человеком.
+//
+// id == 0 означает возврат к автовыбору. Выбор запоминается и переживает
+// переезды: если выбранная страна замолчала, надзор уедет на живую, а когда
+// человек переподключится — вернётся к выбранной, если она ожила.
+//
+// Туннель при этом не рвётся: меняется дозвон под мостом, ровно как при
+// переезде. Человек не теряет ни одного открытого соединения, кроме тех, что
+// шли через прежнюю ноду, — их не сохранить в принципе.
+func (s *Supervisor) Select(ctx context.Context, id int64) error {
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return errors.New("туннель закрыт")
+	}
+	s.cfg.Prefer = id
+	cur := s.dialer
+	s.mu.Unlock()
+
+	// Уже на ней — переподключаться незачем: это стоило бы человеку всех
+	// открытых соединений ради того, что и так выполнено.
+	if cur != nil && id != 0 && cur.Node().ID == id {
+		return nil
+	}
+
+	if !s.move(ctx, cur) {
+		return errors.New("не вышло переключиться: нода не ответила")
+	}
+	return nil
+}
+
+// Selected — что выбрано руками. Ноль означает автовыбор.
+func (s *Supervisor) Selected() int64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cfg.Prefer
+}
+
+// Nodes — список нод из последней подписки.
+func (s *Supervisor) Nodes() []Node {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.dialer == nil {
+		return nil
+	}
+	return s.dialer.Subscription().Nodes
+}
+
+// Measure меряет все ноды заново — для экрана выбора страны.
+//
+// Отдельными соединениями, не через туннель: замер должен показать, как
+// откроется нода, а не как она работает через другую ноду.
+func (s *Supervisor) Measure(ctx context.Context) []Measurement {
+	s.mu.Lock()
+	cfg := s.cfg
+	var nodes []Node
+	if s.dialer != nil {
+		nodes = s.dialer.Subscription().Nodes
+	}
+	s.mu.Unlock()
+
+	if len(nodes) == 0 {
+		return nil
+	}
+	return MeasureAll(ctx, nodes, cfg.Key, cfg.Dial)
+}
+
 // Node — нода, через которую идёт трафик прямо сейчас.
 func (s *Supervisor) Node() Node {
 	s.mu.Lock()
@@ -447,7 +514,13 @@ func (s *Supervisor) move(ctx context.Context, dead *Dialer) bool {
 	pick, cancel := context.WithTimeout(ctx, moveTimeout)
 	defer cancel()
 
-	fresh, _, err := Connect(pick, s.cfg)
+	// Настройки читаем под замком: выбор страны человек меняет из другого
+	// потока, и без замка это была бы гонка за поле cfg.Prefer.
+	s.mu.Lock()
+	cfg := s.cfg
+	s.mu.Unlock()
+
+	fresh, _, err := Connect(pick, cfg)
 	if err != nil {
 		s.log("переехать не удалось: %v", err)
 		return false

@@ -44,6 +44,12 @@ type ConnectConfig struct {
 
 	// Log — необязательный журнал хода подключения.
 	Log func(format string, args ...any)
+
+	// Prefer — нода, выбранная человеком руками; ноль означает автовыбор.
+	//
+	// Идентификатор, а не имя: продавец переименовывает ноды, и выбор,
+	// записанный именем, молча перестал бы действовать после переименования.
+	Prefer int64
 }
 
 // Connect выбирает лучшую ноду, стараясь не ходить в панель.
@@ -82,7 +88,7 @@ func Connect(ctx context.Context, cfg ConnectConfig) (*Dialer, []Measurement, er
 
 	if cached.Fresh() {
 		logf("замеряю ноды из кэша, их %d", len(cached.Nodes()))
-		dialer, m, err := SelectBest(ctx, cached.Nodes(), cfg.Key, cfg.Dial)
+		dialer, m, err := SelectPreferred(ctx, cached.Nodes(), cfg.Key, cfg.Dial, cfg.Prefer)
 		if err == nil {
 			// Срок и остаток берём из кэша: он вчерашний, но показать
 			// «осталось 12 ГБ» вчерашней точности лучше, чем не показать
@@ -127,7 +133,7 @@ func Connect(ctx context.Context, cfg ConnectConfig) (*Dialer, []Measurement, er
 	}
 
 	logf("замеряю ноды, их %d", len(sub.Nodes))
-	dialer, m, err := SelectBest(ctx, sub.Nodes, cfg.Key, cfg.Dial)
+	dialer, m, err := SelectPreferred(ctx, sub.Nodes, cfg.Key, cfg.Dial, cfg.Prefer)
 	return dialer.withSubscription(sub), m, err
 }
 
@@ -142,7 +148,7 @@ func lastHope(ctx context.Context, cached CachedSubscription, cfg ConnectConfig,
 	}
 
 	logf("панель недоступна, пробую протухший кэш")
-	dialer, m, err := SelectBest(ctx, cached.Nodes(), cfg.Key, cfg.Dial)
+	dialer, m, err := SelectPreferred(ctx, cached.Nodes(), cfg.Key, cfg.Dial, cfg.Prefer)
 	if err != nil {
 		return nil, m, false
 	}

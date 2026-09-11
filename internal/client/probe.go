@@ -111,10 +111,63 @@ func Probe(ctx context.Context, node Node, key vp1.KeyPair, opts Options) Measur
 // Возвращаются все замеры, а не только победитель: их надо отправить панели,
 // иначе продавец так и не узнает, что половина его нод не работает у людей.
 func SelectBest(ctx context.Context, nodes []Node, key vp1.KeyPair, opts Options) (*Dialer, []Measurement, error) {
+	return SelectPreferred(ctx, nodes, key, opts, 0)
+}
+
+// SelectPreferred — то же, но с нодой, выбранной человеком.
+//
+// prefer — её идентификатор; ноль означает обычный выбор по замеру. Меряем
+// всё равно все: экран выбора страны показывает время рядом с каждой, и
+// показывать его только у выбранной значило бы лишить человека того, ради
+// чего он туда зашёл — сравнения.
+//
+// Если выбранная нода не ответила, берём лучшую живую. Человек хотел
+// определённую страну, но интернет он хотел сильнее; о подмене ему скажут —
+// имя ноды на экране живое.
+func SelectPreferred(ctx context.Context, nodes []Node, key vp1.KeyPair, opts Options, prefer int64) (*Dialer, []Measurement, error) {
 	if len(nodes) == 0 {
 		return nil, nil, errors.New("список нод пуст")
 	}
 
+	results := probeAll(ctx, nodes, key, opts)
+
+	// Сортируем копию: порядок замеров должен совпадать с порядком нод,
+	// иначе отчёт панели уедет не про те ноды.
+	ranked := make([]Measurement, len(results))
+	copy(ranked, results)
+	sort.SliceStable(ranked, func(a, b int) bool {
+		if ranked[a].OK() != ranked[b].OK() {
+			return ranked[a].OK()
+		}
+		return ranked[a].Cost() < ranked[b].Cost()
+	})
+
+	winner := ranked[0]
+
+	// Выбор человека идёт впереди замера, но только если он жив.
+	if prefer != 0 {
+		for _, m := range ranked {
+			if m.Node.ID == prefer && m.OK() {
+				winner = m
+				break
+			}
+		}
+	}
+
+	if !winner.OK() {
+		closeAll(results, nil)
+		return nil, results, fmt.Errorf("ни одна нода не ответила: %w", winner.Err)
+	}
+
+	closeAll(results, winner.dialer)
+	return winner.dialer, results, nil
+}
+
+// probeAll меряет все ноды разом и оставляет их соединения открытыми.
+//
+// Закрывает их тот, кто звал: победителя надо сохранить, а при простом замере
+// для экрана выбора — закрыть все до одного.
+func probeAll(ctx context.Context, nodes []Node, key vp1.KeyPair, opts Options) []Measurement {
 	results := make([]Measurement, len(nodes))
 	slots := make(chan struct{}, maxParallelProbes)
 	var wg sync.WaitGroup
@@ -133,26 +186,18 @@ func SelectBest(ctx context.Context, nodes []Node, key vp1.KeyPair, opts Options
 	wg.Wait()
 
 	measureSpeeds(ctx, results)
+	return results
+}
 
-	// Сортируем копию: порядок замеров должен совпадать с порядком нод,
-	// иначе отчёт панели уедет не про те ноды.
-	ranked := make([]Measurement, len(results))
-	copy(ranked, results)
-	sort.SliceStable(ranked, func(a, b int) bool {
-		if ranked[a].OK() != ranked[b].OK() {
-			return ranked[a].OK()
-		}
-		return ranked[a].Cost() < ranked[b].Cost()
-	})
-
-	winner := ranked[0]
-	if !winner.OK() {
-		closeAll(results, nil)
-		return nil, results, fmt.Errorf("ни одна нода не ответила: %w", winner.Err)
-	}
-
-	closeAll(results, winner.dialer)
-	return winner.dialer, results, nil
+// MeasureAll меряет все ноды и ничего не оставляет открытым.
+//
+// Нужен экрану выбора страны: человек смотрит, где быстрее, и выбирает сам.
+// Меряем с его устройства, а не берём числа у панели — панель стоит за
+// границей и видит ноду живой ровно тогда, когда для телефона она уже мертва.
+func MeasureAll(ctx context.Context, nodes []Node, key vp1.KeyPair, opts Options) []Measurement {
+	results := probeAll(ctx, nodes, key, opts)
+	closeAll(results, nil)
+	return results
 }
 
 // closeAll закрывает все соединения, кроме соединения победителя.
