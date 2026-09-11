@@ -109,17 +109,15 @@ class MarviaVpnService : VpnService() {
             }
 
             core = started
+            // Отдаём ядро экрану: выбор страны спрашивает у него список нод.
+            MarviaState.hold(started)
+
             val node = started.nodeName()
-            val subscription = TunnelState.Subscription(
-                until = started.until(),
-                limitBytes = started.trafficLimit(),
-                leftBytes = started.trafficLeft(),
-            )
             Journal.add(getString(R.string.log_connected, node))
-            MarviaState.set(TunnelState.On(node, subscription = subscription))
+            MarviaState.set(snapshot(started, node))
             goForeground(getString(R.string.status_on), getString(R.string.detail_node, node))
 
-            watch(started, node, subscription)
+            watch(started, node)
         }
     }
 
@@ -196,8 +194,7 @@ class MarviaVpnService : VpnService() {
      * человек, глядя на мёртвое имя и на ошибки под ним, шёл переподключаться
      * руками. Ровно это и случилось на первой живой проверке.
      */
-    private suspend fun watch(started: Core, node: String, subscription: TunnelState.Subscription) {
-        var shown = ""
+    private suspend fun watch(started: Core, node: String) {
         var shownNode = node
         while (scope.isActive && started.running()) {
             delay(POLL_INTERVAL_MS)
@@ -211,16 +208,49 @@ class MarviaVpnService : VpnService() {
             val last = if (trouble.isEmpty()) started.lastError() else troubleText(trouble)
 
             val now = started.nodeName()
-            if (last != shown || now != shownNode) {
-                shown = last
-                if (now != shownNode) {
-                    shownNode = now
-                    Journal.add(getString(R.string.log_moved, now))
-                    goForeground(getString(R.string.status_on), getString(R.string.detail_node, now))
-                }
-                MarviaState.set(TunnelState.On(shownNode, last, subscription))
+            if (now != shownNode) {
+                shownNode = now
+                Journal.add(getString(R.string.log_moved, now))
+                goForeground(getString(R.string.status_on), getString(R.string.detail_node, now))
+            }
+
+            // Пересобираем целиком, а не только имя ноды: остаток трафика
+            // тает на глазах, и показывать число с момента подключения значит
+            // отвечать на «сколько осталось» вчерашним ответом.
+            val next = snapshot(started, shownNode, last)
+            if (next != MarviaState.state.value) {
+                MarviaState.set(next)
             }
         }
+    }
+
+    /**
+     * snapshot собирает всё, что экран показывает про работающий туннель.
+     *
+     * Список нод спрашиваем здесь же: из него видно и время отклика текущей
+     * ноды, и то, совпадает ли она с выбранной руками. Сети это не касается —
+     * ядро отдаёт то, что уже знает.
+     */
+    private fun snapshot(started: Core, node: String, warning: String = ""): TunnelState.On {
+        val rows = NodeRow.parse(started.nodes())
+        val current = rows.firstOrNull { it.current }
+        val chosen = rows.firstOrNull { it.chosen }
+
+        // Время отклика ядро между вызовами не помнит: в nodes() оно нулевое,
+        // и его приходится брать из последнего замера.
+        val ms = current?.let { if (it.ms > 0) it.ms else MarviaState.ping(it.id)?.ms ?: 0 } ?: 0
+
+        return TunnelState.On(
+            node = node,
+            warning = warning,
+            subscription = TunnelState.Subscription(
+                until = started.until(),
+                limitBytes = started.trafficLimit(),
+                leftBytes = started.trafficLeft(),
+            ),
+            ms = ms,
+            chosen = chosen?.title.orEmpty(),
+        )
     }
 
     /** troubleText подбирает фразу под код беды из ядра. */
@@ -259,6 +289,8 @@ class MarviaVpnService : VpnService() {
 
         val started = core
         core = null
+        // Экрану стран больше не у кого спрашивать: туннеля нет.
+        MarviaState.hold(null)
         if (started != null) {
             try {
                 started.stop()

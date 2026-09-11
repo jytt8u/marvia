@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="edge_pad">24dp</dimen>
+    <!-- Поля экрана из макета: 18 по краям, заголовок отступает сверху на 10. -->
+    <dimen name="screen_pad">18dp</dimen>
+    <dimen name="header_pad">10dp</dimen>
 </resources>

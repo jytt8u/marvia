@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ровно те значения, что стоят в макетах: макеты нарисованы тёмными. -->
+<resources>
+    <color name="veil_bg">#FF0F1218</color>
+    <color name="veil_surface">#FF191D24</color>
+    <color name="veil_border">#FF272D36</color>
+    <color name="veil_text">#FFF2F5F9</color>
+    <color name="veil_muted">#FF8B94A3</color>
+    <color name="veil_accent">#FF2F6FED</color>
+    <color name="veil_link">#FF6EA0FF</color>
+    <color name="veil_live">#FF4EC27F</color>
+    <color name="veil_warn">#FFE0A33A</color>
+    <color name="veil_fail">#FFE0707E</color>
+    <color name="veil_ring">#FF3A424E</color>
+    <color name="veil_chevron">#FF4D5766</color>
+</resources>

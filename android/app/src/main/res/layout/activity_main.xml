@@ -1,140 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Четыре экрана лежат друг на друге, видим всегда один. Так задумано: они
+    переключаются нижней панелью мгновенно и без пересборки, а состояние
+    подключения живёт в процессе и переживает любое переключение.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground"
-    android:orientation="vertical"
-    android:paddingHorizontal="24dp">
+    android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/appName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:alpha="0.55"
-        android:letterSpacing="0.32"
-        android:text="@string/app_name"
-        android:textAllCaps="true"
-        android:textSize="13sp"
-        android:textStyle="bold" />
-
-    <Space
+    <FrameLayout
+        android:id="@+id/content"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1">
 
-    <TextView
-        android:id="@+id/statusText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="@string/status_off"
-        android:textSize="32sp"
-        android:textStyle="bold" />
+        <include
+            android:id="@+id/keyScreen"
+            layout="@layout/screen_key" />
 
-    <TextView
-        android:id="@+id/detailText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:alpha="0.6"
-        android:gravity="center"
-        android:text="@string/detail_off"
-        android:textSize="14sp" />
+        <include
+            android:id="@+id/connectScreen"
+            layout="@layout/screen_connect" />
 
-    <!--
-        Подписка: до какого числа и сколько трафика осталось. Человек заплатил
-        и вправе это видеть, не спрашивая продавца, — а продавец вправе не
-        отвечать на такое вручную каждому.
-    -->
-    <TextView
-        android:id="@+id/subText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:alpha="0.45"
-        android:gravity="center"
-        android:textSize="13sp"
-        android:visibility="gone" />
+        <include
+            android:id="@+id/serversScreen"
+            layout="@layout/screen_servers" />
 
-    <!--
-        Подробности из ядра. Покупателю они не говорят ничего, поэтому мелко и
-        бледно, — но именно их он снимет вместе с экраном и пришлёт продавцу.
-        Текст можно выделить и скопировать: пересказывать такое по памяти
-        бессмысленно.
-    -->
-    <TextView
-        android:id="@+id/techText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:alpha="0.38"
-        android:gravity="center"
-        android:textIsSelectable="true"
-        android:textSize="12sp"
-        android:visibility="gone" />
+        <include
+            android:id="@+id/settingsScreen"
+            layout="@layout/screen_settings" />
+    </FrameLayout>
 
-    <Space
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/connectButton"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="@string/action_connect"
-        android:textSize="16sp"
-        app:cornerRadius="18dp" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/keyLayout"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="28dp"
-        android:hint="@string/key_hint"
-        app:endIconMode="clear_text"
-        app:helperText="@string/key_helper"
-        app:helperTextEnabled="true">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/keyInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textUri"
-            android:maxLines="3"
-            android:textSize="14sp" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/saveButton"
-        style="@style/Widget.Material3.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:layout_marginBottom="8dp"
-        android:text="@string/action_save" />
-
-    <!--
-        Приложения мимо туннеля. Внизу, под ключом: настраивают это один раз и
-        обычно уже после того, как наткнулись на неоткрывающиеся госуслуги.
-    -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/settingsButton"
-        style="@style/Widget.Material3.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
-        android:text="@string/settings_title" />
-
-    <TextView
-        android:id="@+id/settingsSummary"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:textAlignment="center"
-        android:textColor="?android:attr/textColorSecondary"
-        android:textSize="13sp" />
+    <include
+        android:id="@+id/nav"
+        layout="@layout/view_nav" />
 </LinearLayout>
