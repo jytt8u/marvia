@@ -92,6 +92,24 @@
   .page { display: none; flex: 1; min-height: 0; flex-direction: column; padding: 26px 32px 28px; position: relative; }
   .page[data-open] { display: flex; }
 
+  /* Список стран. Строка — кнопка: нажал и поехал, без «применить». */
+  .nodes { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .nodes .row-node {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 13px; border-radius: 10px; cursor: pointer;
+    background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
+    color: var(--text); text-align: left; font: inherit;
+  }
+  .nodes .row-node:hover { background: rgba(255,255,255,.06); }
+  .nodes .row-node[data-chosen] { border-color: rgba(77,124,254,.55); }
+  .nodes .row-node[data-current] { background: rgba(33,196,138,.10); }
+  .nodes .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #7c8aa5; }
+  .nodes .row-node[data-alive] .dot { background: var(--live); }
+  .nodes .grow { flex: 1; min-width: 0; }
+  .nodes .name { font-weight: 600; font-size: 14px; }
+  .nodes .sub { font-size: 12px; color: #8b97ad; margin-top: 2px; }
+  .nodes .ms { font-variant-numeric: tabular-nums; font-size: 13px; color: #8b97ad; flex: none; }
+
   .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
 
   /* ------------------------------------------------------------- кнопка */
@@ -264,6 +282,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="12" r="3.6"/><path d="M11.6 12H21M17.5 12v3.4M20.4 12v2.6"/></svg>
       <span data-t="tabKey">Ключ доступа</span>
     </button>
+    <button class="tab" data-tab="nodes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/><path d="M3.4 12h17.2M12 3.4c2.2 2.4 3.4 5.4 3.4 8.6S14.2 18.2 12 20.6c-2.2-2.4-3.4-5.4-3.4-8.6S9.8 5.8 12 3.4z"/></svg>
+      <span data-t="tabNodes">Страны</span>
+    </button>
     <button class="tab" data-tab="log">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg>
       <span data-t="tabLog">Журнал</span>
@@ -349,6 +371,12 @@
           </div>
           <div class="body" id="proxy-text"></div>
           <div class="body" id="proxy-care" data-t="proxyCare"></div>
+          <div class="act">
+            <button id="proxy-off" data-t="proxyOff"></button>
+            <span class="said" id="proxy-msg"></span>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ----------------------------------------------------------- ключ -->
@@ -364,6 +392,17 @@
         В ссылке личный ключ. Она лежит в профиле пользователя и никуда не
         отправляется — кроме адреса подписки, который в ней же и записан.
       </p>
+    </section>
+
+    <!-- --------------------------------------------------------- страны -->
+    <section class="page" data-tab="nodes">
+      <h2 data-t="nodesTitle"></h2>
+      <p class="lead" data-t="nodesLead"></p>
+      <div class="row">
+        <button class="primary" id="nodes-measure" data-t="nodesMeasure"></button>
+        <span id="nodes-msg" class="hint" style="margin:0"></span>
+      </div>
+      <div class="nodes" id="nodes-list"></div>
     </section>
 
     <!-- --------------------------------------------------------- журнал -->
@@ -392,6 +431,25 @@
 
 const $ = (id) => document.getElementById(id);
 
+// on вешает обработчик и не падает, если элемента нет.
+//
+// Прямая подписка через getElementById однажды уже обрушила всё окно: правка
+// разметки убрала кнопку, а подписку на неё оставила. Исключение прервало
+// загрузку на середине, и не выполнилось ничего из того, что шло ниже, —
+// перевод надписей, сохранение ключа, переключатель языка и, главное, опрос
+// состояния. Окно осталось живым на вид и мёртвым по сути.
+//
+// Пропажу не заминаем: она едет в консоль, чтобы её починили, — но роняет
+// теперь одну кнопку, а не всю страницу.
+function on(id, event, handler) {
+  const el = $(id);
+  if (!el) {
+    console.error("нет элемента " + id + ": обработчик не повешен");
+    return;
+  }
+  el.addEventListener(event, handler);
+}
+
 /* ----------------------------------------------------------------- язык */
 
 /*
@@ -413,7 +471,13 @@ const T = {
   ru: {
     lang: "ru", switchTo: "EN", switchTitle: "Switch to English",
 
-    tabHome: "Туннель", tabKey: "Ключ доступа", tabLog: "Журнал", tabAbout: "О программе",
+    tabHome: "Туннель", tabKey: "Ключ доступа", tabLog: "Журнал", tabAbout: "О программе", tabNodes: "Страны",
+    nodesTitle: "Через какую страну идти",
+    nodesLead: "Скорость меряется с этого компьютера, а не с сервера продавца. Обычно выбирать не нужно — приложение само берёт самую быструю и само уходит с той, что замолчала.",
+    nodesMeasure: "Перемерить",
+    nodesAuto: "Автовыбор", nodesAutoSub: "самая быстрая прямо сейчас",
+    nodesCurrent: "идёт трафик", nodesChosen: "выбрана вами", nodesDead: "не ответила", nodesUnknown: "не мерили",
+    nodesMeasuring: "меряю…", nodesSwitching: "переключаю…", nodesNone: "туннель не поднят — список появится после подключения",
     down: "Приём", up: "Отдача",
 
     state: {
@@ -468,7 +532,13 @@ const T = {
   en: {
     lang: "en", switchTo: "RU", switchTitle: "Переключить на русский",
 
-    tabHome: "Tunnel", tabKey: "Access key", tabLog: "Log", tabAbout: "About",
+    tabHome: "Tunnel", tabKey: "Access key", tabLog: "Log", tabAbout: "About", tabNodes: "Countries",
+    nodesTitle: "Which country to go through",
+    nodesLead: "Speed is measured from this computer, not from the seller server. Usually there is nothing to choose — the app picks the fastest one and leaves any node that goes silent.",
+    nodesMeasure: "Measure again",
+    nodesAuto: "Automatic", nodesAutoSub: "the fastest one right now",
+    nodesCurrent: "traffic goes here", nodesChosen: "chosen by you", nodesDead: "no answer", nodesUnknown: "not measured",
+    nodesMeasuring: "measuring…", nodesSwitching: "switching…", nodesNone: "the tunnel is not up — the list appears after connecting",
     down: "Down", up: "Up",
 
     state: {
@@ -574,6 +644,10 @@ document.querySelectorAll(".tab").forEach((tab) => {
       if (p.dataset.tab === tab.dataset.tab) p.setAttribute("data-open", "");
       else p.removeAttribute("data-open");
     });
+
+  // Список стран подтягиваем при открытии вкладки, а не постоянно: он
+  // меняется редко, а лишний опрос стоит человеку батареи и трафика.
+  if (tab.dataset.tab === "nodes") loadNodes();
   });
 });
 
@@ -646,6 +720,125 @@ async function api(method, path, body) {
   if (!res.ok) throw new Error(data.error || (L().err + res.status));
   return data;
 }
+
+/* ----------------------------------------------------------- выбор ноды */
+
+// Список стран рисуем сами, без шаблонов: строк единицы, а каждая новая
+// зависимость в окне — это то, что придётся вшивать и обновлять.
+//
+// Текст не вставляем разметкой: имя и страну пишет продавец, и одна кавычка
+// в названии сервера превратилась бы в сломанную страницу, а то и хуже.
+function paintNodes(list) {
+  const box = document.getElementById("nodes-list");
+  box.replaceChildren();
+
+  const d = L();
+  if (!list || list.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = d.nodesNone;
+    box.append(empty);
+    return;
+  }
+
+  const row = (opts) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "row-node";
+    if (opts.alive) b.setAttribute("data-alive", "");
+    if (opts.current) b.setAttribute("data-current", "");
+    if (opts.chosen) b.setAttribute("data-chosen", "");
+
+    const dot = document.createElement("span");
+    dot.className = "dot";
+
+    const grow = document.createElement("div");
+    grow.className = "grow";
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = opts.name;
+    const sub = document.createElement("div");
+    sub.className = "sub";
+    sub.textContent = opts.sub;
+    grow.append(name, sub);
+
+    const ms = document.createElement("div");
+    ms.className = "ms";
+    ms.textContent = opts.ms;
+
+    b.append(dot, grow, ms);
+    b.addEventListener("click", () => chooseNode(opts.id));
+    return b;
+  };
+
+  // Автовыбор — первой строкой: это состояние по умолчанию, и вернуться к
+  // нему человек должен уметь так же легко, как уйти.
+  const chosenAny = list.some((n) => n.chosen);
+  const fastest = list.filter((n) => n.alive && n.ms > 0).sort((a, b) => a.ms - b.ms)[0];
+  box.append(row({
+    id: 0,
+    name: d.nodesAuto,
+    sub: fastest ? d.nodesAutoSub + " — " + (fastest.country || fastest.name) : d.nodesAutoSub,
+    ms: "",
+    alive: true,
+    chosen: !chosenAny,
+    current: false,
+  }));
+
+  for (const n of list) {
+    // Что показываем под именем: сначала то, где трафик, потом выбор.
+    // Это разные вещи: выбранная нода могла замолчать, и ядро уехало на живую.
+    let sub = n.country && n.country !== n.name ? n.name : "";
+    const marks = [];
+    if (n.current) marks.push(d.nodesCurrent);
+    if (n.chosen) marks.push(d.nodesChosen);
+    if (!n.alive && !n.current) marks.push(n.ms > 0 ? d.nodesDead : d.nodesUnknown);
+    if (marks.length) sub = sub ? sub + " · " + marks.join(" · ") : marks.join(" · ");
+
+    box.append(row({
+      id: n.id,
+      name: n.country || n.name,
+      sub,
+      ms: n.ms > 0 ? n.ms + d.ms : "",
+      alive: n.alive,
+      current: n.current,
+      chosen: n.chosen,
+    }));
+  }
+}
+
+async function loadNodes() {
+  try {
+    const data = await api("GET", "api/nodes");
+    paintNodes(data.nodes);
+  } catch (e) {
+    document.getElementById("nodes-msg").textContent = e.message;
+  }
+}
+
+async function chooseNode(id) {
+  const msg = document.getElementById("nodes-msg");
+  msg.textContent = L().nodesSwitching;
+  try {
+    const data = await api("POST", "api/nodes/select", { id });
+    paintNodes(data.nodes);
+    msg.textContent = "";
+  } catch (e) {
+    msg.textContent = e.message;
+  }
+}
+
+document.getElementById("nodes-measure").addEventListener("click", async () => {
+  const msg = document.getElementById("nodes-msg");
+  msg.textContent = L().nodesMeasuring;
+  try {
+    const data = await api("POST", "api/nodes/measure");
+    paintNodes(data.nodes);
+    msg.textContent = "";
+  } catch (e) {
+    msg.textContent = e.message;
+  }
+});
 
 /* -------------------------------------------------------------- величины */
 
@@ -752,7 +945,7 @@ function render(s) {
 
 let busy = false;
 
-$("power").addEventListener("click", async () => {
+on("power", "click", async () => {
   if (busy) return;
   busy = true;
   try {
@@ -768,9 +961,9 @@ $("power").addEventListener("click", async () => {
   }
 });
 
-$("proxy-off").addEventListener("click", dropProxy);
+on("proxy-off", "click", dropProxy);
 
-$("save").addEventListener("click", async () => {
+on("save", "click", async () => {
   const msg = $("save-msg");
   msg.className = "hint";
   msg.style.margin = "0";
@@ -789,7 +982,7 @@ $("save").addEventListener("click", async () => {
 //
 // Оно там ровно до первого сохранённого ключа: дальше человек про него
 // забудет, а место на главном экране дорогое.
-$("first-save").addEventListener("click", async () => {
+on("first-save", "click", async () => {
   const msg = $("first-msg");
   msg.className = "hint";
   try {
@@ -818,7 +1011,7 @@ async function tick() {
 
 lang = pickLang();
 paintStatic();
-$("lang").addEventListener("click", () => setLang(lang === "ru" ? "en" : "ru"));
+on("lang", "click", () => setLang(lang === "ru" ? "en" : "ru"));
 
 // Программе язык сообщаем сразу: её сообщения приходят готовой строкой, и до
 // первого такого сообщения она должна знать, на каком языке его собирать.

@@ -31,9 +31,17 @@ class Store(context: Context) {
             val link = value.trim()
             if (link != accountLink) {
                 dropSubscriptionCache()
+                // Запоминаем день, а не саму ссылку: в настройках человек
+                // видит, когда ключ появился, и понимает, тот ли он, что
+                // прислал продавец на прошлой неделе.
+                prefs.edit().putLong(KEY_ACCOUNT_SAVED, System.currentTimeMillis()).apply()
             }
             prefs.edit().putString(KEY_ACCOUNT_LINK, link).apply()
         }
+
+    /** Когда ключ положили сюда. Ноль означает, что он появился до этой записи. */
+    val accountSavedAt: Long
+        get() = prefs.getLong(KEY_ACCOUNT_SAVED, 0)
 
     /**
      * bypassed — приложения, которые ходят мимо туннеля.
@@ -111,6 +119,7 @@ class Store(context: Context) {
 
     private companion object {
         const val KEY_ACCOUNT_LINK = "account_link"
+        const val KEY_ACCOUNT_SAVED = "account_saved_at"
         const val KEY_BYPASSED = "bypassed_apps"
         const val KEY_BYPASS_RU = "bypass_russian"
         const val KEY_BYPASS_ASKED = "bypass_asked"

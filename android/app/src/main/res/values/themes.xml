@@ -1,8 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Тема одна на светлое и тёмное: сами цвета разведены по values и
+    values-night. Второго файла темы поэтому нет — иначе одно и то же
+    пришлось бы править в двух местах, и однажды поправили бы в одном.
+-->
 <resources>
     <style name="Theme.Veil" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/veil_accent</item>
         <item name="colorOnPrimary">@color/veil_on_accent</item>
-        <item name="android:colorBackground">@color/veil_paper</item>
+        <item name="colorSurface">@color/veil_surface</item>
+        <item name="colorOnSurface">@color/veil_text</item>
+        <item name="android:colorBackground">@color/veil_bg</item>
+        <item name="android:textColorPrimary">@color/veil_text</item>
+        <item name="android:textColorSecondary">@color/veil_muted</item>
+    </style>
+
+    <!-- Заголовок раздела в списках: «Выбрать вручную», «Ключ доступа». -->
+    <style name="VeilSection">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textSize">12.5sp</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:textColor">@color/veil_muted</item>
+    </style>
+
+    <!-- Строка внутри карточки настроек: название слева, значение справа. -->
+    <style name="VeilRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">58dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingHorizontal">15dp</item>
+        <item name="android:paddingVertical">13dp</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+    </style>
+
+    <style name="VeilRowTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/veil_text</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="VeilRowSub">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">12.5sp</item>
+        <item name="android:textColor">@color/veil_muted</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
     </style>
 </resources>

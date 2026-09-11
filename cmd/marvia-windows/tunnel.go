@@ -403,6 +403,96 @@ func (c *Controller) stall(code string) {
 	c.log.add("%s", reason)
 }
 
+// NodeView — одна нода так, как её видит покупатель в окне.
+type NodeView struct {
+	ID      int64  `json:"id"`
+	Name    string `json:"name"`
+	Country string `json:"country,omitempty"`
+	MS      int64  `json:"ms"`
+	Alive   bool   `json:"alive"`
+
+	// Current и Chosen — разные вещи, и обе нужны. Выбранная страна могла
+	// замолчать, надзор уехал на живую, и показывать в этом случае одну
+	// «выбранную» значило бы врать про то, куда идёт трафик.
+	Current bool `json:"current"`
+	Chosen  bool `json:"chosen"`
+}
+
+// Nodes отдаёт список нод без замера — тем, что известно с подключения.
+func (c *Controller) Nodes() []NodeView {
+	c.mu.Lock()
+	dialer := c.dialer
+	c.mu.Unlock()
+	if dialer == nil {
+		return nil
+	}
+	return nodeViews(dialer, dialer.Nodes(), nil)
+}
+
+// MeasureNodes меряет все ноды заново — по нажатию «Обновить».
+func (c *Controller) MeasureNodes(ctx context.Context) []NodeView {
+	c.mu.Lock()
+	dialer := c.dialer
+	c.mu.Unlock()
+	if dialer == nil {
+		return nil
+	}
+	return nodeViews(dialer, dialer.Nodes(), dialer.Measure(ctx))
+}
+
+// SelectNode переводит туннель на выбранную ноду. Ноль — обратно к автовыбору.
+func (c *Controller) SelectNode(ctx context.Context, id int64) error {
+	c.mu.Lock()
+	dialer := c.dialer
+	c.mu.Unlock()
+	if dialer == nil {
+		return errors.New(say("notConnected"))
+	}
+
+	if err := dialer.Select(ctx, id); err != nil {
+		return err
+	}
+
+	c.mu.Lock()
+	c.node = dialer.Node()
+	c.mu.Unlock()
+
+	c.log.add("%s", sayf("logChosen", dialer.Node().Title()))
+	return nil
+}
+
+func nodeViews(dialer *client.Supervisor, nodes []client.Node, measured []client.Measurement) []NodeView {
+	byID := make(map[int64]client.Measurement, len(measured))
+	for _, m := range measured {
+		byID[m.Node.ID] = m
+	}
+
+	current := dialer.Node().ID
+	chosen := dialer.Selected()
+
+	out := make([]NodeView, 0, len(nodes))
+	for _, n := range nodes {
+		v := NodeView{
+			ID:      n.ID,
+			Name:    n.Name,
+			Country: n.Country,
+			Current: n.ID == current,
+			Chosen:  chosen != 0 && n.ID == chosen,
+		}
+		if m, ok := byID[n.ID]; ok {
+			v.Alive = m.OK()
+			if cost := m.Cost(); cost > 0 {
+				v.MS = cost.Milliseconds()
+			}
+		} else if n.ID == current {
+			// Текущую не мерили, но знаем точно: через неё идёт трафик.
+			v.Alive = true
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
 // recovered — нода снова отвечает после того, как её объявили молчащей.
 //
 // Без этого из «связь потеряна» не было выхода, кроме переезда. А самый

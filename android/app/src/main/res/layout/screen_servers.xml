@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingTop="@dimen/header_pad"
+        android:paddingBottom="10dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:letterSpacing="0.2"
+            android:text="@string/app_name"
+            android:textAllCaps="true"
+            android:textColor="@color/veil_muted"
+            android:textSize="12sp" />
+
+        <ProgressBar
+            android:id="@+id/measureSpinner"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="9dp"
+            android:visibility="gone" />
+
+        <!-- «Обновить» — это перезамер всех нод с этого телефона, он не мгновенный. -->
+        <TextView
+            android:id="@+id/measureButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="4dp"
+            android:text="@string/servers_measure"
+            android:textColor="@color/veil_link"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:letterSpacing="-0.02"
+            android:text="@string/servers_title"
+            android:textColor="@color/veil_text"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/servers_hint"
+            android:textColor="@color/veil_muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingHorizontal="@dimen/screen_pad">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp">
+
+            <!--
+                Автовыбор отдельной строкой сверху, а не галочкой в списке:
+                это не одна из стран, а отказ выбирать страну вручную.
+            -->
+            <LinearLayout
+                android:id="@+id/autoRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:minHeight="60dp"
+                android:orientation="horizontal"
+                android:paddingHorizontal="15dp"
+                android:paddingVertical="13dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:text="@string/servers_auto_mark"
+                    android:textSize="24sp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/servers_auto"
+                        android:textColor="@color/veil_text"
+                        android:textSize="15.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/autoNote"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/autoPing"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="11dp"
+                    android:textSize="13.5sp" />
+
+                <FrameLayout
+                    android:id="@+id/autoMark"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginStart="11dp"
+                    android:background="@drawable/bg_ring">
+
+                    <ImageView
+                        android:id="@+id/autoMarkCheck"
+                        android:layout_width="13dp"
+                        android:layout_height="13dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_check"
+                        android:visibility="gone" />
+                </FrameLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/manualLabel"
+                style="@style/VeilSection"
+                android:layout_marginTop="16dp"
+                android:paddingHorizontal="3dp"
+                android:text="@string/servers_manual" />
+
+            <!-- Список нод собирается кодом: страны приходят от продавца. -->
+            <LinearLayout
+                android:id="@+id/nodeList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <!--
+                Пока туннель не поднят, мерить нечем: ноды известны ядру, а
+                ядро живёт внутри туннеля. Обещать список до подключения было
+                бы обманом.
+            -->
+            <TextView
+                android:id="@+id/serversEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:textColor="@color/veil_muted"
+                android:textSize="13.5sp"
+                android:visibility="gone" />
+        </LinearLayout>
+    </ScrollView>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingBottom="14dp"
+        android:text="@string/servers_footer"
+        android:textColor="@color/veil_muted"
+        android:textSize="12.5sp" />
+</LinearLayout>

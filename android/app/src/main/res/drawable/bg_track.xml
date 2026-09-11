@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Дорожка полосы остатка: фон экрана внутри карточки, как в макете. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/veil_bg" />
+    <corners android:radius="999dp" />
+</shape>

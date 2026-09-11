@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Одна нода в списке стран. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="10dp"
+    android:background="@drawable/bg_card"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:minHeight="60dp"
+    android:orientation="horizontal"
+    android:paddingHorizontal="15dp"
+    android:paddingVertical="13dp">
+
+    <!-- Флаг. Страну не узнали — места он не занимает: выдумывать флаг нельзя. -->
+    <TextView
+        android:id="@+id/nodeFlag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
+        android:textSize="24sp" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/nodeTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/veil_text"
+            android:textSize="15.5sp"
+            android:textStyle="bold" />
+
+        <!-- Здесь же разводятся «выбрана» и «трафик идёт сейчас»: это разное. -->
+        <TextView
+            android:id="@+id/nodeNote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/veil_muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/nodePing"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="11dp"
+        android:textSize="13.5sp" />
+
+    <FrameLayout
+        android:id="@+id/nodeMark"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginStart="11dp"
+        android:background="@drawable/bg_ring">
+
+        <ImageView
+            android:id="@+id/nodeMarkCheck"
+            android:layout_width="13dp"
+            android:layout_height="13dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_check"
+            android:visibility="gone" />
+    </FrameLayout>
+</LinearLayout>
