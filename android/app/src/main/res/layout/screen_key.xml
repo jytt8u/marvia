@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingHorizontal="22dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="24dp">
+
+        <FrameLayout
+            android:layout_width="62dp"
+            android:layout_height="62dp"
+            android:background="@drawable/bg_accent_button">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_mark"
+                app:tint="@color/veil_on_accent" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:gravity="center"
+            android:letterSpacing="-0.02"
+            android:text="@string/key_title"
+            android:textColor="@color/veil_text"
+            android:textSize="25sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="@string/key_body"
+            android:textColor="@color/veil_muted"
+            android:textSize="14.5sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="26dp"
+            android:background="@drawable/bg_card"
+            android:gravity="center_vertical"
+            android:minHeight="56dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="9dp">
+
+            <EditText
+                android:id="@+id/keyInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="@string/key_hint_short"
+                android:importantForAutofill="no"
+                android:inputType="textUri"
+                android:maxLines="3"
+                android:minHeight="38dp"
+                android:textColor="@color/veil_text"
+                android:textColorHint="@color/veil_muted"
+                android:textSize="15sp" />
+
+            <!-- Ключ приходит в чат: почти всегда он уже лежит в буфере обмена. -->
+            <TextView
+                android:id="@+id/pasteButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:background="?attr/selectableItemBackground"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="6dp"
+                android:text="@string/key_paste"
+                android:textColor="@color/veil_link"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/keyError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/veil_fail"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/keySaveButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_accent_button"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:minHeight="54dp"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="16dp"
+            android:text="@string/action_connect"
+            android:textColor="@color/veil_on_accent"
+            android:textSize="16.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:text="@string/key_footer"
+            android:textColor="@color/veil_muted"
+            android:textSize="12.5sp" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingTop="@dimen/header_pad"
+        android:paddingBottom="10dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:letterSpacing="0.2"
+            android:text="@string/app_name"
+            android:textAllCaps="true"
+            android:textColor="@color/veil_muted"
+            android:textSize="12sp" />
+
+        <!-- Срок подписки в углу: это первое, что спрашивают у продавца. -->
+        <TextView
+            android:id="@+id/headerUntil"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/veil_muted"
+            android:textSize="13sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/screen_pad">
+
+            <!--
+                Круг — и есть выключатель. Отдельной кнопки внизу нет: там
+                нижняя панель, а два органа управления одним и тем же приучают
+                нажимать наугад.
+            -->
+            <FrameLayout
+                android:id="@+id/powerOuter"
+                android:layout_width="188dp"
+                android:layout_height="188dp"
+                android:layout_marginTop="40dp"
+                android:background="@drawable/bg_circle"
+                android:clickable="true"
+                android:focusable="true">
+
+                <FrameLayout
+                    android:id="@+id/powerMiddle"
+                    android:layout_width="152dp"
+                    android:layout_height="152dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_circle">
+
+                    <FrameLayout
+                        android:id="@+id/powerInner"
+                        android:layout_width="116dp"
+                        android:layout_height="116dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/bg_circle">
+
+                        <ImageView
+                            android:id="@+id/powerIcon"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_power"
+                            app:tint="@color/veil_bg" />
+                    </FrameLayout>
+                </FrameLayout>
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
+                android:gravity="center"
+                android:letterSpacing="-0.02"
+                android:text="@string/status_off"
+                android:textColor="@color/veil_text"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <!--
+                Страна, а не имя сервера: покупателю «ae-1» не говорит ничего.
+                Строка ведёт на выбор страны — туда же, куда вкладка внизу.
+            -->
+            <LinearLayout
+                android:id="@+id/nodeLine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp">
+
+                <TextView
+                    android:id="@+id/nodeCountry"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/veil_text"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/nodePing"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="9dp"
+                    android:background="@drawable/bg_pill"
+                    android:paddingHorizontal="9dp"
+                    android:paddingVertical="2dp"
+                    android:textSize="12.5sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Сам ли выбрал человек ноду или её выбрало ядро. -->
+            <TextView
+                android:id="@+id/nodeNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:gravity="center"
+                android:textColor="@color/veil_muted"
+                android:textSize="13sp" />
+
+            <!-- Круг не выглядит кнопкой, пока об этом не сказано словами. -->
+            <TextView
+                android:id="@+id/powerHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:textColor="@color/veil_muted"
+                android:textSize="12.5sp" />
+
+            <!--
+                Подробности из ядра. Покупателю они не говорят ничего, поэтому
+                мелко и бледно, — но именно их он снимет вместе с экраном и
+                пришлёт продавцу. Выделяются, чтобы не пересказывать по памяти.
+            -->
+            <TextView
+                android:id="@+id/techText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center"
+                android:textColor="@color/veil_muted"
+                android:textIsSelectable="true"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!--
+                Срок и остаток — прямо здесь. Каждый вопрос «сколько у меня
+                осталось» стоит продавцу времени: приложение знает ответ само.
+            -->
+            <LinearLayout
+                android:id="@+id/subCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="15dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/trafficLine"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/traffic_left"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/trafficValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/veil_text"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/trafficTrack"
+                    android:layout_width="match_parent"
+                    android:layout_height="7dp"
+                    android:layout_marginTop="11dp"
+                    android:background="@drawable/bg_track"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:id="@+id/trafficFill"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@color/veil_accent" />
+
+                    <View
+                        android:id="@+id/trafficRest"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="0" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/untilLine"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="11dp"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

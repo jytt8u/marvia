@@ -1,10 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Палитра макета. В values лежит светлый вариант, в values-night — тот, что
+    нарисован в макетах: они тёмные.
+
+    Имена по роли, а не по цвету: «поверхность», «приглушённый текст». Иначе
+    при смене темы получается veil_white тёмного цвета, и по коду уже не
+    понять, что где должно стоять.
+-->
 <resources>
-    <color name="veil_ink">#FF0B1020</color>
-    <color name="veil_paper">#FFF6F7FB</color>
-    <color name="veil_accent">#FF3B6EF3</color>
+    <color name="veil_bg">#FFF6F7FB</color>
+    <color name="veil_surface">#FFFFFFFF</color>
+    <color name="veil_border">#FFE3E7EF</color>
+    <color name="veil_text">#FF0F1218</color>
+    <color name="veil_muted">#FF69727F</color>
+    <color name="veil_accent">#FF2F6FED</color>
     <color name="veil_on_accent">#FFFFFFFF</color>
-    <color name="veil_live">#FF17A673</color>
+    <color name="veil_link">#FF2F6FED</color>
+    <color name="veil_live">#FF2C9760</color>
+    <color name="veil_warn">#FFA9750F</color>
     <color name="veil_fail">#FFD1495B</color>
-    <color name="ic_launcher_background">#FF0B1020</color>
+
+    <!-- Обод невыбранного кружка и стрелка в строке настроек. -->
+    <color name="veil_ring">#FFC2C9D4</color>
+    <color name="veil_chevron">#FF98A1AF</color>
+
+    <color name="ic_launcher_background">#FF0F1218</color>
 </resources>

@@ -6,35 +6,64 @@
     своей папки. Держать в нём русский значило бы показывать русские надписи
     человеку с турецким или персидским телефоном — а это ровно те, ради кого
     приложение и делается.
+
+    Апостроф в английском тексте ломает сборку ресурсов, а номер строки aapt
+    показывает не тот — поэтому фразы здесь построены без него.
 -->
 <resources>
     <string name="app_name">Marvia</string>
+
+    <!-- Нижняя панель: три экрана и ничего больше. -->
+    <string name="nav_connect">Connection</string>
+    <string name="nav_servers">Countries</string>
+    <string name="nav_settings">Settings</string>
 
     <string name="status_off">Disconnected</string>
     <string name="status_connecting">Connecting…</string>
     <string name="status_on">Connected</string>
     <string name="status_failed">Could not connect</string>
 
-    <string name="detail_off">Traffic goes directly</string>
     <string name="detail_connecting">Picking the fastest node</string>
     <string name="detail_no_key">Paste your access key</string>
     <string name="detail_node">Node: %1$s</string>
-    <string name="detail_node_warning">Node: %1$s · %2$s</string>
+
+    <!-- Круг на главном экране и есть выключатель, и это стоит сказать словами. -->
+    <string name="connect_tap_on">tap the circle to connect</string>
+    <string name="connect_tap_off">tap the circle to disconnect</string>
+    <string name="connect_no_key">no access key yet</string>
+
+    <!--
+        Выбор и текущая нода — разные вещи. Выбранная страна могла замолчать, и
+        ядро уехало на живую: показывать в этом случае только выбор значило бы
+        врать о том, куда идёт трафик.
+    -->
+    <string name="connect_auto">picked automatically, the fastest one</string>
+    <string name="connect_manual">this country you picked yourself</string>
+    <string name="connect_manual_moved">you picked %1$s, it went silent — traffic goes through this one</string>
 
     <!-- Подписка: до какого числа и сколько трафика осталось. -->
-    <string name="sub_until">Until %1$s</string>
-    <string name="sub_until_left">Until %1$s · %2$s left</string>
-    <string name="sub_left">%1$s left</string>
-    <string name="sub_unlimited">Unlimited</string>
+    <string name="header_until">until %1$s</string>
+    <string name="traffic_left">Left</string>
+    <string name="traffic_of">%1$s of %2$s</string>
+    <string name="sub_until_days">Access until %1$s — that is %2$s</string>
+    <string name="sub_until_only">Access until %1$s</string>
+    <plurals name="days_left">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
     <string name="size_gb">%1$s GB</string>
     <string name="size_mb">%1$d MB</string>
 
     <string name="action_connect">Connect</string>
-    <string name="action_disconnect">Disconnect</string>
     <string name="action_save">Save the key</string>
 
-    <string name="key_hint">Access key</string>
-    <string name="key_helper">A marvia://… link — the bot sends it on payment</string>
+    <!-- Экран ключа. -->
+    <string name="key_title">Paste the access key</string>
+    <string name="key_body">Your seller sent it in the chat — a marvia://… link. Tap it right there and the app sets itself up.</string>
+    <string name="key_hint_short">marvia://…</string>
+    <string name="key_paste">Paste</string>
+    <string name="key_footer">The key lives on this phone only. We do not see it and cannot bring it back — if you lose it, ask your seller for a new one.</string>
+    <string name="key_clipboard_empty">There is no link in the clipboard</string>
     <string name="key_saved">Key saved</string>
     <string name="key_empty">The field is empty</string>
 
@@ -49,16 +78,38 @@
     <string name="key_replace_yes">Replace</string>
     <string name="key_replace_no">Keep the old one</string>
 
+    <!-- Экран выбора страны. -->
+    <string name="servers_title">Countries</string>
+    <string name="servers_hint">Speed is measured from your phone, not from the servers of your seller.</string>
+    <string name="servers_measure">Refresh</string>
+    <string name="servers_auto">Automatic</string>
+    <string name="servers_auto_mark">⚡</string>
+    <string name="servers_auto_note">the fastest one right now is %1$s</string>
+    <string name="servers_auto_unknown">tap Refresh to measure the countries</string>
+    <string name="servers_manual">Pick by hand</string>
+    <string name="servers_footer">If a country stops opening, the app moves to another one by itself — picking by hand is rarely needed.</string>
+    <string name="servers_empty">The list lives inside the tunnel: connect, and the countries with their response times appear here.</string>
+    <string name="servers_group_other">Other</string>
+    <string name="servers_failed">Could not move: %1$s</string>
+
+    <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
+    <string name="node_ping">%1$d ms</string>
+    <string name="node_ping_none">—</string>
+    <string name="node_ok">works</string>
+    <string name="node_down">not available right now</string>
+    <string name="node_unmeasured">not measured yet</string>
+    <string name="node_current">traffic goes through it right now</string>
+    <string name="node_chosen_current">picked by you · traffic goes through it</string>
+    <string name="node_chosen_silent">picked by you, but silent — traffic goes through %1$s</string>
+
     <!--
         Байпас. Значок VPN в шторке остаётся всегда — его рисует Android, пока
         поднят туннель. Но местные сервисы ломает не значок, а зарубежный адрес
         ноды, и вот его исключение из туннеля и чинит.
     -->
-    <string name="bypass_open">Apps outside the tunnel</string>
     <string name="bypass_title">What to keep out of the tunnel</string>
     <string name="bypass_none">Every app goes through the tunnel</string>
     <string name="bypass_some">Outside the tunnel: %1$d</string>
-    <string name="bypass_hint">Government services, banks and other local sites often refuse requests coming from abroad. Send them outside — they keep an ordinary connection with a local address.</string>
     <string name="bypass_preset">Government services and banks</string>
     <string name="bypass_save">Save</string>
     <string name="bypass_restart">Changes apply on the next connection</string>
@@ -73,23 +124,28 @@
     <string name="bypass_ru_body">Government services, banks and mail often refuse requests from abroad. Sent outside, they open as usual, while everything else keeps going through the tunnel.</string>
     <string name="bypass_ru_yes">Send them outside</string>
     <string name="bypass_ru_no">No need</string>
-    <string name="bypass_ru_on">Local sites outside</string>
 
     <!--
         Настройки. Здесь нет ручек протокола: их место внутри, а не на экране
         человека, который не может выбрать между ними осознанно.
     -->
     <string name="settings_title">Settings</string>
-    <string name="settings_apps">Apps outside the tunnel</string>
-    <string name="settings_autostart_off">Start after reboot: no</string>
-    <string name="settings_autostart_on">Start after reboot: yes</string>
-    <string name="settings_autostart_short">autostart</string>
+    <string name="settings_autostart">Start when the phone starts</string>
     <string name="settings_autostart_saved">The tunnel will come up by itself after a reboot</string>
     <string name="settings_autostart_off_saved">After a reboot you will have to turn it on by hand</string>
+    <string name="settings_russian">Local sites outside the tunnel</string>
+    <string name="settings_russian_sub">banks and government services complain otherwise</string>
+    <string name="settings_apps">Apps outside the tunnel</string>
     <string name="settings_always_on">Always-on VPN in the system</string>
+    <string name="settings_always_on_sub">the system brings the tunnel up earlier than we can</string>
     <string name="settings_always_on_missing">This phone has no such settings screen</string>
     <string name="settings_theme">Theme</string>
+    <string name="settings_key">Access key</string>
+    <string name="settings_key_added">added on %1$s</string>
     <string name="settings_journal">Log</string>
+    <string name="settings_journal_sub">shows your seller what happened</string>
+    <string name="settings_about">About</string>
+    <string name="about_body">%1$s, version %2$s</string>
     <string name="theme_system">Follow the system</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>

@@ -2,31 +2,59 @@
 <resources>
     <string name="app_name">Marvia</string>
 
+    <!-- Нижняя панель: три экрана и ничего больше. -->
+    <string name="nav_connect">Подключение</string>
+    <string name="nav_servers">Страны</string>
+    <string name="nav_settings">Настройки</string>
+
     <string name="status_off">Отключено</string>
     <string name="status_connecting">Подключаюсь…</string>
     <string name="status_on">Подключено</string>
     <string name="status_failed">Не подключилось</string>
 
-    <string name="detail_off">Трафик идёт напрямую</string>
     <string name="detail_connecting">Выбираю самую быструю ноду</string>
     <string name="detail_no_key">Вставь ключ доступа</string>
     <string name="detail_node">Нода: %1$s</string>
-    <string name="detail_node_warning">Нода: %1$s · %2$s</string>
+
+    <!-- Круг на главном экране и есть выключатель, и это стоит сказать словами. -->
+    <string name="connect_tap_on">нажми на круг, чтобы подключиться</string>
+    <string name="connect_tap_off">нажми на круг, чтобы отключиться</string>
+    <string name="connect_no_key">ключа доступа пока нет</string>
+
+    <!--
+        Выбор и текущая нода — разные вещи. Выбранная страна могла замолчать, и
+        ядро уехало на живую: показывать в этом случае только выбор значило бы
+        врать о том, куда идёт трафик.
+    -->
+    <string name="connect_auto">выбрано автоматически, самое быстрое</string>
+    <string name="connect_manual">эту страну выбрал ты</string>
+    <string name="connect_manual_moved">ты выбрал %1$s, она замолчала — трафик идёт через эту</string>
 
     <!-- Подписка: до какого числа и сколько трафика осталось. -->
-    <string name="sub_until">До %1$s</string>
-    <string name="sub_until_left">До %1$s · осталось %2$s</string>
-    <string name="sub_left">Осталось %1$s</string>
-    <string name="sub_unlimited">Без ограничений</string>
+    <string name="header_until">до %1$s</string>
+    <string name="traffic_left">Осталось</string>
+    <string name="traffic_of">%1$s из %2$s</string>
+    <string name="sub_until_days">Доступ до %1$s — это %2$s</string>
+    <string name="sub_until_only">Доступ до %1$s</string>
+    <plurals name="days_left">
+        <item quantity="one">%d день</item>
+        <item quantity="few">%d дня</item>
+        <item quantity="many">%d дней</item>
+        <item quantity="other">%d дня</item>
+    </plurals>
     <string name="size_gb">%1$s ГБ</string>
     <string name="size_mb">%1$d МБ</string>
 
     <string name="action_connect">Подключиться</string>
-    <string name="action_disconnect">Отключиться</string>
     <string name="action_save">Сохранить ключ</string>
 
-    <string name="key_hint">Ключ доступа</string>
-    <string name="key_helper">Ссылка вида marvia://… — её выдаёт бот при оплате</string>
+    <!-- Экран ключа. -->
+    <string name="key_title">Вставь ключ доступа</string>
+    <string name="key_body">Продавец прислал его в чате — ссылку вида marvia://… Нажми её прямо в переписке, и приложение настроится само.</string>
+    <string name="key_hint_short">marvia://…</string>
+    <string name="key_paste">Вставить</string>
+    <string name="key_footer">Ключ хранится только на этом телефоне. Мы его не видим и восстановить не сможем — если потеряешь, попроси у продавца новый.</string>
+    <string name="key_clipboard_empty">В буфере обмена нет ссылки</string>
     <string name="key_saved">Ключ сохранён</string>
     <string name="key_empty">Поле пустое</string>
 
@@ -41,16 +69,38 @@
     <string name="key_replace_yes">Заменить</string>
     <string name="key_replace_no">Оставить прежний</string>
 
+    <!-- Экран выбора страны. -->
+    <string name="servers_title">Страны</string>
+    <string name="servers_hint">Скорость меряется с твоего телефона, а не с сервера продавца.</string>
+    <string name="servers_measure">Обновить</string>
+    <string name="servers_auto">Автовыбор</string>
+    <string name="servers_auto_mark">⚡</string>
+    <string name="servers_auto_note">самая быстрая прямо сейчас — %1$s</string>
+    <string name="servers_auto_unknown">нажми «Обновить», чтобы замерить страны</string>
+    <string name="servers_manual">Выбрать вручную</string>
+    <string name="servers_footer">Если страна перестала открываться, приложение уйдёт на другую само — выбирать вручную нужно редко.</string>
+    <string name="servers_empty">Список живёт внутри туннеля: подключись, и страны со временем отклика появятся здесь.</string>
+    <string name="servers_group_other">Другие</string>
+    <string name="servers_failed">Не получилось перейти: %1$s</string>
+
+    <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
+    <string name="node_ping">%1$d мс</string>
+    <string name="node_ping_none">—</string>
+    <string name="node_ok">работает</string>
+    <string name="node_down">сейчас недоступна</string>
+    <string name="node_unmeasured">скорость ещё не мерили</string>
+    <string name="node_current">через неё идёт трафик прямо сейчас</string>
+    <string name="node_chosen_current">выбрана тобой · через неё идёт трафик</string>
+    <string name="node_chosen_silent">выбрана тобой, но молчит — трафик идёт через %1$s</string>
+
     <!--
         Байпас. Значок VPN в шторке остаётся всегда — его рисует Android, пока
         поднят туннель. Но госуслуги ломает не значок, а зарубежный адрес
         ноды, и вот его исключение из туннеля и чинит.
     -->
-    <string name="bypass_open">Приложения мимо туннеля</string>
     <string name="bypass_title">Что не пускать в туннель</string>
     <string name="bypass_none">Все приложения идут через туннель</string>
     <string name="bypass_some">Мимо туннеля: %1$d</string>
-    <string name="bypass_hint">Госуслуги, банки и всё государственное не отвечают на запросы из-за границы. Отправь их мимо — у них останется обычный интернет с российским адресом.</string>
     <string name="bypass_preset">Госуслуги и банки</string>
     <string name="bypass_save">Сохранить</string>
     <string name="bypass_restart">Изменения применятся при следующем подключении</string>
@@ -65,23 +115,28 @@
     <string name="bypass_ru_body">Госуслуги, банки и почта не отвечают на запросы из-за границы. Если увести их мимо, они будут открываться как обычно, а всё остальное пойдёт через туннель.</string>
     <string name="bypass_ru_yes">Увести мимо</string>
     <string name="bypass_ru_no">Не надо</string>
-    <string name="bypass_ru_on">Российские сайты мимо</string>
 
     <!--
         Настройки. Здесь нет ручек протокола: их место внутри, а не на экране
         человека, который не может выбрать между ними осознанно.
     -->
     <string name="settings_title">Настройки</string>
-    <string name="settings_apps">Приложения мимо туннеля</string>
-    <string name="settings_autostart_off">Включаться после перезагрузки: нет</string>
-    <string name="settings_autostart_on">Включаться после перезагрузки: да</string>
-    <string name="settings_autostart_short">автозапуск</string>
+    <string name="settings_autostart">Включаться при запуске телефона</string>
     <string name="settings_autostart_saved">После перезагрузки телефона туннель поднимется сам</string>
     <string name="settings_autostart_off_saved">После перезагрузки придётся включить руками</string>
+    <string name="settings_russian">Российские сайты — мимо туннеля</string>
+    <string name="settings_russian_sub">банки и госуслуги иначе ругаются</string>
+    <string name="settings_apps">Приложения мимо туннеля</string>
     <string name="settings_always_on">Постоянный VPN в системе</string>
+    <string name="settings_always_on_sub">система поднимает туннель раньше, чем можем мы</string>
     <string name="settings_always_on_missing">На этом телефоне нет такого раздела настроек</string>
     <string name="settings_theme">Тема</string>
+    <string name="settings_key">Ключ доступа</string>
+    <string name="settings_key_added">добавлен %1$s</string>
     <string name="settings_journal">Журнал</string>
+    <string name="settings_journal_sub">покажет продавцу, что случилось</string>
+    <string name="settings_about">О приложении</string>
+    <string name="about_body">%1$s, версия %2$s</string>
     <string name="theme_system">Как в системе</string>
     <string name="theme_light">Светлая</string>
     <string name="theme_dark">Тёмная</string>
@@ -111,6 +166,7 @@
     <string name="notification_channel">Туннель</string>
     <string name="notification_channel_desc">Показывает, работает ли туннель</string>
     <string name="notification_stop">Отключить</string>
+
     <!--
         Строки журнала. Журнал человек отправляет продавцу, то есть читает его
         не только он, — поэтому он такой же перевод, как и всё остальное.

@@ -3,6 +3,8 @@ package io.marvia.android
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.ConcurrentHashMap
+import io.marvia.mobile.Tunnel as Core
 
 /** Что сейчас с туннелем. */
 sealed interface TunnelState {
@@ -25,6 +27,17 @@ sealed interface TunnelState {
         val warning: String = "",
         /** Подписка: до какого числа и сколько трафика осталось. */
         val subscription: Subscription = Subscription(),
+        /** Время отклика текущей ноды. Ноль означает, что её не мерили. */
+        val ms: Long = 0,
+        /**
+         * chosen — нода, которую человек выбрал руками. Пусто значит автовыбор.
+         *
+         * Хранится отдельно от [node] намеренно. Выбранная нода могла
+         * замолчать, и ядро уехало на живую: тогда эти два имени разные, и
+         * показать надо оба. Одно «выбрана ОАЭ» при трафике через Финляндию —
+         * это неправда, которую человеку нечем проверить.
+         */
+        val chosen: String = "",
     ) : TunnelState
 
     /**
@@ -72,4 +85,53 @@ object MarviaState {
     fun set(next: TunnelState) {
         current.value = next
     }
+
+    @Volatile
+    private var live: Core? = null
+
+    /**
+     * core — поднятое ядро, пока туннель работает.
+     *
+     * Экрану выбора страны нужно спросить у ядра список нод и попросить
+     * переключиться, а ядро держит служба. Служба и экран живут в одном
+     * процессе, поэтому передавать его сообщениями было бы лишним слоем.
+     *
+     * null означает, что туннеля нет: спрашивать не у кого, и экран стран
+     * честно говорит, что список появится после подключения.
+     */
+    val core: Core? get() = live
+
+    /** hold зовёт служба: она одна знает, когда ядро появилось и пропало. */
+    fun hold(next: Core?) {
+        live = next
+        if (next == null) {
+            // Замеры принадлежат прошлому туннелю. У следующего может быть
+            // другой продавец и другие ноды с теми же номерами.
+            measured.clear()
+        }
+    }
+
+    /**
+     * Последний замер каждой ноды.
+     *
+     * Ядро замеры не хранит: nodes() отдаёт нули, время появляется только в
+     * ответе measure(). Без этой памяти список стран показывал бы прочерки
+     * сразу после того, как человек нажал «Обновить» и увидел числа, — а
+     * главный экран терял бы «42 мс» через пять секунд после подключения.
+     */
+    private val measured = ConcurrentHashMap<Long, Ping>()
+
+    /** Что мы знаем о ноде по последнему замеру. */
+    data class Ping(val ms: Long, val alive: Boolean)
+
+    fun remember(rows: List<NodeRow>) {
+        for (row in rows) {
+            measured[row.id] = Ping(row.ms, row.alive)
+        }
+    }
+
+    fun ping(id: Long): Ping? = measured[id]
+
+    /** Мерили ли вообще хоть что-то с этого подключения. */
+    fun anyMeasured(): Boolean = measured.isNotEmpty()
 }
