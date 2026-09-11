@@ -14,6 +14,7 @@ package mobile
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -45,6 +46,15 @@ const CacheName = "subscription.json"
 // Минута: достаточно, чтобы человек успел прочитать, и мало, чтобы старая
 // неудача не висела рядом с работающим туннелем.
 const errorLifetime = time.Minute
+
+// Сколько даём на замер всех нод и на переключение между ними.
+//
+// Замер идёт настоящими подключениями ко всем нодам разом, поэтому он не
+// мгновенный; переключение — это обычное подключение, только к заданной ноде.
+const (
+	measureTimeout = 30 * time.Second
+	selectTimeout  = 60 * time.Second
+)
 
 // Виды неудач.
 //
@@ -384,6 +394,142 @@ func (t *Tunnel) LastError() string {
 		t.lastError = ""
 	}
 	return t.lastError
+}
+
+// Экран выбора страны.
+//
+// Наружу отдаём JSON строкой, а не список объектов, и это не лень. gomobile
+// умеет переносить только строки, числа и указатели на типы этого же пакета:
+// список пришлось бы отдавать обёрткой со счётчиком и обращением по номеру, и
+// приложение читало бы его в цикле через границу языков. JSON пересекает её
+// один раз.
+
+// NodeView — одна нода так, как её видит покупатель.
+type NodeView struct {
+	ID int64 `json:"id"`
+
+	// Name и Country пишет продавец. Покупателю говорит страна: имя сервера
+	// вроде vm-4823917 не значит для него ничего.
+	Name    string `json:"name"`
+	Country string `json:"country,omitempty"`
+
+	// MS — сколько нода отвечала при последнем замере с этого телефона.
+	// Ноль вместе с Alive означает, что замера ещё не было.
+	MS    int64 `json:"ms"`
+	Alive bool  `json:"alive"`
+
+	// Current — через неё идёт трафик прямо сейчас.
+	// Chosen — её выбрал человек руками.
+	//
+	// Это разные вещи, и именно поэтому оба поля здесь. Выбранная нода могла
+	// замолчать, надзор уехал на живую, и показывать в этом случае одну
+	// «выбранную» значило бы врать про то, куда идёт трафик.
+	Current bool `json:"current"`
+	Chosen  bool `json:"chosen"`
+}
+
+// Nodes отдаёт список нод без замера — тем, что известно с подключения.
+func (t *Tunnel) Nodes() string {
+	t.mu.Lock()
+	dialer := t.dialer
+	t.mu.Unlock()
+	if dialer == nil {
+		return "[]"
+	}
+	return viewsJSON(dialer, dialer.Nodes(), nil)
+}
+
+// Measure меряет все ноды заново и отдаёт тот же список с временами.
+//
+// Зовётся по нажатию «Обновить» и занимает секунды: ноды опрашиваются разом,
+// но каждая — настоящим подключением, иначе число было бы выдумкой.
+func (t *Tunnel) Measure() string {
+	t.mu.Lock()
+	dialer := t.dialer
+	t.mu.Unlock()
+	if dialer == nil {
+		return "[]"
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), measureTimeout)
+	defer cancel()
+
+	return viewsJSON(dialer, dialer.Nodes(), dialer.Measure(ctx))
+}
+
+// SelectNode переводит туннель на выбранную ноду. Ноль — обратно к автовыбору.
+func (t *Tunnel) SelectNode(id int64) error {
+	t.mu.Lock()
+	dialer := t.dialer
+	t.mu.Unlock()
+	if dialer == nil {
+		return errors.New("туннель не поднят")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), selectTimeout)
+	defer cancel()
+
+	if err := dialer.Select(ctx, id); err != nil {
+		return err
+	}
+
+	t.mu.Lock()
+	t.nodeName = dialer.Node().Title()
+	t.mu.Unlock()
+	return nil
+}
+
+// SelectedNode — что выбрано руками. Ноль означает автовыбор.
+func (t *Tunnel) SelectedNode() int64 {
+	t.mu.Lock()
+	dialer := t.dialer
+	t.mu.Unlock()
+	if dialer == nil {
+		return 0
+	}
+	return dialer.Selected()
+}
+
+// viewsJSON собирает список для приложения.
+func viewsJSON(dialer *client.Supervisor, nodes []client.Node, measured []client.Measurement) string {
+	byID := make(map[int64]client.Measurement, len(measured))
+	for _, m := range measured {
+		byID[m.Node.ID] = m
+	}
+
+	current := dialer.Node().ID
+	chosen := dialer.Selected()
+
+	views := make([]NodeView, 0, len(nodes))
+	for _, n := range nodes {
+		v := NodeView{
+			ID:      n.ID,
+			Name:    n.Name,
+			Country: n.Country,
+			Current: n.ID == current,
+			Chosen:  chosen != 0 && n.ID == chosen,
+		}
+		if m, ok := byID[n.ID]; ok {
+			v.Alive = m.OK()
+			// Показываем полное время замера, а не одну задержку: человек
+			// ждёт именно его, и по нему же выбирает ядро.
+			cost := m.Cost()
+			if cost > 0 {
+				v.MS = cost.Milliseconds()
+			}
+		} else if n.ID == current {
+			// Текущую ноду мы не мерили, но знаем точно: через неё прямо
+			// сейчас идёт трафик.
+			v.Alive = true
+		}
+		views = append(views, v)
+	}
+
+	out, err := json.Marshal(views)
+	if err != nil {
+		return "[]"
+	}
+	return string(out)
 }
 
 // CheckAccountLink проверяет ссылку, ничего не подключая.

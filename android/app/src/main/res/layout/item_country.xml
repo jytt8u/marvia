@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Заголовок страны над её нодами. У продавца в одной стране бывает несколько
+    городов, и плоским списком человек ищет свою страну глазами по всему экрану.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="14dp"
+    android:paddingHorizontal="3dp"
+    android:textColor="@color/veil_muted"
+    android:textSize="13sp" />
