@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	_ "embed"
 	"encoding/base64"
@@ -26,6 +27,15 @@ type journal struct {
 	mu    sync.Mutex
 	lines []string
 }
+
+// Сколько даём на замер всех нод и на переключение между ними.
+//
+// Замер идёт настоящими подключениями ко всем нодам разом, поэтому он не
+// мгновенный; переключение — это обычное подключение, только к заданной ноде.
+const (
+	measureTimeout = 30 * time.Second
+	selectTimeout  = 60 * time.Second
+)
 
 const journalDepth = 200
 
@@ -81,6 +91,9 @@ func serveUI(ctl *Controller, log *journal) (string, *http.Server, error) {
 	mux.HandleFunc("POST "+prefix+"/api/account", u.setAccount)
 	mux.HandleFunc("POST "+prefix+"/api/connect", u.connect)
 	mux.HandleFunc("POST "+prefix+"/api/disconnect", u.disconnect)
+	mux.HandleFunc("GET "+prefix+"/api/nodes", u.nodes)
+	mux.HandleFunc("POST "+prefix+"/api/nodes/measure", u.measureNodes)
+	mux.HandleFunc("POST "+prefix+"/api/nodes/select", u.selectNode)
 	mux.HandleFunc("POST "+prefix+"/api/proxy/off", u.dropProxy)
 	mux.HandleFunc("POST "+prefix+"/api/lang", u.setLang)
 
@@ -140,6 +153,40 @@ func (u *ui) connect(w http.ResponseWriter, _ *http.Request) {
 func (u *ui) disconnect(w http.ResponseWriter, _ *http.Request) {
 	u.ctl.Disconnect()
 	writeJSON(w, http.StatusOK, map[string]any{})
+}
+
+// nodes отдаёт список нод без замера: тем, что уже известно.
+func (u *ui) nodes(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"nodes": u.ctl.Nodes()})
+}
+
+// measureNodes перемеряет все ноды. Секунды, а не мгновение: каждая нода
+// опрашивается настоящим подключением, иначе число было бы выдумкой.
+func (u *ui) measureNodes(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), measureTimeout)
+	defer cancel()
+
+	writeJSON(w, http.StatusOK, map[string]any{"nodes": u.ctl.MeasureNodes(ctx)})
+}
+
+// selectNode переводит туннель на выбранную ноду. Ноль — обратно к автовыбору.
+func (u *ui) selectNode(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID int64 `json:"id"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": say("badRequest")})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), selectTimeout)
+	defer cancel()
+
+	if err := u.ctl.SelectNode(ctx, body.ID); err != nil {
+		writeJSON(w, http.StatusConflict, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"nodes": u.ctl.Nodes()})
 }
 
 // dropProxy снимает системный прокси — по нажатию человека, не сам.
