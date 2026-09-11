@@ -109,8 +109,9 @@ type Config struct {
 
 // Bridge — работающий мост.
 type Bridge struct {
-	device stack.LinkEndpoint
-	stack  *stack.Stack
+	device  stack.LinkEndpoint
+	stack   *stack.Stack
+	handler *handler
 }
 
 // Start поднимает мост и начинает разбирать пакеты.
@@ -150,7 +151,23 @@ func Start(cfg Config) (*Bridge, error) {
 		return nil, fmt.Errorf("сетевой стек: %w", err)
 	}
 
-	return &Bridge{device: dev, stack: st}, nil
+	return &Bridge{device: dev, stack: st, handler: handler}, nil
+}
+
+// NodeChanged сообщает мосту, что трафик пошёл через другую ноду.
+//
+// Нужно ровно ради одного: снять запрет датаграмм. Вывод «нода не умеет
+// датаграммы» относится к конкретной ноде, а не к туннелю, и переносить его на
+// новую ноду — значит наказывать её за чужую старость.
+//
+// Хуже того, сам вывод мог быть неверным: умирающая нода обрывает поток там
+// же, где старая отвечает отказом. На живой проверке это и случилось — после
+// смерти ноды датаграммы выключались до конца сессии, и человеку оставалось
+// только переподключиться руками, что он и сделал.
+func (b *Bridge) NodeChanged() {
+	if b != nil && b.handler != nil {
+		b.handler.noUDP.Store(false)
+	}
 }
 
 // openDevice отдаёт интерфейс канального уровня.

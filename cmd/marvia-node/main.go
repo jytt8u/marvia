@@ -374,6 +374,15 @@ func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, 
 		OnError: func(err error) {
 			log.Printf("синхронизация с панелью не удалась, работаем по последнему списку: %v", err)
 		},
+		OnDisabled: func() {
+			// Выключили в середине жизни — та же реакция, что и на старте:
+			// реестр уже очищен, никого не пускаем, ждём включения. Строка одна
+			// на переход, а не каждые 15 секунд.
+			log.Printf("нода выключена в панели: очищаю список, никого не пускаю, жду включения")
+		},
+		OnEnabled: func() {
+			log.Printf("нода снова включена в панели: возобновляю обслуживание")
+		},
 	})
 
 	go registry.PersistUsage(ctx, usagePath, usageFlushInterval, func(err error) {

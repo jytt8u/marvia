@@ -1247,7 +1247,7 @@ function downloadBackup() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Тема. Перенесена из дизайна дословно: 27 видов, три плотности и арифметика
+   Тема. Перенесена из дизайна дословно: 28 видов, три плотности и арифметика
    контраста, которая подбирает приглушённый цвет так, чтобы он оставался
    читаемым на обоих фонах.
    ──────────────────────────────────────────────────────────────────────── */
@@ -1423,7 +1423,7 @@ const TEXTS = {
     sub: {
       dash: "Обзор за 30 дней",
       keys: "Токены для ботов и интеграций",
-      look: "Тема панели · 27 готовых видов",
+      look: "Тема панели · 28 готовых видов",
       appsEmpty: "ничего не выложено",
       appsSome: "покупатель качает их с домена панели, а не из магазина",
       clients: (shown, total, active, filtered) => filtered
@@ -1635,7 +1635,7 @@ const TEXTS = {
     sub: {
       dash: "Last 30 days",
       keys: "Tokens for bots and integrations",
-      look: "Panel theme · 27 ready looks",
+      look: "Panel theme · 28 ready looks",
       appsEmpty: "nothing published yet",
       appsSome: "buyers download them from your panel, not from a store",
       clients: (shown, total, active, filtered) => filtered
@@ -1869,8 +1869,10 @@ function paintLogin() {
    ──────────────────────────────────────────────────────────────────────── */
 
 function bytes(n) {
-  if (!n) return "0";
   const units = L().bytes;
+  // Голый «0» рядом с «12.4 ГБ» читается как другая величина, а не как ноль
+  // байт. Держим единицу и на нуле, и на языке интерфейса («0 Б» / «0 B»).
+  if (!n) return "0 " + units[0];
   let i = 0, v = n;
   while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
   return (v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)) + " " + units[i];
@@ -2004,13 +2006,18 @@ function renderVals() {
     ? users.filter((u) => ((u.label || "") + " " + (u.external_id || "") + " #" + u.id).toLowerCase().includes(q))
     : users;
 
+  // Пока не знаем, что в панели (первый ответ ещё в полёте) — подзаголовки,
+  // считающие клиентов, ноды, трафик и приложения, показали бы нули и
+  // «ничего не выложено». Это враньё: данных ещё нет, а не «их ноль». Пока
+  // !known говорим честное «пока не знаю», а не рисуем пустоту как факт.
   const subFor = {
     dash: d18.sub.dash,
-    clients: d18.sub.clients(shown.length, users.length, activeUsers, !!q),
+    clients: state.known ? d18.sub.clients(shown.length, users.length, activeUsers, !!q) : d18.err.unknown,
     keys: d18.sub.keys,
-    nodes: d18.sub.nodes(nodes.length, liveNodes),
-    stats: d18.sub.stats(bytes(total)),
-    apps: ((state.apps && state.apps.apps) || []).length === 0 ? d18.sub.appsEmpty : d18.sub.appsSome,
+    nodes: state.known ? d18.sub.nodes(nodes.length, liveNodes) : d18.err.unknown,
+    stats: state.known ? d18.sub.stats(bytes(total)) : d18.err.unknown,
+    apps: !state.known ? d18.err.unknown
+      : ((state.apps && state.apps.apps) || []).length === 0 ? d18.sub.appsEmpty : d18.sub.appsSome,
     look: d18.sub.look,
   };
 
@@ -2161,19 +2168,21 @@ function renderVals() {
     };
   });
 
+  // Те же num()/size(), что на обзоре: пока !known — прочерк, а не голый ноль.
+  // Карточка с «0» на разделе клиентов читается как «базу потеряли».
   const KPI = {
     clients: [
-      [d18.kpi.total, String(users.length), d18.kpi.ofAll, true],
-      [d18.kpi.active, String(activeUsers), users.length ? d18.kpi.share(Math.round((activeUsers / users.length) * 100)) : "—", true],
-      [d18.kpi.expiring, String(expiring), d18.kpi.sevenDays, expiring === 0],
+      [d18.kpi.total, num(users.length), d18.kpi.ofAll, true],
+      [d18.kpi.active, num(activeUsers), users.length ? d18.kpi.share(Math.round((activeUsers / users.length) * 100)) : "—", true],
+      [d18.kpi.expiring, num(expiring), d18.kpi.sevenDays, expiring === 0],
     ],
     keys: [
-      [d18.kpi.keysCount, String((state.keys || []).length), d18.kpi.forBots, true],
+      [d18.kpi.keysCount, num((state.keys || []).length), d18.kpi.forBots, true],
     ],
     stats: [
-      [d18.col.traffic, bytes(total), d18.kpi.forPeriod, true],
-      [d18.kpi.nodesWithTraffic, String(byNode.length), d18.kpi.outOf(nodes.length), true],
-      [d18.kpi.perDay, bytes(byDay.length ? total / byDay.length : 0), d18.kpi.onAverage, true],
+      [d18.col.traffic, size(total), d18.kpi.forPeriod, true],
+      [d18.kpi.nodesWithTraffic, num(byNode.length), state.known ? d18.kpi.outOf(nodes.length) : d18.err.unknown, true],
+      [d18.kpi.perDay, size(byDay.length ? total / byDay.length : 0), d18.kpi.onAverage, true],
     ],
   };
   const pageKpis = (KPI[page] || []).map(([label, value, delta, good]) => ({
@@ -2182,14 +2191,20 @@ function renderVals() {
   }));
 
   // ── ноды ─────────────────────────────────────────────────────────────────
-  const nodeTraffic = {};
-  for (const x of byNode) nodeTraffic[x.name] = (x.up || 0) + (x.down || 0);
-  const nodePeak = Object.values(nodeTraffic).reduce((m, v) => Math.max(m, v), 0) || 1;
+  // Трафик сводим по node_id, а не по имени. Имя ноды по умолчанию — hostname
+  // сервера, и у облачных образов оно сплошь одинаковое (ubuntu/vps/localhost):
+  // по имени две разные ноды слились бы в одну, и обе карточки показали бы долю
+  // последней. Плюс имя вроде «constructor»/«__proto__» в объекте-литерале
+  // достало бы поле из прототипа и дало бы «NaN Б» и width:NaN%. Map по
+  // идентификатору снимает и совпадение имён, и ловушку прототипа разом.
+  const nodeTraffic = new Map();
+  for (const x of byNode) nodeTraffic.set(x.node_id, (x.up || 0) + (x.down || 0));
+  const nodePeak = [...nodeTraffic.values()].reduce((m, v) => Math.max(m, v), 0) || 1;
 
   const nodeCards = nodes.map((n) => {
     const alive = nodeAlive(n);
     const st = alive ? "ok" : "warn";
-    const traffic = nodeTraffic[n.name] || 0;
+    const traffic = nodeTraffic.get(n.id) || 0;
     const f = traffic / nodePeak;
     return {
       onClick: () => nodeSheet(n),
@@ -2335,7 +2350,12 @@ function renderVals() {
     // Кнопка действия есть только там, где действие вправду работает.
     // Нарисованная кнопка — это обещание, и «Скачать журнал» на разделе,
     // которого нет, стоит дороже пустого угла.
-    showStart: page === "dash" && steps.some(([done]) => !done),
+    // Подсказку «с чего начать» показываем только когда точно знаем, что
+    // шаг не пройден. До первого ответа ноды/клиенты/ключи ещё пусты не
+    // потому что их нет, а потому что мы их не загрузили — развернуть на
+    // весь обзор «заведи первую ноду» у продавца с полной базой значит
+    // соврать. Поэтому state.known впереди.
+    showStart: state.known && page === "dash" && steps.some(([done]) => !done),
     startSteps,
     startBox: "display:flex;flex-direction:column;gap:8px;padding:" + d.pad + "px;border-radius:"
       + d.r + "px;background:" + t.surf + ";border:1px solid " + t.acc,
@@ -2369,7 +2389,9 @@ function renderVals() {
       + ";font-family:Onest,system-ui,sans-serif;font-size:13px;outline:none",
 
     appCards,
-    appsHint: laid.length === 0,
+    // «Ничего не выложено» — утверждение, и до первого ответа оно ложно:
+    // список приложений ещё не пришёл. Пока !known держим подсказку скрытой.
+    appsHint: state.known && laid.length === 0,
     appsHintText: (state.apps && state.apps.hint)
       || d18.appsPage.empty,
     hintBox: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf

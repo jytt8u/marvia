@@ -277,19 +277,23 @@ func (d *Dialer) Granted(ctx context.Context, size int) (int, error) {
 // Хвост дописывается сразу за запросом, до чтения статуса: если чего-то ждёт
 // нода, а мы уже сели ждать её ответа, встанут обе стороны.
 func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind, tail []byte) (net.Conn, error) {
+	// Всё, что не доехало до ответа ноды, помечаем как недоступность самой
+	// ноды. Дальше по этому признаку принимают два решения: надзор — менять
+	// ли ноду немедленно, мост — выключать ли датаграммы навсегда. Оба до
+	// появления признака ошибались, и оба дорого.
 	stream, err := d.pool.Open(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", vp1.ErrNodeUnreachable, err)
 	}
 
 	if err := vp1.WriteRequestOf(stream, target, kind); err != nil {
 		_ = stream.Close()
-		return nil, fmt.Errorf("запрос на %s: %w", target, err)
+		return nil, fmt.Errorf("%w: запрос на %s: %w", vp1.ErrNodeUnreachable, target, err)
 	}
 	if len(tail) > 0 {
 		if _, err := stream.Write(tail); err != nil {
 			_ = stream.Close()
-			return nil, fmt.Errorf("запрос на %s: %w", target, err)
+			return nil, fmt.Errorf("%w: запрос на %s: %w", vp1.ErrNodeUnreachable, target, err)
 		}
 	}
 
@@ -299,10 +303,15 @@ func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind, ta
 		// Старая нода не знает про датаграммы: она видит незнакомый тип
 		// адреса и закрывает поток, не ответив. Обрыв ровно здесь и ровно на
 		// запросе датаграмм — это она, а не сеть.
+		//
+		// Ровно так же обрывается поток у ноды, которую в этот миг выключили,
+		// поэтому вывод «нода старая» здесь только предположение — и он несёт
+		// на себе признак недоступности, чтобы тот, кто выключает датаграммы
+		// до конца сессии, мог отличить одно от другого.
 		if kind == vp1.KindUDP && closedEarly(err) {
-			return nil, vp1.ErrDatagramsUnsupported
+			return nil, fmt.Errorf("%w: %w", vp1.ErrNodeUnreachable, vp1.ErrDatagramsUnsupported)
 		}
-		return nil, fmt.Errorf("ответ ноды по %s: %w", target, err)
+		return nil, fmt.Errorf("%w: ответ ноды по %s: %w", vp1.ErrNodeUnreachable, target, err)
 	}
 	if status != vp1.StatusOK {
 		_ = stream.Close()
