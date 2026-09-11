@@ -131,5 +131,7 @@
     <string name="log_no">no</string>
     <string name="log_tunnel_on">turning the tunnel on</string>
     <string name="log_connected">connected through %1$s</string>
+    <string name="log_moved">node stopped answering, moved to %1$s</string>
+    <string name="trouble_no_node">the node is silent and there is nowhere to move — nothing works right now</string>
     <string name="log_failed">did not come up: %1$s — %2$s</string>
 </resources>

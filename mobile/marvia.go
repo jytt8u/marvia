@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -111,6 +112,10 @@ type Tunnel struct {
 	// строку вовсе — а она понадобится, когда сломается что-то настоящее.
 	lastError string
 	lastErrAt time.Time
+
+	// troubleCode — держащаяся беда: нода молчит, и переехать не на что.
+	// Живёт до тех пор, пока надзор не скажет, что связь вернулась.
+	troubleCode string
 }
 
 // Start поднимает туннель поверх сетевого интерфейса, полученного от системы.
@@ -145,7 +150,7 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 
 	// Имя ноды переписываем при переезде: иначе окно будет показывать ту,
 	// через которую трафик давно не идёт.
-	dialer, err := connect(accountLink, cacheDir, client.Events{OnSwitch: t.switched, OnTrouble: t.trouble})
+	dialer, err := connect(accountLink, cacheDir, client.Events{OnSwitch: t.switched, OnTrouble: t.trouble, OnRecovered: t.recovered})
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +168,11 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 		_ = dialer.Close()
 		return nil, fail(FailSystem, fmt.Errorf("сетевой мост: %w", err))
 	}
+	// Под замком: надзор уже работает и может позвать switched в любой миг, а
+	// тот читает мост, чтобы снять с него запрет датаграмм.
+	t.mu.Lock()
 	t.bridge = bridge
+	t.mu.Unlock()
 
 	return t, nil
 }
@@ -196,10 +205,18 @@ func connect(accountLink, cacheDir string, events client.Events) (*client.Superv
 	// следят и меняют её, если она замолчала. Без этого туннель, чью ноду
 	// заблокировали, не рвётся — он глохнет, и телефон продолжает показывать
 	// «Подключено», пока у человека наполовину не грузится всё подряд.
+	//
+	// Журнал ядра прокидываем обязательно.
+	//
+	// Без него надзор на телефоне нем: ни «нода не отвечает», ни «переехали»,
+	// ни «переехать не удалось» наружу не выходят, и живая проверка не может
+	// отличить «сторож не сработал» от «сторож сработал и не смог». Ровно на
+	// этом застряла первая проверка переезда.
 	dialer, measurements, err := client.Supervise(context.Background(), client.ConnectConfig{
 		Account:   account,
 		Key:       key,
 		CachePath: cachePath(cacheDir),
+		Log:       func(format string, args ...any) { log.Printf(format, args...) },
 	}, events)
 
 	// Отчёт уходит в любом случае, в том числе когда не подключилось ни к
@@ -264,7 +281,13 @@ func (t *Tunnel) switched(n client.Node) {
 	t.mu.Lock()
 	t.nodeName = n.Title()
 	t.lastError = ""
+	bridge := t.bridge
 	t.mu.Unlock()
+
+	// Мосту говорим отдельно: он мог выключить датаграммы, решив, что нода их
+	// не умеет, а на самом деле нода в тот миг умирала. Новая нода за это не
+	// отвечает.
+	bridge.NodeChanged()
 }
 
 // trouble — нода замолчала, а переехать не на что.
@@ -272,13 +295,41 @@ func (t *Tunnel) switched(n client.Node) {
 // Единственный случай, когда человеку про переезд надо сказать. Удачный он
 // замечать не должен: в этом весь смысл. А вот «сейчас не работает ничего»
 // лучше прочитать у нас, чем выяснять самому, почему интернет наполовину.
-func (t *Tunnel) trouble(reason string) {
+//
+// Кладём в отдельное поле, а не в общую строку ошибки, по двум причинам.
+//
+// Первая: беда должна держаться, пока не кончится, а разовая неудача одного
+// потока — гаснуть через минуту. В одном поле это несовместимо, и раньше
+// сообщение о беде мигало: надзор ставил его заново раз в минуту с лишним, а
+// гасло оно ровно через минуту.
+//
+// Вторая: здесь код, а не фраза. Фразу подбирает приложение на своём языке —
+// иначе английский интерфейс показывает русское предложение из ядра.
+func (t *Tunnel) trouble(code string) {
 	t.mu.Lock()
-	t.lastError = reason
-	// Время ставим обязательно: без него сообщение считалось бы старым с
-	// рождения и гасло бы, не успев показаться.
-	t.lastErrAt = time.Now()
+	t.troubleCode = code
 	t.mu.Unlock()
+}
+
+// recovered — нода снова отвечает после того, как её объявили молчащей.
+//
+// Без этого надпись про беду не гасла бы никогда: надзор ставит её, а снять
+// было некому. Человек смотрел бы на «ничего не работает» после того, как всё
+// заработало.
+func (t *Tunnel) recovered() {
+	t.mu.Lock()
+	t.troubleCode = ""
+	t.mu.Unlock()
+}
+
+// Trouble отдаёт код беды: пусто — беды нет.
+//
+// Приложение подбирает под код свою надпись. Разовые неудачи отдельных
+// соединений сюда не попадают — они в LastError и гаснут сами.
+func (t *Tunnel) Trouble() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.troubleCode
 }
 
 // Stop закрывает туннель. Безопасно вызывать несколько раз.

@@ -188,17 +188,47 @@ class MarviaVpnService : VpnService() {
      *
      * Разница между «ничего не работает» и «не открывается один сайт» для
      * человека огромна, а изнутри ядра она видна сразу.
+     *
+     * Имя ноды перечитываем на каждом круге, а не запоминаем при подключении.
+     * Ядро меняет ноду само, когда прежняя замолчала, и раньше об этом здесь
+     * не узнавали: на экране навсегда оставалась та нода, через которую трафик
+     * давно не идёт. Удачный переезд выглядел как «ничего не произошло» — и
+     * человек, глядя на мёртвое имя и на ошибки под ним, шёл переподключаться
+     * руками. Ровно это и случилось на первой живой проверке.
      */
     private suspend fun watch(started: Core, node: String, subscription: TunnelState.Subscription) {
         var shown = ""
+        var shownNode = node
         while (scope.isActive && started.running()) {
             delay(POLL_INTERVAL_MS)
-            val last = started.lastError()
-            if (last != shown) {
+
+            // Держащаяся беда важнее разовой ошибки и показывается вместо неё.
+            //
+            // Из ядра приезжает код, а не фраза: оно не знает языка интерфейса.
+            // Раньше оттуда приходило русское предложение, и англоязычный
+            // покупатель читал его как есть.
+            val trouble = started.trouble()
+            val last = if (trouble.isEmpty()) started.lastError() else troubleText(trouble)
+
+            val now = started.nodeName()
+            if (last != shown || now != shownNode) {
                 shown = last
-                MarviaState.set(TunnelState.On(node, last, subscription))
+                if (now != shownNode) {
+                    shownNode = now
+                    Journal.add(getString(R.string.log_moved, now))
+                    goForeground(getString(R.string.status_on), getString(R.string.detail_node, now))
+                }
+                MarviaState.set(TunnelState.On(shownNode, last, subscription))
             }
         }
+    }
+
+    /** troubleText подбирает фразу под код беды из ядра. */
+    private fun troubleText(code: String): String = when (code) {
+        "no-node" -> getString(R.string.trouble_no_node)
+        // Незнакомый код — не повод молчать: покажем как есть, чтобы поломка
+        // была видна, а не спрятана за пустой строкой.
+        else -> code
     }
 
     /**
