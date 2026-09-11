@@ -251,7 +251,7 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 		Key:       key,
 		CachePath: cachePath(),
 		Log:       c.log.add,
-	}, client.Events{OnSwitch: c.moved, OnTrouble: c.stall})
+	}, client.Events{OnSwitch: c.moved, OnTrouble: c.stall, OnRecovered: c.recovered})
 
 	go func() {
 		_ = client.SendReports(context.Background(), account.SubscriptionURL, client.ReportsFrom(measurements))
@@ -368,9 +368,15 @@ func (c *Controller) moved(node client.Node) {
 		c.state = StateConnected
 		c.reason = ""
 	}
+	bridge := c.bridge
 	c.mu.Unlock()
 
-	c.log.add("переехали на %s", node.Title())
+	// Мост мог выключить датаграммы, решив, что нода их не умеет. Умирающая
+	// нода обрывает поток там же, где старая отвечает отказом, так что вывод
+	// мог быть про смерть, а не про старость. Новая нода за это не отвечает.
+	bridge.NodeChanged()
+
+	c.log.add("%s", sayf("logMoved", node.Title()))
 }
 
 // stall — нода замолчала, а переехать не на что.
@@ -379,13 +385,40 @@ func (c *Controller) moved(node client.Node) {
 // работает, — но тогда снимутся маршруты, и трафик пойдёт мимо туннеля
 // открыто ровно в тот момент, когда человек об этом не знает. Для средства
 // обхода блокировок это хуже, чем отсутствие связи.
-func (c *Controller) stall(reason string) {
+func (c *Controller) stall(code string) {
+	// Из ядра приезжает код, а не фраза: оно не знает, на каком языке говорит
+	// окно. Фразу подбираем здесь, из своего словаря.
+	reason := say("nodeSilent")
+	if code != client.TroubleNoNode {
+		reason = code
+	}
+
 	c.mu.Lock()
 	if c.state == StateConnected {
 		c.state = StateStalled
 		c.reason = reason
 	}
 	c.mu.Unlock()
+
+	c.log.add("%s", reason)
+}
+
+// recovered — нода снова отвечает после того, как её объявили молчащей.
+//
+// Без этого из «связь потеряна» не было выхода, кроме переезда. А самый
+// обычный случай — не мёртвая нода, а пропавшая сеть: тогда переезжать некуда,
+// и надпись оставалась навсегда, в том числе после возвращения сети. Хуже
+// того, кнопка «Подключиться» в этом состоянии тоже не помогала: туннель
+// считался поднятым.
+func (c *Controller) recovered() {
+	c.mu.Lock()
+	if c.state == StateStalled {
+		c.state = StateConnected
+		c.reason = ""
+	}
+	c.mu.Unlock()
+
+	c.log.add("%s", say("logNodeBack"))
 }
 
 func (c *Controller) finish(state State, reason string) {

@@ -122,5 +122,7 @@
     <string name="log_no">нет</string>
     <string name="log_tunnel_on">включаю туннель</string>
     <string name="log_connected">подключено через %1$s</string>
+    <string name="log_moved">нода замолчала, переехали на %1$s</string>
+    <string name="trouble_no_node">нода молчит, и переехать не на что — сейчас ничего не работает</string>
     <string name="log_failed">не поднялся: %1$s — %2$s</string>
 </resources>
