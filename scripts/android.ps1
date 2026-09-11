@@ -19,14 +19,33 @@ Set-Location (Join-Path $PSScriptRoot '..')
 # путём, SDK лежит в предсказуемом месте. Падать с «не задан ANDROID_HOME»,
 # когда SDK стоит в двух шагах, — это отправлять человека искать то, что
 # программа могла найти сама.
-if (-not $env:ANDROID_HOME) {
+# Заданной переменной не верим на слово, а проверяем.
+#
+# Она переживает запуск скрипта: $env:ANDROID_HOME остаётся в окне PowerShell
+# до его закрытия. Однажды туда попал мусор от сломанной версии этого же
+# скрипта, и все следующие запуски в том же окне молча брали его и падали
+# дальше по дороге — с сообщением про NDK, хотя виноват был SDK.
+$sdkHere = { param($p) $p -and (Test-Path (Join-Path $p 'platform-tools')) }
+
+if (-not (& $sdkHere $env:ANDROID_HOME)) {
+    if ($env:ANDROID_HOME) {
+        Write-Host "== ANDROID_HOME указывает не на SDK ($env:ANDROID_HOME), ищу сам"
+    }
+    # Скобки @() снаружи обязательны, и это не украшение.
+    #
+    # Where-Object с одним совпадением возвращает не список из одного пути, а
+    # саму строку. Тогда $where[0] берёт из неё первый символ, и от
+    # «D:\android-sdk» остаётся «D»: сборка падала на «Не нашёл NDK в D\ndk»,
+    # хотя NDK стоял на месте.
     $where = @(
-        $env:ANDROID_SDK_ROOT
-        "$env:LOCALAPPDATA\Android\Sdk"
-        "$env:USERPROFILE\Android\Sdk"
-        'C:\Android\Sdk'
-        'D:\android-sdk'
-    ) | Where-Object { $_ -and (Test-Path (Join-Path $_ 'platform-tools')) }
+        @(
+            $env:ANDROID_SDK_ROOT
+            "$env:LOCALAPPDATA\Android\Sdk"
+            "$env:USERPROFILE\Android\Sdk"
+            'C:\Android\Sdk'
+            'D:\android-sdk'
+        ) | Where-Object { $_ -and (Test-Path (Join-Path $_ 'platform-tools')) }
+    )
 
     if (-not $where) {
         throw @'
@@ -46,10 +65,16 @@ if (-not $env:ANDROID_HOME) {
     Write-Host "== SDK: $env:ANDROID_HOME"
 }
 
-if (-not $env:ANDROID_NDK_HOME) {
+# NDK проверяем так же, как SDK, и по той же причине.
+$ndkHere = { param($p) $p -and (Test-Path (Join-Path $p 'source.properties')) }
+
+if (-not (& $ndkHere $env:ANDROID_NDK_HOME)) {
     $ndkRoot = Join-Path $env:ANDROID_HOME 'ndk'
+    # Сортируем как версии, а не как текст: по тексту «9.0» больше «28.2», и
+    # свежий NDK проиграл бы старому, оставшемуся рядом с ним.
     $ndk = Get-ChildItem $ndkRoot -Directory -ErrorAction SilentlyContinue |
-        Sort-Object Name | Select-Object -Last 1
+        Sort-Object { $v = $null; if ([version]::TryParse($_.Name, [ref]$v)) { $v } else { [version]'0.0' } } |
+        Select-Object -Last 1
     if (-not $ndk) {
         throw "Не нашёл NDK в $ndkRoot"
     }
