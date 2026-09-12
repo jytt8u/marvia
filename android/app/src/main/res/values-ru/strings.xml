@@ -7,6 +7,7 @@
     <string name="nav_servers">Страны</string>
     <string name="nav_settings">Настройки</string>
     <string name="nav_theme">Тема</string>
+    <string name="settings_language">Язык</string>
 
     <string name="status_off">Отключено</string>
     <string name="status_connecting">Подключаюсь…</string>
