@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jytt8u/marvia/internal/look"
 	"github.com/jytt8u/marvia/internal/routes"
 	"github.com/jytt8u/marvia/internal/users"
 )
@@ -108,8 +109,8 @@ func (a *API) Handler() http.Handler {
 	// Веб-интерфейс. Только по точному корню: всё остальное — 404, чтобы
 	// панель не отвечала страницей на случайные пути сканеров.
 	mux.HandleFunc("GET /{$}", a.ServeApp)
-	mux.HandleFunc("GET /fonts/{name}", a.ServeFont)
-	mux.HandleFunc("GET /assets/{name}", a.ServeAsset)
+	mux.HandleFunc("GET /fonts/{name}", look.ServeFont)
+	mux.HandleFunc("GET /assets/{name}", look.ServeAsset)
 
 	// Версия — с авторизацией. Продавцу она нужна, когда он пишет в поддержку;
 	// постороннему сканеру знать её незачем.
