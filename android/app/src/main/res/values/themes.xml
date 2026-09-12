@@ -17,6 +17,7 @@
 
     <!-- Заголовок раздела в списках: «Выбрать вручную», «Ключ доступа». -->
     <style name="VeilSection">
+        <item name="android:tag">dim</item>
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textAllCaps">true</item>
@@ -38,6 +39,7 @@
     </style>
 
     <style name="VeilRowTitle">
+        <item name="android:tag">fg</item>
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textSize">15sp</item>
@@ -47,6 +49,7 @@
     </style>
 
     <style name="VeilRowSub">
+        <item name="android:tag">dim</item>
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textSize">12.5sp</item>

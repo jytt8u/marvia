@@ -123,4 +123,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("com.google.android.material:material:1.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+
+    // Тесты на JVM, без телефона: арифметика темы сверяется с look.js.
+    testImplementation("junit:junit:4.13.2")
 }

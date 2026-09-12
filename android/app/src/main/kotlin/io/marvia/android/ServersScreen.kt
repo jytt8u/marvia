@@ -4,7 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import android.content.res.ColorStateList
+import androidx.core.widget.ImageViewCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import io.marvia.android.databinding.ItemCountryBinding
@@ -30,10 +31,17 @@ import kotlinx.coroutines.withContext
 class ServersScreen(
     private val host: AppCompatActivity,
     private val ui: ScreenServersBinding,
+    /** Тема на сейчас: цвета выбора, пинга и карточек берутся из неё. */
+    private val theme: () -> Theme,
 ) {
 
     /** Идёт замер или переключение: второе нажатие в это время только мешает. */
     private var busy = false
+
+    /** Последний показанный список: перекрашивается при смене темы без похода в ядро. */
+    private var shown: List<NodeRow> = emptyList()
+
+    private val dp = host.resources.displayMetrics.density
 
     init {
         ui.measureButton.setOnClickListener { load(measure = true) }
@@ -135,7 +143,13 @@ class ServersScreen(
         ui.measureButton.alpha = if (now) 0.4f else 1f
     }
 
+    /** paint перекрашивает экран в новую тему по тому, что уже показано. */
+    fun paint() {
+        if (shown.isEmpty()) renderEmpty() else render(shown)
+    }
+
     private fun renderEmpty() {
+        shown = emptyList()
         ui.autoRow.isVisible = false
         ui.manualLabel.isVisible = false
         ui.nodeList.removeAllViews()
@@ -150,6 +164,7 @@ class ServersScreen(
             renderEmpty()
             return
         }
+        shown = rows
 
         ui.measureButton.isVisible = true
         ui.serversEmpty.isVisible = false
@@ -186,12 +201,10 @@ class ServersScreen(
             .filter { it.second.alive && it.second.ms > 0 }
             .minByOrNull { it.second.ms }
 
-        ui.autoRow.setBackgroundResource(
-            if (manual) R.drawable.bg_card else R.drawable.bg_card_chosen,
-        )
-        ui.autoMark.setBackgroundResource(
-            if (manual) R.drawable.bg_ring else R.drawable.bg_ring_chosen,
-        )
+        val t = theme()
+        ui.autoRow.background = Paint.card(t, dp, stroke = if (manual) t.line else t.acc)
+        ui.autoMark.background = Paint.ring(t, dp, chosen = !manual)
+        ImageViewCompat.setImageTintList(ui.autoMarkCheck, ColorStateList.valueOf(t.accFg))
         ui.autoMarkCheck.isVisible = !manual
 
         ui.autoNote.text = if (fastest == null) {
@@ -213,6 +226,7 @@ class ServersScreen(
         for ((country, group) in rows.groupBy { it.group }) {
             val header = ItemCountryBinding.inflate(inflater, ui.nodeList, false)
             header.root.text = country.ifEmpty { host.getString(R.string.servers_group_other) }
+            Paint.apply(header.root, theme())
             ui.nodeList.addView(header.root)
 
             for (row in group) {
@@ -236,13 +250,13 @@ class ServersScreen(
         val seen = known(row)
         showPing(item.nodePing, if (seen?.alive == true) seen.ms else 0)
 
-        item.root.setBackgroundResource(
-            if (row.chosen) R.drawable.bg_card_chosen else R.drawable.bg_card,
-        )
-        item.nodeMark.setBackgroundResource(
-            if (row.chosen) R.drawable.bg_ring_chosen else R.drawable.bg_ring,
-        )
+        val t = theme()
+        item.root.background = Paint.card(t, dp, stroke = if (row.chosen) t.acc else t.line)
+        item.nodeMark.background = Paint.ring(t, dp, chosen = row.chosen)
+        ImageViewCompat.setImageTintList(item.nodeMarkCheck, ColorStateList.valueOf(t.accFg))
         item.nodeMarkCheck.isVisible = row.chosen
+        // Строка собрана из разметки после общей покраски — красим её здесь.
+        Paint.apply(item.root, t)
         item.root.setOnClickListener { select(row.id) }
 
         return item.root
@@ -285,19 +299,15 @@ class ServersScreen(
     }
 
     private fun showPing(view: android.widget.TextView, ms: Long) {
+        val t = theme()
         if (ms <= 0) {
             view.setText(R.string.node_ping_none)
-            view.setTextColor(ContextCompat.getColor(host, R.color.veil_muted))
+            view.setTextColor(t.dim)
             return
         }
 
         view.text = host.getString(R.string.node_ping, ms)
-        val color = when {
-            ms < 70 -> R.color.veil_live
-            ms < 250 -> R.color.veil_warn
-            else -> R.color.veil_fail
-        }
-        view.setTextColor(ContextCompat.getColor(host, color))
+        view.setTextColor(pingColor(t, ms))
     }
 
     /** Как ноду называть человеку: страна, а не «ae-1». */
@@ -307,4 +317,16 @@ class ServersScreen(
         /** Ноль в selectNode означает «выбирай сам». */
         const val AUTO = 0L
     }
+}
+
+/**
+ * pingColor — быстро акцентом, терпимо янтарным, плохо красным.
+ *
+ * Пороги одни на оба экрана: список стран и главный экран не должны спорить,
+ * хорошие ли это сорок миллисекунд.
+ */
+fun pingColor(t: Theme, ms: Long): Int = when {
+    ms < 70 -> t.acc
+    ms < 250 -> t.warn
+    else -> t.fail
 }
