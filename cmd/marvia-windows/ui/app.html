@@ -33,7 +33,8 @@
     --fg: #f1f4f7; --dim: #9aa0a7; --acc: #c3ccd6; --accFg: #08110d;
     --accSoft: rgba(195,204,214,0.13); --accRgb: 195,204,214;
     --warn: #f2a03d; --fail: #ff6b7a;
-    --r: 16px; --pad: 16px; --gap: 12px;
+    --bgcss: var(--bg); --cardLine: var(--line); --cardShadow: none; --glow: none;
+    --r: 14px; --pad: 16px; --gap: 12px;
     --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
     --display: Unbounded, Onest, system-ui, sans-serif;
   }
@@ -46,7 +47,7 @@
 
   html, body {
     height: 100%; margin: 0;
-    background: var(--bg); color: var(--fg);
+    background: var(--bgcss, var(--bg)); color: var(--fg);
     font: 14px/1.5 Onest, "Segoe UI", system-ui, sans-serif;
     user-select: none; overflow: hidden;
     -webkit-font-smoothing: antialiased;
@@ -132,7 +133,7 @@
 
   .card {
     padding: var(--pad); border-radius: var(--r);
-    background: var(--surf); border: 1px solid var(--line);
+    background: var(--surf); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none);
     display: flex; flex-direction: column; gap: 10px; min-width: 0;
   }
   .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -173,11 +174,20 @@
   .power:active:not(:disabled) { transform: translateY(0) scale(.985); }
   .power:disabled { cursor: default; opacity: .55; }
 
+  /* Подключено: вид кнопки — из темы. Диск, кольцо, стекло, контур; свечение
+     тоже оттуда. Остальные состояния одинаковы при любой кнопке: беда должна
+     выглядеть как беда. */
   .power[data-state="connected"] {
     background: var(--acc); border-color: transparent;
-    box-shadow: 0 0 0 10px var(--accSoft), 0 0 60px rgba(var(--accRgb), .38);
+    box-shadow: 0 0 0 10px var(--accSoft), var(--glow);
   }
   .power[data-state="connected"] svg { color: var(--accFg); }
+  .power[data-state="connected"][data-btn="ring"] { background: transparent; border: 3px solid var(--acc); }
+  .power[data-state="connected"][data-btn="ring"] svg { color: var(--acc); }
+  .power[data-state="connected"][data-btn="glass"] { background: var(--accSoft); border: 1px solid var(--acc); }
+  .power[data-state="connected"][data-btn="glass"] svg { color: var(--acc); }
+  .power[data-state="connected"][data-btn="bare"] { background: transparent; border: 1px solid var(--line); box-shadow: var(--glow); }
+  .power[data-state="connected"][data-btn="bare"] svg { color: var(--acc); }
 
   .power[data-state="failed"] { background: var(--fail); border-color: transparent; }
   .power[data-state="failed"] svg { color: #fff; }
@@ -330,7 +340,32 @@
 
   /* Тема: пресеты — карточки с фоном пресета, чтобы выбирать по виду, а не
      по названию. */
-  .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; padding-right: 4px; }
+  .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; padding-right: 4px; align-content: start; }
+  .knobs { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: var(--gap); }
+  .knobs::-webkit-scrollbar { width: 8px; }
+  .knobs::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+  .knobs .card { flex: none; }
+  .lamp { position: relative; height: 110px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line);
+    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); }
+  .lamp button { background: none; border: none; cursor: pointer; display: grid; place-items: center; }
+  .lamp button i { width: 7px; height: 7px; border-radius: 50%; background: var(--fg); opacity: .22; display: block; }
+  .lamp button[aria-pressed="true"] i { width: 22px; height: 22px; opacity: 1; background: var(--acc);
+    box-shadow: 0 0 0 5px var(--accSoft), 0 0 22px 4px rgba(var(--accRgb), .55); }
+  .lamp .hint { position: absolute; left: 0; right: 0; bottom: 5px; text-align: center; pointer-events: none; font-size: 11px; }
+  .kinds { display: flex; gap: 6px; }
+  .kind { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 3px; cursor: pointer;
+    border-radius: calc(var(--r) + 3px); border: 1px solid var(--line); background: transparent; font: inherit; font-size: 10px; color: var(--dim); }
+  .kind i { display: block; height: 34px; border-radius: max(calc(var(--r) - 3px), 5px); }
+  .kind[aria-pressed="true"] { border: 2px solid var(--acc); background: var(--accSoft); color: var(--acc); }
+  .range { width: 100%; accent-color: var(--acc); }
+  .code { padding: 10px 12px; border-radius: var(--r); background: var(--surf2); border: 1px dashed var(--acc);
+    font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--fg); overflow: hidden; white-space: nowrap;
+    text-overflow: ellipsis; cursor: copy; user-select: text; }
+  .code-in { width: 100%; padding: 9px 12px; border-radius: var(--r); background: var(--surf); border: 1px solid var(--line);
+    color: var(--fg); font-family: var(--mono); font-size: 12px; outline: none; }
+  .code-in:focus { border-color: var(--acc); }
+  .preset .pv { position: relative; width: 44px; height: 30px; border-radius: 6px; flex: none; overflow: hidden; }
+  .preset .pv i { position: absolute; display: block; }
   .presets::-webkit-scrollbar { width: 8px; }
   .presets::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
   .preset {
@@ -341,7 +376,7 @@
   .preset .sw { width: 18px; height: 18px; border-radius: 6px; flex: none; }
   .preset .nm { font-size: 12px; font-weight: 500; }
   .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
-  .swatch { width: 30px; height: 30px; border-radius: 9px; cursor: pointer; border: none; outline: 2px solid transparent; outline-offset: 2px; }
+  .swatch { width: 26px; height: 26px; border-radius: 8px; cursor: pointer; border: none; outline: 2px solid transparent; outline-offset: 2px; }
   .swatch[aria-pressed="true"] { outline-color: var(--fg); }
   .pills { display: flex; gap: 6px; }
   .pillb { flex: 1; text-align: center; padding: 9px 0; border-radius: 10px; font: inherit; font-size: 12px; cursor: pointer; background: var(--surf2); color: var(--dim); border: none; }
@@ -527,16 +562,43 @@
             <div class="k" data-t="themePresets"></div>
             <div class="presets" id="presets"></div>
           </div>
-          <div class="col">
+          <div class="col knobs">
             <div class="card">
               <div class="k" data-t="themeAccent"></div>
               <div class="swatches" id="accents"></div>
             </div>
             <div class="card">
-              <div class="k" data-t="themeDensity"></div>
-              <div class="pills" id="densities"></div>
+              <div class="card-head"><div class="k" data-t="themeLight"></div><span class="hint" id="light-note"></span></div>
+              <div class="lamp" id="lamp"></div>
+              <div class="kinds" id="kinds"></div>
+              <div class="card-head"><span data-t="themeDepth"></span><span class="hint" id="depth-note"></span></div>
+              <input type="range" class="range" id="depth" min="8" max="98">
+              <div class="k" data-t="themeTint"></div>
+              <div class="swatches" id="tints"></div>
             </div>
             <div class="card">
+              <div class="k" data-t="themeRadius"></div>
+              <div class="pills" id="radii"></div>
+              <div class="k" data-t="themeDensity"></div>
+              <div class="pills" id="densities"></div>
+              <div class="k" data-t="themeCards"></div>
+              <div class="pills" id="cardKinds"></div>
+              <div class="k" data-t="themeButton"></div>
+              <div class="pills" id="buttons"></div>
+              <div class="k" data-t="themeGlow"></div>
+              <div class="pills" id="glows"></div>
+            </div>
+            <div class="card">
+              <div class="k" data-t="themeProfiles"></div>
+              <div class="pills" id="profiles"></div>
+              <div class="pills">
+                <button class="pillb" id="profile-save" data-t="themeSaveHere" aria-pressed="true"></button>
+                <button class="pillb" id="theme-random" data-t="themeRandom"></button>
+              </div>
+              <div class="k" data-t="themeCode"></div>
+              <div class="code" id="theme-code"></div>
+              <input type="text" class="code-in" id="code-in" autocomplete="off" spellcheck="false">
+              <p class="hint" id="code-bad" hidden data-t="themeCodeBad"></p>
               <p class="lead" data-t="themeNote"></p>
               <div class="row"><button class="chip" id="theme-reset" data-t="themeReset"></button></div>
             </div>
@@ -658,17 +720,29 @@ const T = {
     logLead: "Что программа делала. Пригодится, если что-то не заработало.",
     logEmpty: "пусто",
 
-    themePresets: "Пресеты", themeAccent: "Акцент", themeDensity: "Плотность",
-    themeNote: "Тема хранится на этом компьютере и никуда не отправляется. Та же таблица цветов стоит в панели продавца.",
+    themePresets: "Готовые виды", themeAccent: "Акцент", themeDensity: "Плотность",
+    themeLight: "Свет", themeLampHint: "нажми, откуда светит", themeLightOff: "свет выключен, фон ровный",
+    themeDepth: "Густота тени", themeTint: "Оттенок светлой стороны",
+    themeRadius: "Скругления", themeCards: "Карточки", themeButton: "Кнопка", themeGlow: "Свечение",
+    themeProfiles: "Мои профили", themeSlotFull: "Стиль", themeSlotEmpty: "Пусто", themeSaveHere: "Сохранить сюда", themeRandom: "Случайная тема",
+    themeCode: "Код темы · можно передать другу", themeCopy: "Нажми, чтобы скопировать", themeCodePlaceholder: "вставить код MV-…",
+    themeCodeBad: "Это не код темы Marvia",
+    themeNote: "Тема хранится на этом компьютере и никуда не отправляется. Та же таблица цветов стоит в панели продавца и в приложении на телефоне, и код темы подходит всем троим.",
     themeReset: "Вернуть серый",
+    dirs: { nw: "сверху слева", n: "сверху", ne: "сверху справа", w: "слева", c: "из центра", e: "справа", sw: "снизу слева", s: "снизу", se: "снизу справа" },
+    kinds: { flat: "Ровный", linear: "Мягкий", radial: "Пятном", aurora: "Сияние" },
+    depths: ["едва заметна", "мягкая", "заметная", "глубокая", "почти чёрная"],
+    radii: { sharp: "Острые", soft: "Мягкие", round: "Круглые", pill: "Капля" },
+    cardKinds: { flat: "Плоские", outline: "Обводка", shadow: "С тенью" },
+    buttons: { solid: "Диск", ring: "Кольцо", glass: "Стекло", bare: "Контур" },
+    glows: { none: "Нет", soft: "Мягко", mid: "Средне", neon: "Неон" },
     density: { compact: "Плотно", normal: "Обычно", roomy: "Просторно" },
-    themes: {
-      emerald: "Изумруд", jade: "Нефрит", teal: "Лагуна", ice: "Лёд", cobalt: "Кобальт", ultra: "Ультра",
-      plum: "Слива", orchid: "Орхидея", fuchsia: "Фуксия", rose: "Роза", crimson: "Кармин", ember: "Угли",
-      amber: "Янтарь", gold: "Золото", citrus: "Цитрус", lime: "Лайм", olive: "Олива", sand: "Песок",
-      copper: "Медь", steel: "Серый", slate: "Графит", mono: "Моно", oled: "OLED", midnight: "Полночь",
-      daylight: "Дневная", paper: "Бумага", linen: "Лён",
-    },
+    themes: [
+      "Серый (из коробки)", "Изумруд", "Нефрит", "Лагуна", "Лёд", "Кобальт", "Ультра",
+      "Слива", "Орхидея", "Фуксия", "Роза", "Кармин", "Угли", "Янтарь", "Золото",
+      "Цитрус", "Лайм", "Олива", "Песок", "Медь", "Сталь", "Графит", "Моно", "OLED",
+      "Полночь", "Дневная", "Бумага", "Лён",
+    ],
 
     about1: "Marvia забирает весь трафик компьютера и уводит его через ноду, "
       + "замаскированную под обычный сайт. <b>Ноду программа выбирает сама</b> — по "
@@ -754,17 +828,29 @@ const T = {
     logLead: "What the program did. Useful when something did not work.",
     logEmpty: "empty",
 
-    themePresets: "Presets", themeAccent: "Accent", themeDensity: "Density",
-    themeNote: "The theme is kept on this computer and sent nowhere. The seller panel uses the same colour table.",
+    themePresets: "Ready looks", themeAccent: "Accent", themeDensity: "Density",
+    themeLight: "Light", themeLampHint: "tap where the light comes from", themeLightOff: "light is off, flat background",
+    themeDepth: "Shadow depth", themeTint: "Tint of the lit side",
+    themeRadius: "Corners", themeCards: "Cards", themeButton: "Button", themeGlow: "Glow",
+    themeProfiles: "My profiles", themeSlotFull: "Style", themeSlotEmpty: "Empty", themeSaveHere: "Save here", themeRandom: "Random theme",
+    themeCode: "Theme code · share it with a friend", themeCopy: "Click to copy", themeCodePlaceholder: "paste an MV-… code",
+    themeCodeBad: "This is not a Marvia theme code",
+    themeNote: "The theme is kept on this computer and sent nowhere. The seller panel and the phone app use the same colour table, and a theme code fits all three.",
+    dirs: { nw: "top left", n: "top", ne: "top right", w: "left", c: "from the centre", e: "right", sw: "bottom left", s: "bottom", se: "bottom right" },
+    kinds: { flat: "Flat", linear: "Soft", radial: "Spot", aurora: "Aurora" },
+    depths: ["barely there", "soft", "visible", "deep", "almost black"],
+    radii: { sharp: "Sharp", soft: "Soft", round: "Round", pill: "Pill" },
+    cardKinds: { flat: "Flat", outline: "Outlined", shadow: "Shadowed" },
+    buttons: { solid: "Disc", ring: "Ring", glass: "Glass", bare: "Outline" },
+    glows: { none: "None", soft: "Soft", mid: "Medium", neon: "Neon" },
     themeReset: "Back to grey",
     density: { compact: "Compact", normal: "Normal", roomy: "Roomy" },
-    themes: {
-      emerald: "Emerald", jade: "Jade", teal: "Lagoon", ice: "Ice", cobalt: "Cobalt", ultra: "Ultra",
-      plum: "Plum", orchid: "Orchid", fuchsia: "Fuchsia", rose: "Rose", crimson: "Crimson", ember: "Ember",
-      amber: "Amber", gold: "Gold", citrus: "Citrus", lime: "Lime", olive: "Olive", sand: "Sand",
-      copper: "Copper", steel: "Grey", slate: "Slate", mono: "Mono", oled: "OLED", midnight: "Midnight",
-      daylight: "Daylight", paper: "Paper", linen: "Linen",
-    },
+    themes: [
+      "Grey (default)", "Emerald", "Jade", "Lagoon", "Ice", "Cobalt", "Ultra",
+      "Plum", "Orchid", "Fuchsia", "Rose", "Crimson", "Ember", "Amber", "Gold",
+      "Citrus", "Lime", "Olive", "Sand", "Copper", "Steel", "Slate", "Mono", "OLED",
+      "Midnight", "Daylight", "Paper", "Linen",
+    ],
 
     about1: "Marvia takes all traffic from this computer and routes it through a node "
       + "disguised as an ordinary website. <b>The program picks the node itself</b> — by "
@@ -878,69 +964,181 @@ let look = Look.load();
 
 function applyLook() {
   const t = Look.theme(look);
-  document.documentElement.style.cssText = Look.vars(t, look.density);
+  document.documentElement.style.cssText = Look.vars(t);
+  // Кнопка питания: вид — из темы. Ставится атрибутом, а красится в CSS.
+  $("power").dataset.btn = t.btn;
   paintTheme();
 }
 
 function setLook(patch) {
   Object.assign(look, patch);
+  look = Look.normalize(look);
   Look.save(look);
   applyLook();
 }
 
+// el — короткий конструктор элемента: тег, класс, содержимое.
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+// pills рисует ряд таблеток: активная — акцентом. Все ручки темы, кроме
+// цветов, выбираются так.
+function pills(id, keys, current, names, onPick) {
+  const box = $(id);
+  box.replaceChildren();
+  for (const k of keys) {
+    const b = el("button", "pillb", names[k] || k);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(current === k));
+    b.addEventListener("click", () => onPick(k));
+    box.append(b);
+  }
+}
+
+function swatches(id, colors, current, paint, onPick) {
+  const box = $(id);
+  box.replaceChildren();
+  for (const c of colors) {
+    const b = el("button", "swatch");
+    b.type = "button";
+    b.style.background = paint(c);
+    b.setAttribute("aria-pressed", String(current === c));
+    b.addEventListener("click", () => onPick(c));
+    box.append(b);
+  }
+}
+
 // paintTheme рисует вкладку «Тема». Заново при каждой смене: у карточек
 // подсветка выбранного, а у плиток — цвет активной, и всё это от темы.
+// Прокрутка колонки ручек при этом остаётся: перерисовываются дети, а не
+// сама колонка.
 function paintTheme() {
   const d = L();
   const t = Look.theme(look);
 
+  // Готовые виды — мини-макет окна в цветах каждого: боковая, кнопка, карточки.
   const presets = $("presets");
   presets.replaceChildren();
-  for (const [key, p] of Object.entries(Look.PRESETS)) {
-    const b = document.createElement("button");
+  Look.LOOKS.forEach((lk, i) => {
+    const lt = Look.theme(Object.assign({}, lk, { acc: null, tint: null }));
+    const b = el("button", "preset");
     b.type = "button";
-    b.className = "preset";
-    b.setAttribute("aria-pressed", String(look.preset === key));
-    b.style.background = "linear-gradient(135deg," + Look.mix(p.bg, p.acc, 0.22) + "," + p.bg + ")";
-    b.style.color = Look.lum(p.bg) < 0.5 ? "#eef0f2" : "#16181a";
-    const sw = document.createElement("i");
-    sw.className = "sw";
-    sw.style.background = p.acc;
-    const nm = document.createElement("span");
-    nm.className = "nm";
-    nm.textContent = d.themes[key] || key;
-    b.append(sw, nm);
-    // Смена пресета сбрасывает акцент: у каждого пресета свой, и чужой
-    // акцент поверх нового фона — это то, чего человек не выбирал.
-    b.addEventListener("click", () => setLook({ preset: key, acc: null }));
+    b.setAttribute("aria-pressed", String(Look.same(look, lk)));
+    const pv = el("span", "pv");
+    pv.style.background = lt.bgcss;
+    const side = el("i"); side.style.cssText = "left:0;top:0;bottom:0;width:30%;background:" + lt.surf + ";border-right:1px solid " + lt.line;
+    const ring = el("i"); ring.style.cssText = "left:52%;top:22%;width:12px;height:12px;border-radius:50%;box-sizing:border-box;border:2px solid " + lt.acc
+      + (lk.btn === "solid" ? ";background:" + lt.acc : "");
+    const cardA = el("i"); cardA.style.cssText = "left:38%;right:8%;bottom:8%;height:22%;border-radius:" + Math.round(lt.r * 0.25) + "px;background:" + lt.surf
+      + ";border:1px solid " + lt.cardLine;
+    pv.append(side, ring, cardA);
+    const nm = el("span", "nm", d.themes[i] || lk.preset);
+    b.append(pv, nm);
+    // Вид задаёт всё разом; акцент и оттенок сбрасываются: у каждого свой.
+    b.addEventListener("click", () => setLook(Object.assign({ acc: null, tint: null }, lk)));
     presets.append(b);
+  });
+
+  swatches("accents", Look.ACCENTS, t.acc, (c) => c, (c) => setLook({ acc: c }));
+  swatches("tints", [null].concat(Look.ACCENTS), look.tint,
+    (c) => "linear-gradient(135deg," + (c || t.acc) + "," + Look.mix(c || t.acc, "#000000", 0.6) + ")",
+    (c) => setLook({ tint: c }));
+
+  // Лампа: экран, залитый настоящим фоном; нажатие в угол переносит свет.
+  const litBg = (kind, dir) => Look.theme(Object.assign({}, look, { kind, dir })).bgcss;
+  const lamp = $("lamp");
+  lamp.replaceChildren();
+  lamp.style.background = litBg(look.kind === "flat" ? "linear" : look.kind, look.dir);
+  for (const k of ["nw", "n", "ne", "w", "c", "e", "sw", "s", "se"]) {
+    const b = el("button");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(look.dir === k));
+    b.append(el("i"));
+    b.addEventListener("click", () => setLook({ dir: k, kind: look.kind === "flat" ? "linear" : look.kind }));
+    lamp.append(b);
+  }
+  lamp.append(el("span", "hint", d.themeLampHint));
+  $("light-note").textContent = look.kind === "flat" ? d.themeLightOff : d.dirs[look.dir];
+
+  const kinds = $("kinds");
+  kinds.replaceChildren();
+  for (const k of Look.KINDS) {
+    const b = el("button", "kind");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(look.kind === k));
+    const i = el("i");
+    i.style.background = litBg(k, look.dir);
+    b.append(i, el("span", null, d.kinds[k]));
+    b.addEventListener("click", () => setLook({ kind: k }));
+    kinds.append(b);
   }
 
-  const accents = $("accents");
-  accents.replaceChildren();
-  for (const c of Look.ACCENTS) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "swatch";
-    b.style.background = c;
-    b.setAttribute("aria-pressed", String(t.acc === c));
-    b.addEventListener("click", () => setLook({ acc: c }));
-    accents.append(b);
-  }
+  const depth = $("depth");
+  depth.value = Math.round(look.depth * 100);
+  $("depth-note").textContent = d.depths[look.depth <= 0.3 ? 0 : look.depth <= 0.5 ? 1 : look.depth <= 0.7 ? 2 : look.depth <= 0.85 ? 3 : 4];
 
-  const densities = $("densities");
-  densities.replaceChildren();
-  for (const k of Object.keys(Look.DENSITY)) {
-    const b = document.createElement("button");
+  pills("radii", Object.keys(Look.RADII), look.radius, d.radii, (k) => setLook({ radius: k }));
+  pills("densities", Object.keys(Look.DENSITY), look.density, d.density, (k) => setLook({ density: k }));
+  pills("cardKinds", Look.CARDS, look.card, d.cardKinds, (k) => setLook({ card: k }));
+  pills("buttons", Look.BUTTONS, look.btn, d.buttons, (k) => setLook({ btn: k }));
+  pills("glows", Object.keys(Look.GLOWS), look.glow, d.glows, (k) => setLook({ glow: k }));
+
+  // Профили — три слота с кодами. Пустой слот занимается кнопкой «сохранить
+  // сюда», занятый по нажатию применяется.
+  const slots = Look.loadProfiles();
+  const profiles = $("profiles");
+  profiles.replaceChildren();
+  slots.forEach((code, i) => {
+    const b = el("button", "pillb", (code ? d.themeSlotFull : d.themeSlotEmpty) + " " + (i + 1));
     b.type = "button";
-    b.className = "pillb";
-    b.textContent = d.density[k];
-    b.setAttribute("aria-pressed", String(look.density === k));
-    b.addEventListener("click", () => setLook({ density: k }));
-    densities.append(b);
-  }
+    b.setAttribute("aria-pressed", String(profileSlot === i));
+    b.addEventListener("click", () => {
+      profileSlot = i;
+      const st = code ? Look.decode(code) : null;
+      if (st) setLook(st); else paintTheme();
+    });
+    profiles.append(b);
+  });
+
+  $("theme-code").textContent = Look.encode(look);
+  $("theme-code").title = d.themeCopy;
+  $("code-in").placeholder = d.themeCodePlaceholder;
 }
 
+// Слот профиля, в который пишет «сохранить сюда».
+let profileSlot = 0;
+
+on("depth", "input", (e) => setLook({ depth: Number(e.target.value) / 100 }));
+on("profile-save", "click", () => {
+  const slots = Look.loadProfiles();
+  slots[profileSlot] = Look.encode(look);
+  Look.saveProfiles(slots);
+  paintTheme();
+});
+on("theme-random", "click", () => {
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  setLook({
+    preset: pick(Object.keys(Look.PRESETS)), acc: pick([null].concat(Look.ACCENTS)), tint: pick([null, null].concat(Look.ACCENTS)),
+    kind: pick(["linear", "radial", "aurora"]), dir: pick(Object.keys(Look.DIRS)),
+    depth: Math.round((0.2 + Math.random() * 0.75) * 100) / 100,
+    radius: pick(Object.keys(Look.RADII)), density: pick(Object.keys(Look.DENSITY)),
+    btn: pick(Look.BUTTONS), glow: pick(Object.keys(Look.GLOWS)), card: pick(Look.CARDS),
+  });
+});
+on("theme-code", "click", () => {
+  if (navigator.clipboard) navigator.clipboard.writeText(Look.encode(look)).catch(() => {});
+});
+on("code-in", "change", (e) => {
+  const st = Look.decode(e.target.value);
+  $("code-bad").hidden = !!st;
+  if (!st) return;
+  e.target.value = "";
+  setLook(st);
+});
 on("theme-reset", "click", () => setLook(Object.assign({}, Look.DEFAULT)));
 
 /* ------------------------------------------------------------- прокси */

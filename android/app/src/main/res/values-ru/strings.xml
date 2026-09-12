@@ -5,7 +5,7 @@
     <!-- Нижняя панель: три экрана и ничего больше. -->
     <string name="nav_connect">Подключение</string>
     <string name="nav_servers">Страны</string>
-    <string name="nav_settings">Настройки</string>
+    <string name="nav_more">Ещё</string>
     <string name="nav_theme">Тема</string>
     <string name="settings_language">Язык</string>
 
@@ -100,11 +100,9 @@
         поднят туннель. Но госуслуги ломает не значок, а зарубежный адрес
         ноды, и вот его исключение из туннеля и чинит.
     -->
-    <string name="bypass_title">Что не пускать в туннель</string>
     <string name="bypass_none">Все приложения идут через туннель</string>
     <string name="bypass_some">Мимо туннеля: %1$d</string>
     <string name="bypass_preset">Госуслуги и банки</string>
-    <string name="bypass_save">Сохранить</string>
     <string name="bypass_restart">Изменения применятся при следующем подключении</string>
     <string name="bypass_loading">Смотрю, что установлено…</string>
 
@@ -122,20 +120,17 @@
         Настройки. Здесь нет ручек протокола: их место внутри, а не на экране
         человека, который не может выбрать между ними осознанно.
     -->
-    <string name="settings_title">Настройки</string>
-    <string name="settings_autostart">Включаться при запуске телефона</string>
+    <string name="settings_autostart">Включаться вместе с телефоном</string>
+    <string name="settings_autostart_sub">туннель поднимется после перезагрузки</string>
     <string name="settings_autostart_saved">После перезагрузки телефона туннель поднимется сам</string>
     <string name="settings_autostart_off_saved">После перезагрузки придётся включить руками</string>
     <string name="settings_russian">Российские сайты — мимо туннеля</string>
     <string name="settings_russian_sub">банки и госуслуги иначе ругаются</string>
-    <string name="settings_apps">Приложения мимо туннеля</string>
     <string name="settings_always_on">Постоянный VPN в системе</string>
     <string name="settings_always_on_sub">система поднимает туннель раньше, чем можем мы</string>
     <string name="settings_always_on_missing">На этом телефоне нет такого раздела настроек</string>
     <string name="settings_key">Ключ доступа</string>
     <string name="settings_key_added">добавлен %1$s</string>
-    <string name="settings_journal">Журнал</string>
-    <string name="settings_journal_sub">покажет продавцу, что случилось</string>
     <string name="settings_about">О приложении</string>
     <string name="about_body">%1$s, версия %2$s</string>
     <string name="theme_title">Тема</string>
@@ -146,6 +141,57 @@
     <string name="theme_density">Плотность</string>
     <string name="theme_note">Тема хранится на этом телефоне и никуда не отправляется. Та же таблица цветов стоит в панели продавца и в приложении на компьютере.</string>
     <string name="theme_reset">Вернуть серый</string>
+    <string name="theme_light">Свет</string>
+    <string name="theme_lamp_hint">нажми, откуда светит</string>
+    <string name="theme_light_off">свет выключен, фон ровный</string>
+    <string name="dir_nw">сверху слева</string>
+    <string name="dir_n">сверху</string>
+    <string name="dir_ne">сверху справа</string>
+    <string name="dir_w">слева</string>
+    <string name="dir_c">из центра</string>
+    <string name="dir_e">справа</string>
+    <string name="dir_sw">снизу слева</string>
+    <string name="dir_s">снизу</string>
+    <string name="dir_se">снизу справа</string>
+    <string name="kind_flat">Ровный</string>
+    <string name="kind_linear">Мягкий</string>
+    <string name="kind_radial">Пятном</string>
+    <string name="kind_aurora">Сияние</string>
+    <string name="theme_depth">Густота тени</string>
+    <string name="depth_0">едва заметна</string>
+    <string name="depth_1">мягкая</string>
+    <string name="depth_2">заметная</string>
+    <string name="depth_3">глубокая</string>
+    <string name="depth_4">почти чёрная</string>
+    <string name="theme_tint">Оттенок светлой стороны</string>
+    <string name="theme_radius">Скругления</string>
+    <string name="radius_sharp">Острые</string>
+    <string name="radius_soft">Мягкие</string>
+    <string name="radius_round">Круглые</string>
+    <string name="radius_pill">Капля</string>
+    <string name="theme_cards">Карточки</string>
+    <string name="card_flat">Плоские</string>
+    <string name="card_outline">Обводка</string>
+    <string name="card_shadow">С тенью</string>
+    <string name="theme_button">Кнопка</string>
+    <string name="btn_solid">Диск</string>
+    <string name="btn_ring">Кольцо</string>
+    <string name="btn_glass">Стекло</string>
+    <string name="btn_bare">Контур</string>
+    <string name="theme_glow">Свечение</string>
+    <string name="glow_none">Нет</string>
+    <string name="glow_soft">Мягко</string>
+    <string name="glow_mid">Средне</string>
+    <string name="glow_neon">Неон</string>
+    <string name="theme_profiles">Мои профили</string>
+    <string name="profile_full">Стиль %1$d</string>
+    <string name="profile_empty">Пусто %1$d</string>
+    <string name="theme_save_here">Сохранить сюда</string>
+    <string name="theme_random">Случайная тема</string>
+    <string name="theme_code">Код темы · можно передать другу</string>
+    <string name="theme_code_placeholder">вставить код MV-…</string>
+    <string name="theme_code_bad">Это не код темы Marvia</string>
+    <string name="theme_code_copied">Код темы скопирован</string>
     <string name="density_compact">Плотно</string>
     <string name="density_normal">Обычно</string>
     <string name="density_roomy">Просторно</string>
@@ -217,4 +263,61 @@
     <string name="log_moved">нода замолчала, переехали на %1$s</string>
     <string name="trouble_no_node">нода молчит, и переехать не на что — сейчас ничего не работает</string>
     <string name="log_failed">не поднялся: %1$s — %2$s</string>
+    <string name="more_conn">Соединение</string>
+    <string name="more_apps">Приложения</string>
+    <string name="more_logs">Логи</string>
+    <string name="more_conn_title">Соединение</string>
+    <string name="more_conn_sub">Защита, DNS, маршруты</string>
+    <string name="more_apps_title">Приложения</string>
+    <string name="more_logs_title">Логи</string>
+    <plurals name="more_logs_sub">
+        <item quantity="one">последняя %1$d строка</item>
+        <item quantity="few">последние %1$d строки</item>
+        <item quantity="many">последние %1$d строк</item>
+        <item quantity="other">последние %1$d строки</item>
+    </plurals>
+    <string name="more_logs_sub_empty">журнал пока пуст</string>
+    <string name="conn_group_protect">Защита</string>
+    <string name="conn_group_net">Сеть</string>
+    <string name="conn_group_app">Приложение</string>
+    <string name="conn_dns">DNS</string>
+    <string name="conn_dns_sub">резолвер внутри туннеля</string>
+    <string name="conn_lan">Домашняя сеть мимо туннеля</string>
+    <string name="conn_lan_sub">принтер, телевизор, роутер</string>
+
+    <string name="apps_mode_exclude">Мимо туннеля</string>
+    <string name="apps_mode_include">Только эти</string>
+    <string name="apps_mode_off">Выключено</string>
+    <string name="apps_note_exclude">Отмеченные идут мимо туннеля, всё остальное — через него.</string>
+    <string name="apps_note_include">Через туннель идут только отмеченные, всё остальное — мимо. Ничего не отмечено — идёт всё.</string>
+    <string name="apps_note_off">Все приложения идут через туннель. Отметки сохраняются, но не применяются.</string>
+    <string name="apps_summary_off">все приложения через туннель</string>
+    <string name="apps_summary_include_none">ничего не отмечено — все через туннель</string>
+    <plurals name="apps_summary_include">
+        <item quantity="one">через туннель только %1$d приложение</item>
+        <item quantity="few">через туннель только %1$d приложения</item>
+        <item quantity="many">через туннель только %1$d приложений</item>
+        <item quantity="other">через туннель только %1$d приложения</item>
+    </plurals>
+    <plurals name="apps_summary_exclude">
+        <item quantity="one">%1$d приложение мимо туннеля</item>
+        <item quantity="few">%1$d приложения мимо туннеля</item>
+        <item quantity="many">%1$d приложений мимо туннеля</item>
+        <item quantity="other">%1$d приложения мимо туннеля</item>
+    </plurals>
+    <string name="apps_preset_none">Добавлять нечего: ничего из набора не установлено или всё уже отмечено</string>
+
+    <string name="logs_all">Все</string>
+    <string name="logs_info">Инфо</string>
+    <string name="logs_warn">Сбои</string>
+    <string name="logs_err">Ошибки</string>
+    <string name="logs_copy">Копировать</string>
+    <string name="logs_copied">Скопировано</string>
+    <string name="logs_empty">Пока пусто — журнал наполняется, пока работает туннель</string>
+    <plurals name="logs_count">
+        <item quantity="one">%1$d строка</item>
+        <item quantity="few">%1$d строки</item>
+        <item quantity="many">%1$d строк</item>
+        <item quantity="other">%1$d строки</item>
+    </plurals>
 </resources>

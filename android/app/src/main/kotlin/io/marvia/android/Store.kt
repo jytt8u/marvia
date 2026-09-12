@@ -64,6 +64,50 @@ class Store(context: Context) {
         }
 
     /**
+     * bypassMode — что делать со списком приложений.
+     *
+     * «Мимо туннеля»: отмеченные ходят напрямую, остальные — через туннель.
+     * «Только эти»: наоборот, в туннель идут одни отмеченные — так живут те,
+     * кому туннель нужен ради двух приложений, а банк и такси должны видеть
+     * настоящий адрес. «Выключено»: список остаётся, но не применяется —
+     * чтобы отметки не пропали, когда человек на день выключает исключения.
+     */
+    var bypassMode: String
+        get() = prefs.getString(KEY_BYPASS_MODE, BYPASS_EXCLUDE).let {
+            if (it == BYPASS_INCLUDE || it == BYPASS_OFF) it else BYPASS_EXCLUDE
+        }
+        set(value) {
+            prefs.edit().putString(KEY_BYPASS_MODE, value).apply()
+        }
+
+    /**
+     * dns — кто отвечает на запросы имён. Только адрес, без порта.
+     *
+     * Запрос в любом случае уходит внутрь туннеля и по TCP — это решает
+     * ядро, а не человек. Выбор здесь только в том, чей резолвер стоит на
+     * другом конце: у кого-то из них есть фильтр рекламы, у кого-то — нет.
+     */
+    var dns: String
+        get() = prefs.getString(KEY_DNS, null)?.takeIf { it in DNS_CHOICES } ?: DNS_CHOICES.first()
+        set(value) {
+            prefs.edit().putString(KEY_DNS, value).apply()
+        }
+
+    /**
+     * lanOutside — оставлять ли домашнюю сеть мимо туннеля.
+     *
+     * Принтер, телевизор, роутер: их адреса частные и за границу не
+     * маршрутизируются, внутри туннеля до них не дойти никак. Выключено по
+     * умолчанию не из вредности: в чужом Wi-Fi «домашняя сеть» — это чужая
+     * сеть, и пускать туда трафик мимо туннеля человек должен сам.
+     */
+    var lanOutside: Boolean
+        get() = prefs.getBoolean(KEY_LAN_OUTSIDE, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_LAN_OUTSIDE, value).apply()
+        }
+
+    /**
      * bypassRussian — вести ли российские сайты мимо туннеля.
      *
      * Отдельно от списка приложений: приложения человек выбирает сам, а это
@@ -106,20 +150,56 @@ class Store(context: Context) {
      */
     var look: Look.Choice
         get() {
+            val d = Look.DEFAULT
             val preset = prefs.getString(KEY_PRESET, null)
-                ?: if (prefs.getInt(KEY_THEME, -1) == LEGACY_LIGHT) "daylight" else LookTable.DEFAULT_PRESET
-            return Look.Choice(
-                preset = preset,
-                accent = prefs.getInt(KEY_ACCENT, 0),
-                density = prefs.getString(KEY_DENSITY, null) ?: LookTable.DEFAULT_DENSITY,
+                ?: if (prefs.getInt(KEY_THEME, -1) == LEGACY_LIGHT) "daylight" else d.preset
+            // Незнакомое или битое значение поле за полем заменит normalize:
+            // одна битая плотность не должна сбрасывать ещё и цвет.
+            return Look.normalize(
+                Look.Choice(
+                    preset = preset,
+                    accent = prefs.getInt(KEY_ACCENT, 0),
+                    kind = prefs.getString(KEY_KIND, null) ?: d.kind,
+                    dir = prefs.getString(KEY_DIR, null) ?: d.dir,
+                    depth = prefs.getFloat(KEY_DEPTH, d.depth.toFloat()).toDouble(),
+                    tint = prefs.getInt(KEY_TINT, 0),
+                    radius = prefs.getString(KEY_RADIUS, null) ?: d.radius,
+                    density = prefs.getString(KEY_DENSITY, null) ?: d.density,
+                    btn = prefs.getString(KEY_BTN, null) ?: d.btn,
+                    glow = prefs.getString(KEY_GLOW, null) ?: d.glow,
+                    card = prefs.getString(KEY_CARD, null) ?: d.card,
+                ),
             )
         }
         set(value) {
+            val v = Look.normalize(value)
             prefs.edit()
-                .putString(KEY_PRESET, value.preset)
-                .putInt(KEY_ACCENT, value.accent)
-                .putString(KEY_DENSITY, value.density)
+                .putString(KEY_PRESET, v.preset)
+                .putInt(KEY_ACCENT, v.accent)
+                .putString(KEY_KIND, v.kind)
+                .putString(KEY_DIR, v.dir)
+                .putFloat(KEY_DEPTH, v.depth.toFloat())
+                .putInt(KEY_TINT, v.tint)
+                .putString(KEY_RADIUS, v.radius)
+                .putString(KEY_DENSITY, v.density)
+                .putString(KEY_BTN, v.btn)
+                .putString(KEY_GLOW, v.glow)
+                .putString(KEY_CARD, v.card)
                 .apply()
+        }
+
+    /** profiles — три сохранённых вида кодами; пустой слот — null. */
+    var profiles: List<String?>
+        get() = (0 until 3).map { i ->
+            prefs.getString(KEY_PROFILE + i, null)?.takeIf { Look.decode(it) != null }
+        }
+        set(value) {
+            val e = prefs.edit()
+            for (i in 0 until 3) {
+                val code = value.getOrNull(i)
+                if (code == null) e.remove(KEY_PROFILE + i) else e.putString(KEY_PROFILE + i, code)
+            }
+            e.apply()
         }
 
     /**
@@ -148,9 +228,24 @@ class Store(context: Context) {
         const val LANG_RU = "ru"
         const val LANG_EN = "en"
 
+        const val BYPASS_EXCLUDE = "exclude"
+        const val BYPASS_INCLUDE = "include"
+        const val BYPASS_OFF = "off"
+
+        /**
+         * Резолверы, из которых выбирают. Первый — по умолчанию, он же
+         * Mobile.DefaultDNS без порта. Список короткий и публичный: свой
+         * адрес вписать нельзя, потому что опечатка в нём — это «интернет
+         * не работает» без единой подсказки, почему.
+         */
+        val DNS_CHOICES = listOf("1.1.1.1", "8.8.8.8", "9.9.9.9", "94.140.14.14")
+
         private const val KEY_ACCOUNT_LINK = "account_link"
         private const val KEY_ACCOUNT_SAVED = "account_saved_at"
         private const val KEY_BYPASSED = "bypassed_apps"
+        private const val KEY_BYPASS_MODE = "bypass_mode"
+        private const val KEY_DNS = "dns"
+        private const val KEY_LAN_OUTSIDE = "lan_outside"
         private const val KEY_BYPASS_RU = "bypass_russian"
         private const val KEY_BYPASS_ASKED = "bypass_asked"
         private const val KEY_AUTOSTART = "autostart"
@@ -159,6 +254,15 @@ class Store(context: Context) {
         private const val KEY_PRESET = "look_preset"
         private const val KEY_ACCENT = "look_accent"
         private const val KEY_DENSITY = "look_density"
+        private const val KEY_KIND = "look_kind"
+        private const val KEY_DIR = "look_dir"
+        private const val KEY_DEPTH = "look_depth"
+        private const val KEY_TINT = "look_tint"
+        private const val KEY_RADIUS = "look_radius"
+        private const val KEY_BTN = "look_btn"
+        private const val KEY_GLOW = "look_glow"
+        private const val KEY_CARD = "look_card"
+        private const val KEY_PROFILE = "look_profile_"
 
         /** AppCompatDelegate.MODE_NIGHT_NO — так хранилась светлая тема. */
         private const val LEGACY_LIGHT = 1

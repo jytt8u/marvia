@@ -1,0 +1,577 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Экран «Ещё» из макета: три раздела под одним заголовком, между ними —
+    ряд кнопок-таблеток. Соединение, приложения, логи. Заголовок и подпись
+    меняются вместе с разделом, поэтому они здесь без текста.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingTop="@dimen/header_pad"
+        android:paddingBottom="10dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:letterSpacing="0.2"
+            android:text="@string/app_name"
+            android:textAllCaps="true"
+            android:tag="dim"
+            android:textColor="@color/veil_muted"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/moreTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:letterSpacing="-0.02"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:tag="fg"
+        android:textColor="@color/veil_text"
+        android:textSize="26sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/moreSub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingTop="2dp"
+        android:paddingBottom="12dp"
+        android:tag="dim"
+        android:textColor="@color/veil_muted"
+        android:textSize="13sp" />
+
+    <!-- Таблетки разделов. Красятся кодом: активная — акцентом. -->
+    <LinearLayout
+        android:id="@+id/morePills"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:id="@+id/pillConn"
+            style="@style/VeilPill"
+            android:text="@string/more_conn" />
+
+        <TextView
+            android:id="@+id/pillApps"
+            style="@style/VeilPill"
+            android:layout_marginStart="6dp"
+            android:text="@string/more_apps" />
+
+        <TextView
+            android:id="@+id/pillLogs"
+            style="@style/VeilPill"
+            android:layout_marginStart="6dp"
+            android:text="@string/more_logs" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- ═══════════════════════════════════════ Соединение -->
+        <ScrollView
+            android:id="@+id/sectionConn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingHorizontal="@dimen/screen_pad">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="18dp">
+
+                <TextView
+                    style="@style/VeilSection"
+                    android:paddingBottom="8dp"
+                    android:text="@string/conn_group_protect" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:tag="card">
+
+                    <LinearLayout
+                        android:id="@+id/rowAutostart"
+                        style="@style/VeilRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/VeilRowTitle"
+                                android:text="@string/settings_autostart" />
+
+                            <TextView
+                                style="@style/VeilRowSub"
+                                android:text="@string/settings_autostart_sub" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchAutostart"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:clickable="false"
+                            android:focusable="false"
+                            android:tag="switch" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/veil_border"
+                        android:tag="line" />
+
+                    <LinearLayout
+                        android:id="@+id/rowAlwaysOn"
+                        style="@style/VeilRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/VeilRowTitle"
+                                android:text="@string/settings_always_on" />
+
+                            <TextView
+                                style="@style/VeilRowSub"
+                                android:text="@string/settings_always_on_sub" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="19dp"
+                            android:layout_height="19dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron"
+                            android:tag="icon:dim"
+                            app:tint="@color/veil_chevron" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    style="@style/VeilSection"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="8dp"
+                    android:text="@string/conn_group_net" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:tag="card">
+
+                    <LinearLayout
+                        android:id="@+id/rowDns"
+                        style="@style/VeilRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/VeilRowTitle"
+                                android:text="@string/conn_dns" />
+
+                            <TextView
+                                style="@style/VeilRowSub"
+                                android:text="@string/conn_dns_sub" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/dnsValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:tag="acc"
+                            android:textColor="@color/veil_accent"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <View
+                        android:id="@+id/dividerLan"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/veil_border"
+                        android:tag="line" />
+
+                    <!-- Домашняя сеть и российские подсети — только с Android 13. -->
+                    <LinearLayout
+                        android:id="@+id/rowLan"
+                        style="@style/VeilRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/VeilRowTitle"
+                                android:text="@string/conn_lan" />
+
+                            <TextView
+                                style="@style/VeilRowSub"
+                                android:text="@string/conn_lan_sub" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchLan"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:clickable="false"
+                            android:focusable="false"
+                            android:tag="switch" />
+                    </LinearLayout>
+
+                    <View
+                        android:id="@+id/dividerRu"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/veil_border"
+                        android:tag="line" />
+
+                    <LinearLayout
+                        android:id="@+id/rowRussian"
+                        style="@style/VeilRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/VeilRowTitle"
+                                android:text="@string/settings_russian" />
+
+                            <TextView
+                                style="@style/VeilRowSub"
+                                android:text="@string/settings_russian_sub" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchRussian"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:clickable="false"
+                            android:focusable="false"
+                            android:tag="switch" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    style="@style/VeilSection"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="8dp"
+                    android:text="@string/conn_group_app" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:tag="card">
+
+                    <LinearLayout
+                        android:id="@+id/rowLanguage"
+                        style="@style/VeilRow">
+
+                        <TextView
+                            style="@style/VeilRowTitle"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:text="@string/settings_language" />
+
+                        <TextView
+                            android:id="@+id/languageValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="9dp"
+                            android:tag="dim"
+                            android:textColor="@color/veil_muted"
+                            android:textSize="14sp" />
+
+                        <ImageView
+                            android:layout_width="19dp"
+                            android:layout_height="19dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron"
+                            android:tag="icon:dim"
+                            app:tint="@color/veil_chevron" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/veil_border"
+                        android:tag="line" />
+
+                    <LinearLayout
+                        android:id="@+id/rowKey"
+                        style="@style/VeilRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/VeilRowTitle"
+                                android:text="@string/settings_key" />
+
+                            <TextView
+                                android:id="@+id/keySummary"
+                                style="@style/VeilRowSub"
+                                android:visibility="gone" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="19dp"
+                            android:layout_height="19dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron"
+                            android:tag="icon:dim"
+                            app:tint="@color/veil_chevron" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/veil_border"
+                        android:tag="line" />
+
+                    <LinearLayout
+                        android:id="@+id/rowAbout"
+                        style="@style/VeilRow">
+
+                        <TextView
+                            style="@style/VeilRowTitle"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:text="@string/settings_about" />
+
+                        <ImageView
+                            android:layout_width="19dp"
+                            android:layout_height="19dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron"
+                            android:tag="icon:dim"
+                            app:tint="@color/veil_chevron" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ═══════════════════════════════════════ Приложения -->
+        <LinearLayout
+            android:id="@+id/sectionApps"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/screen_pad"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/modeExclude"
+                    style="@style/VeilPill"
+                    android:text="@string/apps_mode_exclude" />
+
+                <TextView
+                    android:id="@+id/modeInclude"
+                    style="@style/VeilPill"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/apps_mode_include" />
+
+                <TextView
+                    android:id="@+id/modeOff"
+                    style="@style/VeilPill"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/apps_mode_off" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/modeNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:tag="dim"
+                android:textColor="@color/veil_muted"
+                android:textSize="12.5sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingBottom="10dp">
+
+                <TextView
+                    android:id="@+id/appsLoading"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:tag="dim"
+                    android:text="@string/bypass_loading"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="12.5sp" />
+
+                <TextView
+                    android:id="@+id/presetChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="7dp"
+                    android:tag="chip"
+                    android:text="@string/bypass_preset"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/appList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:paddingBottom="18dp" />
+        </LinearLayout>
+
+        <!-- ═══════════════════════════════════════ Логи -->
+        <LinearLayout
+            android:id="@+id/sectionLogs"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/screen_pad"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/logAll"
+                    style="@style/VeilPill"
+                    android:text="@string/logs_all" />
+
+                <TextView
+                    android:id="@+id/logInfo"
+                    style="@style/VeilPill"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/logs_info" />
+
+                <TextView
+                    android:id="@+id/logWarn"
+                    style="@style/VeilPill"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/logs_warn" />
+
+                <TextView
+                    android:id="@+id/logErr"
+                    style="@style/VeilPill"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/logs_err" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
+
+                <TextView
+                    android:id="@+id/logsCount"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:tag="dim"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="12.5sp" />
+
+                <TextView
+                    android:id="@+id/logsCopy"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="7dp"
+                    android:tag="chip"
+                    android:text="@string/logs_copy"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/logsSend"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="7dp"
+                    android:tag="chip"
+                    android:text="@string/journal_send"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ScrollView
+                android:id="@+id/logsScroll"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingBottom="18dp">
+
+                    <LinearLayout
+                        android:id="@+id/logRows"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_card"
+                        android:orientation="vertical"
+                        android:tag="card.pad" />
+                </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>
