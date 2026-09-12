@@ -29,6 +29,8 @@ class SettingsScreen(
     private val store: Store,
     /** Открыть экран ключа: он общий с первым запуском. */
     private val onKey: () -> Unit,
+    /** Открыть выбор языка: он тоже общий с первым запуском. */
+    private val onLanguage: () -> Unit,
     /** Что-то из этого применяется только на следующем подключении. */
     private val onRoutesChanged: () -> Unit,
 ) {
@@ -62,6 +64,7 @@ class SettingsScreen(
         }
 
         ui.rowAlwaysOn.setOnClickListener { openAlwaysOn() }
+        ui.rowLanguage.setOnClickListener { onLanguage() }
         ui.rowKey.setOnClickListener { onKey() }
         ui.rowJournal.setOnClickListener { journal() }
         ui.rowAbout.setOnClickListener { about() }
@@ -79,6 +82,9 @@ class SettingsScreen(
         ui.switchAutostart.isChecked = store.autoStart
         ui.switchRussian.isChecked = store.bypassRussian
         ui.appsSummary.text = appsSummary()
+        ui.languageValue.text = host.getString(
+            if (store.language == Store.LANG_EN) R.string.language_en else R.string.language_ru,
+        )
 
         val saved = store.accountSavedAt
         ui.keySummary.isVisible = saved > 0
