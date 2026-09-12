@@ -57,6 +57,16 @@ type Status struct {
 	HasAccount bool   `json:"has_account"`
 	Elevated   bool   `json:"elevated"`
 
+	// Since — когда поднялся туннель, unix-секунды. Окно считает по нему
+	// длительность сессии само: слать готовую строку раз в секунду — значит
+	// собирать её на языке окна в программе, которой это знать незачем.
+	Since int64 `json:"since,omitempty"`
+
+	// History — байты по минутам за последний час, от старой к текущей.
+	History []int64 `json:"history"`
+
+	Version string `json:"version"`
+
 	// Proxy — предупреждение о системном прокси, если он есть.
 	//
 	// Пока он прописан, наше «весь трафик идёт через туннель» неправда:
@@ -102,14 +112,31 @@ type Controller struct {
 	dns string
 	mtu uint32
 	log *journal
+
+	// since — момент подъёма туннеля; нулевой, пока туннеля нет.
+	since time.Time
+	hist  history
 }
 
 // NewController готовит управление, подхватывая сохранённую ссылку доступа.
 func NewController(dns string, mtu uint32, log *journal) *Controller {
 	c := &Controller{state: StateIdle, dns: dns, mtu: mtu, log: log}
 	c.account = readAccount()
+	go c.keepHistory()
 	return c
 }
+
+// keepHistory снимает счётчики трафика для графика за час.
+//
+// Раз в несколько секунд, а не на каждый опрос окна: окно может быть
+// закрыто, а график за час должен остаться честным, когда его откроют.
+func (c *Controller) keepHistory() {
+	for now := range time.Tick(historyTick) {
+		c.hist.sample(now, c.up.Load()+c.down.Load())
+	}
+}
+
+const historyTick = 5 * time.Second
 
 // Status отдаёт снимок состояния для окна.
 func (c *Controller) Status() Status {
@@ -129,6 +156,9 @@ func (c *Controller) Status() Status {
 		LeftBytes:  c.leftBytes,
 		HasAccount: c.account != "",
 		Elevated:   elevated(),
+		Since:      sinceUnix(c.since),
+		History:    c.hist.minutes(time.Now()),
+		Version:    version,
 		Proxy:      c.proxy.Describe(),
 		ProxyOwner: c.proxy.Owner,
 		ProxyEnv:   c.proxy.FromEnv,
@@ -316,6 +346,7 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 	c.until, c.limitBytes, c.leftBytes = subscriptionOf(dialer)
 	c.state = StateConnected
 	c.reason = ""
+	c.since = time.Now()
 	c.mu.Unlock()
 
 	c.log.add("%s", sayf("logTunnelUp", node.Name))
@@ -336,6 +367,7 @@ func (c *Controller) Disconnect() {
 	c.reason = ""
 	c.node = client.Node{}
 	c.until, c.limitBytes, c.leftBytes = "", 0, 0
+	c.since = time.Time{}
 	c.mu.Unlock()
 
 	// Порядок обратный сборке: сначала перестаём разбирать пакеты, потом
@@ -671,4 +703,12 @@ func subscriptionOf(dialer *client.Supervisor) (until string, limit, left int64)
 		until = at.Local().Format("02.01.2006")
 	}
 	return until, sub.TrafficLimit, sub.Remaining()
+}
+
+// sinceUnix — время в секундах для окна; ноль, если туннеля нет.
+func sinceUnix(t time.Time) int64 {
+	if t.IsZero() {
+		return 0
+	}
+	return t.Unix()
 }

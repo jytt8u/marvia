@@ -695,7 +695,6 @@ function buildInto(source, target, scope) {
 // Ключ тот же, что был у прежней панели: продавец, уже вошедший однажды, не
 // должен искать токен заново из-за смены вида.
 const TOKEN_KEY = "veil.token";
-const LOOK_KEY = "marvia-look";
 
 const state = {
   token: null,
@@ -1247,132 +1246,24 @@ function downloadBackup() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Тема. Перенесена из дизайна дословно: 28 видов, три плотности и арифметика
-   контраста, которая подбирает приглушённый цвет так, чтобы он оставался
-   читаемым на обоих фонах.
+   Тема.
+
+   Таблица пресетов, видов и арифметика контраста — общие с окном на
+   компьютере и живут в internal/look/look.js. Сюда они вшиваются при отдаче
+   на место метки ниже; своей копии у панели нет и быть не должно.
    ──────────────────────────────────────────────────────────────────────── */
 
-const PRESETS = {
-  emerald:  { bg: "#06100c", fg: "#e8f6ef", acc: "#1fd18d" },
-  jade:     { bg: "#071310", fg: "#e3f5f0", acc: "#33d6c0" },
-  teal:     { bg: "#04100f", fg: "#dff5f3", acc: "#00d4c8" },
-  ice:      { bg: "#060c14", fg: "#e2f0fb", acc: "#54c8ff" },
-  cobalt:   { bg: "#070a18", fg: "#e6eaff", acc: "#5c7cff" },
-  ultra:    { bg: "#05061a", fg: "#e4e7ff", acc: "#3d5bff" },
-  plum:     { bg: "#0b0714", fg: "#efe7fb", acc: "#a86dff" },
-  orchid:   { bg: "#100716", fg: "#f7e8fb", acc: "#e46ce0" },
-  fuchsia:  { bg: "#120616", fg: "#fbe6f6", acc: "#ff5ecd" },
-  rose:     { bg: "#120709", fg: "#fbe8ec", acc: "#ff5f7e" },
-  crimson:  { bg: "#130508", fg: "#fbe3e6", acc: "#ff3b52" },
-  ember:    { bg: "#120902", fg: "#fbeadc", acc: "#ff7a3d" },
-  amber:    { bg: "#100c04", fg: "#f8f0dd", acc: "#ffc247" },
-  gold:     { bg: "#0f0d05", fg: "#f7f1dc", acc: "#e8c25a" },
-  citrus:   { bg: "#0c0f05", fg: "#f0f5dd", acc: "#c9e64b" },
-  lime:     { bg: "#080f06", fg: "#ecf7e2", acc: "#8ff04f" },
-  olive:    { bg: "#0a0d07", fg: "#eaf1de", acc: "#96bf5c" },
-  sand:     { bg: "#100d09", fg: "#f5ede1", acc: "#d9a97a" },
-  copper:   { bg: "#110a06", fg: "#f8e9dd", acc: "#e08b4c" },
-  steel:    { bg: "#0c0e11", fg: "#f1f4f7", acc: "#c3ccd6" },
-  slate:    { bg: "#0e1013", fg: "#eef1f4", acc: "#8fa3b8" },
-  mono:     { bg: "#0a0a0a", fg: "#fafafa", acc: "#fafafa" },
-  oled:     { bg: "#000000", fg: "#ffffff", acc: "#3dffc0" },
-  midnight: { bg: "#03050a", fg: "#dfe8f5", acc: "#4d8cff" },
-  daylight: { bg: "#f3f5f7", fg: "#0d1013", acc: "#046b4a" },
-  paper:    { bg: "#f7f4ee", fg: "#14120e", acc: "#8a4b1f" },
-  linen:    { bg: "#f4f1ea", fg: "#171512", acc: "#3f6b4a" },
-};
+/*%LOOK%*/
 
-const DENSITY = {
-  compact: { r: 12, pad: 12, gap: 8 },
-  normal:  { r: 16, pad: 16, gap: 12 },
-  roomy:   { r: 22, pad: 20, gap: 16 },
-};
-
-// Виды: тема плюс плотность. Названия лежат в словаре под теми же номерами —
-// порядок здесь и там обязан совпадать, иначе «Изумруд» окажется подписан
-// «Нефритом». Держать имя рядом с ключом значило бы иметь два списка,
-// расходящихся при первом же переводе.
-const LOOKS = [
-  ["steel", "normal"],
-  ["emerald", "normal"], ["jade", "normal"], ["teal", "normal"],
-  ["ice", "normal"], ["cobalt", "normal"], ["ultra", "roomy"],
-  ["plum", "roomy"], ["orchid", "normal"], ["fuchsia", "normal"],
-  ["rose", "roomy"], ["crimson", "compact"], ["ember", "normal"],
-  ["amber", "roomy"], ["gold", "roomy"], ["citrus", "normal"],
-  ["lime", "normal"], ["olive", "normal"], ["sand", "roomy"],
-  ["copper", "roomy"], ["steel", "compact"], ["slate", "compact"],
-  ["mono", "compact"], ["oled", "compact"], ["midnight", "normal"],
-  ["daylight", "normal"], ["paper", "roomy"], ["linen", "roomy"],
-];
-
-function hex(h) {
-  const v = h.replace("#", "");
-  const n = v.length === 3 ? v.split("").map((c) => c + c).join("") : v;
-  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
-}
-function mix(a, b, t) {
-  const A = hex(a), B = hex(b);
-  return "#" + A.map((c, i) => Math.round(c + (B[i] - c) * t).toString(16).padStart(2, "0")).join("");
-}
-function lum(h) {
-  const [r, g, b] = hex(h);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-}
-function rl(h) {
-  return hex(h).map((c) => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  }).reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
-}
-function ratio(a, b) {
-  const x = rl(a), y = rl(b);
-  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
-}
-function bestOn(bg) {
-  return ratio("#08110d", bg) >= ratio("#ffffff", bg) ? "#08110d" : "#ffffff";
-}
-function readableDim(fg, grounds, start) {
-  const list = [].concat(grounds), tone = list[list.length - 1];
-  const ok = (c) => Math.min.apply(null, list.map((g) => ratio(c, g))) >= 4.5;
-  let t = Math.min(start == null ? 0.55 : start, 0.55), out = mix(fg, tone, t);
-  while (t > 0 && !ok(out)) { t = Math.max(0, t - 0.04); out = mix(fg, tone, t); }
-  return out;
-}
+const { PRESETS, DENSITY, LOOKS, mix, lum, bestOn } = Look;
 
 function theme(ov) {
   const st = ov ? Object.assign({}, state, ov) : state;
-  const base = PRESETS[st.preset] || PRESETS.steel;
-  const acc = st.acc || base.acc;
-  const bg = base.bg, dark = lum(bg) < 0.5;
-  const [r, g, b] = hex(acc);
-  const surf = mix(bg, dark ? "#ffffff" : "#000000", 0.05);
-  const surf2 = mix(bg, dark ? "#ffffff" : "#000000", 0.10);
-  return {
-    bg, acc, surf, surf2,
-    line: mix(bg, dark ? "#ffffff" : "#000000", 0.16),
-    fg: base.fg,
-    dim: readableDim(base.fg, [surf, surf2]),
-    accFg: bestOn(acc),
-    accSoft: "rgba(" + r + "," + g + "," + b + ",0.13)",
-    warn: "#f2a03d",
-  };
+  return Look.theme(st);
 }
 
-function saveLook() {
-  try {
-    localStorage.setItem(LOOK_KEY, JSON.stringify({ preset: state.preset, acc: state.acc, density: state.density }));
-  } catch (_) { /* приватное окно — вид просто не запомнится */ }
-}
-function loadLook() {
-  try {
-    const raw = localStorage.getItem(LOOK_KEY);
-    if (!raw) return;
-    const v = JSON.parse(raw);
-    if (v && PRESETS[v.preset]) state.preset = v.preset;
-    if (v && DENSITY[v.density]) state.density = v.density;
-    if (v && typeof v.acc === "string") state.acc = v.acc;
-  } catch (_) { /* испорченное значение — берём вид из коробки */ }
-}
+function saveLook() { Look.save(state); }
+function loadLook() { Object.assign(state, Look.load()); }
 
 /* ────────────────────────────────────────────────────────────────────────────
    Язык
@@ -1980,8 +1871,7 @@ function renderVals() {
   // значит получить цвет вместо надписи в самом неожиданном месте.
   const d18 = L();
 
-  const vars = Object.entries(t).map(([k, v]) => "--" + k + ":" + v).join(";")
-    + ";--r:" + d.r + "px;--pad:" + d.pad + "px;--gap:" + d.gap + "px";
+  const vars = Look.vars(t, state.density);
 
   const card = "flex:1;min-width:0;padding:" + d.pad + "px;border-radius:" + d.r
     + "px;background:" + t.surf + ";border:1px solid " + t.line;
