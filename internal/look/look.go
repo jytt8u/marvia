@@ -55,18 +55,16 @@ func Presets() map[string]bool {
 }
 
 // Looks отдаёт готовые виды в порядке таблицы: пары «пресет, плотность».
+// Полные виды со всеми ручками — LookList.
 func Looks() [][2]string {
 	var out [][2]string
-	for _, m := range lookRow.FindAllStringSubmatch(js, -1) {
-		out = append(out, [2]string{m[1], m[2]})
+	for _, l := range LookList() {
+		out = append(out, [2]string{l.Preset, l.Density})
 	}
 	return out
 }
 
-var (
-	presetKey = regexp.MustCompile(`(?m)^    ([a-z]+): +\{ bg:`)
-	lookRow   = regexp.MustCompile(`\["([a-z]+)", "(compact|normal|roomy)"\]`)
-)
+var presetKey = regexp.MustCompile(`(?m)^    ([a-z]+): +\{ bg:`)
 
 // ServeFont отдаёт вшитый шрифт по имени из адреса.
 //

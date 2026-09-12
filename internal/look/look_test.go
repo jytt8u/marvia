@@ -180,14 +180,48 @@ func TestThemeTableIsWhole(t *testing.T) {
 		t.Errorf("пресетов %d, ожидалось 27", len(presets))
 	}
 
-	looks := Looks()
+	looks := LookList()
 	if len(looks) != 28 {
 		t.Errorf("видов %d, ожидалось 28", len(looks))
 	}
-	for _, l := range looks {
-		if !presets[l[0]] {
-			t.Errorf("вид ссылается на пресет %q, которого нет", l[0])
+	// Каждая ручка вида должна быть из своего списка: код темы кодирует их
+	// по первым буквам, и незнакомое слово не влезет ни в один клиент.
+	in := func(list []string, v string) bool {
+		for _, x := range list {
+			if x == v {
+				return true
+			}
 		}
+		return false
+	}
+	var radii, glows, densities, dirs []string
+	for _, r := range Radii() {
+		radii = append(radii, r.Key)
+	}
+	for _, g := range Glows() {
+		glows = append(glows, g.Key)
+	}
+	for _, d := range Densities() {
+		densities = append(densities, d.Key)
+	}
+	for _, d := range Dirs() {
+		dirs = append(dirs, d.Key)
+	}
+	for _, l := range looks {
+		switch {
+		case !presets[l.Preset]:
+			t.Errorf("вид ссылается на пресет %q, которого нет", l.Preset)
+		case !in(Words("KINDS"), l.Kind), !in(dirs, l.Dir), !in(radii, l.Radius), !in(densities, l.Density),
+			!in(Words("BUTTONS"), l.Btn), !in(glows, l.Glow), !in(Words("CARDS"), l.Card):
+			t.Errorf("вид %q ссылается на незнакомую ручку: %+v", l.Preset, l)
+		case l.Depth < 0.08 || l.Depth > 0.98:
+			t.Errorf("вид %q: глубина %v вне 0.08…0.98", l.Preset, l.Depth)
+		}
+	}
+	if len(radii) != 4 || len(glows) != 4 || len(dirs) != 9 || len(Words("KINDS")) != 4 ||
+		len(Words("BUTTONS")) != 4 || len(Words("CARDS")) != 3 {
+		t.Errorf("ручек разобрано не столько, сколько в таблице: radii %d, glows %d, dirs %d, kinds %d, buttons %d, cards %d",
+			len(radii), len(glows), len(dirs), len(Words("KINDS")), len(Words("BUTTONS")), len(Words("CARDS")))
 	}
 
 	if strings.Contains(js, Marker) {
@@ -241,8 +275,14 @@ func TestKotlinTableCarriesWholeTable(t *testing.T) {
 			t.Errorf("пресет %q не попал в Kotlin", p.Key)
 		}
 	}
-	if !strings.Contains(kt, `DEFAULT_PRESET = "steel"`) {
+	// Вид из коробки — первый в списке видов, и в Kotlin он тоже первый.
+	if !strings.Contains(kt, "    val looks: List<Look> = listOf(\n        Look(\"steel\", \"linear\"") {
 		t.Error("вид из коробки не совпал с look.js")
+	}
+	for _, l := range LookList() {
+		if !strings.Contains(kt, "Look(\""+l.Preset+"\", \""+l.Kind+"\", \""+l.Dir+"\"") {
+			t.Errorf("вид %q не попал в Kotlin", l.Preset)
+		}
 	}
 }
 

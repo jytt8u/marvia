@@ -37,11 +37,76 @@ object LookTable {
         Preset("linen", 0xFFF4F1EA, 0xFF171512, 0xFF3F6B4A),
     )
 
-    /** Плотности: ключ, скругление, отступ карточки, зазор — в dp. */
+    /** Плотности: ключ, отступ карточки, зазор — в dp. */
     val densities: List<Density> = listOf(
-        Density("compact", 12, 12, 8),
-        Density("normal", 16, 16, 12),
-        Density("roomy", 22, 20, 16),
+        Density("compact", 12, 8),
+        Density("normal", 16, 12),
+        Density("roomy", 20, 16),
+    )
+
+    /** Скругления: ключ и радиус в dp. */
+    val radii: List<Radius> = listOf(
+        Radius("sharp", 6),
+        Radius("soft", 14),
+        Radius("round", 22),
+        Radius("pill", 30),
+    )
+
+    /** Свечение: ключ и сила от 0 до 1. */
+    val glows: List<Glow> = listOf(
+        Glow("none", 0.0),
+        Glow("soft", 0.2),
+        Glow("mid", 0.42),
+        Glow("neon", 0.72),
+    )
+
+    /** Откуда светит: ключ и угол CSS-градиента; «c» — из центра. */
+    val dirs: List<Dir> = listOf(
+        Dir("n", 0, false),
+        Dir("ne", 45, false),
+        Dir("e", 90, false),
+        Dir("se", 135, false),
+        Dir("s", 180, false),
+        Dir("sw", 225, false),
+        Dir("w", 270, false),
+        Dir("nw", 315, false),
+        Dir("c", 315, true),
+    )
+
+    val kinds: List<String> = listOf("flat", "linear", "radial", "aurora")
+    val buttons: List<String> = listOf("solid", "ring", "glass", "bare")
+    val cards: List<String> = listOf("flat", "outline", "shadow")
+
+    /** Готовые виды в порядке экрана выбора. */
+    val looks: List<Look> = listOf(
+        Look("steel", "linear", "nw", 0.55, "soft", "normal", "ring", "soft", "outline"),
+        Look("emerald", "linear", "nw", 0.62, "soft", "normal", "ring", "mid", "outline"),
+        Look("jade", "radial", "n", 0.58, "round", "normal", "ring", "mid", "outline"),
+        Look("teal", "aurora", "ne", 0.66, "round", "normal", "solid", "mid", "flat"),
+        Look("ice", "aurora", "ne", 0.8, "round", "normal", "solid", "neon", "flat"),
+        Look("cobalt", "linear", "nw", 0.7, "soft", "normal", "ring", "mid", "outline"),
+        Look("ultra", "radial", "c", 0.82, "round", "roomy", "solid", "neon", "shadow"),
+        Look("plum", "radial", "se", 0.8, "round", "roomy", "glass", "mid", "shadow"),
+        Look("orchid", "aurora", "w", 0.72, "pill", "normal", "glass", "mid", "flat"),
+        Look("fuchsia", "aurora", "sw", 0.7, "round", "normal", "solid", "neon", "flat"),
+        Look("rose", "linear", "s", 0.6, "pill", "roomy", "solid", "mid", "outline"),
+        Look("crimson", "radial", "se", 0.85, "sharp", "compact", "ring", "mid", "flat"),
+        Look("ember", "aurora", "s", 0.75, "soft", "normal", "solid", "mid", "shadow"),
+        Look("amber", "linear", "s", 0.45, "pill", "roomy", "solid", "soft", "flat"),
+        Look("gold", "radial", "n", 0.55, "round", "roomy", "glass", "soft", "outline"),
+        Look("citrus", "linear", "ne", 0.5, "soft", "normal", "solid", "mid", "flat"),
+        Look("lime", "aurora", "nw", 0.5, "round", "normal", "solid", "mid", "flat"),
+        Look("olive", "linear", "w", 0.52, "soft", "normal", "ring", "soft", "outline"),
+        Look("sand", "linear", "nw", 0.42, "pill", "roomy", "glass", "soft", "outline"),
+        Look("copper", "linear", "e", 0.55, "pill", "roomy", "glass", "soft", "outline"),
+        Look("steel", "flat", "n", 0.25, "sharp", "compact", "bare", "none", "outline"),
+        Look("slate", "linear", "n", 0.4, "soft", "compact", "ring", "none", "outline"),
+        Look("mono", "flat", "n", 0.3, "sharp", "compact", "bare", "none", "flat"),
+        Look("oled", "flat", "n", 0.95, "soft", "compact", "ring", "soft", "outline"),
+        Look("midnight", "radial", "c", 0.85, "soft", "normal", "ring", "mid", "shadow"),
+        Look("daylight", "linear", "nw", 0.4, "soft", "normal", "ring", "soft", "outline"),
+        Look("paper", "linear", "nw", 0.4, "soft", "roomy", "ring", "none", "outline"),
+        Look("linen", "flat", "n", 0.3, "pill", "roomy", "glass", "none", "flat"),
     )
 
     /** Все акценты из пресетов без повторов, в порядке первого появления. */
@@ -75,9 +140,13 @@ object LookTable {
         0xFF3F6B4A.toInt(),
     )
 
-    const val DEFAULT_PRESET = "steel"
-    const val DEFAULT_DENSITY = "normal"
-
     data class Preset(val key: String, val bg: Long, val fg: Long, val acc: Long)
-    data class Density(val key: String, val r: Int, val pad: Int, val gap: Int)
+    data class Density(val key: String, val pad: Int, val gap: Int)
+    data class Radius(val key: String, val r: Int)
+    data class Glow(val key: String, val a: Double)
+    data class Dir(val key: String, val deg: Int, val centered: Boolean)
+    data class Look(
+        val preset: String, val kind: String, val dir: String, val depth: Double,
+        val radius: String, val density: String, val btn: String, val glow: String, val card: String,
+    )
 }

@@ -118,6 +118,126 @@
                 android:layout_marginTop="9dp"
                 android:orientation="vertical" />
 
+            <!-- Свет: откуда светит (лампа), характер, густота тени, оттенок. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="3dp">
+
+                <TextView
+                    style="@style/VeilSection"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:tag="dim"
+                    android:text="@string/theme_light" />
+
+                <TextView
+                    android:id="@+id/lightNote"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:tag="acc"
+                    android:textColor="@color/veil_accent"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:id="@+id/lamp"
+                android:layout_width="match_parent"
+                android:layout_height="140dp"
+                android:layout_marginTop="9dp">
+
+                <GridLayout
+                    android:id="@+id/lampZones"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:columnCount="3"
+                    android:rowCount="3" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:gravity="center"
+                    android:paddingBottom="6dp"
+                    android:tag="dim"
+                    android:text="@string/theme_lamp_hint"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="11sp" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:id="@+id/kindsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="horizontal" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="3dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:tag="fg"
+                    android:text="@string/theme_depth"
+                    android:textColor="@color/veil_text"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/depthNote"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:tag="dim"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/depthSeek"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:max="90" />
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="14dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_tint" />
+
+            <LinearLayout
+                android:id="@+id/tintRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="vertical" />
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_radius" />
+
+            <LinearLayout
+                android:id="@+id/radiusRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="horizontal" />
+
             <TextView
                 style="@style/VeilSection"
                 android:layout_marginTop="18dp"
@@ -131,6 +251,131 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="9dp"
                 android:orientation="horizontal" />
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_cards" />
+
+            <LinearLayout
+                android:id="@+id/cardRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="horizontal" />
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_button" />
+
+            <LinearLayout
+                android:id="@+id/buttonRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="horizontal" />
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_glow" />
+
+            <LinearLayout
+                android:id="@+id/glowRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="horizontal" />
+
+            <!-- Профили и код темы: то, что уезжает другу и в другие клиенты. -->
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_profiles" />
+
+            <LinearLayout
+                android:id="@+id/profileRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="horizontal" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/profileSave"
+                    style="@style/VeilPill"
+                    android:text="@string/theme_save_here" />
+
+                <TextView
+                    android:id="@+id/themeRandom"
+                    style="@style/VeilPill"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/theme_random" />
+            </LinearLayout>
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_code" />
+
+            <TextView
+                android:id="@+id/themeCode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:ellipsize="end"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.04"
+                android:maxLines="1"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="12dp"
+                android:tag="fg"
+                android:textColor="@color/veil_text"
+                android:textSize="12sp" />
+
+            <EditText
+                android:id="@+id/codeInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="monospace"
+                android:hint="@string/theme_code_placeholder"
+                android:imeOptions="actionDone"
+                android:importantForAutofill="no"
+                android:inputType="textNoSuggestions|textVisiblePassword"
+                android:maxLines="1"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="11dp"
+                android:tag="fg"
+                android:textColor="@color/veil_text"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/codeBad"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:paddingHorizontal="3dp"
+                android:tag="fail"
+                android:text="@string/theme_code_bad"
+                android:textSize="12sp"
+                android:visibility="gone" />
 
             <TextView
                 android:layout_width="match_parent"
