@@ -7,7 +7,6 @@ import android.provider.Settings as AndroidSettings
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import io.marvia.android.databinding.ScreenSettingsBinding
@@ -30,6 +29,8 @@ class SettingsScreen(
     private val store: Store,
     /** Открыть экран ключа: он общий с первым запуском. */
     private val onKey: () -> Unit,
+    /** Открыть выбор языка: он тоже общий с первым запуском. */
+    private val onLanguage: () -> Unit,
     /** Что-то из этого применяется только на следующем подключении. */
     private val onRoutesChanged: () -> Unit,
 ) {
@@ -63,7 +64,7 @@ class SettingsScreen(
         }
 
         ui.rowAlwaysOn.setOnClickListener { openAlwaysOn() }
-        ui.rowTheme.setOnClickListener { theme() }
+        ui.rowLanguage.setOnClickListener { onLanguage() }
         ui.rowKey.setOnClickListener { onKey() }
         ui.rowJournal.setOnClickListener { journal() }
         ui.rowAbout.setOnClickListener { about() }
@@ -81,7 +82,9 @@ class SettingsScreen(
         ui.switchAutostart.isChecked = store.autoStart
         ui.switchRussian.isChecked = store.bypassRussian
         ui.appsSummary.text = appsSummary()
-        ui.themeValue.text = host.getString(themeLabel())
+        ui.languageValue.text = host.getString(
+            if (store.language == Store.LANG_EN) R.string.language_en else R.string.language_ru,
+        )
 
         val saved = store.accountSavedAt
         ui.keySummary.isVisible = saved > 0
@@ -102,12 +105,6 @@ class SettingsScreen(
         }
     }
 
-    private fun themeLabel(): Int = when (store.theme) {
-        AppCompatDelegate.MODE_NIGHT_NO -> R.string.theme_light
-        AppCompatDelegate.MODE_NIGHT_YES -> R.string.theme_dark
-        else -> R.string.theme_system
-    }
-
     /**
      * openAlwaysOn отправляет в системный «постоянный VPN».
      *
@@ -122,30 +119,6 @@ class SettingsScreen(
         } catch (_: ActivityNotFoundException) {
             Toast.makeText(host, R.string.settings_always_on_missing, Toast.LENGTH_LONG).show()
         }
-    }
-
-    private fun theme() {
-        val modes = intArrayOf(
-            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,
-            AppCompatDelegate.MODE_NIGHT_NO,
-            AppCompatDelegate.MODE_NIGHT_YES,
-        )
-        val labels = arrayOf(
-            host.getString(R.string.theme_system),
-            host.getString(R.string.theme_light),
-            host.getString(R.string.theme_dark),
-        )
-
-        AlertDialog.Builder(host)
-            .setTitle(R.string.settings_theme)
-            .setSingleChoiceItems(labels, modes.indexOf(store.theme).coerceAtLeast(0)) { dialog, which ->
-                store.theme = modes[which]
-                AppCompatDelegate.setDefaultNightMode(modes[which])
-                dialog.dismiss()
-                open()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
     }
 
     /**

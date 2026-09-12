@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
@@ -48,12 +49,20 @@ import kotlinx.coroutines.withContext
  */
 class MainActivity : AppCompatActivity() {
 
-    private enum class Screen { KEY, CONNECT, SERVERS, SETTINGS }
+    private enum class Screen { LANGUAGE, KEY, CONNECT, SERVERS, THEME, SETTINGS }
 
     private lateinit var ui: ActivityMainBinding
     private lateinit var store: Store
     private lateinit var servers: ServersScreen
     private lateinit var settings: SettingsScreen
+    private lateinit var themeScreen: ThemeScreen
+    private lateinit var language: LanguageScreen
+
+    /** Откуда открыт выбор языка: с первого запуска возврат ведёт дальше, из настроек — назад. */
+    private var languageFromSettings = false
+
+    /** Тема на сейчас. Пересчитывается по выбору и красит всё дерево вьюх. */
+    private var theme: Theme = Look.theme(Look.Choice())
 
     private var screen = Screen.CONNECT
 
@@ -78,25 +87,35 @@ class MainActivity : AppCompatActivity() {
     ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppCompatDelegate.setDefaultNightMode(Store(this).theme)
+        // Режим ночи — по темноте пресета. Он нужен не нам, а Material:
+        // диалоги и системные виджеты берут цвета оттуда, и светлый диалог
+        // над «Полночью» выглядел бы дырой в экране.
+        store = Store(this)
+        theme = Look.theme(store.look)
+        AppCompatDelegate.setDefaultNightMode(nightModeFor(theme))
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
-        store = Store(this)
 
         applyInsets()
         wireNav()
         wireConnect()
         wireKey()
 
-        servers = ServersScreen(this, ui.serversScreen)
+        servers = ServersScreen(this, ui.serversScreen) { theme }
+        themeScreen = ThemeScreen(this, ui.themeScreen, store) { repaint() }
+        language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
         settings = SettingsScreen(
             host = this,
             ui = ui.settingsScreen,
             store = store,
             onKey = { show(Screen.KEY) },
+            onLanguage = {
+                languageFromSettings = true
+                show(Screen.LANGUAGE)
+            },
             onRoutesChanged = {
                 refreshRoutes()
                 // Исключения читаются при поднятии туннеля: менять маршруты у
@@ -115,16 +134,43 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, back)
 
-        show(if (store.accountLink.isBlank()) Screen.KEY else Screen.CONNECT)
+        repaint()
+        show(firstScreen())
         refreshRoutes()
         askForNotifications()
         acceptLinkFrom(intent)
     }
 
+    /**
+     * firstScreen — с чего начинать: язык, пока не выбран; ключ, пока его нет;
+     * иначе подключение.
+     */
+    private fun firstScreen(): Screen = when {
+        store.language.isEmpty() -> Screen.LANGUAGE
+        store.accountLink.isBlank() -> Screen.KEY
+        else -> Screen.CONNECT
+    }
+
+    /** afterLanguage — язык выбран: назад в настройки или дальше по первому запуску. */
+    private fun afterLanguage() {
+        if (languageFromSettings) {
+            languageFromSettings = false
+            show(Screen.SETTINGS)
+        } else {
+            show(firstScreen())
+        }
+    }
+
     /** Возврат с любого экрана ведёт на подключение, а с него — из приложения. */
     private val back = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            if (screen == Screen.CONNECT || store.accountLink.isBlank()) {
+            // Из выбора языка, открытого из настроек, — назад в настройки.
+            if (screen == Screen.LANGUAGE && languageFromSettings) {
+                languageFromSettings = false
+                show(Screen.SETTINGS)
+                return
+            }
+            if (screen == Screen.CONNECT || screen == Screen.LANGUAGE || store.accountLink.isBlank()) {
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
                 isEnabled = true
@@ -133,6 +179,41 @@ class MainActivity : AppCompatActivity() {
             show(Screen.CONNECT)
         }
     }
+
+    // ---------------------------------------------------------------- тема
+
+    /**
+     * repaint пересчитывает тему по выбору и красит всё приложение.
+     *
+     * Дерево вьюх красится по тегам, состояние туннеля — своей отрисовкой,
+     * экраны с динамикой — своими paint. Если пресет сменил тёмное на светлое
+     * или обратно, экран пересоздаётся системой ради режима ночи — тогда
+     * красить сейчас незачем, onCreate сделает это заново.
+     */
+    private fun repaint() {
+        theme = Look.theme(store.look)
+
+        val night = nightModeFor(theme)
+        if (AppCompatDelegate.getDefaultNightMode() != night) {
+            AppCompatDelegate.setDefaultNightMode(night)
+            return
+        }
+
+        Paint.apply(ui.root, theme)
+        paintNav()
+        servers.paint()
+        themeScreen.paint(theme)
+        render(MarviaState.state.value)
+
+        // Часы и кнопки системы над нашим фоном: тёмные на светлой теме,
+        // светлые на тёмной. Иначе на «Бумаге» строка состояния пропадает.
+        val bars = WindowCompat.getInsetsController(window, ui.root)
+        bars.isAppearanceLightStatusBars = !theme.dark
+        bars.isAppearanceLightNavigationBars = !theme.dark
+    }
+
+    private fun nightModeFor(t: Theme): Int =
+        if (t.dark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
 
     // -------------------------------------------------------------- экраны
 
@@ -143,14 +224,19 @@ class MainActivity : AppCompatActivity() {
         ui.connectScreen.root.isVisible = next == Screen.CONNECT
         ui.serversScreen.root.isVisible = next == Screen.SERVERS
         ui.settingsScreen.root.isVisible = next == Screen.SETTINGS
+        ui.themeScreen.root.isVisible = next == Screen.THEME
+        ui.languageScreen.root.isVisible = next == Screen.LANGUAGE
 
-        // Пока ключа нет, ходить некуда: панель появится вместе с ним.
-        ui.nav.root.isVisible = store.accountLink.isNotBlank()
+        // Пока ключа нет, ходить некуда: панель появится вместе с ним. На
+        // выборе языка её тоже нет — это экран одного действия.
+        ui.nav.root.isVisible = store.accountLink.isNotBlank() && next != Screen.LANGUAGE
         paintNav()
 
         when (next) {
             Screen.SERVERS -> servers.open()
             Screen.SETTINGS -> settings.open()
+            Screen.THEME -> themeScreen.paint(theme)
+            Screen.LANGUAGE -> language.open()
             Screen.KEY -> openKey()
             Screen.CONNECT -> Unit
         }
@@ -163,17 +249,19 @@ class MainActivity : AppCompatActivity() {
     private fun wireNav() {
         ui.nav.navConnect.setOnClickListener { show(Screen.CONNECT) }
         ui.nav.navServers.setOnClickListener { show(Screen.SERVERS) }
+        ui.nav.navTheme.setOnClickListener { show(Screen.THEME) }
         ui.nav.navSettings.setOnClickListener { show(Screen.SETTINGS) }
     }
 
     private fun paintNav() {
         paintTab(ui.nav.navConnectIcon, ui.nav.navConnectLabel, screen == Screen.CONNECT)
         paintTab(ui.nav.navServersIcon, ui.nav.navServersLabel, screen == Screen.SERVERS)
+        paintTab(ui.nav.navThemeIcon, ui.nav.navThemeLabel, screen == Screen.THEME)
         paintTab(ui.nav.navSettingsIcon, ui.nav.navSettingsLabel, screen == Screen.SETTINGS)
     }
 
     private fun paintTab(icon: ImageView, label: TextView, active: Boolean) {
-        val color = ContextCompat.getColor(this, if (active) R.color.veil_text else R.color.veil_muted)
+        val color = if (active) theme.acc else theme.dim
         ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(color))
         label.setTextColor(color)
         label.typeface = if (active) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
@@ -200,24 +288,24 @@ class MainActivity : AppCompatActivity() {
         when (state) {
             TunnelState.Off -> {
                 c.statusText.setText(R.string.status_off)
-                paintPower(R.color.veil_muted)
-                c.statusText.setTextColor(ContextCompat.getColor(this, R.color.veil_text))
+                paintPower(theme.dim)
+                c.statusText.setTextColor(theme.fg)
                 c.nodeNote.text = if (hasKey) "" else getString(R.string.connect_no_key)
                 c.powerHint.text = if (hasKey) getString(R.string.connect_tap_on) else ""
             }
 
             TunnelState.Connecting -> {
                 c.statusText.setText(R.string.status_connecting)
-                paintPower(R.color.veil_accent)
-                c.statusText.setTextColor(ContextCompat.getColor(this, R.color.veil_text))
+                paintPower(theme.acc)
+                c.statusText.setTextColor(theme.fg)
                 c.nodeNote.setText(R.string.detail_connecting)
                 c.powerHint.text = ""
             }
 
             is TunnelState.On -> {
                 c.statusText.setText(R.string.status_on)
-                paintPower(R.color.veil_live)
-                c.statusText.setTextColor(ContextCompat.getColor(this, R.color.veil_live))
+                paintPower(theme.acc)
+                c.statusText.setTextColor(theme.acc)
                 c.powerHint.setText(R.string.connect_tap_off)
 
                 c.nodeLine.isVisible = true
@@ -230,7 +318,7 @@ class MainActivity : AppCompatActivity() {
                 // живой ноде.
                 if (state.warning.isNotBlank()) {
                     c.techText.text = state.warning
-                    c.techText.setTextColor(ContextCompat.getColor(this, R.color.veil_warn))
+                    c.techText.setTextColor(theme.warn)
                     c.techText.isVisible = true
                 }
 
@@ -239,8 +327,8 @@ class MainActivity : AppCompatActivity() {
 
             is TunnelState.Failed -> {
                 c.statusText.setText(R.string.status_failed)
-                paintPower(R.color.veil_fail)
-                c.statusText.setTextColor(ContextCompat.getColor(this, R.color.veil_fail))
+                paintPower(theme.fail)
+                c.statusText.setTextColor(theme.fail)
                 c.powerHint.text = if (hasKey) getString(R.string.connect_tap_on) else ""
 
                 val human = humanReasonFor(state.kind)
@@ -250,7 +338,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     c.nodeNote.setText(human)
                     c.techText.text = state.detail
-                    c.techText.setTextColor(ContextCompat.getColor(this, R.color.veil_muted))
+                    c.techText.setTextColor(theme.dim)
                     c.techText.isVisible = state.detail.isNotBlank()
                 }
             }
@@ -287,10 +375,14 @@ class MainActivity : AppCompatActivity() {
         else -> getString(R.string.connect_manual_moved, state.chosen)
     }
 
-    /** paintPower красит три круга: внешние — тем же цветом, но почти прозрачным. */
-    private fun paintPower(colorRes: Int) {
+    /**
+     * paintPower красит три круга: внешние — тем же цветом, но почти прозрачным.
+     * Значок — тем, что читается на диске: на бледном «отключено» это фон, на
+     * акценте — цвет текста поверх акцента.
+     */
+    private fun paintPower(color: Int) {
         val c = ui.connectScreen
-        val color = ContextCompat.getColor(this, colorRes)
+        ImageViewCompat.setImageTintList(c.powerIcon, ColorStateList.valueOf(Look.bestOn(color)))
         c.powerOuter.backgroundTintList =
             ColorStateList.valueOf(ColorUtils.setAlphaComponent(color, 18))
         c.powerMiddle.backgroundTintList =
@@ -304,12 +396,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val color = when {
-            ms < 70 -> R.color.veil_live
-            ms < 250 -> R.color.veil_warn
-            else -> R.color.veil_fail
-        }
-        val value = ContextCompat.getColor(this, color)
+        val value = pingColor(theme, ms)
         view.text = getString(R.string.node_ping, ms)
         view.setTextColor(value)
         view.backgroundTintList =
@@ -428,7 +515,9 @@ class MainActivity : AppCompatActivity() {
         // Работающий туннель на новый ключ не переводим сами: это обрыв связи
         // посреди чужого дела, и решать про него человеку.
         val running = MarviaState.state.value is TunnelState.On
-        show(Screen.CONNECT)
+        // Через firstScreen, а не сразу на подключение: ключ мог приехать
+        // ссылкой при самом первом запуске, и язык ещё не выбран.
+        show(firstScreen())
         if (!running) {
             toggle()
         }
@@ -502,7 +591,7 @@ class MainActivity : AppCompatActivity() {
         show(Screen.KEY)
         ui.keyScreen.keyInput.setText(link)
         if (saveKey()) {
-            show(Screen.CONNECT)
+            show(firstScreen())
         }
     }
 

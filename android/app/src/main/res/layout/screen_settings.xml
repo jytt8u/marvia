@@ -22,6 +22,7 @@
             android:letterSpacing="0.2"
             android:text="@string/app_name"
             android:textAllCaps="true"
+            android:tag="dim"
             android:textColor="@color/veil_muted"
             android:textSize="12sp" />
     </LinearLayout>
@@ -33,6 +34,7 @@
         android:paddingHorizontal="@dimen/screen_pad"
         android:paddingBottom="8dp"
         android:text="@string/settings_title"
+        android:tag="fg"
         android:textColor="@color/veil_text"
         android:textSize="26sp"
         android:textStyle="bold" />
@@ -52,13 +54,14 @@
 
             <!--
                 Первым — то, что чинит «интернет тормозит»: не всё нужно вести
-                через туннель. Дальше вид, и только потом ключ доступа, который
-                трогают раз.
+                через туннель. Потом ключ доступа, который трогают раз. Вид живёт
+                на своей вкладке: его выбирают глядя, а не из списка.
             -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card"
+                android:tag="card"
                 android:orientation="vertical">
 
                 <LinearLayout
@@ -73,6 +76,7 @@
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switchAutostart"
+                        android:tag="switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:clickable="false"
@@ -83,6 +87,7 @@
                     android:id="@+id/dividerRu"
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
+                    android:tag="line"
                     android:background="@color/veil_border" />
 
                 <!--
@@ -111,6 +116,7 @@
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switchRussian"
+                        android:tag="switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:clickable="false"
@@ -120,6 +126,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
+                    android:tag="line"
                     android:background="@color/veil_border" />
 
                 <LinearLayout
@@ -146,12 +153,14 @@
                         android:layout_height="19dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_chevron"
+                        android:tag="icon:dim"
                         app:tint="@color/veil_chevron" />
                 </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
+                    android:tag="line"
                     android:background="@color/veil_border" />
 
                 <LinearLayout
@@ -178,6 +187,7 @@
                         android:layout_height="19dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_chevron"
+                        android:tag="icon:dim"
                         app:tint="@color/veil_chevron" />
                 </LinearLayout>
             </LinearLayout>
@@ -187,23 +197,25 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/bg_card"
+                android:tag="card"
                 android:orientation="vertical">
 
                 <LinearLayout
-                    android:id="@+id/rowTheme"
+                    android:id="@+id/rowLanguage"
                     style="@style/VeilRow">
 
                     <TextView
                         style="@style/VeilRowTitle"
                         android:layout_width="0dp"
                         android:layout_weight="1"
-                        android:text="@string/settings_theme" />
+                        android:text="@string/settings_language" />
 
                     <TextView
-                        android:id="@+id/themeValue"
+                        android:id="@+id/languageValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="9dp"
+                        android:tag="dim"
                         android:textColor="@color/veil_muted"
                         android:textSize="14sp" />
 
@@ -212,16 +224,15 @@
                         android:layout_height="19dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_chevron"
+                        android:tag="icon:dim"
                         app:tint="@color/veil_chevron" />
                 </LinearLayout>
-            </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical">
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:tag="line"
+                    android:background="@color/veil_border" />
 
                 <LinearLayout
                     android:id="@+id/rowKey"
@@ -248,12 +259,14 @@
                         android:layout_height="19dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_chevron"
+                        android:tag="icon:dim"
                         app:tint="@color/veil_chevron" />
                 </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
+                    android:tag="line"
                     android:background="@color/veil_border" />
 
                 <LinearLayout
@@ -280,12 +293,14 @@
                         android:layout_height="19dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_chevron"
+                        android:tag="icon:dim"
                         app:tint="@color/veil_chevron" />
                 </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
+                    android:tag="line"
                     android:background="@color/veil_border" />
 
                 <LinearLayout
@@ -303,6 +318,7 @@
                         android:layout_height="19dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_chevron"
+                        android:tag="icon:dim"
                         app:tint="@color/veil_chevron" />
                 </LinearLayout>
             </LinearLayout>
