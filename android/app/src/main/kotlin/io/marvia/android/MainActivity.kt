@@ -49,13 +49,17 @@ import kotlinx.coroutines.withContext
  */
 class MainActivity : AppCompatActivity() {
 
-    private enum class Screen { KEY, CONNECT, SERVERS, THEME, SETTINGS }
+    private enum class Screen { LANGUAGE, KEY, CONNECT, SERVERS, THEME, SETTINGS }
 
     private lateinit var ui: ActivityMainBinding
     private lateinit var store: Store
     private lateinit var servers: ServersScreen
     private lateinit var settings: SettingsScreen
     private lateinit var themeScreen: ThemeScreen
+    private lateinit var language: LanguageScreen
+
+    /** Откуда открыт выбор языка: с первого запуска возврат ведёт дальше, из настроек — назад. */
+    private var languageFromSettings = false
 
     /** Тема на сейчас. Пересчитывается по выбору и красит всё дерево вьюх. */
     private var theme: Theme = Look.theme(Look.Choice())
@@ -102,11 +106,16 @@ class MainActivity : AppCompatActivity() {
 
         servers = ServersScreen(this, ui.serversScreen) { theme }
         themeScreen = ThemeScreen(this, ui.themeScreen, store) { repaint() }
+        language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
         settings = SettingsScreen(
             host = this,
             ui = ui.settingsScreen,
             store = store,
             onKey = { show(Screen.KEY) },
+            onLanguage = {
+                languageFromSettings = true
+                show(Screen.LANGUAGE)
+            },
             onRoutesChanged = {
                 refreshRoutes()
                 // Исключения читаются при поднятии туннеля: менять маршруты у
@@ -126,16 +135,42 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, back)
 
         repaint()
-        show(if (store.accountLink.isBlank()) Screen.KEY else Screen.CONNECT)
+        show(firstScreen())
         refreshRoutes()
         askForNotifications()
         acceptLinkFrom(intent)
     }
 
+    /**
+     * firstScreen — с чего начинать: язык, пока не выбран; ключ, пока его нет;
+     * иначе подключение.
+     */
+    private fun firstScreen(): Screen = when {
+        store.language.isEmpty() -> Screen.LANGUAGE
+        store.accountLink.isBlank() -> Screen.KEY
+        else -> Screen.CONNECT
+    }
+
+    /** afterLanguage — язык выбран: назад в настройки или дальше по первому запуску. */
+    private fun afterLanguage() {
+        if (languageFromSettings) {
+            languageFromSettings = false
+            show(Screen.SETTINGS)
+        } else {
+            show(firstScreen())
+        }
+    }
+
     /** Возврат с любого экрана ведёт на подключение, а с него — из приложения. */
     private val back = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            if (screen == Screen.CONNECT || store.accountLink.isBlank()) {
+            // Из выбора языка, открытого из настроек, — назад в настройки.
+            if (screen == Screen.LANGUAGE && languageFromSettings) {
+                languageFromSettings = false
+                show(Screen.SETTINGS)
+                return
+            }
+            if (screen == Screen.CONNECT || screen == Screen.LANGUAGE || store.accountLink.isBlank()) {
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
                 isEnabled = true
@@ -190,15 +225,18 @@ class MainActivity : AppCompatActivity() {
         ui.serversScreen.root.isVisible = next == Screen.SERVERS
         ui.settingsScreen.root.isVisible = next == Screen.SETTINGS
         ui.themeScreen.root.isVisible = next == Screen.THEME
+        ui.languageScreen.root.isVisible = next == Screen.LANGUAGE
 
-        // Пока ключа нет, ходить некуда: панель появится вместе с ним.
-        ui.nav.root.isVisible = store.accountLink.isNotBlank()
+        // Пока ключа нет, ходить некуда: панель появится вместе с ним. На
+        // выборе языка её тоже нет — это экран одного действия.
+        ui.nav.root.isVisible = store.accountLink.isNotBlank() && next != Screen.LANGUAGE
         paintNav()
 
         when (next) {
             Screen.SERVERS -> servers.open()
             Screen.SETTINGS -> settings.open()
             Screen.THEME -> themeScreen.paint(theme)
+            Screen.LANGUAGE -> language.open()
             Screen.KEY -> openKey()
             Screen.CONNECT -> Unit
         }
@@ -477,7 +515,9 @@ class MainActivity : AppCompatActivity() {
         // Работающий туннель на новый ключ не переводим сами: это обрыв связи
         // посреди чужого дела, и решать про него человеку.
         val running = MarviaState.state.value is TunnelState.On
-        show(Screen.CONNECT)
+        // Через firstScreen, а не сразу на подключение: ключ мог приехать
+        // ссылкой при самом первом запуске, и язык ещё не выбран.
+        show(firstScreen())
         if (!running) {
             toggle()
         }
@@ -551,7 +591,7 @@ class MainActivity : AppCompatActivity() {
         show(Screen.KEY)
         ui.keyScreen.keyInput.setText(link)
         if (saveKey()) {
-            show(Screen.CONNECT)
+            show(firstScreen())
         }
     }
 
