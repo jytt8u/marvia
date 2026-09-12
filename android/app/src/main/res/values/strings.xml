@@ -16,7 +16,7 @@
     <!-- Нижняя панель: три экрана и ничего больше. -->
     <string name="nav_connect">Connection</string>
     <string name="nav_servers">Countries</string>
-    <string name="nav_settings">Settings</string>
+    <string name="nav_more">More</string>
     <string name="nav_theme">Theme</string>
 
     <!--
@@ -123,11 +123,9 @@
         поднят туннель. Но местные сервисы ломает не значок, а зарубежный адрес
         ноды, и вот его исключение из туннеля и чинит.
     -->
-    <string name="bypass_title">What to keep out of the tunnel</string>
     <string name="bypass_none">Every app goes through the tunnel</string>
     <string name="bypass_some">Outside the tunnel: %1$d</string>
     <string name="bypass_preset">Government services and banks</string>
-    <string name="bypass_save">Save</string>
     <string name="bypass_restart">Changes apply on the next connection</string>
     <string name="bypass_loading">Looking at what is installed…</string>
 
@@ -145,20 +143,17 @@
         Настройки. Здесь нет ручек протокола: их место внутри, а не на экране
         человека, который не может выбрать между ними осознанно.
     -->
-    <string name="settings_title">Settings</string>
-    <string name="settings_autostart">Start when the phone starts</string>
+    <string name="settings_autostart">Start with the phone</string>
+    <string name="settings_autostart_sub">the tunnel comes up after a reboot</string>
     <string name="settings_autostart_saved">The tunnel will come up by itself after a reboot</string>
     <string name="settings_autostart_off_saved">After a reboot you will have to turn it on by hand</string>
     <string name="settings_russian">Local sites outside the tunnel</string>
     <string name="settings_russian_sub">banks and government services complain otherwise</string>
-    <string name="settings_apps">Apps outside the tunnel</string>
     <string name="settings_always_on">Always-on VPN in the system</string>
     <string name="settings_always_on_sub">the system brings the tunnel up earlier than we can</string>
     <string name="settings_always_on_missing">This phone has no such settings screen</string>
     <string name="settings_key">Access key</string>
     <string name="settings_key_added">added on %1$s</string>
-    <string name="settings_journal">Log</string>
-    <string name="settings_journal_sub">shows your seller what happened</string>
     <string name="settings_about">About</string>
     <string name="about_body">%1$s, version %2$s</string>
     <!--
@@ -174,6 +169,57 @@
     <string name="theme_density">Density</string>
     <string name="theme_note">The theme is kept on this phone and sent nowhere. The seller panel and the desktop app use the same colour table.</string>
     <string name="theme_reset">Back to grey</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_lamp_hint">tap where the light comes from</string>
+    <string name="theme_light_off">light is off, flat background</string>
+    <string name="dir_nw">top left</string>
+    <string name="dir_n">top</string>
+    <string name="dir_ne">top right</string>
+    <string name="dir_w">left</string>
+    <string name="dir_c">from the centre</string>
+    <string name="dir_e">right</string>
+    <string name="dir_sw">bottom left</string>
+    <string name="dir_s">bottom</string>
+    <string name="dir_se">bottom right</string>
+    <string name="kind_flat">Flat</string>
+    <string name="kind_linear">Soft</string>
+    <string name="kind_radial">Spot</string>
+    <string name="kind_aurora">Aurora</string>
+    <string name="theme_depth">Shadow depth</string>
+    <string name="depth_0">barely there</string>
+    <string name="depth_1">soft</string>
+    <string name="depth_2">visible</string>
+    <string name="depth_3">deep</string>
+    <string name="depth_4">almost black</string>
+    <string name="theme_tint">Tint of the lit side</string>
+    <string name="theme_radius">Corners</string>
+    <string name="radius_sharp">Sharp</string>
+    <string name="radius_soft">Soft</string>
+    <string name="radius_round">Round</string>
+    <string name="radius_pill">Pill</string>
+    <string name="theme_cards">Cards</string>
+    <string name="card_flat">Flat</string>
+    <string name="card_outline">Outlined</string>
+    <string name="card_shadow">Shadowed</string>
+    <string name="theme_button">Button</string>
+    <string name="btn_solid">Disc</string>
+    <string name="btn_ring">Ring</string>
+    <string name="btn_glass">Glass</string>
+    <string name="btn_bare">Outline</string>
+    <string name="theme_glow">Glow</string>
+    <string name="glow_none">None</string>
+    <string name="glow_soft">Soft</string>
+    <string name="glow_mid">Medium</string>
+    <string name="glow_neon">Neon</string>
+    <string name="theme_profiles">My profiles</string>
+    <string name="profile_full">Style %1$d</string>
+    <string name="profile_empty">Empty %1$d</string>
+    <string name="theme_save_here">Save here</string>
+    <string name="theme_random">Random theme</string>
+    <string name="theme_code">Theme code · share it with a friend</string>
+    <string name="theme_code_placeholder">paste an MV-… code</string>
+    <string name="theme_code_bad">This is not a Marvia theme code</string>
+    <string name="theme_code_copied">Theme code copied</string>
     <string name="density_compact">Compact</string>
     <string name="density_normal">Normal</string>
     <string name="density_roomy">Roomy</string>
@@ -245,4 +291,61 @@
     <string name="log_moved">node stopped answering, moved to %1$s</string>
     <string name="trouble_no_node">the node is silent and there is nowhere to move — nothing works right now</string>
     <string name="log_failed">did not come up: %1$s — %2$s</string>
+    <!--
+        Вкладка «Ещё»: соединение, приложения, логи. Три раздела под одним
+        заголовком, как в макете; заголовок и подпись меняются вместе с ними.
+    -->
+    <string name="more_conn">Connection</string>
+    <string name="more_apps">Apps</string>
+    <string name="more_logs">Log</string>
+    <string name="more_conn_title">Connection</string>
+    <string name="more_conn_sub">Protection, DNS, routing</string>
+    <string name="more_apps_title">Apps</string>
+    <string name="more_logs_title">Log</string>
+    <plurals name="more_logs_sub">
+        <item quantity="one">last %1$d line</item>
+        <item quantity="other">last %1$d lines</item>
+    </plurals>
+    <string name="more_logs_sub_empty">the log is empty so far</string>
+    <string name="conn_group_protect">Protection</string>
+    <string name="conn_group_net">Network</string>
+    <string name="conn_group_app">App</string>
+    <string name="conn_dns">DNS</string>
+    <string name="conn_dns_sub">resolver inside the tunnel</string>
+    <string name="conn_lan">Home network outside the tunnel</string>
+    <string name="conn_lan_sub">printer, TV, router</string>
+
+    <!--
+        Режимы списка приложений. «Только эти» — для тех, кому туннель нужен
+        ради двух приложений; «выключено» держит отметки, но не применяет их.
+    -->
+    <string name="apps_mode_exclude">Outside</string>
+    <string name="apps_mode_include">Only these</string>
+    <string name="apps_mode_off">Off</string>
+    <string name="apps_note_exclude">Checked apps go around the tunnel, everything else goes through it.</string>
+    <string name="apps_note_include">Only checked apps go through the tunnel, everything else goes around it. Nothing checked means everything goes through.</string>
+    <string name="apps_note_off">Every app goes through the tunnel. Your checks are kept but not applied.</string>
+    <string name="apps_summary_off">every app through the tunnel</string>
+    <string name="apps_summary_include_none">nothing checked — every app through the tunnel</string>
+    <plurals name="apps_summary_include">
+        <item quantity="one">only %1$d app through the tunnel</item>
+        <item quantity="other">only %1$d apps through the tunnel</item>
+    </plurals>
+    <plurals name="apps_summary_exclude">
+        <item quantity="one">%1$d app outside the tunnel</item>
+        <item quantity="other">%1$d apps outside the tunnel</item>
+    </plurals>
+    <string name="apps_preset_none">Nothing to add: none of them is installed, or all are already checked</string>
+
+    <string name="logs_all">All</string>
+    <string name="logs_info">Info</string>
+    <string name="logs_warn">Warnings</string>
+    <string name="logs_err">Errors</string>
+    <string name="logs_copy">Copy</string>
+    <string name="logs_copied">Copied</string>
+    <string name="logs_empty">Nothing yet — the log fills up as the tunnel works</string>
+    <plurals name="logs_count">
+        <item quantity="one">%1$d line</item>
+        <item quantity="other">%1$d lines</item>
+    </plurals>
 </resources>

@@ -18,22 +18,42 @@ import java.util.Locale
  */
 object Journal {
 
-    /** Сколько строк помним. Больше сотни в переписку никто не читает. */
-    private const val LIMIT = 120
+    /**
+     * Важность строки. Нужна экрану логов: продавец, которому прислали
+     * пятьсот строк, первым делом хочет видеть только беды, а без метки
+     * отличить «подключились» от «не поднялись» можно только чтением.
+     */
+    enum class Level { INFO, WARN, ERROR }
 
-    private val lines = ArrayDeque<String>(LIMIT)
+    /** Одна строка: когда, насколько важно, что. */
+    data class Entry(val time: String, val level: Level, val text: String)
+
+    /**
+     * Сколько строк помним. Пятьсот — это сутки переподключений на плохой
+     * сети; в переписку уходит хвост покороче, см. report.
+     */
+    private const val LIMIT = 500
+
+    /** Сколько строк уезжает продавцу. Больше сотни в чате никто не читает. */
+    private const val REPORT_TAIL = 120
+
+    private val entries = ArrayDeque<Entry>(LIMIT)
     private val clock = SimpleDateFormat("HH:mm:ss", Locale.US)
 
     @Synchronized
-    fun add(line: String) {
-        if (lines.size >= LIMIT) {
-            lines.removeFirst()
+    fun add(line: String, level: Level = Level.INFO) {
+        if (entries.size >= LIMIT) {
+            entries.removeFirst()
         }
-        lines.addLast(clock.format(Date()) + "  " + line)
+        entries.addLast(Entry(clock.format(Date()), level, line))
     }
 
     @Synchronized
-    fun lines(): List<String> = lines.toList()
+    fun entries(): List<Entry> = entries.toList()
+
+    /** lines — строки в том виде, в каком они уходят в чат. */
+    @Synchronized
+    fun lines(): List<String> = entries.map { it.time + "  " + it.text }
 
     /**
      * report собирает то, что отправляется продавцу.
@@ -54,7 +74,7 @@ object Journal {
         append(context.getString(R.string.log_bypass_local, local))
         append('\n').append('\n')
 
-        for (line in lines) {
+        for (line in lines().takeLast(REPORT_TAIL)) {
             append(line).append('\n')
         }
     }

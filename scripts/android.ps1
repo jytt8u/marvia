@@ -7,7 +7,13 @@
 #>
 [CmdletBinding()]
 param(
-    [switch]$SkipCore
+    [switch]$SkipCore,
+
+    # Собрать ядро ещё и под x86_64 — для эмулятора. Под ARM в трансляторе
+    # эмулятора ядро на Go падает с SIGILL, и без этой библиотеки приложение
+    # там не запустить. В релиз x86_64 не попадает никогда: фильтр ABI в
+    # gradle пускает его только в отладочную сборку.
+    [switch]$Emulator
 )
 
 $ErrorActionPreference = 'Stop'
@@ -90,8 +96,10 @@ if (-not $SkipCore) {
     # Без них PowerShell видит запятую в -target=android/arm64,android/arm как
     # свой разделитель списка и разбирает строку как два аргумента, падая
     # ещё до запуска gomobile: «Отсутствует аргумент в списке параметров».
+    $targets = 'android/arm64,android/arm'
+    if ($Emulator) { $targets += ',android/amd64' }
     gomobile bind `
-        '-target=android/arm64,android/arm' `
+        "-target=$targets" `
         '-androidapi' '24' `
         '-javapkg=io.marvia' `
         '-o' 'android/app/libs/marvia.aar' `

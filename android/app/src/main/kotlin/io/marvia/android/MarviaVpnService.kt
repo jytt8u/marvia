@@ -6,10 +6,13 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.net.InetAddresses
+import android.net.IpPrefix
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import io.marvia.mobile.Mobile
 import kotlinx.coroutines.CoroutineScope
@@ -86,7 +89,7 @@ class MarviaVpnService : VpnService() {
 
         worker = scope.launch {
             val descriptor = try {
-                openInterface(store.bypassed, store.bypassRussian)
+                openInterface(store)
             } catch (t: Throwable) {
                 // Вид здесь известен без ядра: до ядра мы ещё не дошли.
                 shutdown(TunnelState.Failed(Mobile.FailSystem, reasonOf(t)))
@@ -102,7 +105,9 @@ class MarviaVpnService : VpnService() {
             val started = try {
                 // Каталог под кэш списка нод. Путь к своим файлам знает только
                 // Context — ядру его взять неоткуда, поэтому передаём руками.
-                Mobile.start(link, fd.toLong(), Mobile.DefaultDNS, store.cacheDir())
+                // Резолвер — тот, что выбрал человек. Внутрь туннеля и по TCP
+                // он уходит в любом случае; выбор только в том, кто отвечает.
+                Mobile.start(link, fd.toLong(), store.dns + ":53", store.cacheDir())
             } catch (t: Throwable) {
                 shutdown(failureOf(t))
                 return@launch
@@ -122,7 +127,7 @@ class MarviaVpnService : VpnService() {
     }
 
     /** openInterface просит у системы интерфейс и описывает, что в него слать. */
-    private fun openInterface(bypassed: Set<String>, bypassRu: Boolean): ParcelFileDescriptor {
+    private fun openInterface(store: Store): ParcelFileDescriptor {
         val builder = Builder()
             .setSession(getString(R.string.app_name))
             .setMtu(MTU)
@@ -135,16 +140,16 @@ class MarviaVpnService : VpnService() {
             // сами переходят на IPv4.
             .addAddress(ADDRESS_V6, PREFIX_V6)
             .addRoute("::", 0)
-            .addDnsServer(DNS)
-
-        // Свой трафик в собственный туннель не заворачиваем. Иначе соединение
-        // до ноды пошло бы через интерфейс, который сам же и ведёт к ноде.
-        builder.addDisallowedApplication(packageName)
+            // Адрес не важен: ядро перехватывает любой запрос имён по порту 53
+            // и отправляет его в туннель по TCP. Ставим тот, что выбрал
+            // человек, на случай, если система решит показать его в
+            // настройках сети — пусть там будет правда.
+            .addDnsServer(store.dns)
 
         // Российские подсети мимо туннеля. Исключение маршрутов появилось в
         // Android 13; на старых остаётся исключение по приложениям, и обещать
         // человеку больше, чем умеет система, нельзя.
-        if (bypassRu && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (store.bypassRussian && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             var excluded = 0
             for (prefix in RuRoutes.load(this)) {
                 try {
@@ -158,19 +163,57 @@ class MarviaVpnService : VpnService() {
             Log.i(TAG, "мимо туннеля российских подсетей: " + excluded)
         }
 
-        // Приложения, которые человек отправил мимо туннеля: госуслуги, банки,
-        // всё, что не отвечает на запросы из-за границы. Система оставляет им
-        // обычную сеть, и на сервер приходит их настоящий адрес.
-        //
-        // Пропавшее приложение не повод не подниматься: его могли удалить между
-        // настройкой и запуском, а падать посреди включения VPN из-за этого —
-        // худший из возможных ответов.
-        for (pkg in bypassed) {
-            try {
-                builder.addDisallowedApplication(pkg)
-            } catch (_: PackageManager.NameNotFoundException) {
-                Log.w(TAG, "мимо туннеля просили $pkg, но оно не установлено")
+        // Домашняя сеть мимо туннеля: принтер, телевизор, роутер. Их адреса
+        // частные, за границу они не маршрутизируются в принципе, и внутри
+        // туннеля до них просто не дойти. Тот же Android 13 и то же
+        // исключение маршрутов.
+        if (store.lanOutside && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            for (prefix in lanPrefixes()) {
+                builder.excludeRoute(prefix)
             }
+        }
+
+        // Приложения. Три режима, и они исключают друг друга по устройству
+        // Android: список «мимо туннеля» и список «только эти» в одном
+        // интерфейсе не сочетаются, система бросит исключение.
+        //
+        // Пропавшее приложение не повод не подниматься: его могли удалить
+        // между настройкой и запуском, а падать посреди включения VPN из-за
+        // этого — худший из возможных ответов.
+        when (store.bypassMode) {
+            Store.BYPASS_EXCLUDE -> {
+                // Свой трафик в собственный туннель не заворачиваем. Иначе
+                // соединение до ноды пошло бы через интерфейс, который сам же
+                // и ведёт к ноде.
+                builder.addDisallowedApplication(packageName)
+                // Госуслуги, банки, всё, что не отвечает на запросы из-за
+                // границы. Система оставляет им обычную сеть, и на сервер
+                // приходит их настоящий адрес.
+                for (pkg in store.bypassed) {
+                    try {
+                        builder.addDisallowedApplication(pkg)
+                    } catch (_: PackageManager.NameNotFoundException) {
+                        Log.w(TAG, "мимо туннеля просили $pkg, но оно не установлено")
+                    }
+                }
+            }
+            Store.BYPASS_INCLUDE -> {
+                // Только отмеченные идут через туннель, остальные — мимо. Себя
+                // в список не добавляем, и этого достаточно: неотмеченное
+                // система в туннель не пускает. Пустой список для Android
+                // означает «все» — экран об этом предупреждает.
+                for (pkg in store.bypassed) {
+                    try {
+                        builder.addAllowedApplication(pkg)
+                    } catch (_: PackageManager.NameNotFoundException) {
+                        Log.w(TAG, "в туннель просили $pkg, но оно не установлено")
+                    }
+                }
+                if (store.bypassed.isEmpty()) {
+                    builder.addDisallowedApplication(packageName)
+                }
+            }
+            else -> builder.addDisallowedApplication(packageName)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -210,7 +253,7 @@ class MarviaVpnService : VpnService() {
             val now = started.nodeName()
             if (now != shownNode) {
                 shownNode = now
-                Journal.add(getString(R.string.log_moved, now))
+                Journal.add(getString(R.string.log_moved, now), Journal.Level.WARN)
                 goForeground(getString(R.string.status_on), getString(R.string.detail_node, now))
             }
 
@@ -281,7 +324,7 @@ class MarviaVpnService : VpnService() {
             // В журнал — чтобы причину можно было достать с чужого телефона,
             // где экран уже закрыли и пересказывают по памяти.
             Log.w(TAG, "туннель не поднялся (${state.kind}): ${state.detail}")
-            Journal.add(getString(R.string.log_failed, state.kind, state.detail))
+            Journal.add(getString(R.string.log_failed, state.kind, state.detail), Journal.Level.ERROR)
         }
 
         worker?.cancel()
@@ -380,10 +423,21 @@ class MarviaVpnService : VpnService() {
         private const val PREFIX_V6 = 126
         private const val MTU = 1500
 
-        // Адрес не важен: ядро перехватывает любой запрос имён по порту 53 и
-        // отправляет его в туннель по TCP. Указываем осмысленный на случай,
-        // если система решит показать его человеку в настройках сети.
-        private const val DNS = "1.1.1.1"
+        /**
+         * Частные диапазоны домашней сети — те, что не уходят за роутер.
+         * Адрес самого туннеля (10.19.84.2) лежит внутри первого, но
+         * исключение маршрута его не трогает: адрес интерфейса — не маршрут.
+         *
+         * Функция, а не поле: конструктор IpPrefix появился в Android 13, и
+         * поле в companion создавалось бы при загрузке класса на любом
+         * телефоне — вместе с падением на старых.
+         */
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+        private fun lanPrefixes(): List<IpPrefix> = listOf(
+            IpPrefix(InetAddresses.parseNumericAddress("10.0.0.0"), 8),
+            IpPrefix(InetAddresses.parseNumericAddress("172.16.0.0"), 12),
+            IpPrefix(InetAddresses.parseNumericAddress("192.168.0.0"), 16),
+        )
 
         fun reasonOf(t: Throwable): String {
             val message = t.message
