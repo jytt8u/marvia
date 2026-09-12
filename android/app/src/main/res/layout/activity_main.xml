@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Четыре экрана лежат друг на друге, видим всегда один. Так задумано: они
+    Пять экранов лежат друг на друге, видим всегда один. Так задумано: они
     переключаются нижней панелью мгновенно и без пересборки, а состояние
     подключения живёт в процессе и переживает любое переключение.
 -->
@@ -9,7 +9,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:tag="bg">
 
     <FrameLayout
         android:id="@+id/content"
@@ -32,6 +33,10 @@
         <include
             android:id="@+id/settingsScreen"
             layout="@layout/screen_settings" />
+
+        <include
+            android:id="@+id/themeScreen"
+            layout="@layout/screen_theme" />
     </FrameLayout>
 
     <include

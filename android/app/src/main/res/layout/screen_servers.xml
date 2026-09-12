@@ -21,6 +21,7 @@
             android:letterSpacing="0.2"
             android:text="@string/app_name"
             android:textAllCaps="true"
+            android:tag="dim"
             android:textColor="@color/veil_muted"
             android:textSize="12sp" />
 
@@ -40,6 +41,7 @@
             android:paddingHorizontal="6dp"
             android:paddingVertical="4dp"
             android:text="@string/servers_measure"
+            android:tag="acc"
             android:textColor="@color/veil_link"
             android:textSize="13sp" />
     </LinearLayout>
@@ -56,6 +58,7 @@
             android:layout_height="wrap_content"
             android:letterSpacing="-0.02"
             android:text="@string/servers_title"
+            android:tag="fg"
             android:textColor="@color/veil_text"
             android:textSize="26sp"
             android:textStyle="bold" />
@@ -65,6 +68,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:text="@string/servers_hint"
+            android:tag="dim"
             android:textColor="@color/veil_muted"
             android:textSize="13sp" />
     </LinearLayout>
@@ -118,6 +122,7 @@
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/servers_auto"
+                        android:tag="fg"
                         android:textColor="@color/veil_text"
                         android:textSize="15.5sp"
                         android:textStyle="bold" />
@@ -128,6 +133,7 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:maxLines="1"
+                        android:tag="dim"
                         android:textColor="@color/veil_muted"
                         android:textSize="13sp" />
                 </LinearLayout>
@@ -181,6 +187,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
+                android:tag="dim"
                 android:textColor="@color/veil_muted"
                 android:textSize="13.5sp"
                 android:visibility="gone" />
@@ -193,6 +200,7 @@
         android:paddingHorizontal="@dimen/screen_pad"
         android:paddingBottom="14dp"
         android:text="@string/servers_footer"
+        android:tag="dim"
         android:textColor="@color/veil_muted"
         android:textSize="12.5sp" />
 </LinearLayout>

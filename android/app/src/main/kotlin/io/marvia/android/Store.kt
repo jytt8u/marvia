@@ -97,15 +97,29 @@ class Store(context: Context) {
         }
 
     /**
-     * theme — светлая, тёмная или как в системе.
+     * look — выбранная тема: пресет, акцент, плотность.
      *
-     * Значения совпадают с режимами AppCompatDelegate, чтобы не заводить
-     * второй словарь и не переводить одно в другое при каждом чтении.
+     * До этого тем было две — светлая и тёмная, — и выбор лежал под ключом
+     * theme числом режима AppCompatDelegate. Тот, кто выбирал светлую, получает
+     * «Дневную»: это ближайший пресет, и человек не должен обнаружить, что его
+     * выбор молча стёрли обновлением.
      */
-    var theme: Int
-        get() = prefs.getInt(KEY_THEME, -1)
+    var look: Look.Choice
+        get() {
+            val preset = prefs.getString(KEY_PRESET, null)
+                ?: if (prefs.getInt(KEY_THEME, -1) == LEGACY_LIGHT) "daylight" else LookTable.DEFAULT_PRESET
+            return Look.Choice(
+                preset = preset,
+                accent = prefs.getInt(KEY_ACCENT, 0),
+                density = prefs.getString(KEY_DENSITY, null) ?: LookTable.DEFAULT_DENSITY,
+            )
+        }
         set(value) {
-            prefs.edit().putInt(KEY_THEME, value).apply()
+            prefs.edit()
+                .putString(KEY_PRESET, value.preset)
+                .putInt(KEY_ACCENT, value.accent)
+                .putString(KEY_DENSITY, value.density)
+                .apply()
         }
 
     /** Каталог, который приложение отдаёт ядру под кэш подписки. */
@@ -125,5 +139,11 @@ class Store(context: Context) {
         const val KEY_BYPASS_ASKED = "bypass_asked"
         const val KEY_AUTOSTART = "autostart"
         const val KEY_THEME = "theme"
+        const val KEY_PRESET = "look_preset"
+        const val KEY_ACCENT = "look_accent"
+        const val KEY_DENSITY = "look_density"
+
+        /** AppCompatDelegate.MODE_NIGHT_NO — так хранилась светлая тема. */
+        const val LEGACY_LIGHT = 1
     }
 }

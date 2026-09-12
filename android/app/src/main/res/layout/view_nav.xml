@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Нижняя панель из макета. Своя, а не BottomNavigationView: там три вкладки
+    Нижняя панель из макета. Своя, а не BottomNavigationView: там четыре вкладки
     со своими правилами подсветки и отступов, и подгонять их под макет вышло бы
-    длиннее, чем нарисовать три кнопки.
+    длиннее, чем нарисовать четыре кнопки.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@color/veil_surface"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:tag="surf">
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
+        android:tag="line"
         android:background="@color/veil_border" />
 
     <LinearLayout
@@ -74,6 +76,33 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/nav_servers"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navTheme"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:minHeight="52dp"
+            android:orientation="vertical"
+            android:paddingVertical="8dp">
+
+            <ImageView
+                android:id="@+id/navThemeIcon"
+                android:layout_width="23dp"
+                android:layout_height="23dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_palette" />
+
+            <TextView
+                android:id="@+id/navThemeLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/nav_theme"
                 android:textSize="12sp" />
         </LinearLayout>
 
