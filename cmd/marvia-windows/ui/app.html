@@ -316,6 +316,7 @@
     padding: 7px 12px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 12px;
   }
   button.chip:hover { color: var(--fg); }
+  button.chip[data-on="true"] { background: var(--acc); color: var(--accFg); }
   button.chip:disabled { opacity: .5; cursor: default; }
 
   .row { display: flex; gap: 12px; align-items: center; }
@@ -381,6 +382,29 @@
   .pills { display: flex; gap: 6px; }
   .pillb { flex: 1; text-align: center; padding: 9px 0; border-radius: 10px; font: inherit; font-size: 12px; cursor: pointer; background: var(--surf2); color: var(--dim); border: none; }
   .pillb[aria-pressed="true"] { background: var(--acc); color: var(--accFg); }
+
+  /* ---------------------------------------------------------- виджет */
+
+  /* Трей-виджет из макета: 380×520 без рамки. Это та же страница в другой
+     шкуре — body.as-widget прячет окно и показывает виджет. Рамку рисуем сами:
+     у окна без заголовка её нет, а без неё виджет сливается с тем, что под ним. */
+  body.as-widget .app { display: none; }
+  .widget { display: none; height: 100%; flex-direction: column; border: 1px solid var(--line); box-sizing: border-box; }
+  body.as-widget .widget { display: flex; }
+  .w-top { height: 44px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 16px; border-bottom: 1px solid var(--line); background: var(--surf); }
+  .w-top .acts { display: flex; gap: 4px; }
+  .w-top .acts button { width: 30px; height: 30px; border-radius: 8px; border: none; background: none; color: var(--dim); font-size: 15px; cursor: pointer; }
+  .w-top .acts button:hover { background: var(--surf2); color: var(--fg); }
+  .w-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px 20px; }
+  .w-hero .power { width: 128px; height: 128px; }
+  .w-hero .power svg { width: 48px; height: 48px; }
+  .w-meta { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: var(--dim); }
+  .w-node { margin: 0 16px; display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: var(--r); background: var(--surf); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none); }
+  .w-node .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .w-node .ping { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .w-links { display: flex; gap: 6px; padding: 12px 16px 16px; }
+  .w-links button { flex: 1; padding: 9px 0; border-radius: 10px; border: none; background: var(--surf2); color: var(--dim); font: inherit; font-size: 12px; cursor: pointer; }
+  .w-links button:hover { color: var(--fg); }
 
   p.about { color: var(--dim); max-width: 580px; font-size: 13.5px; margin: 0; line-height: 1.55; }
   p.about b { color: var(--fg); font-weight: 600; }
@@ -608,6 +632,16 @@
 
       <!-- ----------------------------------------------------- о программе -->
       <section class="page" data-tab="about">
+        <!--
+          Запуск вместе с Windows — через планировщик, с высшими правами: из
+          обычной автозагрузки программа при каждом входе просила бы права
+          администратора. Стартует в трее без окна и поднимает туннель сама.
+        -->
+        <div class="card">
+          <div class="card-head"><b data-t="autostart"></b><button class="chip" id="autostart" type="button"></button></div>
+          <p class="hint" data-t="autostartHint"></p>
+          <p class="hint" id="autostart-msg"></p>
+        </div>
         <div class="card">
           <p class="about" data-html="about1"></p>
           <p class="about" data-html="about2"></p>
@@ -615,6 +649,39 @@
         </div>
       </section>
     </main>
+  </div>
+</div>
+
+<!-- -------------------------------------------------------- трей-виджет -->
+<div class="widget" id="widget">
+  <div class="w-top">
+    <div class="brand">
+      <img src="assets/marvia-mark.png" alt="">
+      <span class="wordmark">MARVIA</span>
+    </div>
+    <div class="acts">
+      <button id="w-full" type="button" title="">⚙</button>
+      <button id="w-hide" type="button" title="">✕</button>
+    </div>
+  </div>
+  <div class="w-hero">
+    <button class="power" id="w-power" data-state="idle" title="">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
+        <path d="M12 3.2v9.2"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/>
+      </svg>
+    </button>
+    <div class="status" id="w-status"></div>
+    <div class="w-meta" id="w-meta"></div>
+  </div>
+  <div class="w-node node">
+    <i class="mark"></i>
+    <span class="name" id="w-node"></span>
+    <span class="ping" id="w-ping"></span>
+  </div>
+  <div class="w-links">
+    <button type="button" data-open="nodes" data-t="tabNodes"></button>
+    <button type="button" data-open="key" data-t="tabKey"></button>
+    <button type="button" data-open="theme" data-t="tabTheme"></button>
   </div>
 </div>
 
@@ -666,6 +733,9 @@ const T = {
     lang: "ru", switchTo: "EN", switchTitle: "Switch to English",
 
     tabHome: "Туннель", tabKey: "Ключ доступа", tabLog: "Журнал", tabAbout: "О программе", tabNodes: "Страны", tabTheme: "Тема",
+    wOpen: "Открыть окно", wHide: "Спрятать в трей",
+    autostart: "Запускать вместе с Windows", autostartHint: "Без окна, в трее; туннель поднимется сам, если ключ сохранён. Ставится задача планировщика с правами администратора — так Windows не спрашивает согласия при каждом входе.",
+    autostartOn: "Включено", autostartOff: "Выключено",
     pages: {
       home: ["Туннель", "Состояние и трафик"],
       nodes: ["Страны", "Через какую идти"],
@@ -774,6 +844,9 @@ const T = {
     lang: "en", switchTo: "RU", switchTitle: "Переключить на русский",
 
     tabHome: "Tunnel", tabKey: "Access key", tabLog: "Log", tabAbout: "About", tabNodes: "Countries", tabTheme: "Theme",
+    wOpen: "Open the window", wHide: "Hide to tray",
+    autostart: "Start with Windows", autostartHint: "Without a window, in the tray; the tunnel comes up by itself if a key is saved. A scheduler task with administrator rights is created, so Windows does not ask for consent at every sign-in.",
+    autostartOn: "On", autostartOff: "Off",
     pages: {
       home: ["Tunnel", "State and traffic"],
       nodes: ["Countries", "Which one to go through"],
@@ -911,6 +984,8 @@ function paintStatic() {
 
   $("lang").textContent = d.switchTo;
   $("lang").title = d.switchTitle;
+  $("w-full").title = d.wOpen;
+  $("w-hide").title = d.wHide;
 
   paintHead();
   paintTheme();
@@ -929,6 +1004,12 @@ async function setLang(next) {
 /* --------------------------------------------------------------- вкладки */
 
 let openTab = "home";
+
+// Режим страницы задаёт программа адресом: ?mode=widget — трей-виджет,
+// ?tab=… — какую вкладку открыть в полном окне. Страница одна на оба вида.
+const pageParams = new URLSearchParams(location.search);
+const widgetMode = pageParams.get("mode") === "widget";
+if (widgetMode) document.body.classList.add("as-widget");
 
 function paintHead() {
   const p = L().pages[openTab] || L().pages.home;
@@ -951,6 +1032,20 @@ document.querySelectorAll(".tab").forEach((tab) => {
     if (openTab === "nodes") loadNodes();
   });
 });
+
+// Вкладка из адреса: так виджет открывает полное окно сразу на нужной.
+{
+  const want = pageParams.get("tab");
+  const tab = want && document.querySelector('.tab[data-tab="' + want + '"]');
+  if (tab) tab.click();
+}
+
+// Виджет просит программу переключить окно: полное на вкладку или в трей.
+for (const b of document.querySelectorAll(".w-links button")) {
+  b.addEventListener("click", () => api("POST", "api/window", { mode: "full", tab: b.dataset.open }).catch(() => {}));
+}
+on("w-full", "click", () => api("POST", "api/window", { mode: "full", tab: "home" }).catch(() => {}));
+on("w-hide", "click", () => api("POST", "api/window", { mode: "hide" }).catch(() => {}));
 
 /* ------------------------------------------------------------------ тема */
 
@@ -1497,6 +1592,20 @@ function render(s) {
   $("t-up").textContent = bytes(s.up || 0);
 
   paintBars(s.history);
+
+  // Виджет — тот же экран в другой шкуре: кнопка, состояние, сессия и
+  // скорость, нода. Красится тем же, чем окно, только короче.
+  $("w-power").dataset.state = s.state;
+  $("w-power").dataset.btn = $("power").dataset.btn || "";
+  $("w-power").disabled = !s.elevated;
+  $("w-power").title = $("power").title;
+  $("w-status").textContent = $("status").textContent;
+  const wmeta = [];
+  if (up && s.since) wmeta.push(clock(Math.max(0, Math.floor(Date.now() / 1000) - s.since)));
+  if (up) wmeta.push($("s-down").textContent);
+  $("w-meta").textContent = wmeta.length ? wmeta.join(" · ") : $("detail").textContent;
+  $("w-node").textContent = $("node-name").textContent;
+  $("w-ping").textContent = $("node-ping").textContent;
 }
 
 // paintKeyCard — заголовок карточки ключа: метка и хост из ссылки.
@@ -1544,7 +1653,7 @@ function paintLog(lines) {
 
 let busy = false;
 
-on("power", "click", async () => {
+async function togglePower() {
   if (busy) return;
   busy = true;
   try {
@@ -1558,7 +1667,31 @@ on("power", "click", async () => {
   } finally {
     busy = false;
   }
+}
+on("power", "click", togglePower);
+on("w-power", "click", togglePower);
+
+// Автозапуск: одна кнопка-переключатель, состояние спрашиваем у программы,
+// а не помним сами — задачу могли снять и мимо нас.
+async function paintAutostart() {
+  const d = L();
+  try {
+    const a = await api("GET", "api/autostart");
+    $("autostart").textContent = a.on ? d.autostartOn : d.autostartOff;
+    $("autostart").dataset.on = String(!!a.on);
+  } catch (_) { /* покажем при следующем заходе */ }
+}
+on("autostart", "click", async () => {
+  const on = $("autostart").dataset.on !== "true";
+  $("autostart-msg").textContent = "";
+  try {
+    await api("POST", "api/autostart", { on });
+  } catch (err) {
+    $("autostart-msg").textContent = err.message;
+  }
+  paintAutostart();
 });
+paintAutostart();
 
 on("proxy-off", "click", dropProxy);
 
