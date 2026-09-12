@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/jytt8u/marvia/internal/look"
 )
 
 // Каждый элемент, который ищет код окна, должен быть в разметке.
@@ -119,4 +121,72 @@ func dictionaryKeys(t *testing.T, page, lang string) map[string]bool {
 		t.Fatalf("словарь %s пуст — разбор не сработал", lang)
 	}
 	return found
+}
+
+// Страница несёт метку общей темы — ровно одну — и не несёт своей таблицы.
+//
+// Без метки страница отдастся целой и упадёт на первой же строке, где спросят
+// Look: окно останется серым и мёртвым, а ошибка — только в консоли движка,
+// которую никто не откроет. Своя таблица страшнее: она работает, и именно
+// поэтому расходится с панелью незаметно.
+func TestPageCarriesSharedLook(t *testing.T) {
+	raw, err := os.ReadFile("ui/app.html")
+	if err != nil {
+		t.Fatalf("страница окна не читается: %v", err)
+	}
+	page := string(raw)
+
+	if n := strings.Count(page, look.Marker); n != 1 {
+		t.Fatalf("метка темы встречается %d раз, нужна ровно одна", n)
+	}
+	if strings.Contains(page, "const PRESETS = {") {
+		t.Error("в странице своя таблица пресетов — она должна быть только в internal/look/look.js")
+	}
+
+	served := look.Inline(page)
+	if strings.Contains(served, look.Marker) || !strings.Contains(served, "const Look = ") {
+		t.Error("тема не встала на место метки")
+	}
+}
+
+// У каждого пресета из таблицы есть название на обоих языках, и ни одно
+// название не висит без пресета.
+//
+// Карточка без названия показала бы ключ вроде «teal» — рабочее слово, не
+// предназначенное для глаз. Название без пресета — след переименования,
+// которое довели до словаря и не довели до таблицы.
+func TestEveryPresetIsNamedInBothLanguages(t *testing.T) {
+	raw, err := os.ReadFile("ui/app.html")
+	if err != nil {
+		t.Fatalf("страница окна не читается: %v", err)
+	}
+	page := string(raw)
+
+	presets := look.Presets()
+	if len(presets) == 0 {
+		t.Fatal("в таблице нет ни одного пресета")
+	}
+
+	// Блок themes: { … } в каждом словаре; ключи — латиница до двоеточия.
+	blocks := regexp.MustCompile(`themes: \{([^}]*)\}`).FindAllStringSubmatch(page, -1)
+	if len(blocks) != 2 {
+		t.Fatalf("блоков названий %d, ожидалось два — по одному на язык", len(blocks))
+	}
+	key := regexp.MustCompile(`([a-z]+): "`)
+	for i, b := range blocks {
+		named := make(map[string]bool)
+		for _, m := range key.FindAllStringSubmatch(b[1], -1) {
+			named[m[1]] = true
+		}
+		for p := range presets {
+			if !named[p] {
+				t.Errorf("словарь %d: пресет %q без названия", i+1, p)
+			}
+		}
+		for n := range named {
+			if !presets[n] {
+				t.Errorf("словарь %d: название для %q, которого нет в таблице", i+1, n)
+			}
+		}
+	}
 }
