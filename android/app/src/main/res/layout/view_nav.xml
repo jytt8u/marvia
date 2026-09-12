@@ -107,7 +107,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/navSettings"
+            android:id="@+id/navMore"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -118,18 +118,18 @@
             android:paddingVertical="8dp">
 
             <ImageView
-                android:id="@+id/navSettingsIcon"
+                android:id="@+id/navMoreIcon"
                 android:layout_width="23dp"
                 android:layout_height="23dp"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_gear" />
+                android:src="@drawable/ic_more" />
 
             <TextView
-                android:id="@+id/navSettingsLabel"
+                android:id="@+id/navMoreLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/nav_settings"
+                android:text="@string/nav_more"
                 android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>

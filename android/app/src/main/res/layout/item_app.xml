@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Одно приложение в списке раздела «Приложения»: буква вместо иконки,
+    название, имя пакета мелко и переключатель. Иконки не грузим намеренно:
+    три сотни растровых значков — это секунды пролистывания и мегабайты
+    памяти ради того, чтобы человек нашёл банк, который и так узнаёт по имени.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_card"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="14dp"
+    android:paddingVertical="10dp"
+    android:tag="card">
+
+    <TextView
+        android:id="@+id/appInitial"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:gravity="center"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/appName"
+            style="@style/VeilRowTitle" />
+
+        <TextView
+            android:id="@+id/appPackage"
+            style="@style/VeilRowSub"
+            android:fontFamily="monospace"
+            android:textSize="10.5sp" />
+    </LinearLayout>
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/appSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="false"
+        android:focusable="false"
+        android:tag="switch" />
+</LinearLayout>

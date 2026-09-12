@@ -64,6 +64,50 @@ class Store(context: Context) {
         }
 
     /**
+     * bypassMode — что делать со списком приложений.
+     *
+     * «Мимо туннеля»: отмеченные ходят напрямую, остальные — через туннель.
+     * «Только эти»: наоборот, в туннель идут одни отмеченные — так живут те,
+     * кому туннель нужен ради двух приложений, а банк и такси должны видеть
+     * настоящий адрес. «Выключено»: список остаётся, но не применяется —
+     * чтобы отметки не пропали, когда человек на день выключает исключения.
+     */
+    var bypassMode: String
+        get() = prefs.getString(KEY_BYPASS_MODE, BYPASS_EXCLUDE).let {
+            if (it == BYPASS_INCLUDE || it == BYPASS_OFF) it else BYPASS_EXCLUDE
+        }
+        set(value) {
+            prefs.edit().putString(KEY_BYPASS_MODE, value).apply()
+        }
+
+    /**
+     * dns — кто отвечает на запросы имён. Только адрес, без порта.
+     *
+     * Запрос в любом случае уходит внутрь туннеля и по TCP — это решает
+     * ядро, а не человек. Выбор здесь только в том, чей резолвер стоит на
+     * другом конце: у кого-то из них есть фильтр рекламы, у кого-то — нет.
+     */
+    var dns: String
+        get() = prefs.getString(KEY_DNS, null)?.takeIf { it in DNS_CHOICES } ?: DNS_CHOICES.first()
+        set(value) {
+            prefs.edit().putString(KEY_DNS, value).apply()
+        }
+
+    /**
+     * lanOutside — оставлять ли домашнюю сеть мимо туннеля.
+     *
+     * Принтер, телевизор, роутер: их адреса частные и за границу не
+     * маршрутизируются, внутри туннеля до них не дойти никак. Выключено по
+     * умолчанию не из вредности: в чужом Wi-Fi «домашняя сеть» — это чужая
+     * сеть, и пускать туда трафик мимо туннеля человек должен сам.
+     */
+    var lanOutside: Boolean
+        get() = prefs.getBoolean(KEY_LAN_OUTSIDE, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_LAN_OUTSIDE, value).apply()
+        }
+
+    /**
      * bypassRussian — вести ли российские сайты мимо туннеля.
      *
      * Отдельно от списка приложений: приложения человек выбирает сам, а это
@@ -148,9 +192,24 @@ class Store(context: Context) {
         const val LANG_RU = "ru"
         const val LANG_EN = "en"
 
+        const val BYPASS_EXCLUDE = "exclude"
+        const val BYPASS_INCLUDE = "include"
+        const val BYPASS_OFF = "off"
+
+        /**
+         * Резолверы, из которых выбирают. Первый — по умолчанию, он же
+         * Mobile.DefaultDNS без порта. Список короткий и публичный: свой
+         * адрес вписать нельзя, потому что опечатка в нём — это «интернет
+         * не работает» без единой подсказки, почему.
+         */
+        val DNS_CHOICES = listOf("1.1.1.1", "8.8.8.8", "9.9.9.9", "94.140.14.14")
+
         private const val KEY_ACCOUNT_LINK = "account_link"
         private const val KEY_ACCOUNT_SAVED = "account_saved_at"
         private const val KEY_BYPASSED = "bypassed_apps"
+        private const val KEY_BYPASS_MODE = "bypass_mode"
+        private const val KEY_DNS = "dns"
+        private const val KEY_LAN_OUTSIDE = "lan_outside"
         private const val KEY_BYPASS_RU = "bypass_russian"
         private const val KEY_BYPASS_ASKED = "bypass_asked"
         private const val KEY_AUTOSTART = "autostart"
