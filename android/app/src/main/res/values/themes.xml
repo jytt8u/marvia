@@ -48,6 +48,23 @@
         <item name="android:ellipsize">end</item>
     </style>
 
+    <!--
+        Таблетка-переключатель раздела или режима: ряд равных по ширине
+        кнопок, активная залита акцентом. Цвета ставит код, здесь только форма.
+    -->
+    <style name="VeilPill">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingVertical">9dp</item>
+        <item name="android:paddingHorizontal">4dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textColor">@color/veil_muted</item>
+    </style>
+
     <style name="VeilRowSub">
         <item name="android:tag">dim</item>
         <item name="android:layout_width">wrap_content</item>

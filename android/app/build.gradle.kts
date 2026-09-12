@@ -69,6 +69,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Отладочная сборка умеет ещё и x86_64 — ради эмулятора. Ядро на
+            // Go под ARM в трансляторе эмулятора падает с SIGILL, так что без
+            // своей библиотеки на x86_64 приложение на нём не проверить
+            // вовсе. В релиз это не попадает: там ARM и только ARM. Чтобы
+            // библиотека появилась, ядро собирают с -Emulator (scripts/android.ps1);
+            // без неё фильтр просто ничего не находит и пакет остаётся ARM.
+            ndk {
+                abiFilters += "x86_64"
+            }
+        }
+
         release {
             signingConfig = signingConfigs.findByName("release")
 
@@ -122,6 +134,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     // Тесты на JVM, без телефона: арифметика темы сверяется с look.js.
