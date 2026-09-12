@@ -1,0 +1,66 @@
+# Проверка каждого изменения — до того, как оно доедет до тега.
+#
+# Сборка в release.yml бежит только на метку v* и на кнопку. Значит, сломанный
+# коммит спокойно доезжал до релиза и выяснялся там: сорок с лишним файлов
+# тестов между релизами не запускались вовсе, и зелёный список был ложным
+# спокойствием. Здесь то же самое, что делают руками перед PR — gofmt, vet,
+# тесты, сборка под три цели, — но на каждый PR и на каждый коммит в main.
+#
+# Ничего не выкладывается: это проверка, а не релиз.
+
+name: Проверка
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Тесты и сборка
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # Версию берём из go.mod, чтобы она не разъехалась с той, на которой
+          # проект собирают руками.
+          go-version-file: go.mod
+          cache: true
+
+      # gofmt молчит на чистом коде, а на грязном печатает имена файлов —
+      # их и показываем, чтобы не гадать.
+      - name: Форматирование
+        run: |
+          dirty="$(gofmt -l .)"
+          if [ -n "$dirty" ]; then
+            echo "не отформатировано gofmt:"
+            echo "$dirty"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Тесты
+        run: go test ./...
+
+      # Те же цели, что в релизе. Файлы под Windows собираются только под
+      # Windows, и без этого шага ошибка в них жила бы до первого тега.
+      - name: Сборка под три цели
+        run: |
+          set -eu
+          for os_arch in linux/amd64 linux/arm64; do
+            for cmd in marvia-panel marvia-node marvia-keygen; do
+              CGO_ENABLED=0 GOOS="${os_arch%/*}" GOARCH="${os_arch#*/}" \
+                go build -trimpath -o /dev/null "./cmd/$cmd"
+            done
+          done
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+            go build -trimpath -ldflags "-H windowsgui" -o /dev/null ./cmd/marvia-windows
