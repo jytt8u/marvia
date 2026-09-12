@@ -3,14 +3,9 @@ package io.marvia.android
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import androidx.appcompat.app.AlertDialog
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
- * Выбор приложений, которые ходят мимо туннеля.
+ * Приложения, которые ходят мимо туннеля — или, наоборот, только через него.
  *
  * Зачем это вообще. Нода стоит за границей, и для любого сервера человек
  * находится там же. Госуслуги, банки и всё государственное на запросы из-за
@@ -32,7 +27,7 @@ object Bypass {
      * Это не «все банки страны», а то, обо что спотыкаются в первый же день.
      * Чего нет в телефоне, того в списке и не появится.
      */
-    private val PRESET = listOf(
+    val PRESET = listOf(
         "ru.gosuslugi.pgu",
         "ru.rt.eq", // Госключ
         "ru.sberbankmobile",
@@ -52,71 +47,16 @@ object Bypass {
     )
 
     /** Приложение, каким его видит человек. */
-    private data class Entry(val pkg: String, val label: String)
-
-    /**
-     * show открывает выбор.
-     *
-     * Список читается в фоне: у человека их бывает под три сотни, и на
-     * медленном телефоне это заметная пауза — держать в ней главный поток
-     * значит показать зависшее приложение.
-     */
-    fun show(context: Context, scope: CoroutineScope, store: Store, onSaved: () -> Unit) {
-        val loading = AlertDialog.Builder(context)
-            .setMessage(R.string.bypass_loading)
-            .setCancelable(true)
-            .show()
-
-        scope.launch {
-            val entries = withContext(Dispatchers.IO) { installed(context) }
-            loading.dismiss()
-
-            val chosen = store.bypassed.toMutableSet()
-            // Выбранные сверху: человек открывает этот список второй раз, чтобы
-            // посмотреть или снять то, что уже отметил, а не искать заново.
-            val ordered = entries.sortedWith(
-                compareByDescending<Entry> { it.pkg in chosen }.thenBy { it.label.lowercase() },
-            )
-
-            val labels = ordered.map { it.label }.toTypedArray()
-            val checked = ordered.map { it.pkg in chosen }.toBooleanArray()
-
-            AlertDialog.Builder(context)
-                .setTitle(R.string.bypass_title)
-                .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
-                    if (isChecked) chosen.add(ordered[which].pkg) else chosen.remove(ordered[which].pkg)
-                }
-                .setNeutralButton(R.string.bypass_preset, null)
-                .setPositiveButton(R.string.bypass_save) { _, _ ->
-                    store.bypassed = chosen
-                    onSaved()
-                }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
-                .also { dialog ->
-                    // Кнопку набора вешаем после показа: иначе нажатие закроет
-                    // окно, а человек ждёт, что отметки появятся у него на
-                    // глазах и он сможет их поправить.
-                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                        val list = dialog.listView
-                        for ((i, entry) in ordered.withIndex()) {
-                            if (entry.pkg in PRESET) {
-                                chosen.add(entry.pkg)
-                                list.setItemChecked(i, true)
-                            }
-                        }
-                    }
-                }
-        }
-    }
+    data class Entry(val pkg: String, val label: String)
 
     /**
      * installed перечисляет приложения, которые человек запускает сам.
      *
      * Системные без экрана запуска отсеиваем: они ничего не откроют и в списке
-     * из трёхсот строк только мешают искать своё.
+     * из трёхсот строк только мешают искать своё. Читать в фоне: у человека их
+     * бывает под три сотни, и на медленном телефоне это заметная пауза.
      */
-    private fun installed(context: Context): List<Entry> {
+    fun installed(context: Context): List<Entry> {
         val pm = context.packageManager
         val mine = context.packageName
 

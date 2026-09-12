@@ -39,8 +39,9 @@ import kotlinx.coroutines.withContext
 /**
  * MainActivity — все экраны приложения.
  *
- * Их четыре, и они лежат друг на друге в одной активности: подключение, выбор
- * страны, настройки и ключ доступа. Отдельных активностей нет намеренно —
+ * Они лежат друг на друге в одной активности: подключение, выбор страны,
+ * тема, «ещё» (соединение, приложения, логи), ключ доступа и выбор языка.
+ * Отдельных активностей нет намеренно —
  * состояние туннеля живёт в процессе, и переключение вкладок не должно
  * пересобирать экран и терять то, что человек уже видел.
  *
@@ -49,12 +50,12 @@ import kotlinx.coroutines.withContext
  */
 class MainActivity : AppCompatActivity() {
 
-    private enum class Screen { LANGUAGE, KEY, CONNECT, SERVERS, THEME, SETTINGS }
+    private enum class Screen { LANGUAGE, KEY, CONNECT, SERVERS, THEME, MORE }
 
     private lateinit var ui: ActivityMainBinding
     private lateinit var store: Store
     private lateinit var servers: ServersScreen
-    private lateinit var settings: SettingsScreen
+    private lateinit var more: MoreScreen
     private lateinit var themeScreen: ThemeScreen
     private lateinit var language: LanguageScreen
 
@@ -107,9 +108,10 @@ class MainActivity : AppCompatActivity() {
         servers = ServersScreen(this, ui.serversScreen) { theme }
         themeScreen = ThemeScreen(this, ui.themeScreen, store) { repaint() }
         language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
-        settings = SettingsScreen(
+        more = MoreScreen(
             host = this,
-            ui = ui.settingsScreen,
+            ui = ui.moreScreen,
+            theme = { theme },
             store = store,
             onKey = { show(Screen.KEY) },
             onLanguage = {
@@ -155,7 +157,7 @@ class MainActivity : AppCompatActivity() {
     private fun afterLanguage() {
         if (languageFromSettings) {
             languageFromSettings = false
-            show(Screen.SETTINGS)
+            show(Screen.MORE)
         } else {
             show(firstScreen())
         }
@@ -167,7 +169,7 @@ class MainActivity : AppCompatActivity() {
             // Из выбора языка, открытого из настроек, — назад в настройки.
             if (screen == Screen.LANGUAGE && languageFromSettings) {
                 languageFromSettings = false
-                show(Screen.SETTINGS)
+                show(Screen.MORE)
                 return
             }
             if (screen == Screen.CONNECT || screen == Screen.LANGUAGE || store.accountLink.isBlank()) {
@@ -203,6 +205,7 @@ class MainActivity : AppCompatActivity() {
         paintNav()
         servers.paint()
         themeScreen.paint(theme)
+        more.paint()
         render(MarviaState.state.value)
 
         // Часы и кнопки системы над нашим фоном: тёмные на светлой теме,
@@ -223,7 +226,7 @@ class MainActivity : AppCompatActivity() {
         ui.keyScreen.root.isVisible = next == Screen.KEY
         ui.connectScreen.root.isVisible = next == Screen.CONNECT
         ui.serversScreen.root.isVisible = next == Screen.SERVERS
-        ui.settingsScreen.root.isVisible = next == Screen.SETTINGS
+        ui.moreScreen.root.isVisible = next == Screen.MORE
         ui.themeScreen.root.isVisible = next == Screen.THEME
         ui.languageScreen.root.isVisible = next == Screen.LANGUAGE
 
@@ -234,7 +237,7 @@ class MainActivity : AppCompatActivity() {
 
         when (next) {
             Screen.SERVERS -> servers.open()
-            Screen.SETTINGS -> settings.open()
+            Screen.MORE -> more.open()
             Screen.THEME -> themeScreen.paint(theme)
             Screen.LANGUAGE -> language.open()
             Screen.KEY -> openKey()
@@ -250,14 +253,14 @@ class MainActivity : AppCompatActivity() {
         ui.nav.navConnect.setOnClickListener { show(Screen.CONNECT) }
         ui.nav.navServers.setOnClickListener { show(Screen.SERVERS) }
         ui.nav.navTheme.setOnClickListener { show(Screen.THEME) }
-        ui.nav.navSettings.setOnClickListener { show(Screen.SETTINGS) }
+        ui.nav.navMore.setOnClickListener { show(Screen.MORE) }
     }
 
     private fun paintNav() {
         paintTab(ui.nav.navConnectIcon, ui.nav.navConnectLabel, screen == Screen.CONNECT)
         paintTab(ui.nav.navServersIcon, ui.nav.navServersLabel, screen == Screen.SERVERS)
         paintTab(ui.nav.navThemeIcon, ui.nav.navThemeLabel, screen == Screen.THEME)
-        paintTab(ui.nav.navSettingsIcon, ui.nav.navSettingsLabel, screen == Screen.SETTINGS)
+        paintTab(ui.nav.navMoreIcon, ui.nav.navMoreLabel, screen == Screen.MORE)
     }
 
     private fun paintTab(icon: ImageView, label: TextView, active: Boolean) {
