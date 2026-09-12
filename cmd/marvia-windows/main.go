@@ -44,6 +44,7 @@ func main() {
 	mtu := flag.Uint("mtu", tunbridge.DefaultMTU, "MTU интерфейса")
 	noElevate := flag.Bool("no-elevate", false, "не просить прав администратора (окно откроется, туннель не поднимется)")
 	urlFile := flag.String("url-file", "", "записать адрес интерфейса в файл (для отладки и поддержки)")
+	inTray := flag.Bool("tray", false, "начать в трее, без окна, и подключиться, если ключ есть (так запускает автозапуск)")
 	flag.Parse()
 
 	// Без прав администратора Windows не даст ни создать адаптер, ни трогать
@@ -59,13 +60,13 @@ func main() {
 		return
 	}
 
-	if err := run(*dns, uint32(*mtu), *urlFile); err != nil {
+	if err := run(*dns, uint32(*mtu), *urlFile, *inTray); err != nil {
 		alert("Marvia", err.Error())
 		os.Exit(1)
 	}
 }
 
-func run(dns string, mtu uint32, urlFile string) error {
+func run(dns string, mtu uint32, urlFile string, inTray bool) error {
 	log := newJournal()
 	ctl := NewController(dns, mtu, log)
 
@@ -86,7 +87,10 @@ func run(dns string, mtu uint32, urlFile string) error {
 
 	log.add("готов к работе")
 
-	url, server, err := serveUI(ctl, log)
+	// Окно ещё не создано, а страница уже может попросить его переключить;
+	// ручка заполняется, когда окно появится.
+	var onWindow func(mode, tab string)
+	url, server, err := serveUI(ctl, log, &onWindow)
 	if err != nil {
 		return err
 	}
@@ -114,7 +118,18 @@ func run(dns string, mtu uint32, urlFile string) error {
 		os.Exit(0)
 	}()
 
-	return showWindow(url)
+	// Запуск вместе с Windows: окна нет, значок есть, и туннель поднимается
+	// сам — ради этого автозапуск и включают. Ошибка подключения не роняет
+	// программу: она в журнале и на значке, а человек увидит её, открыв окно.
+	if inTray && ctl.Account() != "" {
+		go func() {
+			if err := ctl.Connect(); err != nil {
+				log.add("автоподключение: %v", err)
+			}
+		}()
+	}
+
+	return showWindow(url, ctl, log, inTray, &onWindow)
 }
 
 // elevated сообщает, запущены ли мы с правами администратора.

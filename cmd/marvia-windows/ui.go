@@ -76,6 +76,11 @@ type ui struct {
 	ctl *Controller
 	log *journal
 	key string
+
+	// onWindow переключает вид окна по просьбе страницы: из виджета в
+	// полное окно на вкладку, крестиком виджета — в трей. Указатель, потому
+	// что окно появляется позже сервера.
+	onWindow *func(mode, tab string)
 }
 
 // serveUI поднимает интерфейс и возвращает адрес, который надо открыть.
@@ -84,14 +89,14 @@ type ui struct {
 // ссылка доступа с личным ключом покупателя, а на компьютере может работать
 // что угодно, в том числе чужое. Поэтому всё лежит под одноразовым ключом в
 // адресе — угадать его чужой программе не проще, чем подобрать пароль.
-func serveUI(ctl *Controller, log *journal) (string, *http.Server, error) {
+func serveUI(ctl *Controller, log *journal, onWindow *func(mode, tab string)) (string, *http.Server, error) {
 	raw := make([]byte, 24)
 	if _, err := rand.Read(raw); err != nil {
 		return "", nil, err
 	}
 	key := base64.RawURLEncoding.EncodeToString(raw)
 
-	u := &ui{ctl: ctl, log: log, key: key}
+	u := &ui{ctl: ctl, log: log, key: key, onWindow: onWindow}
 
 	mux := http.NewServeMux()
 	prefix := "/" + key
@@ -107,6 +112,9 @@ func serveUI(ctl *Controller, log *journal) (string, *http.Server, error) {
 	mux.HandleFunc("POST "+prefix+"/api/nodes/select", u.selectNode)
 	mux.HandleFunc("POST "+prefix+"/api/proxy/off", u.dropProxy)
 	mux.HandleFunc("POST "+prefix+"/api/lang", u.setLang)
+	mux.HandleFunc("POST "+prefix+"/api/window", u.window)
+	mux.HandleFunc("GET "+prefix+"/api/autostart", u.getAutostart)
+	mux.HandleFunc("POST "+prefix+"/api/autostart", u.setAutostart)
 
 	// Шрифты и знак — общие с панелью, из того же пакета. Под тем же
 	// одноразовым ключом: адреса под ним не угадать, и чужой программе на
@@ -237,4 +245,51 @@ func (u *ui) setLang(w http.ResponseWriter, r *http.Request) {
 	}
 	setUILang(body.Lang)
 	writeJSON(w, http.StatusOK, map[string]any{})
+}
+
+// window — страница просит переключить вид окна: «full» с вкладкой или «hide».
+func (u *ui) window(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Mode string `json:"mode"`
+		Tab  string `json:"tab"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": say("badRequest")})
+		return
+	}
+	// Вкладку проверяем по списку: она уходит в адрес страницы, и мусор в
+	// ней — это мусор в адресной строке движка.
+	switch body.Tab {
+	case "", "home", "nodes", "key", "log", "theme", "about":
+	default:
+		body.Tab = ""
+	}
+	if u.onWindow != nil && *u.onWindow != nil {
+		(*u.onWindow)(body.Mode, body.Tab)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{})
+}
+
+func (u *ui) getAutostart(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"on": autostartOn()})
+}
+
+func (u *ui) setAutostart(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		On bool `json:"on"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": say("badRequest")})
+		return
+	}
+	if err := setAutostart(body.On); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	if body.On {
+		u.log.add("%s", say("logAutostartOn"))
+	} else {
+		u.log.add("%s", say("logAutostartOff"))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"on": autostartOn()})
 }
