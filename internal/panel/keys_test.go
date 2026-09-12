@@ -217,3 +217,30 @@ func TestVersionNeedsAuth(t *testing.T) {
 		t.Errorf("под админским токеном версии нет: %d %s", code, body)
 	}
 }
+
+// Приложение продавца на компьютере, получив ссылку-приглашение, показывает,
+// кем оно войдёт: администратором или ключом с такими-то правами. Про чужой
+// токен ручка не говорит ничего, кроме того, что он чужой.
+func TestWhoamiTellsRoleAndRights(t *testing.T) {
+	srv, admin := keyPanel(t)
+
+	code, body := do(t, srv, "GET", "/api/v1/whoami", admin, "")
+	if code != http.StatusOK || !strings.Contains(body, `"admin":true`) {
+		t.Fatalf("админ: %d %s", code, body)
+	}
+
+	_, created := do(t, srv, "POST", "/api/v1/keys", admin, `{"name":"бот","scopes":["users"]}`)
+	secret := between(t, created, `"secret":"`, `"`)
+	code, body = do(t, srv, "GET", "/api/v1/whoami", secret, "")
+	if code != http.StatusOK || !strings.Contains(body, `"admin":false`) || !strings.Contains(body, `"key":"бот"`) ||
+		!strings.Contains(body, `"scopes":["users"]`) {
+		t.Fatalf("ключ: %d %s", code, body)
+	}
+
+	if code, _ := do(t, srv, "GET", "/api/v1/whoami", "nope-nope-nope", ""); code != http.StatusUnauthorized {
+		t.Fatalf("чужой токен прошёл: %d", code)
+	}
+	if code, _ := do(t, srv, "GET", "/api/v1/whoami", "", ""); code != http.StatusUnauthorized {
+		t.Fatalf("без токена прошло: %d", code)
+	}
+}

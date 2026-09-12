@@ -538,6 +538,19 @@
             <sc-if value="{{ appsHint }}">
               <div style="{{ hintBox }}">{{ appsHintText }}</div>
             </sc-if>
+
+            <!--
+              Вход с компьютера: приложение продавца открывает эту же панель
+              внутри себя по ссылке-приглашению. В ссылке — адрес панели и тот
+              токен, которым вошли сюда: у администратора — администраторский,
+              у бота — его ключ с его правами.
+            -->
+            <div style="{{ partnerCard }}">
+              <div style="font-size: 16px; font-weight: 600; color: var(--fg);">{{ d18.partner.title }}</div>
+              <div style="font-size: 13px; line-height: 1.5; color: var(--dim); max-width: 640px;">{{ d18.partner.body }}</div>
+              <div style="{{ codeStyle }}" onClick="{{ copyPartner }}" title="{{ d18.look.copy }}">{{ partnerLink }}</div>
+              <div style="font-size: 12px; color: var(--warn);">{{ d18.partner.warn }}</div>
+            </div>
           </div>
         </sc-if>
 
@@ -1468,6 +1481,11 @@ const TEXTS = {
       laid: "ВЫЛОЖЕНО",
       empty: "Приложения пока не выложены: покупателям их раздаёт сама панель со своего домена.",
     },
+    partner: {
+      title: "Панель в приложении на компьютере",
+      body: "Приложение Marvia для Windows умеет открывать эту панель внутри себя: выбери в нём «Продавец» и вставь эту ссылку. В ней адрес панели и токен, которым ты вошёл сюда, — приложение войдёт с теми же правами. Нажми, чтобы скопировать.",
+      warn: "Ссылка равна входу в панель. Не пересылай её никому и не клади в чаты.",
+    },
 
     look: {
       accent: "АКЦЕНТ", compact: "плотно", normal: "обычно", roomy: "просторно",
@@ -1694,6 +1712,11 @@ const TEXTS = {
     appsPage: {
       laid: "PUBLISHED",
       empty: "No apps published yet: the panel serves them to buyers from your own domain.",
+    },
+    partner: {
+      title: "The panel inside the desktop app",
+      body: "The Marvia app for Windows can open this panel inside itself: choose “Seller” there and paste this link. It carries the panel address and the token you signed in with — the app gets the same rights. Click to copy.",
+      warn: "This link is a sign-in. Do not forward it to anyone or paste it into chats.",
     },
 
     look: {
@@ -2372,6 +2395,14 @@ function renderVals() {
       btn: pick(Look.BUTTONS), glow: pick(Object.keys(Look.GLOWS)), card: pick(Look.CARDS),
     });
   };
+  // Ссылка для приложения продавца: marvia-panel://<токен>@<адрес панели>.
+  const partnerLink = "marvia-panel://" + encodeURIComponent(state.token || "") + "@" + location.host + "/";
+  const copyPartner = () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(partnerLink).catch(() => {});
+  };
+  const partnerCard = "padding:" + d.pad + "px;border-radius:" + t.r + "px;background:" + t.surf
+    + ";border:1px solid " + t.cardLine + ";box-shadow:" + t.cardShadow + ";display:flex;flex-direction:column;gap:10px";
+
   const themeCode = Look.encode(state);
   const codeStyle = "padding:11px 12px;border-radius:" + t.r + "px;background:" + t.surf2 + ";border:1px dashed " + t.acc
     + ";font-family:JetBrains Mono,monospace;font-size:12px;letter-spacing:.04em;color:" + t.fg
@@ -2535,6 +2566,7 @@ function renderVals() {
     accents, looks, tints, knobCard, knobTitle, knobSub, lampWrap, lampHint, lampZones, lightNote, kinds,
     depthPct, depthNote, depthStyle, setDepth, radii, densities, cards, glows, profiles, saveProfile, randomize,
     themeCode, codeStyle, copyCode, codeInput, applyCode, codeBad: !!state.codeBad, saveStyle, diceStyle,
+    partnerLink, copyPartner, partnerCard,
   };
 }
 
@@ -2624,6 +2656,18 @@ loadLook();
 
 let saved = null;
 try { saved = localStorage.getItem(TOKEN_KEY); } catch (_) { /* приватное окно */ }
+
+// Токен в хвосте адреса — так приложение продавца на компьютере открывает
+// панель внутри себя, не показывая форму входа. Хвост на сервер не уходит и
+// стирается сразу после чтения, чтобы не остаться в истории движка.
+{
+  const m = /(?:^#|&)token=([^&]+)/.exec(location.hash);
+  if (m) {
+    saved = decodeURIComponent(m[1]);
+    try { localStorage.setItem(TOKEN_KEY, saved); } catch (_) { /* приватное окно */ }
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+}
 if (saved) enter(saved);
 </script>
 </body>
