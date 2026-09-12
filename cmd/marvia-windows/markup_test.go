@@ -149,44 +149,33 @@ func TestPageCarriesSharedLook(t *testing.T) {
 	}
 }
 
-// У каждого пресета из таблицы есть название на обоих языках, и ни одно
-// название не висит без пресета.
+// У каждого готового вида из таблицы есть название на обоих языках — по
+// номеру, как в панели.
 //
-// Карточка без названия показала бы ключ вроде «teal» — рабочее слово, не
-// предназначенное для глаз. Название без пресета — след переименования,
-// которое довели до словаря и не довели до таблицы.
-func TestEveryPresetIsNamedInBothLanguages(t *testing.T) {
+// Названия лежат по номерам, и лишний или недостающий вид подписал бы
+// карточки со сдвигом: «Изумруд» стал бы «Нефритом». Карточка без названия
+// показала бы ключ вроде «teal» — рабочее слово, не предназначенное для глаз.
+func TestEveryLookIsNamedInBothLanguages(t *testing.T) {
 	raw, err := os.ReadFile("ui/app.html")
 	if err != nil {
 		t.Fatalf("страница окна не читается: %v", err)
 	}
 	page := string(raw)
 
-	presets := look.Presets()
-	if len(presets) == 0 {
-		t.Fatal("в таблице нет ни одного пресета")
+	want := len(look.Looks())
+	if want == 0 {
+		t.Fatal("в таблице нет ни одного вида")
 	}
 
-	// Блок themes: { … } в каждом словаре; ключи — латиница до двоеточия.
-	blocks := regexp.MustCompile(`themes: \{([^}]*)\}`).FindAllStringSubmatch(page, -1)
-	if len(blocks) != 2 {
-		t.Fatalf("блоков названий %d, ожидалось два — по одному на язык", len(blocks))
+	// Список названий: themes: [ "…", "…", ], по одному на язык.
+	lists := regexp.MustCompile(`themes: \[([^\]]*)\]`).FindAllStringSubmatch(page, -1)
+	if len(lists) != 2 {
+		t.Fatalf("списков названий %d, ожидалось два — по одному на язык", len(lists))
 	}
-	key := regexp.MustCompile(`([a-z]+): "`)
-	for i, b := range blocks {
-		named := make(map[string]bool)
-		for _, m := range key.FindAllStringSubmatch(b[1], -1) {
-			named[m[1]] = true
-		}
-		for p := range presets {
-			if !named[p] {
-				t.Errorf("словарь %d: пресет %q без названия", i+1, p)
-			}
-		}
-		for n := range named {
-			if !presets[n] {
-				t.Errorf("словарь %d: название для %q, которого нет в таблице", i+1, n)
-			}
+	for i, l := range lists {
+		got := strings.Count(l[1], `"`) / 2
+		if got != want {
+			t.Errorf("словарь %d: названий %d, видов в таблице %d", i+1, got, want)
 		}
 	}
 }

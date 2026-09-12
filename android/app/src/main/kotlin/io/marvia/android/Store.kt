@@ -150,20 +150,56 @@ class Store(context: Context) {
      */
     var look: Look.Choice
         get() {
+            val d = Look.DEFAULT
             val preset = prefs.getString(KEY_PRESET, null)
-                ?: if (prefs.getInt(KEY_THEME, -1) == LEGACY_LIGHT) "daylight" else LookTable.DEFAULT_PRESET
-            return Look.Choice(
-                preset = preset,
-                accent = prefs.getInt(KEY_ACCENT, 0),
-                density = prefs.getString(KEY_DENSITY, null) ?: LookTable.DEFAULT_DENSITY,
+                ?: if (prefs.getInt(KEY_THEME, -1) == LEGACY_LIGHT) "daylight" else d.preset
+            // Незнакомое или битое значение поле за полем заменит normalize:
+            // одна битая плотность не должна сбрасывать ещё и цвет.
+            return Look.normalize(
+                Look.Choice(
+                    preset = preset,
+                    accent = prefs.getInt(KEY_ACCENT, 0),
+                    kind = prefs.getString(KEY_KIND, null) ?: d.kind,
+                    dir = prefs.getString(KEY_DIR, null) ?: d.dir,
+                    depth = prefs.getFloat(KEY_DEPTH, d.depth.toFloat()).toDouble(),
+                    tint = prefs.getInt(KEY_TINT, 0),
+                    radius = prefs.getString(KEY_RADIUS, null) ?: d.radius,
+                    density = prefs.getString(KEY_DENSITY, null) ?: d.density,
+                    btn = prefs.getString(KEY_BTN, null) ?: d.btn,
+                    glow = prefs.getString(KEY_GLOW, null) ?: d.glow,
+                    card = prefs.getString(KEY_CARD, null) ?: d.card,
+                ),
             )
         }
         set(value) {
+            val v = Look.normalize(value)
             prefs.edit()
-                .putString(KEY_PRESET, value.preset)
-                .putInt(KEY_ACCENT, value.accent)
-                .putString(KEY_DENSITY, value.density)
+                .putString(KEY_PRESET, v.preset)
+                .putInt(KEY_ACCENT, v.accent)
+                .putString(KEY_KIND, v.kind)
+                .putString(KEY_DIR, v.dir)
+                .putFloat(KEY_DEPTH, v.depth.toFloat())
+                .putInt(KEY_TINT, v.tint)
+                .putString(KEY_RADIUS, v.radius)
+                .putString(KEY_DENSITY, v.density)
+                .putString(KEY_BTN, v.btn)
+                .putString(KEY_GLOW, v.glow)
+                .putString(KEY_CARD, v.card)
                 .apply()
+        }
+
+    /** profiles — три сохранённых вида кодами; пустой слот — null. */
+    var profiles: List<String?>
+        get() = (0 until 3).map { i ->
+            prefs.getString(KEY_PROFILE + i, null)?.takeIf { Look.decode(it) != null }
+        }
+        set(value) {
+            val e = prefs.edit()
+            for (i in 0 until 3) {
+                val code = value.getOrNull(i)
+                if (code == null) e.remove(KEY_PROFILE + i) else e.putString(KEY_PROFILE + i, code)
+            }
+            e.apply()
         }
 
     /**
@@ -218,6 +254,15 @@ class Store(context: Context) {
         private const val KEY_PRESET = "look_preset"
         private const val KEY_ACCENT = "look_accent"
         private const val KEY_DENSITY = "look_density"
+        private const val KEY_KIND = "look_kind"
+        private const val KEY_DIR = "look_dir"
+        private const val KEY_DEPTH = "look_depth"
+        private const val KEY_TINT = "look_tint"
+        private const val KEY_RADIUS = "look_radius"
+        private const val KEY_BTN = "look_btn"
+        private const val KEY_GLOW = "look_glow"
+        private const val KEY_CARD = "look_card"
+        private const val KEY_PROFILE = "look_profile_"
 
         /** AppCompatDelegate.MODE_NIGHT_NO — так хранилась светлая тема. */
         private const val LEGACY_LIGHT = 1

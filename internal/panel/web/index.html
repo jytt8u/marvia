@@ -244,7 +244,7 @@
   их нет ни в базе, ни в API, а нарисованный раздел — это обещание.
 -->
 <template id="shell">
-  <div style="height: 100%; background: var(--bg, #05100a); display: flex; flex-direction: column; overflow: hidden;">
+  <div style="height: 100%; background: var(--bgcss, var(--bg, #05100a)); display: flex; flex-direction: column; overflow: hidden;">
 
     <div style="height: 46px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line, #1c2e21); background: var(--surf, #0c1a11);">
       <div style="display: flex; align-items: center; gap: 10px;">
@@ -332,7 +332,7 @@
               </sc-for>
             </div>
             <div style="display: flex; gap: var(--gap, 12px); height: 210px;">
-              <div style="flex: 1.6; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--line, #1c2e21); display: flex; flex-direction: column; gap: 12px;">
+              <div style="flex: 1.6; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none); display: flex; flex-direction: column; gap: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">{{ d18.dash.traffic }}</div>
                   <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim, #6c8a76);">{{ totalTraffic }}</div>
@@ -347,7 +347,7 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .12em; color: var(--dim, #6c8a76);"><span>{{ firstDay }}</span><span>{{ lastDay }}</span></div>
               </div>
-              <div style="flex: 1; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--line, #1c2e21); display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+              <div style="flex: 1; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none); display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
                 <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">{{ d18.dash.nodes }}</div>
                 <sc-for list="{{ nodes }}" as="n">
                   <div style="{{ n.rowStyle }}">
@@ -363,7 +363,7 @@
                 </sc-if>
               </div>
             </div>
-            <div style="flex: 1; min-height: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--line, #1c2e21); display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+            <div style="flex: 1; min-height: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf, #0c1a11); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none); display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="font-size: 14px; font-weight: 600; color: var(--fg, #eaf5ee);">{{ d18.dash.clients }}</div>
                 <div style="{{ allClients }}" onClick="{{ goClients }}">{{ allClientsLabel }}</div>
@@ -398,7 +398,7 @@
                 </div>
               </sc-for>
             </div>
-            <div style="flex: 1; min-height: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; overflow: hidden;">
+            <div style="flex: 1; min-height: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none); display: flex; flex-direction: column; gap: 8px; overflow: hidden;">
               <div style="{{ tableHead }}">
                 <sc-for list="{{ tableCols }}" as="col">
                   <div>{{ col }}</div>
@@ -475,7 +475,7 @@
               </sc-for>
             </div>
             <div style="flex: 1; min-height: 0; display: flex; gap: var(--gap, 12px);">
-              <div style="flex: 1.5; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px;">
+              <div style="flex: 1.5; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none); display: flex; flex-direction: column; gap: 14px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div style="font-size: 14px; font-weight: 600; color: var(--fg);">{{ d18.statsPage.byDay }}</div>
                   <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ totalTraffic }}</div>
@@ -489,7 +489,7 @@
                   </sc-for>
                 </div>
               </div>
-              <div style="flex: 1; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; overflow-y: auto;">
+              <div style="flex: 1; min-width: 0; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none); display: flex; flex-direction: column; gap: 14px; overflow-y: auto;">
                 <div style="font-size: 14px; font-weight: 600; color: var(--fg);">{{ d18.statsPage.byNode }}</div>
                 <sc-for list="{{ shareRows }}" as="sr">
                   <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -542,16 +542,10 @@
         </sc-if>
 
         <sc-if value="{{ isLook }}">
-          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--gap, 12px); overflow: hidden;">
-            <div style="display: flex; align-items: center; gap: 14px; padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line);">
-              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim); flex: none;">{{ d18.look.accent }}</div>
-              <div style="display: flex; flex-wrap: wrap; gap: 7px;">
-                <sc-for list="{{ accents }}" as="a">
-                  <div style="{{ a.style }}" onClick="{{ a.onClick }}"></div>
-                </sc-for>
-              </div>
-            </div>
-            <div style="flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap, 12px); align-content: start;">
+          <div style="flex: 1; min-height: 0; display: flex; gap: var(--gap, 12px); overflow: hidden;">
+
+            <!-- Готовые виды: мини-макет панели в цветах каждого. -->
+            <div data-keep-scroll="looks" style="flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding-right: 4px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap, 12px); align-content: start;">
               <sc-for list="{{ looks }}" as="lk">
                 <div style="{{ lk.wrap }}" onClick="{{ lk.onClick }}">
                   <div style="{{ lk.canvas }}">
@@ -570,6 +564,100 @@
                   </div>
                 </div>
               </sc-for>
+            </div>
+
+            <!-- Ручки. Всё применяется сразу: панель и есть предпросмотр. -->
+            <div data-keep-scroll="knobs" style="width: 320px; flex: none; min-height: 0; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: var(--gap, 12px);">
+
+              <div style="{{ knobCard }}">
+                <div style="{{ knobTitle }}">{{ d18.look.accent }}</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+                  <sc-for list="{{ accents }}" as="a">
+                    <div style="{{ a.style }}" onClick="{{ a.onClick }}"></div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="{{ knobCard }}">
+                <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                  <div style="{{ knobTitle }}">{{ d18.look.light }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--acc);">{{ lightNote }}</div>
+                </div>
+                <div style="{{ lampWrap }}">
+                  <sc-for list="{{ lampZones }}" as="z">
+                    <div style="{{ z.cell }}" onClick="{{ z.onClick }}"><div style="{{ z.sun }}"></div></div>
+                  </sc-for>
+                  <div style="{{ lampHint }}">{{ d18.look.lampHint }}</div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <sc-for list="{{ kinds }}" as="k">
+                    <div style="{{ k.wrap }}" onClick="{{ k.onClick }}">
+                      <div style="{{ k.canvas }}"></div>
+                      <div style="{{ k.label }}">{{ k.name }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <div style="font-size: 13px; color: var(--fg);">{{ d18.look.depth }}</div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ depthNote }}</div>
+                  </div>
+                  <input type="range" min="8" max="98" value="{{ depthPct }}" style="{{ depthStyle }}" onInput="{{ setDepth }}">
+                </div>
+                <div style="{{ knobSub }}">{{ d18.look.tint }}</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+                  <sc-for list="{{ tints }}" as="tn">
+                    <div style="{{ tn.style }}" onClick="{{ tn.onClick }}"></div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="{{ knobCard }}">
+                <div style="{{ knobTitle }}">{{ d18.look.radius }}</div>
+                <div style="display: flex; gap: 6px;">
+                  <sc-for list="{{ radii }}" as="p">
+                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                  </sc-for>
+                </div>
+                <div style="{{ knobSub }}">{{ d18.look.density }}</div>
+                <div style="display: flex; gap: 6px;">
+                  <sc-for list="{{ densities }}" as="p">
+                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                  </sc-for>
+                </div>
+                <div style="{{ knobSub }}">{{ d18.look.cards }}</div>
+                <div style="display: flex; gap: 6px;">
+                  <sc-for list="{{ cards }}" as="p">
+                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                  </sc-for>
+                </div>
+                <div style="{{ knobSub }}">{{ d18.look.glow }}</div>
+                <div style="display: flex; gap: 6px;">
+                  <sc-for list="{{ glows }}" as="p">
+                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="{{ knobCard }}">
+                <div style="{{ knobTitle }}">{{ d18.look.profiles }}</div>
+                <div style="display: flex; gap: 6px;">
+                  <sc-for list="{{ profiles }}" as="p">
+                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                  </sc-for>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <div style="{{ saveStyle }}" onClick="{{ saveProfile }}">{{ d18.look.saveHere }}</div>
+                  <div style="{{ diceStyle }}" onClick="{{ randomize }}">{{ d18.look.random }}</div>
+                </div>
+                <div style="{{ knobSub }}">{{ d18.look.code }}</div>
+                <div style="{{ codeStyle }}" onClick="{{ copyCode }}" title="{{ d18.look.copy }}">{{ themeCode }}</div>
+                <input type="text" style="{{ codeInput }}" placeholder="{{ d18.look.codePlaceholder }}" autocomplete="off" spellcheck="false" onChange="{{ applyCode }}">
+                <sc-if value="{{ codeBad }}">
+                  <div style="font-size: 12px; color: var(--warn);">{{ d18.look.codeBad }}</div>
+                </sc-if>
+                <div style="font-size: 12px; line-height: 1.45; color: var(--dim);">{{ d18.look.codeNote }}</div>
+              </div>
             </div>
           </div>
         </sc-if>
@@ -1381,7 +1469,22 @@ const TEXTS = {
       empty: "Приложения пока не выложены: покупателям их раздаёт сама панель со своего домена.",
     },
 
-    look: { accent: "АКЦЕНТ", compact: "плотно", normal: "обычно", roomy: "просторно" },
+    look: {
+      accent: "АКЦЕНТ", compact: "плотно", normal: "обычно", roomy: "просторно",
+      light: "СВЕТ", lampHint: "нажми, откуда светит", lightOff: "свет выключен, фон ровный",
+      dirs: { nw: "сверху слева", n: "сверху", ne: "сверху справа", w: "слева", c: "из центра",
+        e: "справа", sw: "снизу слева", s: "снизу", se: "снизу справа" },
+      kinds: { flat: "Ровный", linear: "Мягкий", radial: "Пятном", aurora: "Сияние" },
+      depth: "Густота тени", depths: ["едва заметна", "мягкая", "заметная", "глубокая", "почти чёрная"],
+      tint: "ОТТЕНОК СВЕТЛОЙ СТОРОНЫ",
+      radius: "СКРУГЛЕНИЯ", radii: { sharp: "Острые", soft: "Мягкие", round: "Круглые", pill: "Капля" },
+      density: "ПЛОТНОСТЬ",
+      cards: "КАРТОЧКИ", cardKinds: { flat: "Плоские", outline: "Обводка", shadow: "С тенью" },
+      glow: "СВЕЧЕНИЕ", glows: { none: "Нет", soft: "Мягко", mid: "Средне", neon: "Неон" },
+      profiles: "МОИ ПРОФИЛИ", slotFull: "Стиль", slotEmpty: "Пусто", saveHere: "Сохранить сюда", random: "Случайная тема",
+      code: "КОД ТЕМЫ · МОЖНО ПЕРЕДАТЬ ДРУГУ", copy: "Нажми, чтобы скопировать", codePlaceholder: "вставить код MV-…",
+      codeBad: "Это не код темы Marvia", codeNote: "Один код хранит весь вид: пресет, акцент, свет, скругления, плотность, кнопку, свечение, карточки. Работает и в приложении на телефоне, и в окне на компьютере.",
+    },
 
     themes: [
       "Серый (из коробки)", "Изумруд", "Нефрит", "Лагуна", "Лёд", "Кобальт", "Ультра",
@@ -1593,7 +1696,22 @@ const TEXTS = {
       empty: "No apps published yet: the panel serves them to buyers from your own domain.",
     },
 
-    look: { accent: "ACCENT", compact: "compact", normal: "normal", roomy: "roomy" },
+    look: {
+      accent: "ACCENT", compact: "compact", normal: "normal", roomy: "roomy",
+      light: "LIGHT", lampHint: "tap where the light comes from", lightOff: "light is off, flat background",
+      dirs: { nw: "top left", n: "top", ne: "top right", w: "left", c: "from the centre",
+        e: "right", sw: "bottom left", s: "bottom", se: "bottom right" },
+      kinds: { flat: "Flat", linear: "Soft", radial: "Spot", aurora: "Aurora" },
+      depth: "Shadow depth", depths: ["barely there", "soft", "visible", "deep", "almost black"],
+      tint: "TINT OF THE LIT SIDE",
+      radius: "CORNERS", radii: { sharp: "Sharp", soft: "Soft", round: "Round", pill: "Pill" },
+      density: "DENSITY",
+      cards: "CARDS", cardKinds: { flat: "Flat", outline: "Outlined", shadow: "Shadowed" },
+      glow: "GLOW", glows: { none: "None", soft: "Soft", mid: "Medium", neon: "Neon" },
+      profiles: "MY PROFILES", slotFull: "Style", slotEmpty: "Empty", saveHere: "Save here", random: "Random theme",
+      code: "THEME CODE · SHARE IT WITH A FRIEND", copy: "Click to copy", codePlaceholder: "paste an MV-… code",
+      codeBad: "This is not a Marvia theme code", codeNote: "One code keeps the whole look: preset, accent, light, corners, density, button, glow, cards. Works in the phone app and the desktop window too.",
+    },
 
     themes: [
       "Grey (default)", "Emerald", "Jade", "Lagoon", "Ice", "Cobalt", "Ultra",
@@ -1850,7 +1968,7 @@ function setState(patch) {
   // трое, а он смотрит на четвёртую полусотню.
   if ("page" in patch || "q" in patch) state.rowsPage = 1;
   Object.assign(state, patch);
-  if ("preset" in patch || "acc" in patch || "density" in patch) saveLook();
+  if (Look.KEYS.some((k) => k in patch)) saveLook();
   render();
 }
 
@@ -1864,17 +1982,17 @@ const CTA = {
 
 function renderVals() {
   const t = theme();
-  const d = DENSITY[state.density] || DENSITY.normal;
+  const d = DENSITY[state.density] || DENSITY.normal; // отступы; скругление — t.r
   const page = state.page;
 
   // Словарь зовём d18, а не t: t здесь уже занято темой, и перепутать их —
   // значит получить цвет вместо надписи в самом неожиданном месте.
   const d18 = L();
 
-  const vars = Look.vars(t, state.density);
+  const vars = Look.vars(t);
 
-  const card = "flex:1;min-width:0;padding:" + d.pad + "px;border-radius:" + d.r
-    + "px;background:" + t.surf + ";border:1px solid " + t.line;
+  const card = "flex:1;min-width:0;padding:" + d.pad + "px;border-radius:" + t.r
+    + "px;background:" + t.surf + ";border:1px solid " + t.cardLine + ";box-shadow:" + t.cardShadow;
 
   const users = state.users || [];
   const nodes = state.nodes || [];
@@ -1914,7 +2032,7 @@ function renderVals() {
   const nav = PAGES.map((k) => ({
     k, label: d18.nav[k],
     onClick: () => setState({ page: k }),
-    style: "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:" + d.r
+    style: "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:" + t.r
       + "px;font-size:13px;cursor:pointer;color:" + (page === k ? t.fg : t.dim)
       + ";background:" + (page === k ? t.surf2 : "transparent"),
     dot: "width:7px;height:7px;border-radius:2px;background:" + (page === k ? t.acc : t.dim),
@@ -1964,7 +2082,7 @@ function renderVals() {
     return {
       name: n.name || n.address,
       load: alive ? sinceLabel(n.last_seen) : n.enabled ? d18.nodesPage.silentShort : d18.nodesPage.offShort,
-      rowStyle: "display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:" + d.r + "px;background:" + t.surf2,
+      rowStyle: "display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:" + t.r + "px;background:" + t.surf2,
       dotStyle: "width:8px;height:8px;border-radius:50%;flex:none;background:" + (alive ? t.acc : t.warn),
     };
   });
@@ -1991,7 +2109,7 @@ function renderVals() {
       status,
       onClick: () => userSheet(u),
       rowStyle: "display:grid;grid-template-columns:" + clientRow
-        + ";gap:12px;align-items:center;padding:11px 12px;border-radius:" + d.r + "px;background:" + t.surf2,
+        + ";gap:12px;align-items:center;padding:11px 12px;border-radius:" + t.r + "px;background:" + t.surf2,
       badgeStyle: "justify-self:start;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
         + (st === "ok" ? t.acc : st === "warn" ? t.warn : t.dim) + ";background:"
         + (st === "ok" ? t.accSoft : st === "warn" ? "rgba(242,160,61,.13)" : t.surf),
@@ -2047,7 +2165,7 @@ function renderVals() {
     return {
       onClick: tbl.onRow ? tbl.onRow(idx) : null,
       style: "display:grid;grid-template-columns:" + tbl.grid
-        + ";gap:12px;align-items:center;padding:11px 12px;border-radius:" + d.r + "px;background:" + t.surf2,
+        + ";gap:12px;align-items:center;padding:11px 12px;border-radius:" + t.r + "px;background:" + t.surf2,
       cells: cells.map((text, i) => ({
         text,
         style: i === cells.length - 1
@@ -2104,7 +2222,7 @@ function renderVals() {
       share: total ? Math.round((traffic / total) * 100) + "%" : "0%",
       seen: alive ? sinceLabel(n.last_seen) : n.enabled ? d18.nodesPage.silentShort : d18.nodesPage.offShort,
       state: alive ? d18.nodesPage.online : n.enabled ? d18.nodesPage.silent : d18.nodesPage.off,
-      style: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf
+      style: "padding:" + d.pad + "px;border-radius:" + t.r + "px;background:" + t.surf
         + ";border:1px solid " + (st === "warn" ? t.warn : t.line) + ";display:flex;flex-direction:column;gap:14px",
       badge: "flex:none;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
         + (st === "ok" ? t.acc : t.warn) + ";background:" + (st === "ok" ? t.accSoft : "rgba(242,160,61,.13)"),
@@ -2121,7 +2239,7 @@ function renderVals() {
       month: dayLabel(x.day).slice(0, 2),
       title: x.day + " · " + bytes(sum),
       col: "flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;height:100%",
-      bar: "height:" + h + "%;border-radius:" + Math.min(d.r, 10) + "px " + Math.min(d.r, 10)
+      bar: "height:" + h + "%;border-radius:" + Math.min(t.r, 10) + "px " + Math.min(t.r, 10)
         + "px 4px 4px;background:linear-gradient(180deg," + t.acc + "," + mix(t.acc, t.surf, 0.55) + ")",
       label: "font-family:JetBrains Mono,monospace;font-size:9px;letter-spacing:.1em;text-align:center;color:" + t.dim,
     };
@@ -2139,34 +2257,85 @@ function renderVals() {
   });
 
   // ── вид ──────────────────────────────────────────────────────────────────
-  const accents = Object.values(PRESETS).map((p) => p.acc)
-    .filter((c, i, a) => a.indexOf(c) === i)
-    .map((c) => ({
-      c,
-      onClick: () => setState({ acc: c }),
-      style: "width:26px;height:26px;border-radius:8px;cursor:pointer;background:" + c
-        + ";outline:2px solid " + (state.acc === c ? t.fg : "transparent") + ";outline-offset:2px",
-    }));
+  // Ручки темы. Всё, что здесь, — про выбор; сами цвета считает Look.
+  const pill = (on) => "flex:1 1 0;min-width:0;text-align:center;padding:8px 4px;border-radius:" + Math.min(t.r, 12)
+    + "px;font-size:12px;cursor:pointer;background:" + (on ? t.acc : t.surf2) + ";color:" + (on ? t.accFg : t.dim);
+  const pills = (keys, field, names) => keys.map((k) => ({
+    label: names[k] || k, onClick: () => setState({ [field]: k }), style: pill(state[field] === k),
+  }));
+  const swatch = (bg, on) => "width:26px;height:26px;border-radius:8px;cursor:pointer;background:" + bg
+    + ";outline:2px solid " + (on ? t.fg : "transparent") + ";outline-offset:2px";
 
-  const looks = LOOKS.map(([key, dens], i) => {
+  const knobCard = "padding:" + d.pad + "px;border-radius:" + t.r + "px;background:" + t.surf
+    + ";border:1px solid " + t.cardLine + ";box-shadow:" + t.cardShadow + ";display:flex;flex-direction:column;gap:10px";
+  const knobTitle = "font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:.16em;color:" + t.dim;
+  const knobSub = knobTitle + ";margin-top:4px";
+
+  const accents = Look.ACCENTS.map((c) => ({
+    onClick: () => setState({ acc: c }), style: swatch(c, state.acc === c),
+  }));
+  // Оттенок светлой стороны: «как акцент» и любой из палитры.
+  const tints = [null].concat(Look.ACCENTS).map((c) => ({
+    onClick: () => setState({ tint: c }),
+    style: swatch("linear-gradient(135deg," + (c || t.acc) + "," + mix(c || t.acc, "#000000", 0.6) + ")", state.tint === c),
+  }));
+
+  // Лампа: экран, залитый настоящим фоном; нажатие в угол переносит свет.
+  const litBg = (kind, dir) => Look.theme(Object.assign({}, state, { kind, dir })).bgcss;
+  const LAMP = ["nw", "n", "ne", "w", "c", "e", "sw", "s", "se"];
+  const lampWrap = "position:relative;height:120px;border-radius:" + t.r + "px;overflow:hidden;background:"
+    + litBg(state.kind === "flat" ? "linear" : state.kind, state.dir)
+    + ";border:1px solid " + t.line + ";display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)";
+  const lampHint = "position:absolute;left:0;right:0;bottom:6px;text-align:center;pointer-events:none;font-size:11px;color:" + t.dim;
+  const lampZones = LAMP.map((k) => ({
+    onClick: () => setState({ dir: k, kind: state.kind === "flat" ? "linear" : state.kind }),
+    cell: "display:flex;align-items:center;justify-content:center;cursor:pointer",
+    sun: state.dir === k
+      ? "width:22px;height:22px;border-radius:50%;background:" + t.acc + ";box-shadow:0 0 0 5px " + t.accSoft + ",0 0 22px 4px rgba(" + t.accRgb + ",.55)"
+      : "width:7px;height:7px;border-radius:50%;background:" + t.fg + ";opacity:.22",
+  }));
+  const lightNote = state.kind === "flat" ? d18.look.lightOff : d18.look.dirs[state.dir];
+  const kinds = Look.KINDS.map((k) => {
+    const on = state.kind === k;
+    return {
+      name: d18.look.kinds[k], onClick: () => setState({ kind: k }),
+      wrap: "flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:4px;cursor:pointer;padding:3px;border-radius:"
+        + (t.r + 3) + "px;border:" + (on ? "2px solid " + t.acc : "1px solid " + t.line) + ";background:" + (on ? t.accSoft : "transparent"),
+      canvas: "height:36px;border-radius:" + Math.max(t.r - 3, 5) + "px;background:" + litBg(k, state.dir),
+      label: "font-size:10px;text-align:center;color:" + (on ? t.acc : t.dim),
+    };
+  });
+  const depthPct = Math.round(state.depth * 100);
+  const depthNote = state.depth <= 0.3 ? d18.look.depths[0] : state.depth <= 0.5 ? d18.look.depths[1]
+    : state.depth <= 0.7 ? d18.look.depths[2] : state.depth <= 0.85 ? d18.look.depths[3] : d18.look.depths[4];
+  const depthStyle = "width:100%;accent-color:" + t.acc;
+  const setDepth = (e) => setState({ depth: Number(e.target.value) / 100 });
+
+  const radii = pills(Object.keys(Look.RADII), "radius", d18.look.radii);
+  const densities = pills(Object.keys(DENSITY), "density", d18.look);
+  const cards = pills(Look.CARDS, "card", d18.look.cardKinds);
+  const glows = pills(Object.keys(Look.GLOWS), "glow", d18.look.glows);
+
+  const looks = LOOKS.map((lk, i) => {
     const name = d18.themes[i];
-    const on = state.preset === key && state.density === dens;
-    const lt = theme({ preset: key, acc: null });
-    const lr = DENSITY[dens].r;
+    const on = Look.same(state, lk);
+    const lt = Look.theme(Object.assign({}, lk, { acc: null, tint: null }));
+    const lr = lt.r;
     return {
       name,
-      sub: d18.look[dens],
-      onClick: () => setState({ preset: key, acc: null, density: dens }),
+      sub: d18.look[lk.density],
+      // Вид задаёт всё разом; акцент и оттенок сбрасываются: у каждого свой.
+      onClick: () => setState(Object.assign({ acc: null, tint: null }, lk)),
       wrap: "min-width:0;display:flex;flex-direction:column;gap:7px;cursor:pointer;padding:4px;border-radius:"
-        + (d.r + 4) + "px;border:" + (on ? "2px solid " + t.acc : "1px solid " + t.line)
+        + (t.r + 4) + "px;border:" + (on ? "2px solid " + t.acc : "1px solid " + t.line)
         + ";background:" + (on ? t.accSoft : "transparent"),
-      canvas: "position:relative;height:104px;border-radius:" + Math.max(d.r - 3, 6) + "px;overflow:hidden;background:" + lt.bg,
+      canvas: "position:relative;height:104px;border-radius:" + Math.max(t.r - 3, 6) + "px;overflow:hidden;background:" + lt.bgcss,
       side: "position:absolute;left:0;top:0;bottom:0;width:26%;background:" + lt.surf + ";border-right:1px solid " + lt.line,
       navA: "position:absolute;left:5%;top:9%;width:17%;height:5%;border-radius:3px;background:" + lt.acc,
       navB: "position:absolute;left:5%;top:19%;width:15%;height:4%;border-radius:3px;background:" + lt.fg + ";opacity:.35",
       navC: "position:absolute;left:5%;top:27%;width:15%;height:4%;border-radius:3px;background:" + lt.fg + ";opacity:.2",
-      kpiA: "position:absolute;left:31%;top:10%;width:20%;height:22%;border-radius:" + Math.round(lr * 0.3) + "px;background:" + lt.surf,
-      kpiB: "position:absolute;left:54%;top:10%;width:20%;height:22%;border-radius:" + Math.round(lr * 0.3) + "px;background:" + lt.surf,
+      kpiA: "position:absolute;left:31%;top:10%;width:20%;height:22%;border-radius:" + Math.round(lr * 0.3) + "px;background:" + lt.surf + ";border:1px solid " + lt.cardLine,
+      kpiB: "position:absolute;left:54%;top:10%;width:20%;height:22%;border-radius:" + Math.round(lr * 0.3) + "px;background:" + lt.surf + ";border:1px solid " + lt.cardLine,
       kpiC: "position:absolute;left:77%;top:10%;width:18%;height:22%;border-radius:" + Math.round(lr * 0.3)
         + "px;background:" + lt.accSoft + ";border:1px solid " + lt.acc,
       chart: "position:absolute;left:31%;top:38%;right:5%;bottom:8%;border-radius:" + Math.round(lr * 0.3)
@@ -2176,6 +2345,52 @@ function renderVals() {
       sub2: "font-family:JetBrains Mono,monospace;font-size:9px;color:" + t.dim,
     };
   });
+
+  // Профили — три слота с кодами в localStorage. Пустой слот занимается
+  // кнопкой «сохранить сюда»; занятый по нажатию применяется.
+  const slots = Look.loadProfiles();
+  const profiles = [0, 1, 2].map((i) => ({
+    label: (slots[i] ? d18.look.slotFull : d18.look.slotEmpty) + " " + (i + 1),
+    onClick: () => {
+      const st = slots[i] ? Look.decode(slots[i]) : null;
+      setState(Object.assign({ slot: i }, st || {}));
+    },
+    style: pill((state.slot || 0) === i),
+  }));
+  const saveProfile = () => {
+    slots[state.slot || 0] = Look.encode(state);
+    Look.saveProfiles(slots);
+    render();
+  };
+  const randomize = () => {
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    setState({
+      preset: pick(Object.keys(PRESETS)), acc: pick([null].concat(Look.ACCENTS)), tint: pick([null, null].concat(Look.ACCENTS)),
+      kind: pick(["linear", "radial", "aurora"]), dir: pick(Object.keys(Look.DIRS)),
+      depth: Math.round((0.2 + Math.random() * 0.75) * 100) / 100,
+      radius: pick(Object.keys(Look.RADII)), density: pick(Object.keys(DENSITY)),
+      btn: pick(Look.BUTTONS), glow: pick(Object.keys(Look.GLOWS)), card: pick(Look.CARDS),
+    });
+  };
+  const themeCode = Look.encode(state);
+  const codeStyle = "padding:11px 12px;border-radius:" + t.r + "px;background:" + t.surf2 + ";border:1px dashed " + t.acc
+    + ";font-family:JetBrains Mono,monospace;font-size:12px;letter-spacing:.04em;color:" + t.fg
+    + ";overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:copy";
+  const copyCode = () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(themeCode).catch(() => {});
+  };
+  const codeInput = "width:100%;box-sizing:border-box;padding:10px 12px;border-radius:" + t.r + "px;background:" + t.surf
+    + ";border:1px solid " + t.line + ";color:" + t.fg + ";font-family:JetBrains Mono,monospace;font-size:12px;outline:none";
+  const applyCode = (e) => {
+    const st = Look.decode(e.target.value);
+    if (!st) { setState({ codeBad: true }); return; }
+    e.target.value = "";
+    setState(Object.assign({ codeBad: false }, st));
+  };
+  const saveStyle = "flex:1;text-align:center;padding:9px 4px;border-radius:" + Math.min(t.r, 12)
+    + "px;font-size:12px;cursor:pointer;background:" + t.acc + ";color:" + t.accFg;
+  const diceStyle = "flex:1;text-align:center;padding:9px 4px;border-radius:" + Math.min(t.r, 12)
+    + "px;font-size:12px;cursor:pointer;background:" + t.surf2 + ";color:" + t.fg;
 
   const ghostBtn = "padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;color:" + t.dim
     + ";background:" + t.surf2;
@@ -2191,8 +2406,8 @@ function renderVals() {
     // влезает в строку. Целиком он всё равно нечитаем глазами.
     sum: (ap.sha256 || "").slice(0, 16) + "…",
     state: d18.appsPage.laid,
-    style: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf
-      + ";border:1px solid " + t.line + ";display:flex;flex-direction:column;gap:12px",
+    style: "padding:" + d.pad + "px;border-radius:" + t.r + "px;background:" + t.surf
+      + ";border:1px solid " + t.cardLine + ";box-shadow:" + t.cardShadow + ";display:flex;flex-direction:column;gap:12px",
     badge: "flex:none;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
       + t.acc + ";background:" + t.accSoft,
   }));
@@ -2212,7 +2427,7 @@ function renderVals() {
     num: done ? "✓" : String(i + 1),
     title, note,
     onClick: done ? null : onClick,
-    row: "display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border-radius:" + d.r
+    row: "display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border-radius:" + t.r
       + "px;background:" + t.surf2 + (done ? ";opacity:.55" : ";cursor:pointer"),
     mark: "flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;"
       + "justify-content:center;font-family:JetBrains Mono,monospace;font-size:11px;background:"
@@ -2248,17 +2463,17 @@ function renderVals() {
     showStart: state.known && page === "dash" && steps.some(([done]) => !done),
     startSteps,
     startBox: "display:flex;flex-direction:column;gap:8px;padding:" + d.pad + "px;border-radius:"
-      + d.r + "px;background:" + t.surf + ";border:1px solid " + t.acc,
+      + t.r + "px;background:" + t.surf + ";border:1px solid " + t.acc,
 
     hasCta: !!CTA[page],
     pageCta: d18.cta[page] || "",
     doCta: CTA[page] || null,
-    ctaStyle: "height:40px;padding:0 18px;border-radius:" + d.r + "px;background:" + t.acc
+    ctaStyle: "height:40px;padding:0 18px;border-radius:" + t.r + "px;background:" + t.acc
       + ";color:" + t.accFg + ";display:flex;align-items:center;font-size:13px;font-weight:600;cursor:pointer",
 
     hasError: !!state.error,
     errText: state.error || "",
-    errStyle: "padding:12px 14px;border-radius:" + d.r + "px;font-size:13px;color:" + t.warn
+    errStyle: "padding:12px 14px;border-radius:" + t.r + "px;font-size:13px;color:" + t.warn
       + ";background:rgba(242,160,61,.13);border:1px solid " + t.warn,
     emptyStyle: "padding:14px 12px;font-size:13px;color:" + t.dim,
 
@@ -2274,7 +2489,7 @@ function renderVals() {
     hasSearch: page === "clients",
     q: state.q,
     doSearch: (e) => setState({ q: e.target.value }),
-    searchStyle: "width:100%;padding:10px 12px;border-radius:" + d.r + "px;background:" + t.surf
+    searchStyle: "width:100%;padding:10px 12px;border-radius:" + t.r + "px;background:" + t.surf
       + ";border:1px solid " + t.line + ";color:" + t.fg
       + ";font-family:Onest,system-ui,sans-serif;font-size:13px;outline:none",
 
@@ -2284,7 +2499,7 @@ function renderVals() {
     appsHint: state.known && laid.length === 0,
     appsHintText: (state.apps && state.apps.hint)
       || d18.appsPage.empty,
-    hintBox: "padding:" + d.pad + "px;border-radius:" + d.r + "px;background:" + t.surf
+    hintBox: "padding:" + d.pad + "px;border-radius:" + t.r + "px;background:" + t.surf
       + ";border:1px solid " + t.line + ";font-size:13px;line-height:1.5;color:" + t.dim,
 
     kpis, lolli, nodes: dashNodes, clients, dashHead,
@@ -2309,15 +2524,17 @@ function renderVals() {
     nextPage: curPage < lastPage ? () => setState({ rowsPage: curPage + 1 }) : null,
     pagerRow: "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px",
     pagerInfo: "font-family:JetBrains Mono,monospace;font-size:11px;color:" + t.dim,
-    prevStyle: "padding:7px 14px;border-radius:" + d.r + "px;font-size:12px;background:" + t.surf2
+    prevStyle: "padding:7px 14px;border-radius:" + t.r + "px;font-size:12px;background:" + t.surf2
       + ";color:" + (curPage > 1 ? t.fg : t.dim) + (curPage > 1 ? ";cursor:pointer" : ";opacity:.45"),
-    nextStyle: "padding:7px 14px;border-radius:" + d.r + "px;font-size:12px;background:" + t.surf2
+    nextStyle: "padding:7px 14px;border-radius:" + t.r + "px;font-size:12px;background:" + t.surf2
       + ";color:" + (curPage < lastPage ? t.fg : t.dim) + (curPage < lastPage ? ";cursor:pointer" : ";opacity:.45"),
 
     nodeCards,
     dayBars, shareRows,
     noShare: shareRows.length === 0,
-    accents, looks,
+    accents, looks, tints, knobCard, knobTitle, knobSub, lampWrap, lampHint, lampZones, lightNote, kinds,
+    depthPct, depthNote, depthStyle, setDepth, radii, densities, cards, glows, profiles, saveProfile, randomize,
+    themeCode, codeStyle, copyCode, codeInput, applyCode, codeBad: !!state.codeBad, saveStyle, diceStyle,
   };
 }
 
@@ -2333,7 +2550,7 @@ function render() {
 
   app.setAttribute("style", vals.vars + ";height:100%");
   app.classList.toggle("busy", state.loading);
-  document.body.style.background = theme().bg;
+  document.body.style.background = theme().bgcss;
 
   // Перерисовка собирает разметку заново, а значит поле поиска — уже другой
   // элемент, и набор текста терял бы фокус на каждой букве. Запоминаем, где
@@ -2342,9 +2559,18 @@ function render() {
   const hadFocus = old && document.activeElement === old;
   const caret = hadFocus ? old.selectionStart : null;
 
+  // Прокрутка списков тоже пропадала бы с разметкой: человек листает виды,
+  // нажимает один — и оказывается наверху. Запоминаем и возвращаем.
+  const scrolled = {};
+  for (const el of app.querySelectorAll("[data-keep-scroll]")) scrolled[el.dataset.keepScroll] = el.scrollTop;
+
   const frag = document.createDocumentFragment();
   buildInto(shell.content, frag, vals);
   app.replaceChildren(frag);
+
+  for (const el of app.querySelectorAll("[data-keep-scroll]")) {
+    if (scrolled[el.dataset.keepScroll]) el.scrollTop = scrolled[el.dataset.keepScroll];
+  }
 
   if (hadFocus) {
     const next = document.getElementById("q");
