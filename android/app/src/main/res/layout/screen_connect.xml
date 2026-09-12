@@ -22,6 +22,7 @@
             android:letterSpacing="0.2"
             android:text="@string/app_name"
             android:textAllCaps="true"
+            android:tag="dim"
             android:textColor="@color/veil_muted"
             android:textSize="12sp" />
 
@@ -30,6 +31,7 @@
             android:id="@+id/headerUntil"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:tag="dim"
             android:textColor="@color/veil_muted"
             android:textSize="13sp"
             android:visibility="gone" />
@@ -83,6 +85,7 @@
                             android:layout_gravity="center"
                             android:contentDescription="@null"
                             android:src="@drawable/ic_power"
+                            android:tag="icon:accFg"
                             app:tint="@color/veil_bg" />
                     </FrameLayout>
                 </FrameLayout>
@@ -121,6 +124,7 @@
                     android:id="@+id/nodeCountry"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:tag="fg"
                     android:textColor="@color/veil_text"
                     android:textSize="16sp" />
 
@@ -143,6 +147,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
                 android:gravity="center"
+                android:tag="dim"
                 android:textColor="@color/veil_muted"
                 android:textSize="13sp" />
 
@@ -153,6 +158,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:gravity="center"
+                android:tag="dim"
                 android:textColor="@color/veil_muted"
                 android:textSize="12.5sp" />
 
@@ -189,6 +195,7 @@
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
+                android:tag="card.pad"
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="15dp"
                 android:visibility="gone">
@@ -205,6 +212,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/traffic_left"
+                        android:tag="dim"
                         android:textColor="@color/veil_muted"
                         android:textSize="14sp" />
 
@@ -212,6 +220,7 @@
                         android:id="@+id/trafficValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:tag="fg"
                         android:textColor="@color/veil_text"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -222,6 +231,7 @@
                     android:layout_height="7dp"
                     android:layout_marginTop="11dp"
                     android:background="@drawable/bg_track"
+                    android:tag="track"
                     android:orientation="horizontal">
 
                     <View
@@ -229,7 +239,8 @@
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:background="@color/veil_accent" />
+                        android:background="@color/veil_accent"
+                        android:tag="fill" />
 
                     <View
                         android:id="@+id/trafficRest"
@@ -243,6 +254,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="11dp"
+                    android:tag="dim"
                     android:textColor="@color/veil_muted"
                     android:textSize="13sp" />
             </LinearLayout>

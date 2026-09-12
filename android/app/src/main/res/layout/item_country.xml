@@ -8,5 +8,6 @@
     android:layout_height="wrap_content"
     android:layout_marginTop="14dp"
     android:paddingHorizontal="3dp"
+    android:tag="dim"
     android:textColor="@color/veil_muted"
     android:textSize="13sp" />

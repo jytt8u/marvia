@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Тема: готовые виды, акцент, плотность. Всё применяется сразу — этот же
+    экран и есть предпросмотр, поэтому отдельной картинки «как будет» нет.
+
+    Сетки видов и акцентов собираются кодом: их содержимое приходит из
+    таблицы тем, а не из разметки.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingTop="@dimen/header_pad"
+        android:paddingBottom="10dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:letterSpacing="0.2"
+            android:tag="dim"
+            android:text="@string/app_name"
+            android:textAllCaps="true"
+            android:textColor="@color/veil_muted"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:letterSpacing="-0.02"
+            android:tag="fg"
+            android:text="@string/theme_title"
+            android:textColor="@color/veil_text"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:tag="dim"
+            android:text="@string/theme_hint"
+            android:textColor="@color/veil_muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingHorizontal="@dimen/screen_pad">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="12dp"
+            android:paddingBottom="18dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:baselineAligned="true"
+                android:orientation="horizontal"
+                android:paddingHorizontal="3dp">
+
+                <TextView
+                    style="@style/VeilSection"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:tag="dim"
+                    android:text="@string/theme_looks" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:tag="dim"
+                    android:text="@string/theme_looks_hint"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Три колонки мини-макетов: заполняется кодом из таблицы. -->
+            <LinearLayout
+                android:id="@+id/looksGrid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="vertical" />
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_accent" />
+
+            <LinearLayout
+                android:id="@+id/accentRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="vertical" />
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_density" />
+
+            <LinearLayout
+                android:id="@+id/densityRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="9dp"
+                android:orientation="horizontal" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/theme_note"
+            android:textColor="@color/veil_muted"
+                android:textSize="12.5sp" />
+
+            <TextView
+                android:id="@+id/themeReset"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_pill"
+                android:foreground="?attr/selectableItemBackground"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="8dp"
+                android:tag="chip"
+                android:text="@string/theme_reset"
+            android:textColor="@color/veil_muted"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

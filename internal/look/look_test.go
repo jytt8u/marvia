@@ -3,6 +3,7 @@ package look
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
@@ -206,5 +207,63 @@ func TestInlineReplacesMarker(t *testing.T) {
 	}
 	if got := Inline("без метки"); got != "без метки" {
 		t.Errorf("страница без метки изменилась: %q", got)
+	}
+}
+
+// Таблица на Kotlin не отстала от look.js.
+//
+// Android читает цвета из сгенерированного файла, и забытый go generate
+// означал бы, что телефон красится вчерашними цветами, а панель и окно —
+// сегодняшними. Никто из троих сам об этом не скажет.
+func TestKotlinTableIsFresh(t *testing.T) {
+	want := Kotlin()
+	got, err := os.ReadFile(KotlinPath)
+	if err != nil {
+		t.Fatalf("таблицы для Android нет: %v — запусти go generate ./internal/look", err)
+	}
+	if strings.ReplaceAll(string(got), "\r\n", "\n") != want {
+		t.Error("LookTable.kt отстал от look.js — запусти go generate ./internal/look")
+	}
+}
+
+// Генератор видит всё, что есть в таблице: каждый пресет, каждую плотность.
+func TestKotlinTableCarriesWholeTable(t *testing.T) {
+	presets := PresetList()
+	if len(presets) != len(Presets()) {
+		t.Errorf("строк пресетов разобрано %d, ключей %d — формат строки в look.js изменился", len(presets), len(Presets()))
+	}
+	if n := len(Densities()); n != 3 {
+		t.Errorf("плотностей %d, ожидалось 3", n)
+	}
+	kt := Kotlin()
+	for _, p := range presets {
+		if !strings.Contains(kt, "Preset(\""+p.Key+"\"") {
+			t.Errorf("пресет %q не попал в Kotlin", p.Key)
+		}
+	}
+	if !strings.Contains(kt, `DEFAULT_PRESET = "steel"`) {
+		t.Error("вид из коробки не совпал с look.js")
+	}
+}
+
+// У каждого пресета есть название в приложении на Android — на обоих языках.
+//
+// Телефон берёт название по ключу: look_<пресет>. Пропущенная строка не
+// ломает сборку — экран покажет ключ «teal» вместо «Лагуны», и заметит это
+// только тот, кто выбрал именно её.
+func TestEveryPresetIsNamedOnAndroid(t *testing.T) {
+	for _, file := range []string{
+		"../../android/app/src/main/res/values/strings.xml",
+		"../../android/app/src/main/res/values-ru/strings.xml",
+	} {
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("строки приложения не читаются: %v", err)
+		}
+		for key := range Presets() {
+			if !strings.Contains(string(raw), `name="look_`+key+`"`) {
+				t.Errorf("%s: пресет %q без названия", file, key)
+			}
+		}
 	}
 }
