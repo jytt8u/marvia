@@ -122,6 +122,19 @@ class Store(context: Context) {
                 .apply()
         }
 
+    /**
+     * language — язык приложения: ru, en или пусто, пока не выбран.
+     *
+     * Пустота означает первый запуск: тогда первым открывается экран выбора.
+     * Сам язык применяет AppCompat и хранит его отдельно; здесь запоминается
+     * только факт выбора и то, что показать отмеченным в настройках.
+     */
+    var language: String
+        get() = prefs.getString(KEY_LANGUAGE, "").orEmpty()
+        set(value) {
+            prefs.edit().putString(KEY_LANGUAGE, value).apply()
+        }
+
     /** Каталог, который приложение отдаёт ядру под кэш подписки. */
     fun cacheDir(): String = app.filesDir.absolutePath
 
@@ -131,19 +144,23 @@ class Store(context: Context) {
         File(app.filesDir, Mobile.CacheName).delete()
     }
 
-    private companion object {
-        const val KEY_ACCOUNT_LINK = "account_link"
-        const val KEY_ACCOUNT_SAVED = "account_saved_at"
-        const val KEY_BYPASSED = "bypassed_apps"
-        const val KEY_BYPASS_RU = "bypass_russian"
-        const val KEY_BYPASS_ASKED = "bypass_asked"
-        const val KEY_AUTOSTART = "autostart"
-        const val KEY_THEME = "theme"
-        const val KEY_PRESET = "look_preset"
-        const val KEY_ACCENT = "look_accent"
-        const val KEY_DENSITY = "look_density"
+    companion object {
+        const val LANG_RU = "ru"
+        const val LANG_EN = "en"
+
+        private const val KEY_ACCOUNT_LINK = "account_link"
+        private const val KEY_ACCOUNT_SAVED = "account_saved_at"
+        private const val KEY_BYPASSED = "bypassed_apps"
+        private const val KEY_BYPASS_RU = "bypass_russian"
+        private const val KEY_BYPASS_ASKED = "bypass_asked"
+        private const val KEY_AUTOSTART = "autostart"
+        private const val KEY_THEME = "theme"
+        private const val KEY_LANGUAGE = "language"
+        private const val KEY_PRESET = "look_preset"
+        private const val KEY_ACCENT = "look_accent"
+        private const val KEY_DENSITY = "look_density"
 
         /** AppCompatDelegate.MODE_NIGHT_NO — так хранилась светлая тема. */
-        const val LEGACY_LIGHT = 1
+        private const val LEGACY_LIGHT = 1
     }
 }

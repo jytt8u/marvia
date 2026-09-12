@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Выбор языка. Первый экран при первом запуске — и он же открывается из
+    настроек. Надписи на нём двуязычные и не переводятся: язык ещё не выбран,
+    и экран обязан читаться на обоих.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="26dp"
+        android:paddingTop="44dp"
+        android:paddingBottom="26dp">
+
+        <FrameLayout
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="@drawable/bg_accent_button"
+            android:tag="btn">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_mark"
+                android:tag="icon:accFg"
+                app:tint="@color/veil_on_accent" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:letterSpacing="-0.02"
+            android:tag="fg"
+            android:text="@string/language_title"
+            android:textColor="@color/veil_text"
+            android:textSize="27sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:tag="dim"
+            android:text="@string/language_subtitle"
+            android:textColor="@color/veil_muted"
+            android:textSize="15sp" />
+
+        <!-- Карточки языков. Выбранная обведена акцентом, отметка залита. -->
+        <LinearLayout
+            android:id="@+id/langRu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:tag="fg"
+                    android:text="@string/language_ru"
+                    android:textColor="@color/veil_text"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:tag="dim"
+                    android:text="@string/language_ru_other"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <View
+                android:id="@+id/langRuMark"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/bg_ring" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/langEn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:tag="fg"
+                    android:text="@string/language_en"
+                    android:textColor="@color/veil_text"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:tag="dim"
+                    android:text="@string/language_en_other"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <View
+                android:id="@+id/langEnMark"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/bg_ring" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Надпись кнопки — на том языке, который сейчас выбран. -->
+        <TextView
+            android:id="@+id/langContinue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_accent_button"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:minHeight="54dp"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="16dp"
+            android:tag="btn"
+            android:text="@string/language_continue_ru"
+            android:textColor="@color/veil_on_accent"
+            android:textSize="16.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</ScrollView>

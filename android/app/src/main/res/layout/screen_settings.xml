@@ -201,6 +201,40 @@
                 android:orientation="vertical">
 
                 <LinearLayout
+                    android:id="@+id/rowLanguage"
+                    style="@style/VeilRow">
+
+                    <TextView
+                        style="@style/VeilRowTitle"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/settings_language" />
+
+                    <TextView
+                        android:id="@+id/languageValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="9dp"
+                        android:tag="dim"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="14sp" />
+
+                    <ImageView
+                        android:layout_width="19dp"
+                        android:layout_height="19dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron"
+                        android:tag="icon:dim"
+                        app:tint="@color/veil_chevron" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:tag="line"
+                    android:background="@color/veil_border" />
+
+                <LinearLayout
                     android:id="@+id/rowKey"
                     style="@style/VeilRow">
 
