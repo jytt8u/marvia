@@ -65,12 +65,12 @@ object Paint {
         val dp = v.resources.displayMetrics.density
 
         when {
-            tag == BG -> v.setBackgroundColor(t.bg)
+            tag == BG -> v.background = Backdrop(t)
             tag == SURF -> v.setBackgroundColor(t.surf)
             tag == LINE -> v.setBackgroundColor(t.line)
-            tag == CARD -> v.background = card(t, dp)
+            tag == CARD -> skin(v, t, dp)
             tag == CARD_PAD -> {
-                v.background = card(t, dp)
+                skin(v, t, dp)
                 val pad = (t.pad * dp).toInt()
                 v.setPadding(pad, pad, pad, pad)
             }
@@ -114,9 +114,30 @@ object Paint {
         }
     }
 
-    /** Карточка: поверхность, тонкая рамка, скругление по плотности. */
-    fun card(t: Theme, dp: Float, stroke: Int = t.line): GradientDrawable =
-        rounded(t.surf, t.r, dp).apply { setStroke((1 * dp).toInt().coerceAtLeast(1), stroke) }
+    /**
+     * Карточка: поверхность, рамка и скругление по теме. Рамка — по подаче
+     * карточек: у плоских она прозрачная, но той же толщины, чтобы ничего не
+     * прыгало при переключении. Выбранная карточка обводится акцентом при
+     * любой подаче: отметка выбора важнее стиля.
+     */
+    fun card(t: Theme, dp: Float, stroke: Int = t.line): GradientDrawable {
+        val line = if (stroke == t.line && t.card == "flat") 0 else stroke
+        return rounded(t.surf, t.r, dp).apply { setStroke((1 * dp).toInt().coerceAtLeast(1), line) }
+    }
+
+    /**
+     * skin красит карточку и ставит тень, если подача «с тенью». Тень —
+     * системная, через elevation: своей у GradientDrawable нет, а рисовать
+     * размытие руками ради карточки — дорого и на глаз не лучше.
+     */
+    private fun skin(v: View, t: Theme, dp: Float) {
+        v.background = card(t, dp)
+        v.elevation = if (t.card == "shadow") 6 * dp else 0f
+        if (t.card == "shadow") {
+            v.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+            v.clipToOutline = false
+        }
+    }
 
     fun rounded(color: Int, radiusDp: Int, dp: Float): GradientDrawable =
         GradientDrawable().apply {

@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.graphics.drawable.GradientDrawable
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -385,12 +386,27 @@ class MainActivity : AppCompatActivity() {
      */
     private fun paintPower(color: Int) {
         val c = ui.connectScreen
-        ImageViewCompat.setImageTintList(c.powerIcon, ColorStateList.valueOf(Look.bestOn(color)))
-        c.powerOuter.backgroundTintList =
-            ColorStateList.valueOf(ColorUtils.setAlphaComponent(color, 18))
-        c.powerMiddle.backgroundTintList =
-            ColorStateList.valueOf(ColorUtils.setAlphaComponent(color, 26))
-        c.powerInner.backgroundTintList = ColorStateList.valueOf(color)
+        val dp = resources.displayMetrics.density
+        // Стиль кнопки — из темы, но только для акцента: беда и «отключено»
+        // выглядят одинаково при любой кнопке, беда должна выглядеть как беда.
+        val styled = color == theme.acc
+        val btn = if (styled) theme.btn else "solid"
+        // Внешние круги — свечение: их прозрачность растёт с силой из темы.
+        // При акценте; у прочих цветов — как раньше, едва заметные.
+        val glow = if (styled) theme.glowA else 0.42
+        c.powerOuter.background = Paint.circle(ColorUtils.setAlphaComponent(color, (44 * glow).toInt()))
+        c.powerMiddle.background = Paint.circle(ColorUtils.setAlphaComponent(color, (62 * glow).toInt()))
+        c.powerInner.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            when (btn) {
+                "ring" -> { setColor(0); setStroke((3 * dp).toInt(), color) }
+                "glass" -> { setColor(theme.accSoft); setStroke((1 * dp).toInt(), color) }
+                "bare" -> { setColor(0); setStroke((1 * dp).toInt(), theme.line) }
+                else -> setColor(color)
+            }
+        }
+        val icon = if (btn == "solid") Look.bestOn(color) else color
+        ImageViewCompat.setImageTintList(c.powerIcon, ColorStateList.valueOf(icon))
     }
 
     private fun showPing(view: TextView, ms: Long) {
