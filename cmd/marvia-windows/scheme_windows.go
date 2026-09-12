@@ -29,7 +29,7 @@ import (
 // Первая своя, вторая осталась от прежнего имени: ключи с ней лежат в
 // переписках покупателей, и нажатие на такую ссылку должно работать
 // по-прежнему. Выдаём при этом только новую.
-var schemes = []string{client.AccountScheme, client.LegacyAccountScheme}
+var schemes = []string{client.AccountScheme, client.LegacyAccountScheme, PanelScheme}
 
 // registerScheme прописывает схемы на себя.
 //
@@ -79,7 +79,7 @@ func registerOne(exe, scheme string) error {
 // трогаем остальные: программу запускают и руками, с ключами.
 func accountFromArgs(args []string) string {
 	for _, arg := range args {
-		for _, scheme := range schemes {
+		for _, scheme := range []string{client.AccountScheme, client.LegacyAccountScheme} {
 			if strings.HasPrefix(strings.ToLower(arg), scheme+"://") {
 				return arg
 			}

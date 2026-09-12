@@ -114,6 +114,10 @@ func (a *API) Handler() http.Handler {
 
 	// Версия — с авторизацией. Продавцу она нужна, когда он пишет в поддержку;
 	// постороннему сканеру знать её незачем.
+	// Кто я: приложение продавца на компьютере показывает, что распознало
+	// из ссылки-приглашения, — панель, роль, права, — до того как открыть её.
+	mux.HandleFunc("GET /api/v1/whoami", a.whoami)
+
 	mux.HandleFunc("GET /api/v1/version", a.scoped(ScopeRead, func(w http.ResponseWriter, _ *http.Request) {
 		version := a.version
 		if version == "" {
@@ -1092,4 +1096,27 @@ func (a *API) bypassRoutes(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	ok(w, map[string]any{"prefixes": prefixes})
+}
+
+// whoami отвечает, чей это токен: администратора или ключа, и с какими правами.
+//
+// Единственная ручка, куда пускают любой живой токен: у ключа без права read
+// ответ тоже честный — «ключ такой-то, прав таких-то». Про чужой токен здесь
+// не узнать ничего, кроме того, что он чужой.
+func (a *API) whoami(w http.ResponseWriter, r *http.Request) {
+	token := bearer(r)
+	if token == "" {
+		fail(w, http.StatusUnauthorized, "нужен токен: админский или ключ доступа")
+		return
+	}
+	if TokensEqual(token, a.adminToken) {
+		ok(w, map[string]any{"admin": true, "scopes": []string{ScopeUsers, ScopeNodes, ScopeRead}})
+		return
+	}
+	key, err := a.store.AuthenticateAPIKey(r.Context(), token)
+	if err != nil {
+		fail(w, http.StatusUnauthorized, "неизвестный токен")
+		return
+	}
+	ok(w, map[string]any{"admin": false, "key": key.Name, "scopes": key.Scopes})
 }

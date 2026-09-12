@@ -85,6 +85,20 @@ func run(dns string, mtu uint32, urlFile string, inTray bool) error {
 		}
 	}
 
+	// Ссылку-приглашение в панель нажали в самой панели: запоминаем и
+	// переводим программу в режим продавца. Проверка у панели — позже, из
+	// окна: здесь сети может ещё не быть.
+	if link := panelFromArgs(os.Args[1:]); link != "" {
+		if _, host, err := parsePanelLink(link); err != nil {
+			log.add("ссылка-приглашение не подошла: %v", err)
+		} else if err := writePanelLink(link); err != nil {
+			log.add("ссылка-приглашение не сохранилась: %v", err)
+		} else {
+			_ = writeRole(roleSeller)
+			log.add("%s", sayf("logPanelSet", host))
+		}
+	}
+
 	log.add("готов к работе")
 
 	// Окно ещё не создано, а страница уже может попросить его переключить;

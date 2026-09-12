@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -113,6 +114,11 @@ func serveUI(ctl *Controller, log *journal, onWindow *func(mode, tab string)) (s
 	mux.HandleFunc("POST "+prefix+"/api/proxy/off", u.dropProxy)
 	mux.HandleFunc("POST "+prefix+"/api/lang", u.setLang)
 	mux.HandleFunc("POST "+prefix+"/api/window", u.window)
+	mux.HandleFunc("GET "+prefix+"/api/role", u.getRole)
+	mux.HandleFunc("POST "+prefix+"/api/role", u.setRole)
+	mux.HandleFunc("GET "+prefix+"/api/panel", u.getPanel)
+	mux.HandleFunc("POST "+prefix+"/api/panel", u.setPanel)
+	mux.HandleFunc("DELETE "+prefix+"/api/panel", u.dropPanel)
 	mux.HandleFunc("GET "+prefix+"/api/autostart", u.getAutostart)
 	mux.HandleFunc("POST "+prefix+"/api/autostart", u.setAutostart)
 
@@ -292,4 +298,85 @@ func (u *ui) setAutostart(w http.ResponseWriter, r *http.Request) {
 		u.log.add("%s", say("logAutostartOff"))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"on": autostartOn()})
+}
+
+// ---------------------------------------------------------------- продавец
+
+func (u *ui) getRole(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"role": readRole()})
+}
+
+func (u *ui) setRole(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Role string `json:"role"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": say("badRequest")})
+		return
+	}
+	if err := writeRole(body.Role); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"role": body.Role})
+}
+
+// getPanel отдаёт панель продавца: адрес и кем войдём — без проверки по сети,
+// из того, что запомнили при подключении. Ссылку с токеном страница получает
+// отдельным полем: ей нужно открыть панель, а токен уходит в хвост адреса.
+func (u *ui) getPanel(w http.ResponseWriter, _ *http.Request) {
+	link := readPanelLink()
+	if link == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"set": false})
+		return
+	}
+	token, host, err := parsePanelLink(link)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"set": false})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"set": true, "host": host,
+		"open": panelURL(host) + "#token=" + url.QueryEscape(token),
+	})
+}
+
+// setPanel принимает ссылку-приглашение, проверяет её у самой панели и
+// запоминает. В ответ — кем войдём: панель, роль, права.
+func (u *ui) setPanel(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Link string `json:"link"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<14)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": say("badRequest")})
+		return
+	}
+	token, host, err := parsePanelLink(body.Link)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	p, err := checkPanel(r.Context(), token, host)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	if err := writePanelLink(strings.TrimSpace(body.Link)); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	u.log.add("%s", sayf("logPanelSet", host))
+	writeJSON(w, http.StatusOK, map[string]any{
+		"set": true, "host": p.Host, "admin": p.Admin, "key": p.Key, "scopes": p.Scopes,
+		"open": panelURL(host) + "#token=" + url.QueryEscape(token),
+	})
+}
+
+func (u *ui) dropPanel(w http.ResponseWriter, _ *http.Request) {
+	if err := writePanelLink(""); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	u.log.add("%s", say("logPanelDropped"))
+	writeJSON(w, http.StatusOK, map[string]any{"set": false})
 }

@@ -383,6 +383,37 @@
   .pillb { flex: 1; text-align: center; padding: 9px 0; border-radius: 10px; font: inherit; font-size: 12px; cursor: pointer; background: var(--surf2); color: var(--dim); border: none; }
   .pillb[aria-pressed="true"] { background: var(--acc); color: var(--accFg); }
 
+  /* ----------------------------------------------------- кто вы / панель */
+
+  /* «Кто вы?» — первый экран, поверх всего, пока роль не выбрана. Макет S00:
+     две карточки, у выбранной обводка акцентом. */
+  .who { position: fixed; inset: 0; background: var(--bgcss, var(--bg)); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 26px; padding: 40px 60px; z-index: 5; }
+  .who h1 { font-family: var(--display); font-size: 27px; font-weight: 700; margin: 0; }
+  .who .lead { text-align: center; max-width: 460px; }
+  .who .roles { display: flex; gap: 16px; width: 100%; max-width: 780px; }
+  .who .role { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: var(--r); cursor: pointer;
+    background: var(--surf); border: 1px solid var(--line); text-align: left; font: inherit; color: var(--fg); }
+  .who .role[aria-pressed="true"] { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc); }
+  .who .role .t { display: flex; align-items: center; justify-content: space-between; font-size: 19px; font-weight: 700; }
+  .who .role .t i { width: 14px; height: 14px; border-radius: 50%; border: 1.6px solid var(--line); }
+  .who .role[aria-pressed="true"] .t i { background: var(--acc); border-color: var(--acc); }
+  .who .role .s { font-size: 13px; line-height: 1.5; color: var(--dim); }
+  .who .role ul { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+  .who .role li { display: flex; align-items: center; gap: 9px; }
+  .who .role li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--acc); flex: none; }
+  .who button.primary { width: 260px; height: 50px; }
+
+  /* Панель продавца — макет S01: слева зачем, справа ссылка и что распознано. */
+  .panel-side { flex: 0 0 300px; }
+  .panel-side h2 { font-size: 21px; font-weight: 700; line-height: 1.3; margin: 0; }
+  .panel-side ul { margin: auto 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--dim); }
+  .panel-side li { display: flex; align-items: center; gap: 10px; }
+  .panel-side li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--acc); flex: none; }
+  .known { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--r); background: var(--surf2); }
+  .known .row { justify-content: space-between; font-size: 13px; }
+  .known .row span:last-child { color: var(--dim); font-family: var(--mono); font-size: 12px; text-align: right; }
+
   /* ---------------------------------------------------------- виджет */
 
   /* Трей-виджет из макета: 380×520 без рамки. Это та же страница в другой
@@ -430,6 +461,8 @@
       <button class="tab" data-tab="log"><i class="dot"></i><span data-t="tabLog">Журнал</span></button>
       <button class="tab" data-tab="theme"><i class="dot"></i><span data-t="tabTheme">Тема</span></button>
       <button class="tab" data-tab="about"><i class="dot"></i><span data-t="tabAbout">О программе</span></button>
+      <!-- Только у продавца: покупателю панель ни к чему, а пустая вкладка — обещание. -->
+      <button class="tab" data-tab="panel" id="tab-panel" hidden><i class="dot"></i><span data-t="tabPanel">Панель</span></button>
 
       <div class="spacer"></div>
 
@@ -631,12 +664,55 @@
       </section>
 
       <!-- ----------------------------------------------------- о программе -->
+      <!-- --------------------------------------------------------- панель -->
+      <section class="page" data-tab="panel">
+        <div class="split">
+          <div class="card panel-side">
+            <h2 data-t="panelTitle"></h2>
+            <p class="lead" data-t="panelLead"></p>
+            <ul>
+              <li data-t="panelPoint1"></li>
+              <li data-t="panelPoint2"></li>
+              <li data-t="panelPoint3"></li>
+            </ul>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="k" data-t="panelLink"></div>
+              <textarea id="panel-link" rows="2" spellcheck="false" placeholder="marvia-panel://…"></textarea>
+              <div class="row">
+                <button class="primary" id="panel-connect" data-t="panelConnect"></button>
+                <span id="panel-msg" class="hint"></span>
+              </div>
+              <p class="hint" data-t="panelHint"></p>
+            </div>
+            <div class="card" id="panel-known" hidden>
+              <div class="k" data-t="panelKnown"></div>
+              <div class="known">
+                <div class="row"><span data-t="panelHost"></span><span id="pk-host"></span></div>
+                <div class="row"><span data-t="panelRole"></span><span id="pk-role"></span></div>
+                <div class="row"><span data-t="panelRights"></span><span id="pk-rights"></span></div>
+              </div>
+              <div class="row">
+                <button class="primary" id="panel-open" data-t="panelOpen"></button>
+                <button class="chip" id="panel-drop" data-t="panelDrop"></button>
+              </div>
+              <p class="hint" data-t="panelBack"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="page" data-tab="about">
         <!--
           Запуск вместе с Windows — через планировщик, с высшими правами: из
           обычной автозагрузки программа при каждом входе просила бы права
           администратора. Стартует в трее без окна и поднимает туннель сама.
         -->
+        <div class="card">
+          <div class="card-head"><b data-t="roleTitle"></b><button class="chip" id="role-change" type="button" data-t="roleChange"></button></div>
+          <p class="hint" id="role-now"></p>
+        </div>
         <div class="card">
           <div class="card-head"><b data-t="autostart"></b><button class="chip" id="autostart" type="button"></button></div>
           <p class="hint" data-t="autostartHint"></p>
@@ -650,6 +726,27 @@
       </section>
     </main>
   </div>
+</div>
+
+<!-- ------------------------------------------------------------ кто вы -->
+<div class="who" id="who" hidden>
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+    <h1 data-t="whoTitle"></h1>
+    <p class="lead" data-t="whoLead"></p>
+  </div>
+  <div class="roles">
+    <button class="role" type="button" data-role="seller" aria-pressed="true">
+      <div class="t"><span data-t="roleSeller"></span><i></i></div>
+      <div class="s" data-t="roleSellerSub"></div>
+      <ul><li data-t="roleSeller1"></li><li data-t="roleSeller2"></li><li data-t="roleSeller3"></li></ul>
+    </button>
+    <button class="role" type="button" data-role="user" aria-pressed="false">
+      <div class="t"><span data-t="roleUser"></span><i></i></div>
+      <div class="s" data-t="roleUserSub"></div>
+      <ul><li data-t="roleUser1"></li><li data-t="roleUser2"></li><li data-t="roleUser3"></li></ul>
+    </button>
+  </div>
+  <button class="primary" id="who-go" type="button"></button>
 </div>
 
 <!-- -------------------------------------------------------- трей-виджет -->
@@ -743,7 +840,26 @@ const T = {
       log: ["Журнал", "Что программа делала"],
       theme: ["Тема", "Окно красится сразу"],
       about: ["О программе", "Как это устроено"],
+      panel: ["Панель", "Своя панель внутри программы"],
     },
+    tabPanel: "Панель",
+    whoTitle: "Кто вы?", whoLead: "От роли зависит набор разделов. Переключить можно позже — в «О программе».",
+    roleSeller: "Продавец", roleSellerSub: "Продавать доступ и вести клиентов через свою панель.",
+    roleSeller1: "Выдача и отзыв доступа", roleSeller2: "Клиенты, ноды, статистика", roleSeller3: "Панель открывается внутри программы",
+    roleUser: "Пользователь", roleUserSub: "Просто подключаться к купленному доступу.",
+    roleUser1: "Ноды с живым замером", roleUser2: "Сессия и трафик", roleUser3: "Тема под себя",
+    whoGo: { seller: "Продолжить как продавец", user: "Продолжить как пользователь" },
+    roleTitle: "Роль", roleChange: "Сменить", roleNow: { seller: "Продавец: панель — на своей вкладке", user: "Пользователь: только туннель", "": "Не выбрана" },
+    panelTitle: "Подключитесь к своей панели",
+    panelLead: "Ссылку-приглашение показывает сама панель: раздел «Приложения». В ней адрес панели и токен, которым вы туда вошли.",
+    panelPoint1: "Токен хранится на этом компьютере", panelPoint2: "Панель открывается по HTTPS", panelPoint3: "Отозвать можно в любой момент — здесь или в панели",
+    panelLink: "Ссылка-приглашение", panelConnect: "Подключиться", panelHint: "Ссылка равна входу в панель: не пересылайте её и не кладите в чаты.",
+    panelKnown: "Распознано из ссылки", panelHost: "Панель", panelRole: "Роль", panelRights: "Права",
+    panelAdmin: "Администратор", panelKey: "Ключ «%s»",
+    scopes: { users: "клиенты", nodes: "ноды", read: "просмотр" },
+    panelOpen: "Открыть панель", panelDrop: "Отвязать",
+    panelBack: "Панель откроется в этом окне. Вернуться к туннелю: нажать значок в трее и ⚙ в виджете, либо «Открыть Marvia» в его меню.",
+    panelChecking: "Спрашиваю панель…", panelOk: "Панель подключена",
     pill: { idle: "НАПРЯМУЮ", connecting: "ПОДКЛЮЧАЮСЬ", connected: "ЗАЩИЩЕНО", failed: "НЕ ПОДКЛЮЧИЛОСЬ", stalled: "СВЯЗЬ ПОТЕРЯНА" },
 
     kSession: "Сессия", kPing: "Пинг", down: "Приём", up: "Отдача",
@@ -854,7 +970,26 @@ const T = {
       log: ["Log", "What the program did"],
       theme: ["Theme", "The window repaints at once"],
       about: ["About", "How it works"],
+      panel: ["Panel", "Your own panel inside the app"],
     },
+    tabPanel: "Panel",
+    whoTitle: "Who are you?", whoLead: "The role decides which sections you see. You can switch later in “About”.",
+    roleSeller: "Seller", roleSellerSub: "Sell access and manage clients through your own panel.",
+    roleSeller1: "Issue and revoke access", roleSeller2: "Clients, nodes, statistics", roleSeller3: "The panel opens inside the app",
+    roleUser: "User", roleUserSub: "Just connect to the access you bought.",
+    roleUser1: "Nodes with live measurement", roleUser2: "Session and traffic", roleUser3: "A theme of your own",
+    whoGo: { seller: "Continue as a seller", user: "Continue as a user" },
+    roleTitle: "Role", roleChange: "Change", roleNow: { seller: "Seller: the panel is on its own tab", user: "User: tunnel only", "": "Not chosen" },
+    panelTitle: "Connect to your panel",
+    panelLead: "The invite link is shown by the panel itself, in “Apps”. It carries the panel address and the token you signed in with.",
+    panelPoint1: "The token stays on this computer", panelPoint2: "The panel opens over HTTPS", panelPoint3: "Revoke any time — here or in the panel",
+    panelLink: "Invite link", panelConnect: "Connect", panelHint: "The link is a sign-in: do not forward it or paste it into chats.",
+    panelKnown: "Recognised from the link", panelHost: "Panel", panelRole: "Role", panelRights: "Rights",
+    panelAdmin: "Administrator", panelKey: "Key “%s”",
+    scopes: { users: "clients", nodes: "nodes", read: "read" },
+    panelOpen: "Open the panel", panelDrop: "Disconnect",
+    panelBack: "The panel opens in this window. To get back to the tunnel: click the tray icon and ⚙ in the widget, or “Open Marvia” in its menu.",
+    panelChecking: "Asking the panel…", panelOk: "Panel connected",
     pill: { idle: "DIRECT", connecting: "CONNECTING", connected: "PROTECTED", failed: "NOT CONNECTED", stalled: "CONNECTION LOST" },
 
     kSession: "Session", kPing: "Ping", down: "Down", up: "Up",
@@ -986,6 +1121,7 @@ function paintStatic() {
   $("lang").title = d.switchTitle;
   $("w-full").title = d.wOpen;
   $("w-hide").title = d.wHide;
+  paintRole();
 
   paintHead();
   paintTheme();
@@ -1004,6 +1140,12 @@ async function setLang(next) {
 /* --------------------------------------------------------------- вкладки */
 
 let openTab = "home";
+
+// Роль этой копии программы: "user", "seller" или пусто, пока не выбрана.
+// Объявлено здесь, а не рядом со своим кодом: надписи перекрашивает
+// paintStatic, а он зовётся раньше, чем дочитается скрипт.
+let role = "";
+let whoPick = "seller";
 
 // Режим страницы задаёт программа адресом: ?mode=widget — трей-виджет,
 // ?tab=… — какую вкладку открыть в полном окне. Страница одна на оба вида.
@@ -1694,6 +1836,75 @@ on("autostart", "click", async () => {
 paintAutostart();
 
 on("proxy-off", "click", dropProxy);
+
+/* ------------------------------------------------------- кто вы / панель */
+
+// Роль решает, есть ли вкладка «Панель». Пока роль не выбрана — первым
+// экраном спрашиваем; в виджете не спрашиваем, там не место.
+
+function paintRole() {
+  const d = L();
+  $("tab-panel").hidden = role !== "seller";
+  $("role-now").textContent = d.roleNow[role] || d.roleNow[""];
+  $("who").hidden = widgetMode || role !== "";
+  $("who-go").textContent = d.whoGo[whoPick];
+  for (const b of document.querySelectorAll(".who .role")) b.setAttribute("aria-pressed", String(b.dataset.role === whoPick));
+}
+
+for (const b of document.querySelectorAll(".who .role")) {
+  b.addEventListener("click", () => { whoPick = b.dataset.role; paintRole(); });
+}
+on("who-go", "click", async () => {
+  try {
+    await api("POST", "api/role", { role: whoPick });
+    role = whoPick;
+    paintRole();
+    if (role === "seller") $("tab-panel").click();
+  } catch (err) {
+    complain(err.message);
+  }
+});
+on("role-change", "click", () => { role = ""; whoPick = "seller"; paintRole(); });
+
+// Панель: что распознано из ссылки и куда идти.
+function paintPanel(p) {
+  const d = L();
+  const known = $("panel-known");
+  known.hidden = !p.set;
+  if (!p.set) return;
+  $("pk-host").textContent = p.host;
+  $("pk-role").textContent = p.admin ? d.panelAdmin : (p.key ? d.panelKey.replace("%s", p.key) : "—");
+  $("pk-rights").textContent = (p.scopes || []).map((k) => d.scopes[k] || k).join(" · ") || "—";
+  $("panel-open").onclick = () => { location.href = p.open; };
+}
+
+async function loadPanel() {
+  try { paintPanel(await api("GET", "api/panel")); } catch (_) { /* покажем позже */ }
+}
+
+on("panel-connect", "click", async () => {
+  const msg = $("panel-msg");
+  msg.textContent = L().panelChecking;
+  try {
+    const p = await api("POST", "api/panel", { link: $("panel-link").value });
+    $("panel-link").value = "";
+    msg.textContent = L().panelOk;
+    paintPanel(p);
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+on("panel-drop", "click", async () => {
+  try {
+    await api("DELETE", "api/panel");
+    paintPanel({ set: false });
+  } catch (err) {
+    $("panel-msg").textContent = err.message;
+  }
+});
+
+api("GET", "api/role").then((r) => { role = r.role || ""; paintRole(); }).catch(() => paintRole());
+loadPanel();
 
 on("save", "click", async () => {
   const msg = $("save-msg");
