@@ -14,10 +14,21 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jytt8u/marvia/internal/look"
 )
 
 //go:embed ui/app.html
 var appHTML string
+
+// appPage — страница с вшитой темой. Собирается один раз: тема не меняется
+// между отдачами, а метку в разметке ищет тест, не отдача.
+var appPage = look.Inline(appHTML)
+
+// version подставляется при сборке релиза через -ldflags "-X main.version=…".
+// Окно показывает её в шапке: человек, у которого что-то не работает,
+// первым делом спрашивает у продавца «а какая у меня версия».
+var version = "dev"
 
 // journal — последние строки о происходящем, для вкладки «Журнал».
 //
@@ -97,6 +108,12 @@ func serveUI(ctl *Controller, log *journal) (string, *http.Server, error) {
 	mux.HandleFunc("POST "+prefix+"/api/proxy/off", u.dropProxy)
 	mux.HandleFunc("POST "+prefix+"/api/lang", u.setLang)
 
+	// Шрифты и знак — общие с панелью, из того же пакета. Под тем же
+	// одноразовым ключом: адреса под ним не угадать, и чужой программе на
+	// этой машине нечего опрашивать.
+	mux.HandleFunc("GET "+prefix+"/fonts/{name}", look.ServeFont)
+	mux.HandleFunc("GET "+prefix+"/assets/{name}", look.ServeAsset)
+
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return "", nil, fmt.Errorf("не занять порт для окна: %w", err)
@@ -111,7 +128,7 @@ func serveUI(ctl *Controller, log *journal) (string, *http.Server, error) {
 func (u *ui) page(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	_, _ = w.Write([]byte(appHTML))
+	_, _ = w.Write([]byte(appPage))
 }
 
 func (u *ui) state(w http.ResponseWriter, _ *http.Request) {

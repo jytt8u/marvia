@@ -24,8 +24,8 @@ func showWindow(url string) error {
 		AutoFocus: true,
 		WindowOptions: webview2.WindowOptions{
 			Title:  "Marvia",
-			Width:  980,
-			Height: 640,
+			Width:  1120,
+			Height: 700,
 			Center: true,
 		},
 	})

@@ -5,174 +5,215 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Marvia</title>
 <style>
+  /* Шрифты свои, вшитые в программу, — те же, что у панели. Системный
+     Segoe UI не совпал бы с макетом ни в одной строке, а тянуть шрифт из
+     сети окно не вправе: оно и так знает о человеке больше, чем нужно. */
+  @font-face { font-family: Onest; src: url(fonts/onest-latin.woff2) format('woff2');
+    font-weight: 300 700; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212; }
+  @font-face { font-family: Onest; src: url(fonts/onest-cyrillic.woff2) format('woff2');
+    font-weight: 300 700; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: 'JetBrains Mono'; src: url(fonts/jetbrains-latin.woff2) format('woff2');
+    font-weight: 400 700; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212; }
+  @font-face { font-family: 'JetBrains Mono'; src: url(fonts/jetbrains-cyrillic.woff2) format('woff2');
+    font-weight: 400 700; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: Unbounded; src: url(fonts/unbounded-latin.woff2) format('woff2');
+    font-weight: 400 800; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212; }
+  @font-face { font-family: Unbounded; src: url(fonts/unbounded-cyrillic.woff2) format('woff2');
+    font-weight: 400 800; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: 'Chakra Petch'; src: url(fonts/chakra-petch-latin.woff2) format('woff2');
+    font-weight: 700; font-display: swap; unicode-range: U+0000-00FF; }
+
+  /*
+    Цвета не написаны здесь ни разу: все они — переменные, которые ставит
+    тема (Look.vars) на корневой элемент. Запасные значения ниже — вид «Серый»
+    из коробки, чтобы страница не мигнула чёрным до первого скрипта.
+  */
   :root {
-    --bg:        #070b16;
-    --panel:     #0d1424;
-    --raise:     #131c30;
-    --line:      rgba(255,255,255,.07);
-    --text:      #eef2fb;
-    --muted:     #7c8aab;
-    --accent:    #4d7cfe;
-    --live:      #21c48a;
-    --fail:      #ef5b6b;
+    --bg: #0c0e11; --surf: #18191c; --surf2: #242628; --line: #333537;
+    --fg: #f1f4f7; --dim: #9aa0a7; --acc: #c3ccd6; --accFg: #08110d;
+    --accSoft: rgba(195,204,214,0.13); --accRgb: 195,204,214;
+    --warn: #f2a03d; --fail: #ff6b7a;
+    --r: 16px; --pad: 16px; --gap: 12px;
+    --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+    --display: Unbounded, Onest, system-ui, sans-serif;
   }
 
   * { box-sizing: border-box; }
 
+  /* Атрибут hidden обязан побеждать любой display: иначе «скрытое» поле
+     ключа торчит на главном экране у того, у кого ключ давно есть. */
+  [hidden] { display: none !important; }
+
   html, body {
     height: 100%; margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    font: 14px/1.5 Onest, "Segoe UI", system-ui, sans-serif;
     user-select: none; overflow: hidden;
     -webkit-font-smoothing: antialiased;
+    transition: background .25s, color .25s;
   }
 
-  .app { display: flex; height: 100%; }
+  .app { display: flex; flex-direction: column; height: 100%; }
+
+  /* ------------------------------------------------------------- шапка */
+
+  .top {
+    height: 44px; flex: none;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--surf);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand img { height: 22px; width: auto; display: block; }
+  .wordmark { font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .2em; color: var(--acc); }
+  .ver { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+  .top button.lang {
+    background: none; border: 1px solid var(--line); color: var(--dim);
+    font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 8px; cursor: pointer;
+  }
+  .top button.lang:hover { color: var(--fg); border-color: var(--acc); }
+
+  .body { flex: 1; display: flex; min-height: 0; }
 
   /* ------------------------------------------------------------ боковая */
 
   aside {
-    width: 208px; flex: 0 0 208px;
-    background: var(--panel);
-    padding: 20px 14px 14px;
-    display: flex; flex-direction: column; gap: 2px;
-    border-right: 1px solid var(--line);
+    width: 216px; flex: 0 0 216px;
+    background: var(--surf); border-right: 1px solid var(--line);
+    padding: 16px 12px; display: flex; flex-direction: column; gap: 4px;
   }
-
-  .brand {
-    display: flex; align-items: center; gap: 11px;
-    padding: 2px 10px 22px;
-    font-weight: 650; letter-spacing: .3em; font-size: 12px; color: #cfd8ee;
-  }
-  .brand svg { flex: 0 0 24px; }
-
   .tab {
-    position: relative;
-    display: flex; align-items: center; gap: 11px;
-    padding: 10px 12px; border-radius: 10px;
-    color: var(--muted); cursor: pointer;
-    border: none; background: none; width: 100%;
-    font: inherit; font-size: 13.5px; text-align: left;
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: var(--r);
+    color: var(--dim); cursor: pointer; border: none; background: none; width: 100%;
+    font: inherit; font-size: 13px; text-align: left;
     transition: background .15s, color .15s;
   }
-  .tab:hover { background: rgba(255,255,255,.04); color: #c4cfe6; }
-  .tab[aria-selected="true"] { background: rgba(77,124,254,.13); color: var(--text); }
-  .tab[aria-selected="true"]::before {
-    content: ""; position: absolute; left: -14px; top: 9px; bottom: 9px;
-    width: 3px; border-radius: 0 3px 3px 0; background: var(--accent);
-  }
-  .tab svg { flex: 0 0 18px; opacity: .9; }
+  .tab .dot { width: 7px; height: 7px; border-radius: 2px; flex: none; background: var(--dim); transition: background .15s; }
+  .tab:hover { color: var(--fg); }
+  .tab[aria-selected="true"] { background: var(--surf2); color: var(--fg); }
+  .tab[aria-selected="true"] .dot { background: var(--acc); }
 
   .spacer { flex: 1; }
 
-  .speeds { display: flex; flex-direction: column; gap: 9px; padding: 14px 12px 6px; border-top: 1px solid var(--line); }
-  .speed { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); }
-  .speed svg { flex: 0 0 14px; }
-  .speed b { margin-left: auto; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
-  .speed .total { color: var(--muted); font-weight: 400; font-size: 11.5px; margin-left: 0; }
+  /* Карточка подписки внизу боковой: что с ключом и до какого числа. */
+  .sub-card { padding: 12px; border-radius: var(--r); background: var(--surf2); display: flex; flex-direction: column; gap: 5px; }
+  .sub-card .t { font-size: 12px; color: var(--fg); }
+  .sub-card .s { font-family: var(--mono); font-size: 10px; color: var(--dim); line-height: 1.5; }
 
   /* -------------------------------------------------------------- центр */
 
-  main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+  main { flex: 1; min-width: 0; padding: 22px 26px; display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
 
-  /* Свечение за кнопкой. Оно и задаёт настроение всему окну, поэтому меняет
-     цвет вместе с состоянием, а не просто украшает. */
-  .glow {
-    position: absolute; left: 50%; top: 46%;
-    width: 620px; height: 620px; transform: translate(-50%, -50%);
-    border-radius: 50%; pointer-events: none;
-    background: radial-gradient(circle, rgba(77,124,254,.16) 0%, rgba(77,124,254,0) 62%);
-    opacity: .55; transition: background .5s, opacity .5s;
+  .head { display: flex; align-items: flex-end; justify-content: space-between; flex: none; }
+  .head .title { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
+  .head .sub { font-size: 13px; color: var(--dim); margin-top: 3px; }
+
+  /* Состояние туннеля — капсула в углу, на всех вкладках. Цвет говорит
+     раньше слов: акцент — защищено, янтарный — связь потеряна, красный — не
+     подключилось. */
+  .pill {
+    display: flex; align-items: center; gap: 8px; padding: 7px 13px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surf2);
+    font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--dim);
+    transition: background .3s, border-color .3s, color .3s;
   }
-  body[data-state="connected"] .glow { background: radial-gradient(circle, rgba(33,196,138,.22) 0%, rgba(33,196,138,0) 62%); opacity: 1; }
-  body[data-state="failed"] .glow { background: radial-gradient(circle, rgba(239,91,107,.18) 0%, rgba(239,91,107,0) 62%); opacity: 1; }
-  body[data-state="stalled"] .glow { background: radial-gradient(circle, rgba(242,160,61,.18) 0%, rgba(242,160,61,0) 62%); opacity: 1; }
+  .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); transition: background .3s; }
+  body[data-state="connected"] .pill { background: var(--accSoft); border-color: var(--acc); color: var(--acc); }
+  body[data-state="connected"] .pill i { background: var(--acc); }
+  body[data-state="connecting"] .pill i { background: var(--acc); animation: blink 1.2s ease-in-out infinite; }
+  body[data-state="stalled"] .pill { border-color: var(--warn); color: var(--warn); }
+  body[data-state="stalled"] .pill i { background: var(--warn); }
+  body[data-state="failed"] .pill { border-color: var(--fail); color: var(--fail); }
+  body[data-state="failed"] .pill i { background: var(--fail); }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 
-  .page { display: none; flex: 1; min-height: 0; flex-direction: column; padding: 26px 32px 28px; position: relative; }
+  .page { display: none; flex: 1; min-height: 0; flex-direction: column; gap: var(--gap); }
   .page[data-open] { display: flex; }
 
-  /* Список стран. Строка — кнопка: нажал и поехал, без «применить». */
-  .nodes { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-  .nodes .row-node {
-    display: flex; align-items: center; gap: 12px;
-    padding: 11px 13px; border-radius: 10px; cursor: pointer;
-    background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
-    color: var(--text); text-align: left; font: inherit;
+  .card {
+    padding: var(--pad); border-radius: var(--r);
+    background: var(--surf); border: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 10px; min-width: 0;
   }
-  .nodes .row-node:hover { background: rgba(255,255,255,.06); }
-  .nodes .row-node[data-chosen] { border-color: rgba(77,124,254,.55); }
-  .nodes .row-node[data-current] { background: rgba(33,196,138,.10); }
-  .nodes .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #7c8aa5; }
-  .nodes .row-node[data-alive] .dot { background: var(--live); }
-  .nodes .grow { flex: 1; min-width: 0; }
-  .nodes .name { font-weight: 600; font-size: 14px; }
-  .nodes .sub { font-size: 12px; color: #8b97ad; margin-top: 2px; }
-  .nodes .ms { font-variant-numeric: tabular-nums; font-size: 13px; color: #8b97ad; flex: none; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .card-head b { font-size: 14px; font-weight: 600; }
+  .card-head .mono { font-family: var(--mono); font-size: 11px; color: var(--dim); }
 
-  .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+  .k { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--dim); text-transform: uppercase; }
+
+  .split { flex: 1; min-height: 0; display: flex; gap: var(--gap); }
+  .split > .card { flex: 1; }
+  .split > .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
+  .split > .wide { flex: 1.4; }
+
+  /* ------------------------------------------------------------- цифры */
+
+  .kpis { display: flex; gap: var(--gap); flex: none; }
+  .kpi { flex: 1; padding: var(--pad); border-radius: var(--r); background: var(--surf); border: 1px solid var(--line); min-width: 0; }
+  .kpi .v { font-family: var(--mono); font-size: 22px; font-weight: 700; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+  .kpi .v.acc { color: var(--acc); }
+  .kpi .t { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 2px; }
 
   /* ------------------------------------------------------------- кнопка */
 
+  /* «safe center»: пока содержимого мало, оно по центру; когда добавилось
+     предупреждение о прокси, карточка прокручивается сверху, а не обрезает
+     кнопку. Обычный center при переполнении режет именно верх. */
+  .hero { align-items: center; justify-content: safe center; gap: 12px; overflow-y: auto; }
+  .hero::-webkit-scrollbar { width: 0; }
+
   .power {
-    width: 176px; height: 176px; border-radius: 50%;
-    border: 1px solid rgba(255,255,255,.09);
-    background: linear-gradient(160deg, #1b2540 0%, #121a2d 100%);
+    width: 150px; height: 150px; border-radius: 50%; flex: none;
+    border: 1px solid var(--line); background: var(--surf2);
     cursor: pointer; display: grid; place-items: center;
     transition: transform .18s, box-shadow .35s, background .35s, border-color .35s;
-    box-shadow: 0 18px 46px rgba(0,0,0,.45);
   }
-  .power svg { width: 62px; height: 62px; color: #93a3c4; transition: color .35s; }
+  .power svg { width: 56px; height: 56px; color: var(--dim); transition: color .35s; }
   .power:hover:not(:disabled) { transform: translateY(-2px); }
   .power:active:not(:disabled) { transform: translateY(0) scale(.985); }
   .power:disabled { cursor: default; opacity: .55; }
 
   .power[data-state="connected"] {
-    background: linear-gradient(160deg, #27d79a 0%, #14a273 100%);
-    border-color: rgba(255,255,255,.22);
-    box-shadow: 0 0 0 10px rgba(33,196,138,.10), 0 0 64px rgba(33,196,138,.42);
+    background: var(--acc); border-color: transparent;
+    box-shadow: 0 0 0 10px var(--accSoft), 0 0 60px rgba(var(--accRgb), .38);
   }
-  .power[data-state="connected"] svg { color: #fff; }
+  .power[data-state="connected"] svg { color: var(--accFg); }
 
-  .power[data-state="failed"] {
-    background: linear-gradient(160deg, #f26a79 0%, #cf3d4f 100%);
-    border-color: rgba(255,255,255,.2);
-    box-shadow: 0 0 0 10px rgba(239,91,107,.10), 0 0 54px rgba(239,91,107,.32);
-  }
+  .power[data-state="failed"] { background: var(--fail); border-color: transparent; }
   .power[data-state="failed"] svg { color: #fff; }
 
   /* Связь потеряна — янтарный, а не красный: туннель поднят, и это не то же
      самое, что «не подключилось». Разный цвет говорит это без слов. */
-  .power[data-state="stalled"] {
-    background: linear-gradient(160deg, #f5b942 0%, #d98a1f 100%);
-    border-color: rgba(255,255,255,.2);
-    box-shadow: 0 0 0 10px rgba(242,160,61,.10), 0 0 54px rgba(242,160,61,.32);
-  }
-  .power[data-state="stalled"] svg { color: #fff; }
+  .power[data-state="stalled"] { background: var(--warn); border-color: transparent; }
+  .power[data-state="stalled"] svg { color: #1a1204; }
 
-  .power[data-state="connecting"] { animation: breathe 1.5s ease-in-out infinite; }
+  .power[data-state="connecting"] { animation: breathe 1.5s ease-in-out infinite; border-color: var(--acc); }
+  .power[data-state="connecting"] svg { color: var(--acc); }
   @keyframes breathe {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(77,124,254,.34), 0 18px 46px rgba(0,0,0,.45); }
-    50%      { box-shadow: 0 0 0 16px rgba(77,124,254,0), 0 18px 46px rgba(0,0,0,.45); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accRgb), .34); }
+    50%      { box-shadow: 0 0 0 16px rgba(var(--accRgb), 0); }
   }
 
-  .status { font-size: 27px; font-weight: 650; letter-spacing: -.01em; margin-top: 26px; }
-  .detail { color: var(--muted); text-align: center; max-width: 440px; margin-top: 7px; font-size: 13.5px; }
-  .detail.bad { color: #f0919b; }
+  .status { font-family: var(--display); font-size: 17px; font-weight: 600; margin-top: 4px; text-align: center; }
+  .detail { color: var(--dim); text-align: center; max-width: 420px; font-size: 13px; line-height: 1.5; }
+  .detail.bad { color: var(--fail); }
 
-  /* ------------------------------------------------------------ карточка */
+  /* ----------------------------------------------------------- карточки */
 
-  .first-key { margin-top: 26px; width: 100%; max-width: 430px; }
-  .first-key textarea { margin-bottom: 10px; }
+  .first-key { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
 
   .node {
-    margin-top: 34px; width: 100%; max-width: 430px;
-    background: var(--raise); border: 1px solid var(--line);
-    border-radius: 14px; padding: 13px 16px;
-    display: flex; align-items: center; gap: 13px;
-    transition: border-color .3s;
+    width: 100%; max-width: 420px; margin-top: 6px;
+    background: var(--surf2); border: 1px solid transparent; border-radius: var(--r); padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px; transition: border-color .3s;
   }
-  body[data-state="connected"] .node { border-color: rgba(33,196,138,.3); }
+  body[data-state="connected"] .node { border-color: var(--accSoft); }
+  .node .mark { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--dim); }
+  body[data-state="connected"] .node .mark { background: var(--acc); }
+  .node .name { font-size: 13px; }
+  .node .sub { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 1px; }
+  .node .ping { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--dim); white-space: nowrap; }
+  .node .ping:empty { display: none; }
 
   /*
     Предупреждение о прокси. Намеренно не красное: ничего не сломано, туннель
@@ -180,254 +221,345 @@
     сказать заметно, но без паники, иначе человек решит, что не подключился.
   */
   .leak {
-    margin-top: 14px; width: 100%; max-width: 430px;
-    background: rgba(240,180,60,.09); border: 1px solid rgba(240,180,60,.28);
-    border-radius: 14px; padding: 13px 16px; text-align: left;
+    width: 100%; max-width: 420px; text-align: left;
+    background: rgba(242,160,61,.09); border: 1px solid rgba(242,160,61,.3);
+    border-radius: var(--r); padding: 12px 14px;
   }
   .leak .head { display: flex; align-items: center; gap: 9px; }
-  .leak .head svg { width: 16px; height: 16px; flex: 0 0 16px; color: #f0b43c; }
-  .leak .title { font-weight: 600; font-size: 13px; color: #f0b43c; }
-  .leak .body { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.5; }
-  .leak .act { margin-top: 11px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .leak .head svg { width: 16px; height: 16px; flex: 0 0 16px; color: var(--warn); }
+  .leak .title { font-weight: 600; font-size: 13px; color: var(--warn); }
+  .leak .body { color: var(--dim); font-size: 12px; margin-top: 6px; line-height: 1.5; }
+  .leak .act { margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .leak button {
-    background: rgba(240,180,60,.16); border: 1px solid rgba(240,180,60,.34);
-    color: #f0b43c; font-size: 12px; padding: 6px 12px; border-radius: 9px;
-    cursor: pointer;
+    background: rgba(242,160,61,.16); border: 1px solid rgba(242,160,61,.34);
+    color: var(--warn); font: inherit; font-size: 12px; padding: 6px 12px; border-radius: 9px; cursor: pointer;
   }
-  .leak button:hover { background: rgba(240,180,60,.24); }
-  .leak .said { color: var(--muted); font-size: 12px; }
-  .node .mark {
-    width: 34px; height: 34px; border-radius: 10px; flex: 0 0 34px;
-    display: grid; place-items: center;
-    background: rgba(255,255,255,.05); color: var(--muted);
-  }
-  body[data-state="connected"] .node .mark { background: rgba(33,196,138,.14); color: var(--live); }
-  .node .mark svg { width: 17px; height: 17px; }
-  .node .name { font-weight: 600; font-size: 14px; }
-  .node .sub { color: var(--muted); font-size: 12px; margin-top: 1px; }
-  .node .ping {
-    margin-left: auto; font-size: 12.5px; color: var(--muted);
-    font-variant-numeric: tabular-nums; white-space: nowrap;
-    background: rgba(255,255,255,.05); padding: 4px 9px; border-radius: 7px;
-  }
-  .node .ping:empty { display: none; }
-
-  /* --------------------------------------------------------- предупрежд. */
+  .leak .said { color: var(--dim); font-size: 12px; }
 
   /*
     Текст ошибки — единственное, что человек может отправить продавцу. Общий
     запрет выделения делал его непередаваемым: оставалось переписывать с
     экрана руками или фотографировать.
   */
-  #detail, .leak .body, .leak .said { user-select: text; }
+  #detail, .leak .body, .leak .said, .log { user-select: text; }
 
   .warn {
-    background: rgba(239,91,107,.1); border: 1px solid rgba(239,91,107,.28);
-    color: #f3a8b1; border-radius: 12px; padding: 11px 15px;
-    font-size: 13px; margin-bottom: 18px;
+    background: rgba(255,107,122,.1); border: 1px solid rgba(255,107,122,.3);
+    color: var(--fail); border-radius: var(--r); padding: 11px 15px; font-size: 13px; flex: none;
   }
 
-  /* ------------------------------------------------------------ вкладки */
+  /* -------------------------------------------------------------- график */
 
-  h2 { margin: 0 0 4px; font-size: 17px; font-weight: 650; }
-  .lead { color: var(--muted); font-size: 13px; margin: 0 0 20px; max-width: 560px; }
+  .chart { flex: 1; }
+  .bars { flex: 1; min-height: 60px; display: flex; align-items: flex-end; gap: 2px; }
+  .bars i { flex: 1; min-height: 2px; border-radius: 2px; background: var(--surf2); }
+  .bars i.hot { background: var(--acc); }
+  .axis { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--dim); }
 
-  label.field { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; }
+  /* --------------------------------------------------------------- ноды */
+
+  .list { overflow: hidden; }
+  .nodes { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
+  .nodes::-webkit-scrollbar { width: 8px; }
+  .nodes::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+  .row-node {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: var(--r); cursor: pointer;
+    background: var(--surf2); border: 1px solid transparent;
+    color: var(--fg); text-align: left; font: inherit; width: 100%;
+  }
+  .row-node:hover { border-color: var(--line); }
+  .row-node[data-chosen] { border-color: var(--acc); }
+  .row-node[data-current] { background: var(--accSoft); }
+  .row-node .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--dim); }
+  .row-node[data-alive] .dot { background: var(--acc); }
+  .row-node .grow { flex: 1; min-width: 0; }
+  .row-node .name { font-size: 13px; }
+  .row-node .sub { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-node .bar { width: 70px; height: 3px; border-radius: 2px; flex: none; background: var(--surf); overflow: hidden; }
+  .row-node .bar i { display: block; height: 100%; background: var(--acc); }
+  .row-node .ms { font-family: var(--mono); font-size: 12px; width: 56px; text-align: right; flex: none; }
+
+  .row-fact { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: var(--r); background: var(--surf2); font-size: 13px; }
+  .row-fact span:last-child { font-family: var(--mono); font-size: 11px; color: var(--acc); text-align: right; }
+
+  /* ------------------------------------------------------------- вкладки */
+
+  .lead { color: var(--dim); font-size: 13px; margin: 0; line-height: 1.55; }
+
   textarea {
-    width: 100%; background: #0a1020; color: var(--text);
-    border: 1px solid var(--line); border-radius: 11px;
-    padding: 12px 14px; font: 12.5px/1.5 ui-monospace, Consolas, monospace;
+    width: 100%; background: var(--surf2); color: var(--fg);
+    border: 1px solid var(--line); border-radius: var(--r);
+    padding: 12px 14px; font: 12px/1.5 var(--mono);
     resize: none; user-select: text; transition: border-color .15s;
   }
-  textarea:focus { outline: none; border-color: var(--accent); }
+  textarea:focus { outline: none; border-color: var(--acc); }
 
   button.primary {
-    background: var(--accent); color: #fff; border: none;
-    padding: 10px 20px; border-radius: 10px; cursor: pointer;
+    background: var(--acc); color: var(--accFg); border: none;
+    padding: 10px 20px; border-radius: var(--r); cursor: pointer;
     font: inherit; font-weight: 600; transition: filter .15s;
   }
   button.primary:hover { filter: brightness(1.08); }
-
-  .row { display: flex; gap: 12px; align-items: center; margin-top: 14px; }
-  .hint { color: var(--muted); font-size: 12px; margin-top: 14px; max-width: 560px; }
-  .bad { color: #f0919b; }
-
-  pre.log {
-    flex: 1; margin: 0; overflow: auto; user-select: text;
-    background: #0a1020; border: 1px solid var(--line); border-radius: 12px;
-    padding: 14px; font: 12px/1.65 ui-monospace, Consolas, monospace;
-    color: #9aa8c6; white-space: pre-wrap;
+  button.chip {
+    background: var(--surf2); color: var(--dim); border: none;
+    padding: 7px 12px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 12px;
   }
-  pre.log::-webkit-scrollbar { width: 9px; }
-  pre.log::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 6px; }
+  button.chip:hover { color: var(--fg); }
+  button.chip:disabled { opacity: .5; cursor: default; }
 
-  p.about { color: var(--muted); max-width: 580px; font-size: 13.5px; }
-  p.about b { color: #c9d3e8; font-weight: 600; }
+  .row { display: flex; gap: 12px; align-items: center; }
+  .hint { color: var(--dim); font-size: 12px; margin: 0; }
+  .bad { color: var(--fail); }
+
+  /* Ключ: карточка с фактами, как в макете, — трафик, срок, статус. */
+  .keycard .facts { display: flex; gap: 32px; margin-top: 6px; }
+  .keycard .fact .v { font-family: var(--mono); font-size: 16px; margin-top: 4px; }
+  .keycard .host { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .badge { padding: 5px 10px; border-radius: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; background: var(--surf2); color: var(--dim); white-space: nowrap; }
+  .badge.on { background: var(--accSoft); color: var(--acc); }
+  .track { height: 5px; border-radius: 3px; overflow: hidden; background: var(--surf2); margin-top: 8px; }
+  .track i { display: block; height: 100%; background: var(--acc); }
+
+  /* Журнал: время отдельно от текста, как в макете. */
+  .log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .log::-webkit-scrollbar { width: 8px; }
+  .log::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+  .log .ln { display: flex; gap: 12px; align-items: flex-start; font-family: var(--mono); font-size: 12px; line-height: 1.5; }
+  .log .ln .tm { color: var(--dim); white-space: nowrap; }
+
+  /* Тема: пресеты — карточки с фоном пресета, чтобы выбирать по виду, а не
+     по названию. */
+  .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; padding-right: 4px; }
+  .presets::-webkit-scrollbar { width: 8px; }
+  .presets::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+  .preset {
+    display: flex; align-items: center; gap: 10px; padding: 10px 11px;
+    border-radius: var(--r); cursor: pointer; border: 1px solid var(--line); font: inherit; text-align: left;
+  }
+  .preset[aria-pressed="true"] { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc); }
+  .preset .sw { width: 18px; height: 18px; border-radius: 6px; flex: none; }
+  .preset .nm { font-size: 12px; font-weight: 500; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .swatch { width: 30px; height: 30px; border-radius: 9px; cursor: pointer; border: none; outline: 2px solid transparent; outline-offset: 2px; }
+  .swatch[aria-pressed="true"] { outline-color: var(--fg); }
+  .pills { display: flex; gap: 6px; }
+  .pillb { flex: 1; text-align: center; padding: 9px 0; border-radius: 10px; font: inherit; font-size: 12px; cursor: pointer; background: var(--surf2); color: var(--dim); border: none; }
+  .pillb[aria-pressed="true"] { background: var(--acc); color: var(--accFg); }
+
+  p.about { color: var(--dim); max-width: 580px; font-size: 13.5px; margin: 0; line-height: 1.55; }
+  p.about b { color: var(--fg); font-weight: 600; }
 </style>
 </head>
 <body data-state="idle">
 <div class="app">
 
-  <aside>
+  <header class="top">
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 20 5.2V11.5C20 16.6 16.6 20.9 12 22.2 7.4 20.9 4 16.6 4 11.5V5.2Z" fill="#4d7cfe"/><path d="M8.3 9.4 12 16.6 15.7 9.4" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      MARVIA
+      <img src="assets/marvia-mark.png" alt="">
+      <span class="wordmark">MARVIA</span>
+      <span class="ver" id="version"></span>
     </div>
+    <button class="lang" id="lang" type="button"></button>
+  </header>
 
-    <button class="tab" data-tab="home" aria-selected="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v9M6.5 6.5a8 8 0 1 0 11 0"/></svg>
-      <span data-t="tabHome">Главная</span>
-    </button>
-    <button class="tab" data-tab="key">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="12" r="3.6"/><path d="M11.6 12H21M17.5 12v3.4M20.4 12v2.6"/></svg>
-      <span data-t="tabKey">Ключ доступа</span>
-    </button>
-    <button class="tab" data-tab="nodes">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/><path d="M3.4 12h17.2M12 3.4c2.2 2.4 3.4 5.4 3.4 8.6S14.2 18.2 12 20.6c-2.2-2.4-3.4-5.4-3.4-8.6S9.8 5.8 12 3.4z"/></svg>
-      <span data-t="tabNodes">Страны</span>
-    </button>
-    <button class="tab" data-tab="log">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg>
-      <span data-t="tabLog">Журнал</span>
-    </button>
-    <button class="tab" data-tab="about">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 11.2v5M12 7.9h.01"/></svg>
-      <span data-t="tabAbout">О программе</span>
-    </button>
+  <div class="body">
+    <aside>
+      <button class="tab" data-tab="home" aria-selected="true"><i class="dot"></i><span data-t="tabHome">Туннель</span></button>
+      <button class="tab" data-tab="nodes"><i class="dot"></i><span data-t="tabNodes">Страны</span></button>
+      <button class="tab" data-tab="key"><i class="dot"></i><span data-t="tabKey">Ключ доступа</span></button>
+      <button class="tab" data-tab="log"><i class="dot"></i><span data-t="tabLog">Журнал</span></button>
+      <button class="tab" data-tab="theme"><i class="dot"></i><span data-t="tabTheme">Тема</span></button>
+      <button class="tab" data-tab="about"><i class="dot"></i><span data-t="tabAbout">О программе</span></button>
 
-    <button class="tab lang" id="lang" type="button"></button>
+      <div class="spacer"></div>
 
-    <div class="spacer"></div>
-
-    <div class="speeds">
-      <div class="speed">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#21c48a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
-        <span class="total" id="t-down">0</span>
-        <b id="s-down">0</b>
+      <!--
+        Подписка: до какого числа и сколько трафика осталось. Человек
+        заплатил и вправе это видеть, не спрашивая продавца, — а продавец
+        вправе не отвечать на такое вручную каждому.
+      -->
+      <div class="sub-card">
+        <div class="t" id="sub-title"></div>
+        <div class="s" id="subscription"></div>
       </div>
-      <div class="speed">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#4d7cfe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
-        <span class="total" id="t-up">0</span>
-        <b id="s-up">0</b>
+    </aside>
+
+    <main>
+      <div class="head">
+        <div>
+          <div class="title" id="page-title"></div>
+          <div class="sub" id="page-sub"></div>
+        </div>
+        <div class="pill"><i></i><span id="pill-text"></span></div>
       </div>
-    </div>
-  </aside>
 
-  <main>
-    <div class="glow"></div>
+      <!-- -------------------------------------------------------- главная -->
+      <section class="page" data-tab="home" data-open>
+        <div id="elev-warn" class="warn" data-t="elevWarn" hidden></div>
 
-    <!-- -------------------------------------------------------- главная -->
-    <section class="page" data-tab="home" data-open>
-      <div id="elev-warn" class="warn" data-t="elevWarn" hidden></div>
+        <div class="kpis">
+          <div class="kpi"><div class="k" data-t="kSession"></div><div class="v" id="k-session">—</div></div>
+          <div class="kpi"><div class="k" data-t="down"></div><div class="v" id="s-down">0</div><div class="t" id="t-down"></div></div>
+          <div class="kpi"><div class="k" data-t="up"></div><div class="v" id="s-up">0</div><div class="t" id="t-up"></div></div>
+          <div class="kpi"><div class="k" data-t="kPing"></div><div class="v acc" id="k-ping">—</div></div>
+        </div>
 
-      <div class="center">
-        <button class="power" id="power" data-state="idle" title="">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
-            <path d="M12 3.2v9.2"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/>
-          </svg>
-        </button>
+        <div class="split">
+          <div class="card hero wide">
+            <button class="power" id="power" data-state="idle" title="">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
+                <path d="M12 3.2v9.2"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/>
+              </svg>
+            </button>
 
-        <div class="status" id="status"></div>
-        <div class="detail" id="detail"></div>
+            <div class="status" id="status"></div>
+            <div class="detail" id="detail"></div>
 
-        <!--
-          Подписка: до какого числа и сколько трафика осталось. Человек
-          заплатил и вправе это видеть, не спрашивая продавца, — а продавец
-          вправе не отвечать на такое вручную каждому.
-        -->
-        <div class="detail" id="subscription" hidden></div>
+            <!--
+              Поле ключа прямо на первом экране, пока ключа нет. Когда ключ
+              уже сохранён, поле здесь не нужно — оно остаётся на своей вкладке.
+            -->
+            <div class="first-key" id="first-key" hidden>
+              <textarea id="first-account" rows="2" spellcheck="false" placeholder="marvia://…"></textarea>
+              <div class="row">
+                <button class="primary" id="first-save" data-t="keySaveFirst"></button>
+                <span id="first-msg" class="hint"></span>
+              </div>
+            </div>
 
-        <!--
-          Поле ключа прямо на первом экране, пока ключа нет.
+            <div class="node" id="node-card">
+              <i class="mark"></i>
+              <div>
+                <div class="name" id="node-name"></div>
+                <div class="sub" id="node-addr"></div>
+              </div>
+              <div class="ping" id="node-ping"></div>
+            </div>
 
-          Раньше на первом экране была только кнопка, а поле пряталось на
-          вкладке: человек жал кнопку, получал отказ и только потом шёл
-          искать, куда вставлять ссылку. Когда ключ уже сохранён, поле здесь
-          не нужно — оно остаётся на своей вкладке.
-        -->
-        <div class="first-key" id="first-key" hidden>
-          <textarea id="first-account" rows="2" spellcheck="false" placeholder="marvia://…"></textarea>
+            <div class="leak" id="proxy-warn" hidden>
+              <div class="head">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v5M12 17.5v.01"/><path d="M10.3 3.9 2.4 17.4A2 2 0 0 0 4.1 20.4h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                <span class="title" data-t="proxyTitle"></span>
+              </div>
+              <div class="body" id="proxy-text"></div>
+              <div class="body" id="proxy-care" data-t="proxyCare"></div>
+              <div class="act">
+                <button id="proxy-off" data-t="proxyOff"></button>
+                <span class="said" id="proxy-msg"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="card chart">
+              <div class="card-head"><b data-t="chartTitle"></b><span class="mono" id="hour-total"></span></div>
+              <div class="bars" id="bars"></div>
+              <div class="axis"><span data-t="chartFrom"></span><span data-t="chartNow"></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- --------------------------------------------------------- страны -->
+      <section class="page" data-tab="nodes">
+        <div class="split">
+          <div class="card list wide">
+            <div class="card-head">
+              <b data-t="nodesAll"></b>
+              <button class="chip" id="nodes-measure" data-t="nodesMeasure"></button>
+            </div>
+            <span id="nodes-msg" class="hint"></span>
+            <div class="nodes" id="nodes-list"></div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <b data-t="nodesAutoTitle"></b>
+              <p class="lead" data-t="nodesLead"></p>
+              <div class="row-fact"><span data-t="ruleStrategy"></span><span data-t="ruleStrategyV"></span></div>
+              <div class="row-fact"><span data-t="ruleWatch"></span><span data-t="ruleWatchV"></span></div>
+              <div class="row-fact"><span data-t="ruleNow"></span><span id="rule-now"></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ----------------------------------------------------------- ключ -->
+      <section class="page" data-tab="key">
+        <div class="card keycard">
+          <div class="card-head">
+            <div>
+              <b id="key-label"></b>
+              <div class="host" id="key-host"></div>
+            </div>
+            <span class="badge" id="key-state"></span>
+          </div>
+          <div class="facts">
+            <div class="fact"><div class="k" data-t="factTraffic"></div><div class="v" id="f-traffic">—</div></div>
+            <div class="fact"><div class="k" data-t="factUntil"></div><div class="v" id="f-until">—</div></div>
+          </div>
+          <div class="track"><i id="f-fill" style="width:0"></i></div>
+          <span class="hint" id="key-note"></span>
+        </div>
+        <div class="card">
+          <p class="lead" data-t="keyLead"></p>
+          <textarea id="account" rows="3" spellcheck="false" placeholder="marvia://…"></textarea>
           <div class="row">
-            <button class="primary" id="first-save" data-t="keySaveFirst"></button>
-            <span id="first-msg" class="hint" style="margin:0"></span>
+            <button class="primary" id="save" data-t="keySave"></button>
+            <span id="save-msg" class="hint"></span>
+          </div>
+          <p class="hint" data-t="keyHint"></p>
+        </div>
+      </section>
+
+      <!-- --------------------------------------------------------- журнал -->
+      <section class="page" data-tab="log">
+        <div class="card list">
+          <p class="lead" data-t="logLead"></p>
+          <div class="log" id="log"></div>
+        </div>
+      </section>
+
+      <!-- ----------------------------------------------------------- тема -->
+      <section class="page" data-tab="theme">
+        <div class="split">
+          <div class="card list wide">
+            <div class="k" data-t="themePresets"></div>
+            <div class="presets" id="presets"></div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="k" data-t="themeAccent"></div>
+              <div class="swatches" id="accents"></div>
+            </div>
+            <div class="card">
+              <div class="k" data-t="themeDensity"></div>
+              <div class="pills" id="densities"></div>
+            </div>
+            <div class="card">
+              <p class="lead" data-t="themeNote"></p>
+              <div class="row"><button class="chip" id="theme-reset" data-t="themeReset"></button></div>
+            </div>
           </div>
         </div>
+      </section>
 
-        <div class="node" id="node-card">
-          <div class="mark">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2.5 19.5 5.5v6C19.5 16 16.3 19.9 12 21.2 7.7 19.9 4.5 16 4.5 11.5v-6z"/></svg>
-          </div>
-          <div>
-            <div class="name" id="node-name"></div>
-            <div class="sub" id="node-addr"></div>
-          </div>
-          <div class="ping" id="node-ping"></div>
+      <!-- ----------------------------------------------------- о программе -->
+      <section class="page" data-tab="about">
+        <div class="card">
+          <p class="about" data-html="about1"></p>
+          <p class="about" data-html="about2"></p>
+          <p class="about" data-t="about3"></p>
         </div>
-
-        <div class="leak" id="proxy-warn" hidden>
-          <div class="head">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v5M12 17.5v.01"/><path d="M10.3 3.9 2.4 17.4A2 2 0 0 0 4.1 20.4h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-            <span class="title" data-t="proxyTitle"></span>
-          </div>
-          <div class="body" id="proxy-text"></div>
-          <div class="body" id="proxy-care" data-t="proxyCare"></div>
-          <div class="act">
-            <button id="proxy-off" data-t="proxyOff"></button>
-            <span class="said" id="proxy-msg"></span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ----------------------------------------------------------- ключ -->
-    <section class="page" data-tab="key">
-      <h2 data-t="keyTitle"></h2>
-      <p class="lead" data-t="keyLead"></p>
-      <textarea id="account" rows="3" spellcheck="false" placeholder="marvia://…"></textarea>
-      <div class="row">
-        <button class="primary" id="save" data-t="keySave"></button>
-        <span id="save-msg" class="hint" style="margin:0"></span>
-      </div>
-      <p class="hint">
-        В ссылке личный ключ. Она лежит в профиле пользователя и никуда не
-        отправляется — кроме адреса подписки, который в ней же и записан.
-      </p>
-    </section>
-
-    <!-- --------------------------------------------------------- страны -->
-    <section class="page" data-tab="nodes">
-      <h2 data-t="nodesTitle"></h2>
-      <p class="lead" data-t="nodesLead"></p>
-      <div class="row">
-        <button class="primary" id="nodes-measure" data-t="nodesMeasure"></button>
-        <span id="nodes-msg" class="hint" style="margin:0"></span>
-      </div>
-      <div class="nodes" id="nodes-list"></div>
-    </section>
-
-    <!-- --------------------------------------------------------- журнал -->
-    <section class="page" data-tab="log">
-      <h2 data-t="logTitle"></h2>
-      <p class="lead" data-t="logLead"></p>
-      <pre class="log" id="log"></pre>
-    </section>
-
-    <!-- ----------------------------------------------------- о программе -->
-    <section class="page" data-tab="about">
-      <h2 data-t="aboutTitle"></h2>
-      <p class="about" data-html="about1"></p>
-      <p class="about" data-html="about2"></p>
-      <p class="about">
-        При выходе маршруты снимаются сами — снимаются именно свои, поимённо.
-        Сбросить таблицу маршрутов целиком было бы проще, но это быстрый способ
-        оставить человека вообще без интернета.
-      </p>
-    </section>
-  </main>
+      </section>
+    </main>
+  </div>
 </div>
 
 <script>
 "use strict";
+
+/*%LOOK%*/
 
 const $ = (id) => document.getElementById(id);
 
@@ -471,14 +603,30 @@ const T = {
   ru: {
     lang: "ru", switchTo: "EN", switchTitle: "Switch to English",
 
-    tabHome: "Туннель", tabKey: "Ключ доступа", tabLog: "Журнал", tabAbout: "О программе", tabNodes: "Страны",
-    nodesTitle: "Через какую страну идти",
+    tabHome: "Туннель", tabKey: "Ключ доступа", tabLog: "Журнал", tabAbout: "О программе", tabNodes: "Страны", tabTheme: "Тема",
+    pages: {
+      home: ["Туннель", "Состояние и трафик"],
+      nodes: ["Страны", "Через какую идти"],
+      key: ["Ключ доступа", "Ссылка от бота после оплаты"],
+      log: ["Журнал", "Что программа делала"],
+      theme: ["Тема", "Окно красится сразу"],
+      about: ["О программе", "Как это устроено"],
+    },
+    pill: { idle: "НАПРЯМУЮ", connecting: "ПОДКЛЮЧАЮСЬ", connected: "ЗАЩИЩЕНО", failed: "НЕ ПОДКЛЮЧИЛОСЬ", stalled: "СВЯЗЬ ПОТЕРЯНА" },
+
+    kSession: "Сессия", kPing: "Пинг", down: "Приём", up: "Отдача",
+    chartTitle: "Трафик за час", chartFrom: "−60 мин", chartNow: "сейчас",
+
+    nodesAll: "Все страны",
+    nodesAutoTitle: "Автовыбор",
     nodesLead: "Скорость меряется с этого компьютера, а не с сервера продавца. Обычно выбирать не нужно — приложение само берёт самую быструю и само уходит с той, что замолчала.",
+    ruleStrategy: "Как выбирает", ruleStrategyV: "самая быстрая по замеру",
+    ruleWatch: "Как следит", ruleWatchV: "по трафику, не по расписанию",
+    ruleNow: "Сейчас",
     nodesMeasure: "Перемерить",
     nodesAuto: "Автовыбор", nodesAutoSub: "самая быстрая прямо сейчас",
     nodesCurrent: "идёт трафик", nodesChosen: "выбрана вами", nodesDead: "не ответила", nodesUnknown: "не мерили",
     nodesMeasuring: "меряю…", nodesSwitching: "переключаю…", nodesNone: "туннель не поднят — список появится после подключения",
-    down: "Приём", up: "Отдача",
 
     state: {
       idle: "Отключено", connecting: "Подключаюсь", connected: "Подключено",
@@ -499,13 +647,29 @@ const T = {
 
     keyTitle: "Ключ доступа",
     keyLead: "Ссылка вида marvia://… — её присылает бот после оплаты.",
+    keyHint: "В ссылке личный ключ. Она лежит в профиле пользователя и никуда не отправляется — кроме адреса подписки, который в ней же и записан.",
     keySave: "Сохранить", keySaveFirst: "Сохранить ключ", keySaved: "Сохранено",
+    keyOn: "СОХРАНЁН", keyOff: "НЕТ КЛЮЧА", keyNoHost: "ссылки пока нет",
+    keyNote: "срок и остаток трафика панель сообщает при подключении",
+    keyNoLimit: "без квоты", keyNoUntil: "без срока",
+    factTraffic: "Осталось", factUntil: "Срок",
+    subOn: "Ключ сохранён", subOff: "Ключа нет", subAfter: "срок и квота — после подключения", subNoKey: "вставь ссылку от бота",
 
-    logTitle: "Журнал",
     logLead: "Что программа делала. Пригодится, если что-то не заработало.",
     logEmpty: "пусто",
 
-    aboutTitle: "О программе",
+    themePresets: "Пресеты", themeAccent: "Акцент", themeDensity: "Плотность",
+    themeNote: "Тема хранится на этом компьютере и никуда не отправляется. Та же таблица цветов стоит в панели продавца.",
+    themeReset: "Вернуть серый",
+    density: { compact: "Плотно", normal: "Обычно", roomy: "Просторно" },
+    themes: {
+      emerald: "Изумруд", jade: "Нефрит", teal: "Лагуна", ice: "Лёд", cobalt: "Кобальт", ultra: "Ультра",
+      plum: "Слива", orchid: "Орхидея", fuchsia: "Фуксия", rose: "Роза", crimson: "Кармин", ember: "Угли",
+      amber: "Янтарь", gold: "Золото", citrus: "Цитрус", lime: "Лайм", olive: "Олива", sand: "Песок",
+      copper: "Медь", steel: "Серый", slate: "Графит", mono: "Моно", oled: "OLED", midnight: "Полночь",
+      daylight: "Дневная", paper: "Бумага", linen: "Лён",
+    },
+
     about1: "Marvia забирает весь трафик компьютера и уводит его через ноду, "
       + "замаскированную под обычный сайт. <b>Ноду программа выбирает сама</b> — по "
       + "замерам с этой машины, а не по мнению панели: панель стоит за границей и "
@@ -513,6 +677,9 @@ const T = {
     about2: "Соединение до самой ноды идёт <b>мимо туннеля</b>, отдельным маршрутом. "
       + "Иначе получился бы круг: пакеты, которыми программа разговаривает с "
       + "нодой, попадали бы в тот самый туннель, который к этой ноде и ведёт.",
+    about3: "При выходе маршруты снимаются сами — снимаются именно свои, поимённо. "
+      + "Сбросить таблицу маршрутов целиком было бы проще, но это быстрый способ "
+      + "оставить человека вообще без интернета.",
 
     proxyTitle: "Часть трафика идёт мимо туннеля",
     proxyCare: "Если прокси ставил не ты — на рабочем компьютере или под родительским "
@@ -532,14 +699,30 @@ const T = {
   en: {
     lang: "en", switchTo: "RU", switchTitle: "Переключить на русский",
 
-    tabHome: "Tunnel", tabKey: "Access key", tabLog: "Log", tabAbout: "About", tabNodes: "Countries",
-    nodesTitle: "Which country to go through",
+    tabHome: "Tunnel", tabKey: "Access key", tabLog: "Log", tabAbout: "About", tabNodes: "Countries", tabTheme: "Theme",
+    pages: {
+      home: ["Tunnel", "State and traffic"],
+      nodes: ["Countries", "Which one to go through"],
+      key: ["Access key", "The link the bot sends after payment"],
+      log: ["Log", "What the program did"],
+      theme: ["Theme", "The window repaints at once"],
+      about: ["About", "How it works"],
+    },
+    pill: { idle: "DIRECT", connecting: "CONNECTING", connected: "PROTECTED", failed: "NOT CONNECTED", stalled: "CONNECTION LOST" },
+
+    kSession: "Session", kPing: "Ping", down: "Down", up: "Up",
+    chartTitle: "Traffic, last hour", chartFrom: "−60 min", chartNow: "now",
+
+    nodesAll: "All countries",
+    nodesAutoTitle: "Automatic choice",
     nodesLead: "Speed is measured from this computer, not from the seller server. Usually there is nothing to choose — the app picks the fastest one and leaves any node that goes silent.",
+    ruleStrategy: "How it picks", ruleStrategyV: "the fastest by measurement",
+    ruleWatch: "How it watches", ruleWatchV: "by traffic, not by schedule",
+    ruleNow: "Now",
     nodesMeasure: "Measure again",
     nodesAuto: "Automatic", nodesAutoSub: "the fastest one right now",
     nodesCurrent: "traffic goes here", nodesChosen: "chosen by you", nodesDead: "no answer", nodesUnknown: "not measured",
     nodesMeasuring: "measuring…", nodesSwitching: "switching…", nodesNone: "the tunnel is not up — the list appears after connecting",
-    down: "Down", up: "Up",
 
     state: {
       idle: "Disconnected", connecting: "Connecting", connected: "Connected",
@@ -560,13 +743,29 @@ const T = {
 
     keyTitle: "Access key",
     keyLead: "A marvia://… link — the bot sends it after payment.",
+    keyHint: "The link carries a private key. It stays in the user profile and is sent nowhere — except to the subscription address written in the link itself.",
     keySave: "Save", keySaveFirst: "Save the key", keySaved: "Saved",
+    keyOn: "SAVED", keyOff: "NO KEY", keyNoHost: "no link yet",
+    keyNote: "the panel reports expiry and remaining traffic on connect",
+    keyNoLimit: "no quota", keyNoUntil: "no expiry",
+    factTraffic: "Left", factUntil: "Until",
+    subOn: "Key saved", subOff: "No key", subAfter: "expiry and quota — after connecting", subNoKey: "paste the link from the bot",
 
-    logTitle: "Log",
     logLead: "What the program did. Useful when something did not work.",
     logEmpty: "empty",
 
-    aboutTitle: "About",
+    themePresets: "Presets", themeAccent: "Accent", themeDensity: "Density",
+    themeNote: "The theme is kept on this computer and sent nowhere. The seller panel uses the same colour table.",
+    themeReset: "Back to grey",
+    density: { compact: "Compact", normal: "Normal", roomy: "Roomy" },
+    themes: {
+      emerald: "Emerald", jade: "Jade", teal: "Lagoon", ice: "Ice", cobalt: "Cobalt", ultra: "Ultra",
+      plum: "Plum", orchid: "Orchid", fuchsia: "Fuchsia", rose: "Rose", crimson: "Crimson", ember: "Ember",
+      amber: "Amber", gold: "Gold", citrus: "Citrus", lime: "Lime", olive: "Olive", sand: "Sand",
+      copper: "Copper", steel: "Grey", slate: "Slate", mono: "Mono", oled: "OLED", midnight: "Midnight",
+      daylight: "Daylight", paper: "Paper", linen: "Linen",
+    },
+
     about1: "Marvia takes all traffic from this computer and routes it through a node "
       + "disguised as an ordinary website. <b>The program picks the node itself</b> — by "
       + "measuring from this machine, not by what the panel thinks: the panel sits abroad "
@@ -574,6 +773,9 @@ const T = {
     about2: "The connection to the node itself goes <b>outside the tunnel</b>, by its own route. "
       + "Otherwise it would be a loop: the packets the program uses to talk to the node "
       + "would go into the very tunnel that leads to that node.",
+    about3: "On exit the routes are removed by the program — its own routes, by name. "
+      + "Flushing the whole routing table would be simpler, but it is a quick way to leave "
+      + "a person without internet at all.",
 
     proxyTitle: "Some traffic bypasses the tunnel",
     proxyCare: "If you did not set the proxy — on a work computer or under parental "
@@ -623,6 +825,9 @@ function paintStatic() {
 
   $("lang").textContent = d.switchTo;
   $("lang").title = d.switchTitle;
+
+  paintHead();
+  paintTheme();
 }
 
 async function setLang(next) {
@@ -637,19 +842,106 @@ async function setLang(next) {
 
 /* --------------------------------------------------------------- вкладки */
 
+let openTab = "home";
+
+function paintHead() {
+  const p = L().pages[openTab] || L().pages.home;
+  $("page-title").textContent = p[0];
+  $("page-sub").textContent = p[1];
+}
+
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
+    openTab = tab.dataset.tab;
     document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
     document.querySelectorAll(".page").forEach((p) => {
-      if (p.dataset.tab === tab.dataset.tab) p.setAttribute("data-open", "");
+      if (p.dataset.tab === openTab) p.setAttribute("data-open", "");
       else p.removeAttribute("data-open");
     });
+    paintHead();
 
-  // Список стран подтягиваем при открытии вкладки, а не постоянно: он
-  // меняется редко, а лишний опрос стоит человеку батареи и трафика.
-  if (tab.dataset.tab === "nodes") loadNodes();
+    // Список стран подтягиваем при открытии вкладки, а не постоянно: он
+    // меняется редко, а лишний опрос стоит человеку батареи и трафика.
+    if (openTab === "nodes") loadNodes();
   });
 });
+
+/* ------------------------------------------------------------------ тема */
+
+/*
+  Тема: таблица и арифметика — общие с панелью, вшиты выше на место метки.
+  Здесь только выбор и раскладка переменных на корневой элемент: остальная
+  страница написана через var(--…) и перекрашивается сама.
+*/
+
+let look = Look.load();
+
+function applyLook() {
+  const t = Look.theme(look);
+  document.documentElement.style.cssText = Look.vars(t, look.density);
+  paintTheme();
+}
+
+function setLook(patch) {
+  Object.assign(look, patch);
+  Look.save(look);
+  applyLook();
+}
+
+// paintTheme рисует вкладку «Тема». Заново при каждой смене: у карточек
+// подсветка выбранного, а у плиток — цвет активной, и всё это от темы.
+function paintTheme() {
+  const d = L();
+  const t = Look.theme(look);
+
+  const presets = $("presets");
+  presets.replaceChildren();
+  for (const [key, p] of Object.entries(Look.PRESETS)) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "preset";
+    b.setAttribute("aria-pressed", String(look.preset === key));
+    b.style.background = "linear-gradient(135deg," + Look.mix(p.bg, p.acc, 0.22) + "," + p.bg + ")";
+    b.style.color = Look.lum(p.bg) < 0.5 ? "#eef0f2" : "#16181a";
+    const sw = document.createElement("i");
+    sw.className = "sw";
+    sw.style.background = p.acc;
+    const nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = d.themes[key] || key;
+    b.append(sw, nm);
+    // Смена пресета сбрасывает акцент: у каждого пресета свой, и чужой
+    // акцент поверх нового фона — это то, чего человек не выбирал.
+    b.addEventListener("click", () => setLook({ preset: key, acc: null }));
+    presets.append(b);
+  }
+
+  const accents = $("accents");
+  accents.replaceChildren();
+  for (const c of Look.ACCENTS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "swatch";
+    b.style.background = c;
+    b.setAttribute("aria-pressed", String(t.acc === c));
+    b.addEventListener("click", () => setLook({ acc: c }));
+    accents.append(b);
+  }
+
+  const densities = $("densities");
+  densities.replaceChildren();
+  for (const k of Object.keys(Look.DENSITY)) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pillb";
+    b.textContent = d.density[k];
+    b.setAttribute("aria-pressed", String(look.density === k));
+    b.addEventListener("click", () => setLook({ density: k }));
+    densities.append(b);
+  }
+}
+
+on("theme-reset", "click", () => setLook(Object.assign({}, Look.DEFAULT)));
 
 /* ------------------------------------------------------------- прокси */
 
@@ -729,7 +1021,7 @@ async function api(method, path, body) {
 // Текст не вставляем разметкой: имя и страну пишет продавец, и одна кавычка
 // в названии сервера превратилась бы в сломанную страницу, а то и хуже.
 function paintNodes(list) {
-  const box = document.getElementById("nodes-list");
+  const box = $("nodes-list");
   box.replaceChildren();
 
   const d = L();
@@ -762,11 +1054,19 @@ function paintNodes(list) {
     sub.textContent = opts.sub;
     grow.append(name, sub);
 
+    // Полоска качества: замер в миллисекундах на глаз не сравнить, а длина —
+    // сравнивается. Триста миллисекунд и хуже — пусто.
+    const bar = document.createElement("span");
+    bar.className = "bar";
+    const fill = document.createElement("i");
+    fill.style.width = opts.ms > 0 ? Math.max(0, Math.min(100, Math.round((1 - opts.ms / 300) * 100))) + "%" : "0";
+    bar.append(fill);
+
     const ms = document.createElement("div");
     ms.className = "ms";
-    ms.textContent = opts.ms;
+    ms.textContent = opts.ms > 0 ? opts.ms + d.ms : "";
 
-    b.append(dot, grow, ms);
+    b.append(dot, grow, bar, ms);
     b.addEventListener("click", () => chooseNode(opts.id));
     return b;
   };
@@ -779,7 +1079,7 @@ function paintNodes(list) {
     id: 0,
     name: d.nodesAuto,
     sub: fastest ? d.nodesAutoSub + " — " + (fastest.country || fastest.name) : d.nodesAutoSub,
-    ms: "",
+    ms: 0,
     alive: true,
     chosen: !chosenAny,
     current: false,
@@ -799,7 +1099,7 @@ function paintNodes(list) {
       id: n.id,
       name: n.country || n.name,
       sub,
-      ms: n.ms > 0 ? n.ms + d.ms : "",
+      ms: n.ms > 0 ? n.ms : 0,
       alive: n.alive,
       current: n.current,
       chosen: n.chosen,
@@ -812,12 +1112,12 @@ async function loadNodes() {
     const data = await api("GET", "api/nodes");
     paintNodes(data.nodes);
   } catch (e) {
-    document.getElementById("nodes-msg").textContent = e.message;
+    $("nodes-msg").textContent = e.message;
   }
 }
 
 async function chooseNode(id) {
-  const msg = document.getElementById("nodes-msg");
+  const msg = $("nodes-msg");
   msg.textContent = L().nodesSwitching;
   try {
     const data = await api("POST", "api/nodes/select", { id });
@@ -828,15 +1128,19 @@ async function chooseNode(id) {
   }
 }
 
-document.getElementById("nodes-measure").addEventListener("click", async () => {
-  const msg = document.getElementById("nodes-msg");
+on("nodes-measure", "click", async () => {
+  const msg = $("nodes-msg");
+  const button = $("nodes-measure");
   msg.textContent = L().nodesMeasuring;
+  button.disabled = true;
   try {
     const data = await api("POST", "api/nodes/measure");
     paintNodes(data.nodes);
     msg.textContent = "";
   } catch (e) {
     msg.textContent = e.message;
+  } finally {
+    button.disabled = false;
   }
 });
 
@@ -847,6 +1151,22 @@ function bytes(n) {
   let i = 0;
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
   return (i === 0 ? Math.round(n) : n.toFixed(1)) + " " + units[i];
+}
+
+function clock(seconds) {
+  const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
+  const two = (n) => String(n).padStart(2, "0");
+  return two(h) + ":" + two(m) + ":" + two(s);
+}
+
+// keyParts достаёт из ссылки то, что можно показать: хост подписки и метку.
+// Сам ключ — между «//» и «@» — на экран не выводится: он и так в поле ниже.
+function keyParts(link) {
+  const m = /^marvia:\/\/[^@]*@([^/#?]+)[^#]*(?:#(.*))?$/.exec((link || "").trim());
+  if (!m) return null;
+  let label = "";
+  try { label = decodeURIComponent(m[2] || ""); } catch (_) { label = m[2] || ""; }
+  return { host: m[1], label };
 }
 
 /* ------------------------------------------------------------- отрисовка */
@@ -876,18 +1196,41 @@ function complaintNow() {
   return null;
 }
 
+// paintBars рисует час трафика: 60 столбиков, самый высокий — самая
+// нагруженная минута. Столбики от четырёх пятых максимума — акцентом, как в
+// макете: глазу нужна точка отсчёта, а не ровная гребёнка.
+function paintBars(history) {
+  const box = $("bars");
+  const list = Array.isArray(history) && history.length ? history : new Array(60).fill(0);
+  const max = Math.max(1, ...list);
+  const total = list.reduce((a, v) => a + v, 0);
+
+  if (box.children.length !== list.length) {
+    box.replaceChildren(...list.map(() => document.createElement("i")));
+  }
+  list.forEach((v, i) => {
+    const bar = box.children[i];
+    bar.style.height = Math.max(2, Math.round((v / max) * 100)) + "%";
+    bar.classList.toggle("hot", v > 0 && v >= max * 0.8);
+  });
+  $("hour-total").textContent = total > 0 ? bytes(total) : "";
+}
+
 function render(s) {
+  const d = L();
   document.body.dataset.state = s.state;
-  $("status").textContent = titles[s.state] || s.state;
+  $("status").textContent = d.state[s.state] || s.state;
+  $("pill-text").textContent = d.pill[s.state] || s.state;
   $("power").dataset.state = s.state;
   // Во время подключения кнопка была заблокирована, а обработчик отмену умел:
   // человек полторы минуты смотрел на замершее окно и не мог ничего сделать.
   $("power").disabled = !s.elevated;
   $("power").title =
-    s.state === "connecting" ? L().power.cancel
-    : s.state === "connected" || s.state === "stalled" ? L().power.off
-    : L().power.on;
+    s.state === "connecting" ? d.power.cancel
+    : s.state === "connected" || s.state === "stalled" ? d.power.off
+    : d.power.on;
   $("elev-warn").hidden = s.elevated;
+  $("version").textContent = s.version ? "v" + s.version : "";
 
   const detail = $("detail");
 
@@ -897,33 +1240,48 @@ function render(s) {
   const said = complaintNow();
   detail.classList.toggle("bad", s.state === "failed" || s.state === "stalled" || said !== null);
   if (said !== null) detail.textContent = said;
-  else if (s.state === "failed") detail.textContent = s.reason || L().detail.unknown;
-  else if (s.state === "stalled") detail.textContent = s.reason || L().detail.stalled;
-  else if (s.state === "connecting") detail.textContent = L().detail.connecting;
-  else if (s.state === "connected") detail.textContent = L().detail.connected;
-  else if (!s.has_account) detail.textContent = L().detail.noKey;
-  else detail.textContent = L().detail.idle;
+  else if (s.state === "failed") detail.textContent = s.reason || d.detail.unknown;
+  else if (s.state === "stalled") detail.textContent = s.reason || d.detail.stalled;
+  else if (s.state === "connecting") detail.textContent = d.detail.connecting;
+  else if (s.state === "connected") detail.textContent = d.detail.connected;
+  else if (!s.has_account) detail.textContent = d.detail.noKey;
+  else detail.textContent = d.detail.idle;
 
   // Поле ключа на первом экране — только пока ключа нет.
   $("first-key").hidden = s.has_account;
 
-  // Подписка: до какого числа и сколько осталось.
-  const sub = $("subscription");
+  // Подписка: до какого числа и сколько осталось — в боковой и на вкладке ключа.
   const parts = [];
-  if (s.until) parts.push(L().until + s.until);
-  if (s.limit_bytes > 0) parts.push(L().left + bytes(s.left_bytes || 0));
-  sub.hidden = parts.length === 0;
-  sub.textContent = parts.join(" · ");
+  if (s.until) parts.push(d.until + s.until);
+  if (s.limit_bytes > 0) parts.push(d.left + bytes(s.left_bytes || 0));
+  $("sub-title").textContent = s.has_account ? d.subOn : d.subOff;
+  $("subscription").textContent = parts.length ? parts.join(" · ") : (s.has_account ? d.subAfter : d.subNoKey);
+
+  const up = s.state === "connected" || s.state === "stalled";
+  $("key-state").textContent = s.has_account ? d.keyOn : d.keyOff;
+  $("key-state").classList.toggle("on", s.has_account);
+  $("f-until").textContent = s.until ? s.until : (up ? d.keyNoUntil : "—");
+  $("f-traffic").textContent = s.limit_bytes > 0 ? bytes(s.left_bytes || 0) + " / " + bytes(s.limit_bytes) : (up ? d.keyNoLimit : "—");
+  $("f-fill").style.width = s.limit_bytes > 0 ? Math.round(100 * Math.max(0, s.left_bytes || 0) / s.limit_bytes) + "%" : "0";
+  $("key-note").textContent = up ? "" : d.keyNote;
 
   if (s.node) {
     $("node-name").textContent = s.node;
     $("node-addr").textContent = s.address;
-    $("node-ping").textContent = s.ping_ms ? s.ping_ms + L().ms : "";
+    $("node-ping").textContent = s.ping_ms ? s.ping_ms + d.ms : "";
+    $("rule-now").textContent = s.node;
+    $("k-ping").textContent = s.ping_ms ? s.ping_ms + d.ms : "—";
   } else {
-    $("node-name").textContent = L().noNode;
-    $("node-addr").textContent = L().noNodeSub;
+    $("node-name").textContent = d.noNode;
+    $("node-addr").textContent = d.noNodeSub;
     $("node-ping").textContent = "";
+    $("rule-now").textContent = "—";
+    $("k-ping").textContent = "—";
   }
+
+  // Сессия считается здесь, по моменту подъёма: секунды тикают сами, и
+  // программе незачем слать готовую строку раз в секунду.
+  $("k-session").textContent = up && s.since ? clock(Math.max(0, Math.floor(Date.now() / 1000) - s.since)) : "—";
 
   showProxy(s);
 
@@ -932,13 +1290,56 @@ function render(s) {
   const now = Date.now();
   if (prev && now > prev.t) {
     const dt = (now - prev.t) / 1000;
-    $("s-down").textContent = bytes(Math.max(0, (s.down - prev.down) / dt)) + L().perSec;
-    $("s-up").textContent = bytes(Math.max(0, (s.up - prev.up) / dt)) + L().perSec;
+    $("s-down").textContent = bytes(Math.max(0, (s.down - prev.down) / dt)) + d.perSec;
+    $("s-up").textContent = bytes(Math.max(0, (s.up - prev.up) / dt)) + d.perSec;
   }
   prev = { t: now, up: s.up || 0, down: s.down || 0 };
 
   $("t-down").textContent = bytes(s.down || 0);
   $("t-up").textContent = bytes(s.up || 0);
+
+  paintBars(s.history);
+}
+
+// paintKeyCard — заголовок карточки ключа: метка и хост из ссылки.
+function paintKeyCard(link) {
+  const d = L();
+  const parts = keyParts(link);
+  $("key-label").textContent = parts && parts.label ? parts.label : d.keyTitle;
+  $("key-host").textContent = parts ? parts.host : d.keyNoHost;
+}
+
+// paintLog раскладывает строки журнала: время отдельно, текст отдельно.
+// Строка приходит как «ЧЧ:ММ:СС  текст» — программа так их и пишет.
+function paintLog(lines) {
+  const box = $("log");
+  const list = lines || [];
+  if (list.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = L().logEmpty;
+    box.replaceChildren(empty);
+    return;
+  }
+  // Перерисовываем только когда число строк изменилось: журнал опрашивается
+  // каждую секунду, а прокрутку человек ставит руками.
+  if (box.dataset.count === String(list.length)) return;
+  box.dataset.count = String(list.length);
+
+  const stuck = box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
+  box.replaceChildren(...list.map((line) => {
+    const ln = document.createElement("div");
+    ln.className = "ln";
+    const tm = document.createElement("span");
+    tm.className = "tm";
+    const tx = document.createElement("span");
+    const m = /^(\d\d:\d\d:\d\d)\s+(.*)$/s.exec(line);
+    tm.textContent = m ? m[1] : "";
+    tx.textContent = m ? m[2] : line;
+    ln.append(tm, tx);
+    return ln;
+  }));
+  if (stuck) box.scrollTop = box.scrollHeight;
 }
 
 /* --------------------------------------------------------------- действия */
@@ -966,14 +1367,13 @@ on("proxy-off", "click", dropProxy);
 on("save", "click", async () => {
   const msg = $("save-msg");
   msg.className = "hint";
-  msg.style.margin = "0";
   try {
     await api("POST", "api/account", { link: $("account").value });
     msg.textContent = L().keySaved;
+    paintKeyCard($("account").value);
     await tick();
   } catch (err) {
     msg.className = "hint bad";
-    msg.style.margin = "0";
     msg.textContent = err.message;
   }
 });
@@ -989,6 +1389,7 @@ on("first-save", "click", async () => {
     const link = $("first-account").value;
     await api("POST", "api/account", { link });
     $("account").value = link;
+    paintKeyCard(link);
     msg.textContent = L().keySaved;
     await tick();
   } catch (err) {
@@ -1003,13 +1404,14 @@ async function tick() {
   try {
     render(await api("GET", "api/state"));
     const log = await api("GET", "api/log");
-    $("log").textContent = (log.lines || []).join("\n") || L().logEmpty;
+    paintLog(log.lines);
   } catch (err) {
     $("status").textContent = L().noLink;
   }
 }
 
 lang = pickLang();
+applyLook();
 paintStatic();
 on("lang", "click", () => setLang(lang === "ru" ? "en" : "ru"));
 
@@ -1017,7 +1419,10 @@ on("lang", "click", () => setLang(lang === "ru" ? "en" : "ru"));
 // первого такого сообщения она должна знать, на каком языке его собирать.
 api("POST", "api/lang", { lang }).catch(() => {});
 
-api("GET", "api/account").then((a) => { $("account").value = a.link || ""; }).catch(() => {});
+api("GET", "api/account").then((a) => {
+  $("account").value = a.link || "";
+  paintKeyCard(a.link);
+}).catch(() => {});
 tick();
 setInterval(tick, 1000);
 </script>
