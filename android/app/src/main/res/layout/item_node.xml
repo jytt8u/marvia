@@ -5,6 +5,7 @@
     android:layout_height="wrap_content"
     android:layout_marginTop="10dp"
     android:background="@drawable/bg_card"
+    android:tag="gap"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
@@ -33,6 +34,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
+            android:tag="fg"
             android:textColor="@color/veil_text"
             android:textSize="15.5sp"
             android:textStyle="bold" />
@@ -44,6 +46,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="2"
+            android:tag="dim"
             android:textColor="@color/veil_muted"
             android:textSize="13sp" />
     </LinearLayout>

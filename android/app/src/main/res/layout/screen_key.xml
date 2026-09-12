@@ -17,7 +17,8 @@
         <FrameLayout
             android:layout_width="62dp"
             android:layout_height="62dp"
-            android:background="@drawable/bg_accent_button">
+            android:background="@drawable/bg_accent_button"
+            android:tag="btn">
 
             <ImageView
                 android:layout_width="36dp"
@@ -25,6 +26,7 @@
                 android:layout_gravity="center"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_mark"
+                android:tag="icon:accFg"
                 app:tint="@color/veil_on_accent" />
         </FrameLayout>
 
@@ -35,6 +37,7 @@
             android:gravity="center"
             android:letterSpacing="-0.02"
             android:text="@string/key_title"
+            android:tag="fg"
             android:textColor="@color/veil_text"
             android:textSize="25sp"
             android:textStyle="bold" />
@@ -45,6 +48,7 @@
             android:layout_marginTop="8dp"
             android:gravity="center"
             android:text="@string/key_body"
+            android:tag="dim"
             android:textColor="@color/veil_muted"
             android:textSize="14.5sp" />
 
@@ -53,6 +57,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="26dp"
             android:background="@drawable/bg_card"
+            android:tag="card"
             android:gravity="center_vertical"
             android:minHeight="56dp"
             android:orientation="horizontal"
@@ -70,6 +75,7 @@
                 android:inputType="textUri"
                 android:maxLines="3"
                 android:minHeight="38dp"
+                android:tag="fg"
                 android:textColor="@color/veil_text"
                 android:textColorHint="@color/veil_muted"
                 android:textSize="15sp" />
@@ -84,6 +90,7 @@
                 android:paddingHorizontal="6dp"
                 android:paddingVertical="6dp"
                 android:text="@string/key_paste"
+                android:tag="acc"
                 android:textColor="@color/veil_link"
                 android:textSize="14sp" />
         </LinearLayout>
@@ -93,6 +100,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:tag="fail"
             android:textColor="@color/veil_fail"
             android:textSize="13sp"
             android:visibility="gone" />
@@ -108,6 +116,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:background="@drawable/bg_accent_button"
+            android:tag="btn"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
             android:minHeight="54dp"
@@ -124,6 +133,7 @@
             android:layout_marginTop="12dp"
             android:gravity="center"
             android:text="@string/key_footer"
+            android:tag="dim"
             android:textColor="@color/veil_muted"
             android:textSize="12.5sp" />
     </LinearLayout>
