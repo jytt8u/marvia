@@ -1,4 +1,4 @@
-<img src="internal/panel/web/assets/marvia-mark.png" alt="" height="72">
+<img src="internal/look/assets/marvia-mark.png" alt="" height="72">
 
 # Marvia
 
@@ -157,7 +157,7 @@ WireGuard:
 | VLESS и Trojan рядом с VP1 на той же ноде | ✅ |
 | REALITY на ноде и в нашем клиенте | ✅ |
 | Транспорт за CDN: адрес ноды не попадает в конфиги | ✅ |
-| Клиент Windows с TUN и окном | ✅ |
+| Клиент Windows с TUN, окном и теми же 27 темами, что у панели | ✅ |
 | Клиент Android: VpnService и экран подключения | ✅ |
 | Установка ноды и панели одной командой, ACME | ✅ |
 
