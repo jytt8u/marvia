@@ -1,6 +1,7 @@
 package panel_test
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jytt8u/marvia/internal/panel"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // Копия базы — единственное, что отделяет продавца от потери всего бизнеса.
@@ -201,5 +203,105 @@ func TestBackupNeedsAdminToken(t *testing.T) {
 	}
 	if !strings.HasPrefix(got, "SQLite format 3") {
 		t.Fatalf("скачалось не похожее на базу: %.40q", got)
+	}
+}
+
+// TestSealedBackupOpensOnlyWithItsKey — зашифрованная копия открывается своим
+// приватным ключом и не открывается чужим.
+//
+// Копия, которую нечем открыть, — это не копия, и выяснять это в день, когда
+// она понадобилась, поздно. Поэтому расшифровка проверяется здесь, а не
+// остаётся на совести утилиты.
+func TestSealedBackupOpensOnlyWithItsKey(t *testing.T) {
+	pair, err := vp1.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("ключи: %v", err)
+	}
+
+	dir := t.TempDir()
+	store, err := panel.Open(filepath.Join(dir, "panel.db"))
+	if err != nil {
+		t.Fatalf("база: %v", err)
+	}
+	defer store.Close()
+	store.WithBackupKey(pair.Public)
+
+	// Заводим покупателя, чтобы в копии было чему найтись.
+	if _, _, err := store.CreateUser(context.Background(), panel.CreateUserParams{Label: "Артём"}); err != nil {
+		t.Fatalf("покупатель: %v", err)
+	}
+
+	path, err := store.BackupNow(context.Background(), filepath.Join(dir, "backup"), 3)
+	if err != nil {
+		t.Fatalf("копия: %v", err)
+	}
+	if !strings.HasSuffix(path, ".sealed") {
+		t.Fatalf("копия не зашифрована: %s", path)
+	}
+
+	// Открытой копии рядом остаться не должно.
+	if _, err := os.Stat(strings.TrimSuffix(path, ".sealed")); !os.IsNotExist(err) {
+		t.Fatal("открытая копия осталась на диске рядом с зашифрованной")
+	}
+
+	sealed, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("чтение копии: %v", err)
+	}
+
+	// Шифротекст не должен нести имя покупателя открытым текстом.
+	if bytes.Contains(sealed, []byte("Артём")) {
+		t.Fatal("имя покупателя видно в зашифрованной копии")
+	}
+
+	// Своим ключом открывается, и внутри настоящая база SQLite.
+	plain, err := panel.OpenSealedBackup(sealed, pair.Private)
+	if err != nil {
+		t.Fatalf("расшифровка своим ключом: %v", err)
+	}
+	if !bytes.HasPrefix(plain, []byte("SQLite format 3")) {
+		t.Fatalf("расшифровалось не в базу: % x", plain[:16])
+	}
+	if !bytes.Contains(plain, []byte("Артём")) {
+		t.Fatal("в расшифрованной копии нет покупателя")
+	}
+
+	// Чужим ключом — нет.
+	other, err := vp1.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("чужие ключи: %v", err)
+	}
+	if _, err := panel.OpenSealedBackup(sealed, other.Private); err == nil {
+		t.Fatal("копия открылась чужим ключом")
+	}
+
+	// Файл не нашего вида распознаётся, а не падает.
+	if _, err := panel.OpenSealedBackup([]byte("просто мусор"), pair.Private); err == nil {
+		t.Fatal("мусор принят за копию")
+	}
+}
+
+// Без ключа копии остаются открытыми — как раньше, без сюрприза.
+func TestBackupStaysPlainWithoutKey(t *testing.T) {
+	dir := t.TempDir()
+	store, err := panel.Open(filepath.Join(dir, "panel.db"))
+	if err != nil {
+		t.Fatalf("база: %v", err)
+	}
+	defer store.Close()
+
+	path, err := store.BackupNow(context.Background(), filepath.Join(dir, "backup"), 3)
+	if err != nil {
+		t.Fatalf("копия: %v", err)
+	}
+	if strings.HasSuffix(path, ".sealed") {
+		t.Fatalf("копия зашифрована без ключа: %s", path)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("чтение: %v", err)
+	}
+	if !bytes.HasPrefix(raw, []byte("SQLite format 3")) {
+		t.Fatal("открытая копия — не база")
 	}
 }

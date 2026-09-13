@@ -94,6 +94,16 @@ func (s *Store) BackupNow(ctx context.Context, dir string, keep int) (string, er
 	if err := s.Backup(ctx, path); err != nil {
 		return "", err
 	}
+
+	// Копия уезжает с сервера — в облако, на ноутбук, иногда в переписку.
+	// Если задан ключ, дальше она едет нечитаемой.
+	if len(s.backupKey) > 0 {
+		sealedPath, err := SealBackup(path, s.backupKey)
+		if err != nil {
+			return "", err
+		}
+		path = sealedPath
+	}
 	if err := pruneBackups(dir, keep); err != nil {
 		// Копия снята — это главное. О невычищенных старых говорим, но не
 		// делаем вид, что копии нет.

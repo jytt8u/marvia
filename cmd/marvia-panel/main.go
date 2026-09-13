@@ -26,6 +26,7 @@ import (
 
 	"github.com/jytt8u/marvia/internal/envvar"
 	"github.com/jytt8u/marvia/internal/panel"
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 const shutdownGrace = 10 * time.Second
@@ -56,6 +57,10 @@ type options struct {
 	backupDir   string
 	backupKeep  int
 	backupEvery time.Duration
+
+	// backupKey — публичный ключ для шифрования копий. Только публичный:
+	// приватному на сервере делать нечего.
+	backupKey string
 }
 
 func main() {
@@ -78,6 +83,7 @@ func main() {
 
 	flag.StringVar(&opts.backupDir, "backup-dir", "", "каталог для копий базы (по умолчанию — backup рядом с базой)")
 	flag.IntVar(&opts.backupKeep, "backup-keep", panel.BackupKeep, "сколько копий держать")
+	flag.StringVar(&opts.backupKey, "backup-key", "", "публичный ключ для шифрования копий базы (приватный держи вне сервера)")
 	flag.DurationVar(&opts.backupEvery, "backup-every", panel.BackupEvery, "как часто снимать копию (0 — не снимать)")
 
 	newToken := flag.Bool("new-token", false, "выпустить админский токен и выйти")
@@ -128,6 +134,20 @@ func run(opts options) error {
 		return err
 	}
 	defer store.Close()
+
+	// Копии базы уезжают с сервера, и там их читает кто угодно. Публичный
+	// ключ делает их нечитаемыми; приватного здесь нет и быть не должно —
+	// иначе изъятие сервера выдавало бы и копии, и ключ к ним.
+	if opts.backupKey != "" {
+		pub, err := vp1.DecodeKey(opts.backupKey)
+		if err != nil {
+			return fmt.Errorf("ключ для копий: %w", err)
+		}
+		store.WithBackupKey(pub)
+		log.Printf("копии базы шифруются; открыть их можно только приватным ключом")
+	} else if opts.backupEvery > 0 {
+		log.Printf("ВНИМАНИЕ: копии базы не шифруются — задай -backup-key, если увозишь их с сервера")
+	}
 
 	// Ключи идемпотентности нужны сутки, а копятся со скоростью продаж.
 	if err := store.ForgetStaleIdempotency(context.Background()); err != nil {

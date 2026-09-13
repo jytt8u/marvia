@@ -127,6 +127,10 @@ type Node struct {
 // Store — хранилище панели поверх SQLite.
 type Store struct {
 	db *sql.DB
+
+	// backupKey — публичный ключ, которым шифруются копии базы. Пусто
+	// означает, что копии остаются открытыми, как было раньше.
+	backupKey []byte
 }
 
 const schema = `
@@ -1438,3 +1442,12 @@ func (s *Store) TouchNode(ctx context.Context, id int64) error {
 // ExpiryAt собирает срок из времени — тому, кто зовёт панель из кода, а не
 // по HTTP.
 func ExpiryAt(t time.Time) *Expiry { return &Expiry{Time: t} }
+
+// WithBackupKey задаёт публичный ключ для шифрования копий базы.
+//
+// Только публичный: приватный на сервере не нужен и быть его здесь не должно.
+// Панель умеет зашифровать копию и не умеет её открыть — это и есть смысл.
+func (s *Store) WithBackupKey(pub []byte) *Store {
+	s.backupKey = pub
+	return s
+}
