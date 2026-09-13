@@ -241,6 +241,18 @@ CREATE TABLE IF NOT EXISTS usage_daily (
 
 CREATE INDEX IF NOT EXISTS usage_daily_day ON usage_daily(day);
 
+CREATE TABLE IF NOT EXISTS events (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    at      TEXT    NOT NULL,
+    actor   TEXT    NOT NULL,
+    action  TEXT    NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    node_id INTEGER REFERENCES nodes(id) ON DELETE CASCADE,
+    detail  TEXT    NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS events_at ON events(at);
+
 CREATE TABLE IF NOT EXISTS settings (
     key   TEXT NOT NULL PRIMARY KEY,
     value TEXT NOT NULL
@@ -301,6 +313,8 @@ func migrate(db *sql.DB) error {
 		`CREATE TABLE IF NOT EXISTS usage_daily (day TEXT NOT NULL, node_id INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE, up INTEGER NOT NULL DEFAULT 0, down INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, node_id))`,
 		`CREATE INDEX IF NOT EXISTS usage_daily_day ON usage_daily(day)`,
 		`CREATE TABLE IF NOT EXISTS settings (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL)`,
+		`CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, actor TEXT NOT NULL, action TEXT NOT NULL, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, node_id INTEGER REFERENCES nodes(id) ON DELETE CASCADE, detail TEXT NOT NULL DEFAULT '')`,
+		`CREATE INDEX IF NOT EXISTS events_at ON events(at)`,
 	}
 
 	for _, step := range steps {

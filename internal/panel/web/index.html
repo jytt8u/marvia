@@ -541,6 +541,22 @@
           </div>
         </sc-if>
 
+        <sc-if value="{{ isJournal }}">
+          <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;">
+            <div style="font-size: 12px; line-height: 1.5; color: var(--dim); padding-bottom: 6px;">{{ d18.journal.what }}</div>
+            <sc-if value="{{ journalEmpty }}">
+              <div style="{{ emptyStyle }}">{{ d18.journal.empty }}</div>
+            </sc-if>
+            <sc-for list="{{ journal }}" as="e">
+              <div style="{{ e.style }}">
+                <div style="{{ e.whenStyle }}">{{ e.when }}</div>
+                <div style="{{ e.actorStyle }}">{{ e.actor }}</div>
+                <div style="{{ e.whatStyle }}">{{ e.what }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
         <sc-if value="{{ isAlerts }}">
           <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--gap, 12px); max-width: 640px;">
             <div style="padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px;">
@@ -886,6 +902,30 @@ async function api(path, method, body) {
 //
 // Отдельно, потому что их отдаёт только админский токен: там лежит признак
 // «токен бота задан», и ключу бота с правом read его видеть незачем.
+// loadJournal забирает журнал. Отдельно и только при открытии страницы: он
+// длинный, нужен редко, и отдаёт его только админский токен.
+async function loadJournal() {
+  try {
+    const res = await api("/api/v1/events?limit=200");
+    state.journal = (res && res.events) || [];
+  } catch (_) {
+    state.journal = [];
+  }
+  render();
+}
+
+// journalWhen — когда это было, коротко: время для сегодняшнего, дата для
+// остального. Полная дата на каждой строке съедает ширину и не читается.
+function journalWhen(iso) {
+  const at = new Date(iso);
+  if (isNaN(at)) return "—";
+  const today = new Date().toDateString() === at.toDateString();
+  const hh = String(at.getHours()).padStart(2, "0");
+  const mm = String(at.getMinutes()).padStart(2, "0");
+  if (today) return hh + ":" + mm;
+  return shortDate(iso) + " " + hh + ":" + mm;
+}
+
 async function loadAlerts() {
   try {
     state.alerts = await api("/api/v1/alerts");
@@ -1485,12 +1525,13 @@ const TEXTS = {
 
     nav: {
       dash: "Панель", clients: "Клиенты", keys: "Ключи ботов",
-      nodes: "Ноды", stats: "Статистика", apps: "Приложения", alerts: "Оповещения", look: "Вид",
+      nodes: "Ноды", stats: "Статистика", apps: "Приложения", alerts: "Оповещения", journal: "Журнал", look: "Вид",
     },
     sub: {
       dash: "Обзор за 30 дней",
       keys: "Токены для ботов и интеграций",
-      alerts: "Телеграм-бот продавца · молчащие ноды, сроки, копии базы",
+      alerts: "Телеграм-бот · молчащие ноды, сроки, копии базы",
+      journal: "Что делали с панелью · последние 90 дней",
       look: "Тема панели · 28 готовых видов",
       appsEmpty: "ничего не выложено",
       appsSome: "покупатель качает их с домена панели, а не из магазина",
@@ -1558,6 +1599,26 @@ const TEXTS = {
       empty: "Приложения пока не выложены: покупателям их раздаёт сама панель со своего домена.",
     },
 
+    journal: {
+      what: "Что делали с панелью: завели, продлили, отключили, сменили ключ. Это летопись действий над панелью, а не слежка за людьми: подключений и адресов здесь нет и не будет.",
+      empty: "Пока ничего не происходило.",
+      admin: "админ",
+      action: {
+        "user.create": "заведён покупатель",
+        "user.update": "правка покупателя",
+        "user.delete": "покупатель удалён",
+        "user.subtoken": "адрес подписки",
+        "cred.add": "выдан доступ",
+        "cred.rotate": "смена ключа",
+        "cred.delete": "отзыв доступа",
+        "node.create": "заведена нода",
+        "node.update": "правка ноды",
+        "node.delete": "нода удалена",
+        "key.create": "выпущен ключ бота",
+        "key.revoke": "отозван ключ бота",
+        "alerts.update": "оповещения",
+      },
+    },
     alerts: {
       title: "Оповещения в телеграм",
       what: "Панель сама скажет, когда нода замолчала, подходит срок или не снялась копия базы. Без этого о поломке узнаёшь тогда, когда она уже мешает.",
@@ -1733,12 +1794,13 @@ const TEXTS = {
 
     nav: {
       dash: "Overview", clients: "Clients", keys: "Bot keys",
-      nodes: "Nodes", stats: "Statistics", apps: "Apps", alerts: "Alerts", look: "Look",
+      nodes: "Nodes", stats: "Statistics", apps: "Apps", alerts: "Alerts", journal: "Journal", look: "Look",
     },
     sub: {
       dash: "Last 30 days",
       keys: "Tokens for bots and integrations",
-      alerts: "The seller's Telegram bot · silent nodes, expiries, backups",
+      alerts: "Telegram bot · silent nodes, expiries, backups",
+      journal: "What was done to the panel · last 90 days",
       look: "Panel theme · 28 ready looks",
       appsEmpty: "nothing published yet",
       appsSome: "buyers download them from your panel, not from a store",
@@ -1806,6 +1868,26 @@ const TEXTS = {
       empty: "No apps published yet: the panel serves them to buyers from your own domain.",
     },
 
+    journal: {
+      what: "What was done to the panel: created, extended, disabled, keys changed. This is a record of actions on the panel, not surveillance of people: there are no connections and no addresses here, and there will not be.",
+      empty: "Nothing has happened yet.",
+      admin: "admin",
+      action: {
+        "user.create": "subscriber created",
+        "user.update": "subscriber edited",
+        "user.delete": "subscriber deleted",
+        "user.subtoken": "subscription address",
+        "cred.add": "access issued",
+        "cred.rotate": "key changed",
+        "cred.delete": "access revoked",
+        "node.create": "node created",
+        "node.update": "node edited",
+        "node.delete": "node deleted",
+        "key.create": "bot key issued",
+        "key.revoke": "bot key revoked",
+        "alerts.update": "alerts",
+      },
+    },
     alerts: {
       title: "Telegram alerts",
       what: "The panel tells you when a node goes quiet, a subscription is about to expire, or a backup failed. Without it you learn about a problem only once it is already in the way.",
@@ -2084,7 +2166,7 @@ function daysLeft(iso) {
 // знает — пункта меню, который ведёт в выдуманное, здесь нет.
 // Порядок разделов в меню. Названия берутся из словаря по этому же ключу:
 // держать их здесь значило бы иметь два места, где они разъезжаются.
-const PAGES = ["dash", "clients", "keys", "nodes", "stats", "apps", "alerts", "look"];
+const PAGES = ["dash", "clients", "keys", "nodes", "stats", "apps", "alerts", "journal", "look"];
 
 // Сколько строк на странице. Полсотни — столько влезает в экран прокруткой и
 // столько человек ещё готов просмотреть глазами, не листая.
@@ -2105,6 +2187,7 @@ function setState(patch) {
     if (state.alerts) fillAlerts();
     else loadAlerts();
   }
+  if (patch.page === "journal") loadJournal();
 }
 
 // CTA — какая кнопка стоит в углу раздела. Разделы без действия остаются без
@@ -2162,6 +2245,7 @@ function renderVals() {
     apps: !state.known ? d18.err.unknown
       : ((state.apps && state.apps.apps) || []).length === 0 ? d18.sub.appsEmpty : d18.sub.appsSome,
     alerts: d18.sub.alerts,
+    journal: d18.sub.journal,
     look: d18.sub.look,
   };
 
@@ -2620,6 +2704,21 @@ function renderVals() {
     isAppsPage: page === "apps",
     isLook: page === "look",
     isAlerts: page === "alerts",
+    isJournal: page === "journal",
+
+    // Журнал приезжает отдельным запросом и только админским токеном: это
+    // летопись действий над панелью, и в общий loadAll ей незачем.
+    journal: (state.journal || []).map((e) => ({
+      when: journalWhen(e.at),
+      actor: e.actor === "admin" ? d18.journal.admin : e.actor,
+      what: (d18.journal.action[e.action] || e.action) + (e.detail ? " · " + e.detail : ""),
+      style: "display:flex;gap:12px;align-items:baseline;padding:9px 12px;border-radius:" + t.r
+        + "px;background:" + t.surf2,
+      whenStyle: "font-family:JetBrains Mono,monospace;font-size:11px;color:" + t.dim + ";white-space:nowrap",
+      actorStyle: "font-family:JetBrains Mono,monospace;font-size:11px;color:" + t.acc + ";white-space:nowrap",
+      whatStyle: "font-size:13px;color:" + t.fg,
+    })),
+    journalEmpty: !(state.journal || []).length,
 
     // Подписи полей плоскими значениями: разметка не умеет индексы массива,
     // и {{ d18.alerts.token[0] }} уехало бы на страницу как есть.

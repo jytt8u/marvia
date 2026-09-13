@@ -82,6 +82,10 @@ func (a *API) Handler() http.Handler {
 
 	// Оповещения — только админским токеном: в настройках лежит токен бота
 	// продавца, а им можно писать от его имени кому угодно.
+	// Журнал событий — только админским токеном. Это летопись действий над
+	// панелью, и боту с правом read в ней делать нечего.
+	mux.HandleFunc("GET /api/v1/events", a.admin(a.listEvents))
+
 	mux.HandleFunc("GET /api/v1/alerts", a.admin(a.getAlerts))
 	mux.HandleFunc("PUT /api/v1/alerts", a.admin(a.setAlerts))
 
@@ -149,7 +153,7 @@ func (a *API) scoped(scope string, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		if TokensEqual(token, a.adminToken) {
-			next(w, r)
+			next(w, withActor(r, ActorAdmin))
 			return
 		}
 
@@ -165,7 +169,10 @@ func (a *API) scoped(scope string, next http.HandlerFunc) http.HandlerFunc {
 			fail(w, http.StatusForbidden, "ключу «"+key.Name+"» не хватает права "+scope)
 			return
 		}
-		next(w, r)
+		// Имя ключа, а не сам ключ: по журналу должно быть видно, чей бот
+		// наделал дел, и при этом журнал не должен становиться местом,
+		// откуда утекают токены.
+		next(w, withActor(r, key.Name))
 	}
 }
 
@@ -176,7 +183,7 @@ func (a *API) admin(next http.HandlerFunc) http.HandlerFunc {
 			fail(w, http.StatusUnauthorized, "нужен админский токен")
 			return
 		}
-		next(w, r)
+		next(w, withActor(r, ActorAdmin))
 	}
 }
 
@@ -294,6 +301,8 @@ func (a *API) createUser(w http.ResponseWriter, r *http.Request) {
 		"issued": issued,
 		"links":  a.links(r.Context(), user, issued),
 	})
+
+	a.record(r, EventUserCreate, Event{UserID: user.ID})
 }
 
 // links собирает готовые к отправке ссылки.
@@ -406,6 +415,7 @@ func (a *API) updateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.remember(r, scope, map[string]any{"user": user})
+	a.record(r, EventUserUpdate, Event{UserID: user.ID, Detail: updateDetail(p.UpdateUserParams, p.ExtendBy)})
 	ok(w, map[string]any{"user": user})
 }
 
@@ -464,10 +474,14 @@ func (a *API) deleteUser(w http.ResponseWriter, r *http.Request) {
 	if !okID {
 		return
 	}
+	// Запись делаем ДО удаления: внешний ключ с каскадом унесёт её вместе с
+	// покупателем, и это нарочно — «удалили значит удалили». Здесь она нужна
+	// лишь затем, чтобы сам факт удаления не пропал бесследно из ответа.
 	if err := a.store.DeleteUser(r.Context(), id); err != nil {
 		respondStoreErr(w, err)
 		return
 	}
+	a.record(r, EventUserDelete, Event{Detail: "вместе со всеми его записями"})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -533,6 +547,7 @@ func (a *API) addCredential(w http.ResponseWriter, r *http.Request) {
 	}
 
 	issued := []Issued{{ID: cred.ID, Kind: cred.Kind, Secret: secret}}
+	a.record(r, EventCredAdd, Event{UserID: user.ID, Detail: "выдан доступ " + cred.Kind})
 	ok(w, map[string]any{
 		"credential": cred,
 		"issued":     issued,
@@ -563,6 +578,7 @@ func (a *API) rotateCredential(w http.ResponseWriter, r *http.Request) {
 	}
 
 	issued := []Issued{{ID: cred.ID, Kind: cred.Kind, Secret: secret}}
+	a.record(r, EventCredRotate, Event{UserID: user.ID, Detail: "сменён ключ " + cred.Kind})
 	ok(w, map[string]any{
 		"credential": cred,
 		"issued":     issued,
@@ -575,9 +591,15 @@ func (a *API) deleteCredential(w http.ResponseWriter, r *http.Request) {
 	if !okID {
 		return
 	}
+	// Хозяина набора узнаём до удаления: после него спрашивать будет не у кого.
+	owner, ownerErr := a.store.UserByCredential(r.Context(), id)
+
 	if err := a.store.DeleteCredential(r.Context(), id); err != nil {
 		respondStoreErr(w, err)
 		return
+	}
+	if ownerErr == nil {
+		a.record(r, EventCredDelete, Event{UserID: owner.ID})
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -661,6 +683,7 @@ func (a *API) createNode(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	a.record(r, EventNodeCreate, Event{NodeID: node.ID})
 	ok(w, map[string]any{
 		"node": node,
 		// Токен ноды тоже отдаётся один раз: в базе только его хеш.
@@ -692,6 +715,7 @@ func (a *API) updateNode(w http.ResponseWriter, r *http.Request) {
 		respondStoreErr(w, err)
 		return
 	}
+	a.record(r, EventNodeUpdate, Event{NodeID: node.ID, Detail: nodeUpdateDetail(p)})
 	ok(w, map[string]any{"node": node})
 }
 
@@ -704,6 +728,7 @@ func (a *API) deleteNode(w http.ResponseWriter, r *http.Request) {
 		respondStoreErr(w, err)
 		return
 	}
+	a.record(r, EventNodeDelete, Event{Detail: "вместе с её статистикой"})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1006,6 +1031,8 @@ func (a *API) createKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// В журнал уходит имя ключа и его права, но не сам ключ.
+	a.record(r, EventKeyCreate, Event{Detail: "«" + key.Name + "», права: " + strings.Join(key.Scopes, ", ")})
 	ok(w, map[string]any{
 		"key":    key,
 		"secret": secret,
@@ -1027,6 +1054,7 @@ func (a *API) revokeKey(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	a.record(r, EventKeyRevoke, Event{})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1057,6 +1085,7 @@ func (a *API) rotateSubToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	a.record(r, EventSubToken, Event{UserID: user.ID, Detail: "сменён"})
 	ok(w, map[string]any{
 		"user": user,
 		// Секретов здесь нет: меняется только адрес подписки, наборы доступа
@@ -1214,6 +1243,12 @@ func (a *API) setAlerts(w http.ResponseWriter, r *http.Request) {
 		respondStoreErr(w, err)
 		return
 	}
+	// Токена бота в журнале нет и быть не может: только сам факт правки.
+	if next.Enabled {
+		a.record(r, EventAlertsUpdate, Event{Detail: "оповещения включены"})
+	} else {
+		a.record(r, EventAlertsUpdate, Event{Detail: "оповещения выключены"})
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1245,4 +1280,124 @@ func sameNames(have, got []string, primary string) bool {
 		}
 	}
 	return true
+}
+
+// actorKey — под каким ключом в контексте запроса лежит тот, кто действует.
+//
+// Своим типом, а не строкой: строковый ключ в context — это общая яма, куда
+// два пакета однажды кладут разное под одним именем.
+type actorKeyType struct{}
+
+var actorKey actorKeyType
+
+// withActor помечает запрос тем, кто его сделал: админ или имя ключа бота.
+func withActor(r *http.Request, actor string) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), actorKey, actor))
+}
+
+// actorOf достаёт того, кто действует. Пусто не бывает у ручек, закрытых
+// проверкой токена, но на всякий случай считаем такое действие админским:
+// потерять запись хуже, чем записать её без имени.
+func actorOf(r *http.Request) string {
+	if v, ok := r.Context().Value(actorKey).(string); ok && v != "" {
+		return v
+	}
+	return ActorAdmin
+}
+
+// record кладёт запись в журнал от имени того, кто сделал запрос.
+func (a *API) record(r *http.Request, action string, e Event) {
+	// Правка без пояснения — это PATCH, который ничего человеческого не
+	// поменял. Журнал из таких строк только тяжелеет.
+	//
+	// У остальных действий пустое пояснение законно: «заведён покупатель»
+	// исчерпывающе описано самим видом события, и дописывать к нему «заведён»
+	// значит повторяться дважды в одной строке.
+	if e.Detail == "" && (action == EventUserUpdate || action == EventNodeUpdate) {
+		return
+	}
+	e.Action = action
+	e.Actor = actorOf(r)
+	a.store.Record(r.Context(), e)
+}
+
+// updateDetail описывает правку подписчика словами для журнала.
+//
+// Именно словами, а не дампом полей: журнал читают глазами, и «продлён на
+// 30 дней» полезнее, чем JSON с семью null.
+func updateDetail(p UpdateUserParams, extend string) string {
+	var parts []string
+	if extend != "" {
+		parts = append(parts, "продлён на "+extend)
+	}
+	if p.Enabled != nil {
+		if *p.Enabled {
+			parts = append(parts, "включён")
+		} else {
+			parts = append(parts, "отключён")
+		}
+	}
+	if p.TrafficLimit != nil {
+		parts = append(parts, "изменена квота")
+	}
+	if p.SpeedLimit != nil {
+		parts = append(parts, "изменён потолок скорости")
+	}
+	if p.MaxIPs != nil || p.MaxConns != nil {
+		parts = append(parts, "изменены лимиты устройств")
+	}
+	if p.Label != nil {
+		parts = append(parts, "переименован")
+	}
+	if len(parts) == 0 {
+		return "правка без изменений"
+	}
+	return strings.Join(parts, ", ")
+}
+
+// nodeUpdateDetail — то же самое для ноды.
+func nodeUpdateDetail(p UpdateNodeParams) string {
+	var parts []string
+	if p.Enabled != nil {
+		if *p.Enabled {
+			parts = append(parts, "включена")
+		} else {
+			parts = append(parts, "выключена")
+		}
+	}
+	if p.Name != nil {
+		parts = append(parts, "переименована")
+	}
+	if p.Country != nil {
+		parts = append(parts, "изменена страна")
+	}
+	if p.Address != nil {
+		parts = append(parts, "изменён адрес")
+	}
+	// Имена прикрытия нода присылает сама, каждым отчётом. Писать о них в
+	// журнал значило бы забивать его строками, которых человек не делал.
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, ", ")
+}
+
+// listEvents отдаёт последние записи журнала.
+func (a *API) listEvents(w http.ResponseWriter, r *http.Request) {
+	limit := 200
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			limit = n
+		}
+	}
+
+	list, err := a.store.Events(r.Context(), limit)
+	if err != nil {
+		respondStoreErr(w, err)
+		return
+	}
+	if list == nil {
+		list = []Event{}
+	}
+	ok(w, map[string]any{"events": list})
 }
