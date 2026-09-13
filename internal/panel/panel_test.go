@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -1003,5 +1004,61 @@ func TestRotatedSecretStopsWorking(t *testing.T) {
 	}
 	if fresh := len(after); fresh != len(accepted) {
 		t.Fatalf("наборов у ноды стало %d вместо %d: смена не должна ни добавлять, ни убавлять", fresh, len(accepted))
+	}
+}
+
+// TestSubscriptionCarriesTheNamePool — запасные имена прикрытия доезжают до
+// клиента, а старый клиент их отсутствия не замечает.
+//
+// Одно имя на ноду означает, что блокировка домена убивает ноду целиком, хотя
+// её адрес жив. Поэтому продавец задаёт набор, и панель обязана раздать его
+// целиком: имена, оставшиеся в панели, ноду не спасают.
+func TestSubscriptionCarriesTheNamePool(t *testing.T) {
+	h := newHarness(t)
+	node := h.createNode("msk")
+	created := h.createUser(0, panel.CredVP1)
+
+	// Продавец дописал ноде запасные имена. Повтор основного и пустая строка
+	// — обычная опечатка при вводе руками, и попасть в набор они не должны.
+	var updated struct {
+		Node panel.Node `json:"node"`
+	}
+	code := h.do(http.MethodPatch, fmt.Sprintf("/api/v1/nodes/%d", node.Node.ID), adminToken,
+		map[string]any{"sni_extra": []string{"cdn.example", " ", "msk.example.com", "static.example"}}, &updated)
+	if code != http.StatusOK {
+		t.Fatalf("правка ноды: код %d", code)
+	}
+	if got := updated.Node.SNIExtra; len(got) != 2 {
+		t.Fatalf("в наборе осталось %d имён: %v (повтор и пустое должны были отпасть)", len(got), got)
+	}
+
+	resp, err := h.server.Client().Get(h.server.URL + "/sub/" + created.User.SubToken + "?format=json")
+	if err != nil {
+		t.Fatalf("подписка: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var sub struct {
+		Nodes []struct {
+			SNI      string   `json:"sni"`
+			SNIExtra []string `json:"sni_extra"`
+		} `json:"nodes"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&sub); err != nil {
+		t.Fatalf("разбор подписки: %v", err)
+	}
+	if len(sub.Nodes) != 1 {
+		t.Fatalf("нод в подписке: %d", len(sub.Nodes))
+	}
+	if sub.Nodes[0].SNI != "msk.example.com" {
+		t.Errorf("основное имя потерялось: %q", sub.Nodes[0].SNI)
+	}
+	if len(sub.Nodes[0].SNIExtra) != 2 {
+		t.Fatalf("запасные имена не доехали: %v", sub.Nodes[0].SNIExtra)
+	}
+	for _, want := range []string{"cdn.example", "static.example"} {
+		if !slices.Contains(sub.Nodes[0].SNIExtra, want) {
+			t.Errorf("имя %q не доехало: %v", want, sub.Nodes[0].SNIExtra)
+		}
 	}
 }

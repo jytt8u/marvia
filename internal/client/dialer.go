@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	mrand "math/rand/v2"
 	"net"
 	"sync/atomic"
 	"time"
@@ -171,13 +172,25 @@ func tcpDialer(node Node, serverName string, opts Options) (func(context.Context
 		if err != nil {
 			return nil, fmt.Errorf("публичный ключ REALITY ноды %s: %w", node.Name, err)
 		}
-		cfg := transport.RealityDialConfig{
-			ServerName: serverName,
-			PublicKey:  pub,
-			ShortID:    node.RealityShortID,
-		}
+		// Имя выбирается на каждое соединение, а не один раз на ноду.
+		//
+		// Только здесь это и возможно: под REALITY подлинность ноды
+		// подтверждает её ключ, а не сертификат, поэтому в SNI годится любое
+		// из имён, которые нода принимает. При обычном TLS и за CDN имя
+		// обязано совпадать с сертификатом, и выбирать там не из чего.
+		//
+		// Зачем. Одно имя на ноду — это одна строка в списке блокировок:
+		// зарезали домен, и нода умерла целиком, хотя её адрес жив. С набором
+		// имён блокировка одного отнимает у неё долю соединений, а не все.
+		// Сессии живут 20…60 минут, так что имя меняется само по себе
+		// несколько раз в сутки.
+		names := node.serverNames(serverName)
 		return func(ctx context.Context) (net.Conn, error) {
-			return transport.DialReality(ctx, node.Address, cfg)
+			return transport.DialReality(ctx, node.Address, transport.RealityDialConfig{
+				ServerName: names[mrand.IntN(len(names))],
+				PublicKey:  pub,
+				ShortID:    node.RealityShortID,
+			})
 		}, nil
 
 	default:

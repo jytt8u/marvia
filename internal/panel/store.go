@@ -85,10 +85,20 @@ type Node struct {
 	// Нидерландах, то в США, и покупатель, выбравший «Финляндию», попадает в
 	// Германию. Пишет человек, а флаг клиент подбирает по написанному — так же
 	// делают Happ и Hiddify, там страну тоже задаёт продавец.
-	Country   string `json:"country,omitempty"`
-	Address   string `json:"address"`
-	SNI       string `json:"sni"`
-	PublicKey string `json:"public_key"`
+	Country string `json:"country,omitempty"`
+	Address string `json:"address"`
+	SNI     string `json:"sni"`
+
+	// SNIExtra — запасные имена прикрытия, кроме SNI.
+	//
+	// Работают только под REALITY: там подлинность ноды подтверждает её ключ,
+	// а не сертификат, и в SNI годится любое имя, которое нода принимает (флаг
+	// -reality-sni у неё же). Одно имя на ноду означает, что блокировка домена
+	// убивает ноду целиком, хотя её адрес жив.
+	//
+	// В базе лежит строкой через запятую, наружу уходит списком.
+	SNIExtra  []string `json:"sni_extra,omitempty"`
+	PublicKey string   `json:"public_key"`
 
 	// RealityPublicKey и RealityShortID заполняются, когда нода работает под
 	// маскировкой REALITY. По ним собираются ссылки для чужих клиентов:
@@ -151,6 +161,7 @@ CREATE TABLE IF NOT EXISTS nodes (
     country    TEXT    NOT NULL DEFAULT '',
     address    TEXT    NOT NULL,
     sni        TEXT    NOT NULL DEFAULT '',
+    sni_extra  TEXT    NOT NULL DEFAULT '',
     public_key TEXT    NOT NULL,
     reality_public_key TEXT NOT NULL DEFAULT '',
     reality_short_id   TEXT NOT NULL DEFAULT '',
@@ -262,6 +273,7 @@ func migrate(db *sql.DB) error {
 		`ALTER TABLE nodes ADD COLUMN ws_path TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN country TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN quic INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE nodes ADD COLUMN sni_extra TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE users ADD COLUMN external_id TEXT`,
 		`CREATE TABLE IF NOT EXISTS api_keys (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, scopes TEXT NOT NULL, created_at TEXT NOT NULL, last_used_at TEXT, revoked_at TEXT)`,
 		// Индекс живёт только здесь, а не в схеме. Схема выполняется первой, и
@@ -600,11 +612,12 @@ func (s *Store) credentials(ctx context.Context, userID int64) ([]Credential, er
 
 // CreateNodeParams — что нужно, чтобы завести ноду.
 type CreateNodeParams struct {
-	Name      string `json:"name"`
-	Country   string `json:"country"`
-	Address   string `json:"address"`
-	SNI       string `json:"sni"`
-	PublicKey string `json:"public_key"`
+	Name      string   `json:"name"`
+	Country   string   `json:"country"`
+	Address   string   `json:"address"`
+	SNI       string   `json:"sni"`
+	SNIExtra  []string `json:"sni_extra"`
+	PublicKey string   `json:"public_key"`
 
 	RealityPublicKey string `json:"reality_public_key"`
 	RealityShortID   string `json:"reality_short_id"`
@@ -628,9 +641,9 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 	now := time.Now().UTC()
 
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO nodes (name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, quic, token_hash, enabled, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
-		p.Name, p.Country, p.Address, p.SNI, p.PublicKey, p.RealityPublicKey, p.RealityShortID, p.WSPath, boolInt(p.QUIC), HashToken(token), format(now))
+		`INSERT INTO nodes (name, country, address, sni, sni_extra, public_key, reality_public_key, reality_short_id, ws_path, quic, token_hash, enabled, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+		p.Name, p.Country, p.Address, p.SNI, joinNames(p.SNIExtra), p.PublicKey, p.RealityPublicKey, p.RealityShortID, p.WSPath, boolInt(p.QUIC), HashToken(token), format(now))
 	if err != nil {
 		return Node{}, "", fmt.Errorf("создание ноды: %w", err)
 	}
@@ -640,6 +653,7 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (Node, strin
 	}
 
 	return Node{ID: id, Name: p.Name, Country: p.Country, Address: p.Address, SNI: p.SNI,
+		SNIExtra:  splitNames(joinNames(p.SNIExtra)),
 		PublicKey: p.PublicKey, RealityPublicKey: p.RealityPublicKey, RealityShortID: p.RealityShortID,
 		WSPath: p.WSPath, QUIC: p.QUIC, Enabled: true, CreatedAt: now}, token, nil
 }
@@ -663,7 +677,7 @@ func (s *Store) GetNode(ctx context.Context, id int64) (Node, error) {
 
 func (s *Store) queryNodes(ctx context.Context, where string, args ...any) ([]Node, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, quic, enabled, last_seen, created_at
+		`SELECT id, name, country, address, sni, sni_extra, public_key, reality_public_key, reality_short_id, ws_path, quic, enabled, last_seen, created_at
 		 FROM nodes `+where+` ORDER BY id`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("чтение нод: %w", err)
@@ -674,23 +688,48 @@ func (s *Store) queryNodes(ctx context.Context, where string, args ...any) ([]No
 	for rows.Next() {
 		var (
 			n         Node
+			sniExtra  string
 			quicOn    int
 			enabled   int
 			lastSeen  sql.NullString
 			createdAt string
 		)
-		if err := rows.Scan(&n.ID, &n.Name, &n.Country, &n.Address, &n.SNI, &n.PublicKey,
+		if err := rows.Scan(&n.ID, &n.Name, &n.Country, &n.Address, &n.SNI, &sniExtra, &n.PublicKey,
 			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &quicOn, &enabled, &lastSeen, &createdAt); err != nil {
 			return nil, err
 		}
+		n.SNIExtra = splitNames(sniExtra)
 		n.Enabled = enabled != 0
-		n.QUIC = quicOn != 0
 		n.QUIC = quicOn != 0
 		n.LastSeen = parseNullTime(lastSeen)
 		n.CreatedAt = parse(createdAt)
 		list = append(list, n)
 	}
 	return list, rows.Err()
+}
+
+// splitNames разбирает имена прикрытия из строки через запятую.
+//
+// Пустые и повторы отбрасываются: продавец вводит их руками, а повтор молча
+// перекосил бы случайный выбор на клиенте в сторону одного имени.
+func splitNames(raw string) []string {
+	var out []string
+	seen := make(map[string]bool)
+	for _, name := range strings.Split(raw, ",") {
+		name = strings.TrimSpace(name)
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out
+}
+
+// joinNames собирает имена обратно в строку для базы.
+func joinNames(names []string) string {
+	clean := splitNames(strings.Join(names, ","))
+	return strings.Join(clean, ",")
 }
 
 // UpdateNodeParams — изменяемые поля ноды. nil означает «не трогать».
@@ -714,6 +753,14 @@ type UpdateNodeParams struct {
 	// к прокси вместо ноды. Поправить это может только человек, у которого есть
 	// админский токен: он один знает, где стоит его сервер.
 	Address *string `json:"address,omitempty"`
+
+	// SNIExtra — запасные имена прикрытия. Пустой список их убирает.
+	//
+	// Правится руками, в отличие от адреса и ключей: имена задаёт продавец
+	// флагом -reality-sni на самой ноде, и панель обязана раздавать клиентам
+	// ровно тот же набор. Нода про панель здесь ничего не сообщает — она
+	// вообще не знает, кому её раздают.
+	SNIExtra *[]string `json:"sni_extra,omitempty"`
 }
 
 // UpdateNode меняет заданные поля ноды.
@@ -741,6 +788,23 @@ func (s *Store) UpdateNode(ctx context.Context, id int64, p UpdateNodeParams) (N
 	if p.Enabled != nil {
 		sets = append(sets, "enabled = ?")
 		args = append(args, boolInt(*p.Enabled))
+	}
+	if p.SNIExtra != nil {
+		// Основное имя из набора вычёркиваем: «запасные» — это те, что кроме
+		// него. Клиент и так сложил бы их вместе, но продавец, глядя в список
+		// нод, должен видеть, что у него добавлено, а не то, что он повторил.
+		current, err := s.GetNode(ctx, id)
+		if err != nil {
+			return Node{}, err
+		}
+		extra := make([]string, 0, len(*p.SNIExtra))
+		for _, name := range splitNames(strings.Join(*p.SNIExtra, ",")) {
+			if name != current.SNI {
+				extra = append(extra, name)
+			}
+		}
+		sets = append(sets, "sni_extra = ?")
+		args = append(args, joinNames(extra))
 	}
 	if p.Address != nil {
 		address := strings.TrimSpace(*p.Address)

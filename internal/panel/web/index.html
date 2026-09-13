@@ -1227,9 +1227,21 @@ function nodeSheet(node) {
     field(d.node.country[0], "nd-country", "text", node.country || "", d.node.country[1]),
   ];
 
+  // Запасные имена прикрытия — только под REALITY: там ноду подтверждает её
+  // ключ, а не сертификат, и в SNI годится любое принимаемое имя. При обычном
+  // TLS и за CDN имя обязано совпадать с сертификатом, и поля здесь нет —
+  // нарисованное, оно обещало бы то, чего не будет.
+  const reality = !!node.reality_public_key;
+  if (reality) {
+    form.push(field(d.node.sniExtra[0], "nd-sni-extra", "text",
+      (node.sni_extra || []).join(", "), d.node.sniExtra[1]));
+  }
+
   sheet(node.name || node.address, facts.concat(form), [
     btn(d.node.save, "go", () => act(async () => {
-      await api("/api/v1/nodes/" + node.id, "PATCH", { name: val("nd-name"), country: val("nd-country") });
+      const patch = { name: val("nd-name"), country: val("nd-country") };
+      if (reality) patch.sni_extra = val("nd-sni-extra").split(",");
+      await api("/api/v1/nodes/" + node.id, "PATCH", patch);
       closeSheet();
       toast(d.node.saved);
       await loadAll();
@@ -1576,6 +1588,7 @@ const TEXTS = {
       online: "на связи", silentOn: "включена, но молчит", offState: "выключена",
       name: ["Имя", "Видно покупателю в списке серверов"],
       country: ["Страна", "Тоже видно покупателю; встаёт первой в названии"],
+      sniExtra: ["Запасные имена прикрытия", "Через запятую, те же что в -reality-sni у ноды. Блокировка одного домена перестаёт убивать ноду целиком"],
       save: "Сохранить", saved: "Сохранено",
       disable: "Выключить", enable: "Включить",
       disabled: "Нода убрана из подписок", enabled: "Нода вернулась в подписки",
@@ -1808,6 +1821,7 @@ const TEXTS = {
       online: "online", silentOn: "enabled, but silent", offState: "disabled",
       name: ["Name", "The buyer sees it in the server list"],
       country: ["Country", "The buyer sees it too; it comes first in the name"],
+      sniExtra: ["Spare cover names", "Comma-separated, the same as -reality-sni on the node. Blocking one domain stops killing the whole node"],
       save: "Save", saved: "Saved",
       disable: "Disable", enable: "Enable",
       disabled: "Node removed from subscriptions", enabled: "Node is back in subscriptions",

@@ -455,3 +455,62 @@ func TestSelectBestFailsWhenAllDead(t *testing.T) {
 		t.Fatalf("отчёт собран неверно: %+v", got)
 	}
 }
+
+// TestRealityPicksFromTheWholeNamePool — клиент ходит не под одним именем.
+//
+// Одно имя на ноду означает, что блокировка домена убивает ноду целиком, хотя
+// её адрес жив. Набор имён превращает такую блокировку из смертельной в
+// потерю доли соединений.
+func TestRealityPicksFromTheWholeNamePool(t *testing.T) {
+	node := client.Node{
+		SNI:      "a.example",
+		SNIExtra: []string{"b.example", "c.example"},
+	}
+
+	got := map[string]bool{}
+	for i := 0; i < 500; i++ {
+		got[client.PickServerName(node)] = true
+	}
+
+	for _, want := range []string{"a.example", "b.example", "c.example"} {
+		if !got[want] {
+			t.Errorf("имя %q ни разу не выпало за 500 попыток", want)
+		}
+	}
+	if len(got) != 3 {
+		t.Errorf("выпадали посторонние имена: %v", got)
+	}
+}
+
+// Набор чистится: пустые и повторы в него не попадают. Продавец вводит имена
+// руками, а повтор молча перекосил бы выбор в свою сторону.
+func TestNamePoolIgnoresBlanksAndRepeats(t *testing.T) {
+	node := client.Node{
+		SNI:      "a.example",
+		SNIExtra: []string{"  ", "a.example", "b.example", "b.example", ""},
+	}
+
+	got := map[string]int{}
+	for i := 0; i < 600; i++ {
+		got[client.PickServerName(node)]++
+	}
+
+	if len(got) != 2 {
+		t.Fatalf("в наборе оказалось %d имён: %v", len(got), got)
+	}
+	// Повтор «a.example» не должен был удвоить её долю: при честном наборе из
+	// двух имён каждое берёт около половины.
+	if got["a.example"] < 200 || got["a.example"] > 400 {
+		t.Errorf("выбор перекошен: a.example выпала %d раз из 600", got["a.example"])
+	}
+}
+
+// Нода без запасных имён ведёт себя ровно как раньше — одно имя.
+func TestNodeWithoutExtraNamesKeepsTheOldBehaviour(t *testing.T) {
+	node := client.Node{SNI: "only.example"}
+	for i := 0; i < 20; i++ {
+		if got := client.PickServerName(node); got != "only.example" {
+			t.Fatalf("выпало %q вместо единственного имени", got)
+		}
+	}
+}

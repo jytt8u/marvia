@@ -791,11 +791,16 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 
 		// Country — то, что продавец написал руками. Флаг клиент подбирает
 		// сам: держать картинки на стороне панели незачем.
-		Country   string `json:"country,omitempty"`
-		Address   string `json:"address"`
-		SNI       string `json:"sni,omitempty"`
-		PublicKey string `json:"public_key"`
-		Link      string `json:"link"`
+		Country string `json:"country,omitempty"`
+		Address string `json:"address"`
+		SNI     string `json:"sni,omitempty"`
+
+		// SNIExtra — запасные имена прикрытия. Клиент выбирает из них на
+		// каждое соединение; клиенты постарше поля не знают и ходят по SNI,
+		// как раньше.
+		SNIExtra  []string `json:"sni_extra,omitempty"`
+		PublicKey string   `json:"public_key"`
+		Link      string   `json:"link"`
 
 		WSPath           string `json:"ws_path,omitempty"`
 		QUIC             bool   `json:"quic,omitempty"`
@@ -810,6 +815,7 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 		}
 		views = append(views, nodeView{
 			ID: n.ID, Name: n.Name, Country: n.Country, Address: n.Address, SNI: n.SNI,
+			SNIExtra:  n.SNIExtra,
 			PublicKey: n.PublicKey, Link: NodeLink(n),
 			WSPath:           n.WSPath,
 			QUIC:             n.QUIC,

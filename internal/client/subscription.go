@@ -42,6 +42,14 @@ type Node struct {
 	SNI       string `json:"sni,omitempty"`
 	PublicKey string `json:"public_key"`
 
+	// SNIExtra — запасные имена прикрытия, кроме SNI. Работают только под
+	// REALITY: там подлинность ноды подтверждает ключ, а не сертификат, и в
+	// SNI годится любое из имён, которые нода принимает.
+	//
+	// Поле добавочное, а не замена SNI: подписку читают уже установленные
+	// клиенты, и они про набор не знают. Им достаётся SNI, как и раньше.
+	SNIExtra []string `json:"sni_extra,omitempty"`
+
 	// WSPath не пуст, когда нода стоит за CDN: тогда Address — адрес CDN,
 	// а не самой ноды.
 	WSPath string `json:"ws_path,omitempty"`
@@ -82,6 +90,29 @@ func (n Node) Transport() Transport {
 	default:
 		return TransportTLS
 	}
+}
+
+// serverNames собирает имена прикрытия, из которых клиент выбирает на каждое
+// соединение: основное плюс запасные.
+//
+// Пустые и повторы отбрасываются: продавец вводит имена руками, а повтор в
+// наборе молча перекосил бы выбор в его сторону. Основное идёт первым, и если
+// запасных нет, набор из него одного — тогда поведение ровно прежнее.
+func (n Node) serverNames(primary string) []string {
+	out := make([]string, 0, 1+len(n.SNIExtra))
+	seen := make(map[string]bool, 1+len(n.SNIExtra))
+	for _, name := range append([]string{primary}, n.SNIExtra...) {
+		name = strings.TrimSpace(name)
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	if len(out) == 0 {
+		return []string{primary}
+	}
+	return out
 }
 
 // Subscription — ответ панели для нашего клиента.
