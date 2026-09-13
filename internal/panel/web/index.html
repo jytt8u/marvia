@@ -1099,6 +1099,17 @@ function userSheet(user) {
   for (const c of creds) {
     facts.push(el("div", { cls: "line" },
       el("div", { cls: "note", text: c.kind + d.user.issued + shortDate(c.created_at) }),
+      // Смена ключа — не то же, что отзыв. Отзыв оставляет покупателя без
+      // доступа, пока ему не выдадут новый; смена отдаёт новую ссылку сразу,
+      // а старый ключ перестаёт работать. Это ответ на «ключ утёк», а не на
+      // «человек больше не платит».
+      btn(d.user.rotateKey, "", () => act(async () => {
+        if (!await ask(d.user.askRotateKeyTitle, d.user.askRotateKeyText(c.kind), d.user.rotateKey)) return;
+        const res = await api("/api/v1/credentials/" + c.id + "/rotate", "POST");
+        closeSheet();
+        await loadAll();
+        showLinks(d.user.keyRotated, res.links || {}, true);
+      })),
       btn(d.key.revoke, "bad", () => act(async () => {
         const [title, text, word] = d.user.askRevoke(c.kind, creds.length === 1);
         if (!await ask(title, text, word)) return;
@@ -1523,6 +1534,11 @@ const TEXTS = {
             + "Сама запись и срок останутся."
           : "Перестанет работать только он. Остальные доступы покупателя останутся живы.", "Отозвать"],
       credRevoked: "Доступ отозван",
+      rotateKey: "Сменить ключ",
+      askRotateKeyTitle: "Сменить ключ?",
+      askRotateKeyText: (kind) => "Старый ключ " + kind + " перестанет работать сразу, покупателю надо будет отправить новую ссылку. "
+        + "Срок, расход и пометка останутся на месте.",
+      keyRotated: "Ключ сменён — отправь покупателю новую ссылку",
       newTitle: "Новый клиент",
       newLabel: ["Имя или метка", "Видно только тебе — по нему ищут в списке"],
       newDays: ["Срок, дней", "0 — бессрочно"],
@@ -1750,6 +1766,11 @@ const TEXTS = {
             + "The record and the expiry date stay."
           : "Only this one stops working. The buyer's other access stays alive.", "Revoke"],
       credRevoked: "Access revoked",
+      rotateKey: "Change key",
+      askRotateKeyTitle: "Change the key?",
+      askRotateKeyText: (kind) => "The old " + kind + " key stops working right away, so send the buyer a new link. "
+        + "The expiry date, usage and label stay as they are.",
+      keyRotated: "Key changed — send the buyer the new link",
       newTitle: "New client",
       newLabel: ["Name or label", "Only you see it — you search the list by it"],
       newDays: ["Days", "0 — no expiry"],

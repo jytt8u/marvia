@@ -61,6 +61,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/users/{id}/links", a.scoped(ScopeUsers, a.userLinks))
 	mux.HandleFunc("POST /api/v1/users/{id}/credentials", a.scoped(ScopeUsers, a.addCredential))
 	mux.HandleFunc("POST /api/v1/users/{id}/sub-token", a.scoped(ScopeUsers, a.rotateSubToken))
+	mux.HandleFunc("POST /api/v1/credentials/{id}/rotate", a.scoped(ScopeUsers, a.rotateCredential))
 	mux.HandleFunc("DELETE /api/v1/credentials/{id}", a.scoped(ScopeUsers, a.deleteCredential))
 
 	// Управление: ноды. Боту сюда не надо.
@@ -521,6 +522,36 @@ func (a *API) addCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, err := a.store.GetUser(r.Context(), id)
+	if err != nil {
+		respondStoreErr(w, err)
+		return
+	}
+
+	issued := []Issued{{ID: cred.ID, Kind: cred.Kind, Secret: secret}}
+	ok(w, map[string]any{
+		"credential": cred,
+		"issued":     issued,
+		"links":      a.links(r.Context(), user, issued),
+	})
+}
+
+// rotateCredential меняет ключ набора, оставляя сам набор на месте.
+//
+// Отвечает тем же, чем выдача нового: ссылками. Секрет показывается один раз
+// — панель его не хранит для vp1 и не показывает второй раз ни для одного
+// вида.
+func (a *API) rotateCredential(w http.ResponseWriter, r *http.Request) {
+	id, okID := pathID(w, r)
+	if !okID {
+		return
+	}
+
+	cred, secret, err := a.store.RotateCredential(r.Context(), id)
+	if err != nil {
+		respondStoreErr(w, err)
+		return
+	}
+	user, err := a.store.UserByCredential(r.Context(), cred.ID)
 	if err != nil {
 		respondStoreErr(w, err)
 		return

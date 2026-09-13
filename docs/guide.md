@@ -1247,6 +1247,7 @@ curl https://panel.example.com/api/v1/apps -H "Authorization: Bearer $MARVIA_ADM
 | `DELETE` | `/api/v1/users/{id}` | удалить |
 | `POST` | `/api/v1/users/{id}/credentials` | выдать доступ ещё на одно устройство или для другого протокола |
 | `POST` | `/api/v1/users/{id}/sub-token` | сменить адрес подписки, когда её ссылку раздали |
+| `POST` | `/api/v1/credentials/{id}/rotate` | сменить утёкший ключ, оставив набор на месте |
 | `DELETE` | `/api/v1/credentials/{id}` | отозвать одно устройство |
 | `POST` | `/api/v1/nodes` | зарегистрировать ноду, вернуть её токен |
 | `GET` | `/api/v1/apps` | что за приложения выложены: размер и sha256 |

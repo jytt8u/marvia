@@ -128,6 +128,73 @@ func NewTrojanPassword() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
 
+// RotateCredential меняет секрет набора, не трогая сам набор.
+//
+// Зачем отдельная операция, когда есть «выдать новый» и «отозвать старый».
+// Ключ утёк — переписка, потерянный телефон, чужой компьютер, — и продавцу
+// нужно заменить именно его. Пара «добавить, удалить» даёт набору новый
+// номер и новую пометку, а пометка у покупателя осмысленная: «телефон жены»,
+// «рабочий ноутбук». После такой замены она относится уже к другой строке, и
+// продавец, глядя в список из шести устройств, перестаёт понимать, где чьё.
+//
+// Здесь же остаются и номер, и пометка, и день выдачи: меняется только
+// секрет. Расход и срок живут на аккаунте и не задеты в любом случае.
+//
+// Вид набора не меняется. Ключ vp1 и UUID vless — разные вещи для клиента:
+// молча превратить одно в другое значило бы сломать приложение покупателя,
+// не сказав ему ни слова. Нужен другой вид — это другой набор.
+//
+// Старый секрет пропадает без следа: ноды перечитывают список за секунды, и
+// с этого момента он не подходит никуда.
+func (s *Store) RotateCredential(ctx context.Context, id int64) (Credential, string, error) {
+	var (
+		cred      Credential
+		createdAt string
+		userID    int64
+	)
+	err := s.db.QueryRowContext(ctx,
+		`SELECT id, user_id, kind, label, created_at FROM credentials WHERE id = ?`, id).
+		Scan(&cred.ID, &userID, &cred.Kind, &cred.Label, &createdAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Credential{}, "", ErrNotFound
+	}
+	if err != nil {
+		return Credential{}, "", err
+	}
+
+	stored, shown, err := newSecret(cred.Kind)
+	if err != nil {
+		return Credential{}, "", err
+	}
+
+	res, err := s.db.ExecContext(ctx, `UPDATE credentials SET secret = ? WHERE id = ?`, stored, id)
+	if err != nil {
+		return Credential{}, "", fmt.Errorf("смена ключа: %w", err)
+	}
+	// Набор могли удалить между чтением и записью: это не «поменяли», а
+	// «менять было нечего», и ответ должен быть таким же, как у пропажи.
+	if n, _ := res.RowsAffected(); n == 0 {
+		return Credential{}, "", ErrNotFound
+	}
+
+	cred.Secret = stored
+	cred.CreatedAt = parse(createdAt)
+	return cred, shown, nil
+}
+
+// UserByCredential находит хозяина набора доступа.
+func (s *Store) UserByCredential(ctx context.Context, credID int64) (User, error) {
+	var userID int64
+	err := s.db.QueryRowContext(ctx, `SELECT user_id FROM credentials WHERE id = ?`, credID).Scan(&userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return User{}, ErrNotFound
+	}
+	if err != nil {
+		return User{}, err
+	}
+	return s.GetUser(ctx, userID)
+}
+
 // DeleteCredential отзывает один набор доступа.
 //
 // Отзыв мгновенный настолько, насколько быстро ноды перечитают список: до

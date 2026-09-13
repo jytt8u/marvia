@@ -900,3 +900,108 @@ func TestReportWithUnknownTokenIsNotFound(t *testing.T) {
 		t.Fatalf("код %d, ожидался 404", code)
 	}
 }
+
+// TestRotateCredentialKeepsTheSlot — ключ утёк, и его меняют на месте.
+//
+// Пара «выдать новый, отозвать старый» тоже сменила бы ключ, но дала бы
+// набору другой номер и пустую пометку. Пометка у покупателя осмысленная —
+// «телефон жены», — и продавец, глядя в список устройств, должен видеть тот
+// же слот, а не новый.
+func TestRotateCredentialKeepsTheSlot(t *testing.T) {
+	h := newHarness(t)
+	h.createNode("msk")
+	created := h.createUser(0, panel.CredVP1)
+
+	var issued struct {
+		Credential panel.Credential `json:"credential"`
+		Issued     []panel.Issued   `json:"issued"`
+	}
+	code := h.do(http.MethodPost, fmt.Sprintf("/api/v1/users/%d/credentials", created.User.ID),
+		adminToken, map[string]any{"kind": panel.CredVLESS, "label": "телефон жены"}, &issued)
+	if code != http.StatusOK {
+		t.Fatalf("выпуск набора: код %d", code)
+	}
+	was := issued.Issued[0].Secret
+
+	var out struct {
+		Credential panel.Credential `json:"credential"`
+		Issued     []panel.Issued   `json:"issued"`
+		Links      links            `json:"links"`
+	}
+	code = h.do(http.MethodPost, fmt.Sprintf("/api/v1/credentials/%d/rotate", issued.Credential.ID),
+		adminToken, nil, &out)
+	if code != http.StatusOK {
+		t.Fatalf("смена ключа: код %d", code)
+	}
+
+	if out.Credential.ID != issued.Credential.ID {
+		t.Fatalf("номер набора сменился: был %d, стал %d", issued.Credential.ID, out.Credential.ID)
+	}
+	if out.Credential.Label != "телефон жены" {
+		t.Fatalf("пометка потерялась: %q", out.Credential.Label)
+	}
+	if out.Credential.Kind != panel.CredVLESS {
+		t.Fatalf("вид набора сменился: %q", out.Credential.Kind)
+	}
+	if len(out.Issued) != 1 || out.Issued[0].Secret == "" {
+		t.Fatalf("новый секрет не выдан: %+v", out.Issued)
+	}
+	if out.Issued[0].Secret == was {
+		t.Fatal("секрет не изменился — менять его и был весь смысл")
+	}
+	if len(out.Links.Stock) != 1 || !strings.HasPrefix(out.Links.Stock[0], "vless://") {
+		t.Fatalf("ссылка не пересобрана: %v", out.Links.Stock)
+	}
+
+	// Пропавший набор — 404, а не пятисотка.
+	if code := h.do(http.MethodPost, "/api/v1/credentials/99999/rotate", adminToken, nil, nil); code != http.StatusNotFound {
+		t.Fatalf("несуществующий набор: код %d, ожидался 404", code)
+	}
+}
+
+// TestRotatedSecretStopsWorking — старый ключ после смены не подходит нигде.
+//
+// Это и есть обещание: утёкший ключ перестаёт быть ключом. Проверяем там же,
+// где его проверяет нода, — в списке, который она забирает у панели.
+func TestRotatedSecretStopsWorking(t *testing.T) {
+	h := newHarness(t)
+	node := h.createNode("msk")
+	created := h.createUser(0, panel.CredVP1)
+
+	// То, что нода принимает сейчас.
+	before := h.nodeUsers(node.Token)
+	accepted := map[string]bool{}
+	for _, u := range before {
+		accepted[u.Secret] = true
+	}
+	if len(accepted) == 0 {
+		t.Fatal("нода не получила ни одного набора")
+	}
+
+	if len(created.User.Credentials) == 0 {
+		t.Fatal("у покупателя нет наборов доступа")
+	}
+	var out struct {
+		Issued []panel.Issued `json:"issued"`
+	}
+	if code := h.do(http.MethodPost, fmt.Sprintf("/api/v1/credentials/%d/rotate", created.User.Credentials[0].ID),
+		adminToken, nil, &out); code != http.StatusOK {
+		t.Fatalf("смена ключа: код %d", code)
+	}
+
+	after := h.nodeUsers(node.Token)
+	if len(after) != len(before) {
+		t.Fatalf("число покупателей у ноды изменилось: было %d, стало %d", len(before), len(after))
+	}
+
+	// Ни один из прежних секретов нодой больше не принимается — а набор на
+	// месте, значит вместо старого приехал новый.
+	for _, u := range after {
+		if accepted[u.Secret] {
+			t.Fatal("нода всё ещё принимает старый ключ: смена его не отозвала")
+		}
+	}
+	if fresh := len(after); fresh != len(accepted) {
+		t.Fatalf("наборов у ноды стало %d вместо %d: смена не должна ни добавлять, ни убавлять", fresh, len(accepted))
+	}
+}
