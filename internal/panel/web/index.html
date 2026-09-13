@@ -541,6 +541,38 @@
           </div>
         </sc-if>
 
+        <sc-if value="{{ isAlerts }}">
+          <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--gap, 12px); max-width: 640px;">
+            <div style="padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px;">
+              <div style="font-size: 14px; font-weight: 600; color: var(--fg);">{{ d18.alerts.title }}</div>
+              <div style="font-size: 13px; line-height: 1.5; color: var(--dim);">{{ d18.alerts.what }}</div>
+
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--fg); cursor: pointer;">
+                <input type="checkbox" id="al-on" />
+                <span>{{ d18.alerts.on }}</span>
+              </label>
+
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim);">{{ alertTokenLabel }}</div>
+                <input id="al-token" type="password" placeholder="{{ alertTokenHint }}" style="{{ inputStyle }}" />
+                <div style="font-size: 12px; line-height: 1.45; color: var(--dim);">{{ alertTokenNote }}</div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim);">{{ alertChatLabel }}</div>
+                <input id="al-chat" type="text" style="{{ inputStyle }}" />
+                <div style="font-size: 12px; line-height: 1.45; color: var(--dim);">{{ alertChatNote }}</div>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <div style="{{ ctaStyle }}" onClick="{{ saveAlerts }}">{{ d18.alerts.save }}</div>
+              </div>
+
+              <div style="font-size: 12px; line-height: 1.5; color: var(--dim); border-top: 1px solid var(--line); padding-top: 12px;">{{ d18.alerts.privacy }}</div>
+            </div>
+          </div>
+        </sc-if>
+
         <sc-if value="{{ isLook }}">
           <div style="flex: 1; min-height: 0; display: flex; gap: var(--gap, 12px); overflow: hidden;">
 
@@ -848,6 +880,33 @@ async function api(path, method, body) {
   try { data = text ? JSON.parse(text) : null; } catch (_) { /* не JSON */ }
   if (!res.ok) throw new Error((data && data.error) || L().err.code(res.status));
   return data;
+}
+
+// loadAlerts забирает настройки оповещений отдельно от остального.
+//
+// Отдельно, потому что их отдаёт только админский токен: там лежит признак
+// «токен бота задан», и ключу бота с правом read его видеть незачем.
+async function loadAlerts() {
+  try {
+    state.alerts = await api("/api/v1/alerts");
+  } catch (_) {
+    // Не отдались — страница покажет выключенные оповещения. Продавец задаст
+    // их заново, а падать из-за этого панель не должна.
+    state.alerts = null;
+  }
+  render();
+  fillAlerts();
+}
+
+// fillAlerts проставляет значения в поля: разметка пересобирается на каждую
+// отрисовку, и то, что человек видит, должно пережить её.
+function fillAlerts() {
+  const cfg = state.alerts || {};
+  const on = document.getElementById("al-on");
+  if (!on) return;
+  on.checked = !!cfg.enabled;
+  document.getElementById("al-chat").value = cfg.chat_id || "";
+  document.getElementById("al-token").placeholder = cfg.has_token ? L().alerts.tokenSaved : L().alerts.tokenHint;
 }
 
 async function loadAll() {
@@ -1425,11 +1484,12 @@ const TEXTS = {
 
     nav: {
       dash: "Панель", clients: "Клиенты", keys: "Ключи ботов",
-      nodes: "Ноды", stats: "Статистика", apps: "Приложения", look: "Вид",
+      nodes: "Ноды", stats: "Статистика", apps: "Приложения", alerts: "Оповещения", look: "Вид",
     },
     sub: {
       dash: "Обзор за 30 дней",
       keys: "Токены для ботов и интеграций",
+      alerts: "Телеграм-бот продавца · молчащие ноды, сроки, копии базы",
       look: "Тема панели · 28 готовых видов",
       appsEmpty: "ничего не выложено",
       appsSome: "покупатель качает их с домена панели, а не из магазина",
@@ -1497,6 +1557,18 @@ const TEXTS = {
       empty: "Приложения пока не выложены: покупателям их раздаёт сама панель со своего домена.",
     },
 
+    alerts: {
+      title: "Оповещения в телеграм",
+      what: "Панель сама скажет, когда нода замолчала, у людей кончается срок или не снялась копия базы. Иначе об этом узнаёшь из жалоб покупателей.",
+      on: "Присылать оповещения",
+      token: ["ТОКЕН БОТА", "Токен своего бота у @BotFather. Панель хранит его у себя и обратно не показывает."],
+      tokenHint: "123456:AA…",
+      tokenSaved: "токен сохранён — оставь пустым, чтобы не менять",
+      chat: ["КУДА ПИСАТЬ", "Твой chat_id или id служебного чата. Узнать можно у @userinfobot."],
+      save: "Сохранить",
+      saved: "Оповещения сохранены",
+      privacy: "В сообщениях только числа: «у троих кончается срок», без имён. Переписка с ботом живёт в телеграме, и списком клиентов ей становиться незачем. Пока оповещения выключены, панель наружу не ходит вовсе.",
+    },
     look: {
       accent: "АКЦЕНТ", compact: "плотно", normal: "обычно", roomy: "просторно",
       light: "СВЕТ", lampHint: "нажми, откуда светит", lightOff: "свет выключен, фон ровный",
@@ -1660,11 +1732,12 @@ const TEXTS = {
 
     nav: {
       dash: "Overview", clients: "Clients", keys: "Bot keys",
-      nodes: "Nodes", stats: "Statistics", apps: "Apps", look: "Look",
+      nodes: "Nodes", stats: "Statistics", apps: "Apps", alerts: "Alerts", look: "Look",
     },
     sub: {
       dash: "Last 30 days",
       keys: "Tokens for bots and integrations",
+      alerts: "The seller's Telegram bot · silent nodes, expiries, backups",
       look: "Panel theme · 28 ready looks",
       appsEmpty: "nothing published yet",
       appsSome: "buyers download them from your panel, not from a store",
@@ -1732,6 +1805,18 @@ const TEXTS = {
       empty: "No apps published yet: the panel serves them to buyers from your own domain.",
     },
 
+    alerts: {
+      title: "Telegram alerts",
+      what: "The panel tells you when a node goes quiet, subscriptions are about to expire, or a backup failed. Otherwise you hear it from your buyers.",
+      on: "Send alerts",
+      token: ["BOT TOKEN", "Your own bot token from @BotFather. The panel keeps it and never shows it back."],
+      tokenHint: "123456:AA…",
+      tokenSaved: "token saved — leave empty to keep it",
+      chat: ["WHERE TO WRITE", "Your chat_id or the id of a service chat. Ask @userinfobot."],
+      save: "Save",
+      saved: "Alerts saved",
+      privacy: "Messages carry numbers only: “three are expiring”, no names. The chat with the bot lives in Telegram, and it has no business becoming a customer list. While alerts are off, the panel makes no outbound calls at all.",
+    },
     look: {
       accent: "ACCENT", compact: "compact", normal: "normal", roomy: "roomy",
       light: "LIGHT", lampHint: "tap where the light comes from", lightOff: "light is off, flat background",
@@ -1998,7 +2083,7 @@ function daysLeft(iso) {
 // знает — пункта меню, который ведёт в выдуманное, здесь нет.
 // Порядок разделов в меню. Названия берутся из словаря по этому же ключу:
 // держать их здесь значило бы иметь два места, где они разъезжаются.
-const PAGES = ["dash", "clients", "keys", "nodes", "stats", "apps", "look"];
+const PAGES = ["dash", "clients", "keys", "nodes", "stats", "apps", "alerts", "look"];
 
 // Сколько строк на странице. Полсотни — столько влезает в экран прокруткой и
 // столько человек ещё готов просмотреть глазами, не листая.
@@ -2012,6 +2097,13 @@ function setState(patch) {
   Object.assign(state, patch);
   if (Look.KEYS.some((k) => k in patch)) saveLook();
   render();
+
+  // Настройки оповещений подтягиваем при открытии их страницы: они нужны
+  // только там, а ходить за ними при каждой отрисовке незачем.
+  if (patch.page === "alerts") {
+    if (state.alerts) fillAlerts();
+    else loadAlerts();
+  }
 }
 
 // CTA — какая кнопка стоит в углу раздела. Разделы без действия остаются без
@@ -2068,6 +2160,7 @@ function renderVals() {
     stats: state.known ? d18.sub.stats(bytes(total)) : d18.err.unknown,
     apps: !state.known ? d18.err.unknown
       : ((state.apps && state.apps.apps) || []).length === 0 ? d18.sub.appsEmpty : d18.sub.appsSome,
+    alerts: d18.sub.alerts,
     look: d18.sub.look,
   };
 
@@ -2525,6 +2618,31 @@ function renderVals() {
     isStatsPage: page === "stats",
     isAppsPage: page === "apps",
     isLook: page === "look",
+    isAlerts: page === "alerts",
+
+    // Подписи полей плоскими значениями: разметка не умеет индексы массива,
+    // и {{ d18.alerts.token[0] }} уехало бы на страницу как есть.
+    alertTokenLabel: d18.alerts.token[0],
+    alertTokenNote: d18.alerts.token[1],
+    alertChatLabel: d18.alerts.chat[0],
+    alertChatNote: d18.alerts.chat[1],
+    alertTokenHint: (state.alerts && state.alerts.has_token) ? d18.alerts.tokenSaved : d18.alerts.tokenHint,
+
+    inputStyle: "width:100%;padding:10px 12px;border-radius:" + t.r + "px;background:" + t.surf2
+      + ";border:1px solid " + t.line + ";color:" + t.fg + ";font:inherit;font-size:13px;outline:none",
+
+    saveAlerts: () => act(async () => {
+      const d = L();
+      await api("/api/v1/alerts", "PUT", {
+        enabled: document.getElementById("al-on").checked,
+        // Пустой токен означает «оставить прежний»: страница его не
+        // показывает и отправить обратно то, чего не знает, не может.
+        bot_token: val("al-token"),
+        chat_id: val("al-chat"),
+      });
+      await loadAlerts();
+      toast(d.alerts.saved);
+    }),
 
     // Поиск нужен там, где список длинный и растёт. У нод и ключей их
     // единицы — поле поиска над тремя строками только мешает.

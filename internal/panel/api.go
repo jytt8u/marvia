@@ -80,6 +80,11 @@ func (a *API) Handler() http.Handler {
 	// Копия базы. Тоже только админским: в ней лежит вся панель целиком.
 	mux.HandleFunc("GET /api/v1/backup", a.admin(a.downloadBackup))
 
+	// Оповещения — только админским токеном: в настройках лежит токен бота
+	// продавца, а им можно писать от его имени кому угодно.
+	mux.HandleFunc("GET /api/v1/alerts", a.admin(a.getAlerts))
+	mux.HandleFunc("PUT /api/v1/alerts", a.admin(a.setAlerts))
+
 	// Установка ноды одной командой. Приглашение стоит в адресе, потому что
 	// команду продавец вставляет целиком, не разбираясь в заголовках.
 	mux.HandleFunc("GET /install/{token}", a.installScript)
@@ -1129,4 +1134,69 @@ func (a *API) bypassRoutes(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	ok(w, map[string]any{"prefixes": prefixes})
+}
+
+// getAlerts отдаёт настройки оповещений без токена бота.
+//
+// Токен наружу не уходит даже админу: страница его не показывает, а отдать —
+// значит положить его в историю браузера и в любой перехват ответа. Вместо
+// него признак «задан»: страница по нему рисует «токен сохранён» и предлагает
+// заменить, а не показать.
+func (a *API) getAlerts(w http.ResponseWriter, r *http.Request) {
+	cfg, err := a.store.AlertSettings(r.Context())
+	if err != nil {
+		respondStoreErr(w, err)
+		return
+	}
+	ok(w, map[string]any{
+		"enabled":   cfg.Enabled,
+		"chat_id":   cfg.ChatID,
+		"has_token": cfg.BotToken != "",
+	})
+}
+
+// setAlerts сохраняет настройки оповещений.
+//
+// Пустой токен в запросе означает «оставить прежний», а не «стереть»: страница
+// его не показывает, и отправить обратно то, чего она не знает, она не может.
+// Стирается токен вместе с выключением оповещений.
+func (a *API) setAlerts(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Enabled  bool   `json:"enabled"`
+		BotToken string `json:"bot_token"`
+		ChatID   string `json:"chat_id"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+
+	current, err := a.store.AlertSettings(r.Context())
+	if err != nil {
+		respondStoreErr(w, err)
+		return
+	}
+
+	next := AlertSettings{
+		Enabled:  body.Enabled,
+		BotToken: strings.TrimSpace(body.BotToken),
+		ChatID:   strings.TrimSpace(body.ChatID),
+	}
+	if next.BotToken == "" {
+		next.BotToken = current.BotToken
+	}
+	if !next.Enabled {
+		// Выключили — значит и токену бота в базе делать нечего.
+		next.BotToken = ""
+	}
+
+	if next.Enabled && (next.BotToken == "" || next.ChatID == "") {
+		fail(w, http.StatusBadRequest, "для оповещений нужны и токен бота, и адрес чата")
+		return
+	}
+
+	if err := a.store.SetAlertSettings(r.Context(), next); err != nil {
+		respondStoreErr(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

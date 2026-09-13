@@ -237,6 +237,11 @@ CREATE TABLE IF NOT EXISTS usage_daily (
 
 CREATE INDEX IF NOT EXISTS usage_daily_day ON usage_daily(day);
 
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS idempotency (
     key        TEXT NOT NULL PRIMARY KEY,
     scope      TEXT NOT NULL,
@@ -291,6 +296,7 @@ func migrate(db *sql.DB) error {
 		`CREATE TABLE IF NOT EXISTS idempotency (key TEXT NOT NULL PRIMARY KEY, scope TEXT NOT NULL, response TEXT NOT NULL, created_at TEXT NOT NULL)`,
 		`CREATE TABLE IF NOT EXISTS usage_daily (day TEXT NOT NULL, node_id INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE, up INTEGER NOT NULL DEFAULT 0, down INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, node_id))`,
 		`CREATE INDEX IF NOT EXISTS usage_daily_day ON usage_daily(day)`,
+		`CREATE TABLE IF NOT EXISTS settings (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL)`,
 	}
 
 	for _, step := range steps {
@@ -1412,3 +1418,23 @@ func (s *Store) DailyHistoryColumns() ([]string, error) {
 	}
 	return out, rows.Err()
 }
+
+// TouchNode отмечает, что нода только что была на связи.
+//
+// В бою это делает сама нода, приходя за списком пользователей. Отдельный
+// метод нужен тестам: поднимать ради отметки живую ноду незачем.
+func (s *Store) TouchNode(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE nodes SET last_seen = ? WHERE id = ?`, format(time.Now().UTC()), id)
+	if err != nil {
+		return fmt.Errorf("отметка ноды: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ExpiryAt собирает срок из времени — тому, кто зовёт панель из кода, а не
+// по HTTP.
+func ExpiryAt(t time.Time) *Expiry { return &Expiry{Time: t} }
