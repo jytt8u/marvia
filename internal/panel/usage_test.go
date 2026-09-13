@@ -2,6 +2,7 @@ package panel_test
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -159,11 +160,21 @@ func TestUsageByNodeNamesNodes(t *testing.T) {
 	}
 }
 
-// TestDeletedUserLeavesNoHistory — удаление покупателя уносит и его историю.
+// TestDeletedUserLeavesNoPersonalTrace — удаление покупателя уносит всё, что
+// было про него, и не трогает то, что про ноду.
 //
-// Иначе панель хранила бы расход людей, которых давно нет, и обещание «удалили
-// — значит удалили» оказалось бы неправдой.
-func TestDeletedUserLeavesNoHistory(t *testing.T) {
+// Раньше посуточная история хранила человека, и удаление вычитало его байты из
+// графика. Человека там больше нет вовсе: в usage_daily остались день, нода и
+// объём. Поэтому проверять надо две разные вещи.
+//
+// Первая: персонального следа не осталось — расход по покупателю исчез вместе
+// с ним, «удалили значит удалили».
+//
+// Вторая: безличный итог по ноде на месте, и это не недоделка. Трафик через
+// неё действительно прошёл, и продавец за него действительно заплатил хостеру.
+// Вычитать его задним числом значило бы врать в том единственном графике, по
+// которому продавец судит о нагрузке.
+func TestDeletedUserLeavesNoPersonalTrace(t *testing.T) {
 	store, userID, nodeID := usageStore(t)
 	ctx := context.Background()
 
@@ -172,13 +183,50 @@ func TestDeletedUserLeavesNoHistory(t *testing.T) {
 		t.Fatalf("удаление: %v", err)
 	}
 
-	days, err := store.UsageByDay(ctx, 2)
-	if err != nil {
-		t.Fatalf("расход по суткам: %v", err)
+	// Персонального расхода нет: сам покупатель исчез, а с ним и его строки.
+	if _, err := store.GetUser(ctx, userID); !errors.Is(err, panel.ErrNotFound) {
+		t.Fatalf("покупатель ещё на месте: %v", err)
 	}
-	for _, d := range days {
-		if d.Up != 0 || d.Down != 0 {
-			t.Fatalf("история удалённого покупателя осталась: %+v", d)
+	users, err := store.ListUsers(ctx)
+	if err != nil {
+		t.Fatalf("список покупателей: %v", err)
+	}
+	for _, u := range users {
+		if u.ID == userID {
+			t.Fatal("удалённый покупатель остался в списке вместе с расходом")
+		}
+	}
+
+	// Безличный итог по ноде остался — трафик через неё был.
+	byNode, err := store.UsageByNode(ctx, 2)
+	if err != nil {
+		t.Fatalf("расход по нодам: %v", err)
+	}
+	var total int64
+	for _, n := range byNode {
+		total += n.Up + n.Down
+	}
+	if total != 200 {
+		t.Fatalf("итог по ноде %d вместо 200: удаление покупателя не должно переписывать нагрузку ноды", total)
+	}
+}
+
+// TestDailyHistoryKeepsNoOneCompany — в посуточной истории нет человека.
+//
+// Это и есть обещание: изъятая панель не должна выдавать, кто на какой ноде
+// сидел в какой день. Проверяем не по коду, а по самой таблице — столбца с
+// покупателем в ней быть не может.
+func TestDailyHistoryKeepsNoOneCompany(t *testing.T) {
+	store, userID, nodeID := usageStore(t)
+	report(t, store, nodeID, userID, 100, 100)
+
+	columns, err := store.DailyHistoryColumns()
+	if err != nil {
+		t.Fatalf("столбцы истории: %v", err)
+	}
+	for _, name := range columns {
+		if name == "user_id" {
+			t.Fatalf("в посуточной истории снова завёлся покупатель: %v", columns)
 		}
 	}
 }

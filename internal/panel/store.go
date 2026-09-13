@@ -229,11 +229,10 @@ CREATE TABLE IF NOT EXISTS usage (
 -- разных поясах, и любой другой выбор был бы произволом в пользу одного.
 CREATE TABLE IF NOT EXISTS usage_daily (
     day     TEXT    NOT NULL,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     node_id INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
     up      INTEGER NOT NULL DEFAULT 0,
     down    INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (day, user_id, node_id)
+    PRIMARY KEY (day, node_id)
 );
 
 CREATE INDEX IF NOT EXISTS usage_daily_day ON usage_daily(day);
@@ -290,7 +289,7 @@ func migrate(db *sql.DB) error {
 		// каждого продавца при обновлении.
 		`CREATE UNIQUE INDEX IF NOT EXISTS users_external ON users(external_id) WHERE external_id IS NOT NULL`,
 		`CREATE TABLE IF NOT EXISTS idempotency (key TEXT NOT NULL PRIMARY KEY, scope TEXT NOT NULL, response TEXT NOT NULL, created_at TEXT NOT NULL)`,
-		`CREATE TABLE IF NOT EXISTS usage_daily (day TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, node_id INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE, up INTEGER NOT NULL DEFAULT 0, down INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, user_id, node_id))`,
+		`CREATE TABLE IF NOT EXISTS usage_daily (day TEXT NOT NULL, node_id INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE, up INTEGER NOT NULL DEFAULT 0, down INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, node_id))`,
 		`CREATE INDEX IF NOT EXISTS usage_daily_day ON usage_daily(day)`,
 	}
 
@@ -300,6 +299,57 @@ func migrate(db *sql.DB) error {
 				continue
 			}
 			return fmt.Errorf("обновление схемы (%s): %w", step, err)
+		}
+	}
+
+	return forgetWhoWentWhere(db)
+}
+
+// forgetWhoWentWhere убирает человека из посуточной истории расхода.
+//
+// На панелях, стоявших до этой правки, usage_daily хранит строки вида «день,
+// покупатель, нода, объём» — то есть посуточную запись, кто на какой ноде
+// сидел. Ни один экран её не читал: и график за 30 дней, и разбивка по нодам
+// суммируют по людям. А изъятие панели выдавало бы эту историю целиком, и
+// панель изымается легче ноды — она стоит в юрисдикции продавца.
+//
+// Поэтому столбец не просто перестаёт заполняться: накопленное сворачивается
+// по дням и нодам, и прежние строки исчезают вместе с ним. Цифры на графиках
+// от этого не меняются — они и были суммами.
+func forgetWhoWentWhere(db *sql.DB) error {
+	var hasUser int
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM pragma_table_info('usage_daily') WHERE name = 'user_id'`).Scan(&hasUser)
+	if err != nil {
+		return fmt.Errorf("проверка истории расхода: %w", err)
+	}
+	if hasUser == 0 {
+		return nil
+	}
+
+	steps := []string{
+		`CREATE TABLE usage_daily_new (
+			day     TEXT    NOT NULL,
+			node_id INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+			up      INTEGER NOT NULL DEFAULT 0,
+			down    INTEGER NOT NULL DEFAULT 0,
+			PRIMARY KEY (day, node_id)
+		)`,
+		// Строки исчезнувших нод отбрасываем. По уму их быть не может —
+		// удаление ноды уносит их каскадом, — но обновление, которое падает
+		// на неожиданной строке, оставляет продавца с неподнявшейся панелью.
+		// Разбивка по нодам такие строки и так не показывает: она соединяется
+		// с таблицей нод.
+		`INSERT INTO usage_daily_new (day, node_id, up, down)
+		 SELECT day, node_id, SUM(up), SUM(down) FROM usage_daily
+		 WHERE node_id IN (SELECT id FROM nodes) GROUP BY day, node_id`,
+		`DROP TABLE usage_daily`,
+		`ALTER TABLE usage_daily_new RENAME TO usage_daily`,
+		`CREATE INDEX IF NOT EXISTS usage_daily_day ON usage_daily(day)`,
+	}
+	for _, step := range steps {
+		if _, err := db.Exec(step); err != nil {
+			return fmt.Errorf("свёртка истории расхода (%s): %w", step, err)
 		}
 	}
 	return nil
@@ -1025,10 +1075,22 @@ func (s *Store) ReportUsage(ctx context.Context, nodeID int64, report map[string
 			continue
 		}
 
+		// В посуточную историю человек не попадает — только нода и объём.
+		//
+		// Раньше здесь стоял user_id, и панель накапливала посуточную запись
+		// «кто на какой ноде сидел»: Артём каждый день сентября через
+		// Финляндию, с четырнадцатого через Турцию. Ни один экран её не
+		// читал — все они суммируют по людям, — а изъятие панели выдавало бы
+		// эту историю целиком. Панель стоит в юрисдикции продавца и изымается
+		// куда легче ноды.
+		//
+		// Что для этого нужно, осталось: общий расход человека и разделение
+		// квоты между нодами считаются по таблице usage, где итог
+		// накопительный и дат нет.
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO usage_daily (day, user_id, node_id, up, down) VALUES (?, ?, ?, ?, ?)
-			ON CONFLICT (day, user_id, node_id) DO UPDATE SET up = up + excluded.up, down = down + excluded.down`,
-			day, userID, nodeID, up, down); err != nil {
+			INSERT INTO usage_daily (day, node_id, up, down) VALUES (?, ?, ?, ?)
+			ON CONFLICT (day, node_id) DO UPDATE SET up = up + excluded.up, down = down + excluded.down`,
+			day, nodeID, up, down); err != nil {
 			return fmt.Errorf("запись расхода за сутки: %w", err)
 		}
 	}
@@ -1326,4 +1388,27 @@ func (s *Store) ForgetOldUsage(ctx context.Context, keep int) error {
 		return fmt.Errorf("очистка истории расхода: %w", err)
 	}
 	return nil
+}
+
+// DailyHistoryColumns перечисляет столбцы посуточной истории расхода.
+//
+// Нужна тесту: обещание «панель не хранит, кто на какой ноде сидел» проверяется
+// по самой таблице, а не по коду, который в неё пишет. Код можно поменять и
+// забыть про столбец.
+func (s *Store) DailyHistoryColumns() ([]string, error) {
+	rows, err := s.db.Query(`SELECT name FROM pragma_table_info('usage_daily')`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		out = append(out, name)
+	}
+	return out, rows.Err()
 }

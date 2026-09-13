@@ -118,3 +118,115 @@ func TestUpgradeFromOlderSchema(t *testing.T) {
 		t.Errorf("страна не сохранилась: %+v", updated)
 	}
 }
+
+// TestUpgradeForgetsWhoWentWhere — обновление панели стирает накопленную
+// посуточную историю «кто на какой ноде сидел».
+//
+// Перестать её писать мало: у продавца, который обновляется, она уже лежит за
+// последний месяц. Обновление обязано свернуть её по дням и нодам — цифры на
+// графиках от этого не меняются, а людей в таблице не остаётся.
+func TestUpgradeForgetsWhoWentWhere(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "old.db")
+
+	// База прежней формы: в посуточной истории есть покупатель.
+	old, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("старая база: %v", err)
+	}
+	mustExec(t, old, `CREATE TABLE nodes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', public_key TEXT NOT NULL DEFAULT '', token_hash TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '')`)
+	mustExec(t, old, `INSERT INTO nodes (id) VALUES (7)`)
+	mustExec(t, old, `CREATE TABLE usage_daily (
+		day TEXT NOT NULL, user_id INTEGER NOT NULL, node_id INTEGER NOT NULL,
+		up INTEGER NOT NULL DEFAULT 0, down INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (day, user_id, node_id))`)
+	// Два покупателя на одной ноде в один день: после свёртки должна остаться
+	// одна строка с их суммой.
+	mustExec(t, old, `INSERT INTO usage_daily VALUES ('2026-09-01', 1, 7, 100, 200)`)
+	mustExec(t, old, `INSERT INTO usage_daily VALUES ('2026-09-01', 2, 7, 300, 400)`)
+	mustExec(t, old, `INSERT INTO usage_daily VALUES ('2026-09-02', 1, 7, 10, 20)`)
+	if err := old.Close(); err != nil {
+		t.Fatalf("закрытие старой базы: %v", err)
+	}
+
+	store, err := panel.Open(path)
+	if err != nil {
+		t.Fatalf("обновление: %v", err)
+	}
+	defer store.Close()
+
+	columns, err := store.DailyHistoryColumns()
+	if err != nil {
+		t.Fatalf("столбцы: %v", err)
+	}
+	for _, name := range columns {
+		if name == "user_id" {
+			t.Fatalf("покупатель остался в истории после обновления: %v", columns)
+		}
+	}
+
+	// Цифры сохранились: 100+300 вверх и 200+400 вниз за первое сентября.
+	days, err := store.UsageByDay(context.Background(), 400)
+	if err != nil {
+		t.Fatalf("расход по суткам: %v", err)
+	}
+	var up, down int64
+	for _, d := range days {
+		up += d.Up
+		down += d.Down
+	}
+	if up != 410 || down != 620 {
+		t.Fatalf("после свёртки расход стал %d/%d вместо 410/620", up, down)
+	}
+}
+
+func mustExec(t *testing.T, db *sql.DB, query string) {
+	t.Helper()
+	if _, err := db.Exec(query); err != nil {
+		t.Fatalf("подготовка старой базы (%s): %v", query, err)
+	}
+}
+
+// TestUpgradeSurvivesOrphanHistory — обновление не падает на строке исчезнувшей
+// ноды.
+//
+// По уму таких строк быть не может: удаление ноды уносит их каскадом. Но если
+// одна всё же нашлась, панель обязана подняться: продавец, у которого после
+// обновления не стартует панель, теряет сервис целиком, и чинить это ему нечем.
+func TestUpgradeSurvivesOrphanHistory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "orphan.db")
+
+	old, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("старая база: %v", err)
+	}
+	mustExec(t, old, `CREATE TABLE nodes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', public_key TEXT NOT NULL DEFAULT '', token_hash TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '')`)
+	mustExec(t, old, `INSERT INTO nodes (id) VALUES (7)`)
+	mustExec(t, old, `CREATE TABLE usage_daily (
+		day TEXT NOT NULL, user_id INTEGER NOT NULL, node_id INTEGER NOT NULL,
+		up INTEGER NOT NULL DEFAULT 0, down INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (day, user_id, node_id))`)
+	mustExec(t, old, `INSERT INTO usage_daily VALUES ('2026-09-01', 1, 7, 100, 200)`)
+	// Нода 99 в базе не значится.
+	mustExec(t, old, `INSERT INTO usage_daily VALUES ('2026-09-01', 1, 99, 5, 5)`)
+	if err := old.Close(); err != nil {
+		t.Fatalf("закрытие старой базы: %v", err)
+	}
+
+	store, err := panel.Open(path)
+	if err != nil {
+		t.Fatalf("панель не поднялась на осиротевшей строке: %v", err)
+	}
+	defer store.Close()
+
+	days, err := store.UsageByDay(context.Background(), 400)
+	if err != nil {
+		t.Fatalf("расход по суткам: %v", err)
+	}
+	var up int64
+	for _, d := range days {
+		up += d.Up
+	}
+	if up != 100 {
+		t.Fatalf("расход после свёртки %d вместо 100", up)
+	}
+}
