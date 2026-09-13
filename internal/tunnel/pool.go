@@ -44,15 +44,60 @@ const (
 	dialGapJitter = 1500 // миллисекунд
 )
 
+// Окно смены сессии.
+//
+// Сессия живёт не дольше случайного срока в этих пределах, после чего уходит
+// на покой: новых потоков не берёт, а опустев — закрывается, и на её место
+// поднимается свежая с новым рукопожатием.
+//
+// Зачем. Во-первых, forward secrecy: эфемерный ключ Noise живёт ровно одну
+// сессию, и суточное соединение — это сутки на одном ключе; смена раз в
+// полчаса ограничивает, что вскрывается при его утечке, получасом трафика.
+// Во-вторых, картина соединений: браузер не держит одно TCP-соединение к
+// сайту сутками, а туннель, открывший его на старте и не трогавший до вечера,
+// этим и выделяется. Плавающий срок не даёт и самой смене стать приметой.
+//
+// Активный поток при этом не рвётся никогда: сессия ждёт, пока он договорит.
+// Одна долгая закачка законно держит одно долгое соединение — рвать её ради
+// ротации значило бы чинить скрытность ценой того, ради чего всё и работает.
+const (
+	rotateMin = 20 * time.Minute
+	rotateMax = 60 * time.Minute
+)
+
+// reapEvery — как часто пул сам оглядывается на свои сессии.
+//
+// Без этого смена случалась бы только при открытии следующего потока, и
+// молчащий туннель держал бы одно соединение до ноды хоть десять часов — ровно
+// ту картину, ради ухода от которой смена и заведена. Минута: смена всё равно
+// назначена на десятки минут, чаще смотреть незачем.
+const reapEvery = time.Minute
+
+// pooled — сессия и срок её жизни.
+type pooled struct {
+	sess *yamux.Session
+	// retireAt — когда сессия перестаёт брать новые потоки. Опустев после
+	// этого срока, она закрывается.
+	retireAt time.Time
+}
+
 // Pool раздаёт логические потоки, пряча за собой управление сессиями.
 type Pool struct {
 	dial        DialFunc
 	maxSessions int
 	maxStreams  int
 
+	// now и rotateAfter вынесены, чтобы тест мог управлять временем и сроком
+	// смены, не выжидая реальные минуты. В бою — time.Now и случайный срок.
+	now         func() time.Time
+	rotateAfter func() time.Duration
+
 	mu       sync.Mutex
-	sessions []*yamux.Session
+	sessions []*pooled
 	closed   bool
+
+	// done останавливает сборщик, когда пул закрывают.
+	done chan struct{}
 
 	// dialMu не даёт двум хендшейкам идти одновременно, lastDial хранит
 	// время последнего, чтобы выдержать разбег.
@@ -68,7 +113,40 @@ func NewPool(dial DialFunc, maxSessions, maxStreams int) *Pool {
 	if maxStreams <= 0 {
 		maxStreams = DefaultMaxStreams
 	}
-	return &Pool{dial: dial, maxSessions: maxSessions, maxStreams: maxStreams}
+	return newPool(dial, maxSessions, maxStreams, reapEvery)
+}
+
+// newPool — тот же конструктор с настраиваемым шагом сборщика: тест не может
+// ждать минуту, а в бою шаг всегда один.
+func newPool(dial DialFunc, maxSessions, maxStreams int, reap time.Duration) *Pool {
+	p := &Pool{
+		dial:        dial,
+		maxSessions: maxSessions,
+		maxStreams:  maxStreams,
+		now:         time.Now,
+		rotateAfter: func() time.Duration { return rotateMin + time.Duration(mrand.Int64N(int64(rotateMax-rotateMin))) },
+		done:        make(chan struct{}),
+	}
+	go p.reap(reap)
+	return p
+}
+
+// reap закрывает отработавшие пустые сессии, пока пул жив.
+func (p *Pool) reap(every time.Duration) {
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-p.done:
+			return
+		case <-ticker.C:
+			p.mu.Lock()
+			if !p.closed {
+				p.pruneLocked()
+			}
+			p.mu.Unlock()
+		}
+	}
 }
 
 // Open выдаёт новый логический поток до ноды.
@@ -96,11 +174,16 @@ func (p *Pool) Close() error {
 	p.mu.Lock()
 	sessions := p.sessions
 	p.sessions = nil
-	p.closed = true
+	// Close могут позвать дважды: закрытие канала во второй раз — паника,
+	// поэтому останавливаем сборщик только на первом.
+	if !p.closed {
+		p.closed = true
+		close(p.done)
+	}
 	p.mu.Unlock()
 
 	for _, s := range sessions {
-		_ = s.Close()
+		_ = s.sess.Close()
 	}
 	return nil
 }
@@ -114,7 +197,10 @@ func (p *Pool) session(ctx context.Context) (*yamux.Session, error) {
 	}
 	p.pruneLocked()
 	best := p.leastLoadedLocked()
-	atCapacity := len(p.sessions) >= p.maxSessions
+	// В счёт ёмкости идут только сессии, ещё берущие потоки: уходящая на
+	// покой не должна мешать поднять ей смену.
+	active := p.activeCountLocked()
+	atCapacity := active >= p.maxSessions
 	p.mu.Unlock()
 
 	if best != nil && (best.NumStreams() < p.maxStreams || atCapacity) {
@@ -168,7 +254,7 @@ func (p *Pool) spawn(ctx context.Context) (*yamux.Session, error) {
 		_ = session.Close()
 		return nil, errors.New("пул закрыт")
 	}
-	p.sessions = append(p.sessions, session)
+	p.sessions = append(p.sessions, &pooled{sess: session, retireAt: p.now().Add(p.rotateAfter())})
 	p.mu.Unlock()
 
 	return session, nil
@@ -178,7 +264,7 @@ func (p *Pool) spawn(ctx context.Context) (*yamux.Session, error) {
 func (p *Pool) drop(target *yamux.Session) {
 	p.mu.Lock()
 	for i, s := range p.sessions {
-		if s == target {
+		if s.sess == target {
 			p.sessions = append(p.sessions[:i], p.sessions[i+1:]...)
 			break
 		}
@@ -187,11 +273,18 @@ func (p *Pool) drop(target *yamux.Session) {
 	_ = target.Close()
 }
 
-// pruneLocked выбрасывает умершие сессии.
+// pruneLocked выбрасывает умершие сессии и закрывает опустевшие после срока
+// смены. Уходящую сессию с живыми потоками не трогаем: она дождётся, пока они
+// договорят.
 func (p *Pool) pruneLocked() {
+	now := p.now()
 	alive := p.sessions[:0]
 	for _, s := range p.sessions {
-		if s.IsClosed() {
+		if s.sess.IsClosed() {
+			continue
+		}
+		if now.After(s.retireAt) && s.sess.NumStreams() == 0 {
+			_ = s.sess.Close()
 			continue
 		}
 		alive = append(alive, s)
@@ -199,17 +292,34 @@ func (p *Pool) pruneLocked() {
 	p.sessions = alive
 }
 
-// leastLoadedLocked возвращает сессию с наименьшим числом потоков.
+// leastLoadedLocked возвращает сессию с наименьшим числом потоков из тех, что
+// ещё берут потоки. Ушедшую на покой не отдаём: она должна опустеть.
 func (p *Pool) leastLoadedLocked() *yamux.Session {
+	now := p.now()
 	var best *yamux.Session
 	bestLoad := -1
 	for _, s := range p.sessions {
-		load := s.NumStreams()
+		if now.After(s.retireAt) {
+			continue
+		}
+		load := s.sess.NumStreams()
 		if bestLoad < 0 || load < bestLoad {
-			best, bestLoad = s, load
+			best, bestLoad = s.sess, load
 		}
 	}
 	return best
+}
+
+// activeCountLocked считает сессии, ещё берущие новые потоки.
+func (p *Pool) activeCountLocked() int {
+	now := p.now()
+	n := 0
+	for _, s := range p.sessions {
+		if !now.After(s.retireAt) {
+			n++
+		}
+	}
+	return n
 }
 
 // dialGap выбирает паузу перед открытием очередной сессии.
@@ -217,15 +327,16 @@ func (p *Pool) dialGap() time.Duration {
 	return dialGapBase + time.Duration(mrand.IntN(dialGapJitter))*time.Millisecond
 }
 
-// roomy возвращает живую сессию, в которой ещё есть место под поток.
+// roomy возвращает живую сессию, ещё берущую потоки и не заполненную.
 func (p *Pool) roomy() *yamux.Session {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	p.pruneLocked()
+	now := p.now()
 	for _, s := range p.sessions {
-		if s.NumStreams() < p.maxStreams {
-			return s
+		if !now.After(s.retireAt) && s.sess.NumStreams() < p.maxStreams {
+			return s.sess
 		}
 	}
 	return nil
