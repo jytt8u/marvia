@@ -1295,17 +1295,18 @@ function nodeSheet(node) {
   // ключ, а не сертификат, и в SNI годится любое принимаемое имя. При обычном
   // TLS и за CDN имя обязано совпадать с сертификатом, и поля здесь нет —
   // нарисованное, оно обещало бы то, чего не будет.
-  const reality = !!node.reality_public_key;
-  if (reality) {
-    form.push(field(d.node.sniExtra[0], "nd-sni-extra", "text",
-      (node.sni_extra || []).join(", "), d.node.sniExtra[1]));
+  // Имена прикрытия нода сообщает сама, вместе с расходом. Поэтому здесь
+  // они показаны, а не редактируются: поле для правки означало бы, что
+  // вписанное сюда переживёт следующий отчёт ноды, — а оно не переживёт.
+  // Менять их надо там, где они заданы: флагом -reality-sni на самой ноде.
+  if (node.reality_public_key) {
+    const names = (node.sni_extra || []);
+    facts.push(el("div", { cls: "note", text: d.node.sniExtra + ": " + (names.length ? names.join(", ") : "—") }));
   }
 
   sheet(node.name || node.address, facts.concat(form), [
     btn(d.node.save, "go", () => act(async () => {
-      const patch = { name: val("nd-name"), country: val("nd-country") };
-      if (reality) patch.sni_extra = val("nd-sni-extra").split(",");
-      await api("/api/v1/nodes/" + node.id, "PATCH", patch);
+      await api("/api/v1/nodes/" + node.id, "PATCH", { name: val("nd-name"), country: val("nd-country") });
       closeSheet();
       toast(d.node.saved);
       await loadAll();
@@ -1559,7 +1560,7 @@ const TEXTS = {
 
     alerts: {
       title: "Оповещения в телеграм",
-      what: "Панель сама скажет, когда нода замолчала, у людей кончается срок или не снялась копия базы. Иначе об этом узнаёшь из жалоб покупателей.",
+      what: "Панель сама скажет, когда нода замолчала, подходит срок или не снялась копия базы. Без этого о поломке узнаёшь тогда, когда она уже мешает.",
       on: "Присылать оповещения",
       token: ["ТОКЕН БОТА", "Токен своего бота у @BotFather. Панель хранит его у себя и обратно не показывает."],
       tokenHint: "123456:AA…",
@@ -1667,7 +1668,7 @@ const TEXTS = {
       online: "на связи", silentOn: "включена, но молчит", offState: "выключена",
       name: ["Имя", "Видно покупателю в списке серверов"],
       country: ["Страна", "Тоже видно покупателю; встаёт первой в названии"],
-      sniExtra: ["Запасные имена прикрытия", "Через запятую, те же что в -reality-sni у ноды. Блокировка одного домена перестаёт убивать ноду целиком"],
+      sniExtra: "Запасные имена прикрытия",
       save: "Сохранить", saved: "Сохранено",
       disable: "Выключить", enable: "Включить",
       disabled: "Нода убрана из подписок", enabled: "Нода вернулась в подписки",
@@ -1807,7 +1808,7 @@ const TEXTS = {
 
     alerts: {
       title: "Telegram alerts",
-      what: "The panel tells you when a node goes quiet, subscriptions are about to expire, or a backup failed. Otherwise you hear it from your buyers.",
+      what: "The panel tells you when a node goes quiet, a subscription is about to expire, or a backup failed. Without it you learn about a problem only once it is already in the way.",
       on: "Send alerts",
       token: ["BOT TOKEN", "Your own bot token from @BotFather. The panel keeps it and never shows it back."],
       tokenHint: "123456:AA…",
@@ -1913,7 +1914,7 @@ const TEXTS = {
       online: "online", silentOn: "enabled, but silent", offState: "disabled",
       name: ["Name", "The buyer sees it in the server list"],
       country: ["Country", "The buyer sees it too; it comes first in the name"],
-      sniExtra: ["Spare cover names", "Comma-separated, the same as -reality-sni on the node. Blocking one domain stops killing the whole node"],
+      sniExtra: "Spare cover names",
       save: "Save", saved: "Saved",
       disable: "Disable", enable: "Enable",
       disabled: "Node removed from subscriptions", enabled: "Node is back in subscriptions",

@@ -112,14 +112,20 @@ func (a *API) registerNode(w http.ResponseWriter, r *http.Request) {
 
 		// Country — то, что продавец передал установщику в COUNTRY. Пусто —
 		// нормально: страну можно проставить потом через PATCH.
-		Country          string `json:"country"`
-		Port             int    `json:"port"`
-		SNI              string `json:"sni"`
-		PublicKey        string `json:"public_key"`
-		RealityPublicKey string `json:"reality_public_key"`
-		RealityShortID   string `json:"reality_short_id"`
-		WSPath           string `json:"ws_path"`
-		QUIC             bool   `json:"quic"`
+		Country string `json:"country"`
+		Port    int    `json:"port"`
+		SNI     string `json:"sni"`
+
+		// SNIExtra — запасные имена прикрытия, как их задали ноде флагом
+		// -reality-sni. Нода сообщает их сама: держать один и тот же список
+		// руками в двух местах — верный способ однажды их разойтись, и тогда
+		// клиент постучится именем, которого нода не принимает.
+		SNIExtra         []string `json:"sni_extra"`
+		PublicKey        string   `json:"public_key"`
+		RealityPublicKey string   `json:"reality_public_key"`
+		RealityShortID   string   `json:"reality_short_id"`
+		WSPath           string   `json:"ws_path"`
+		QUIC             bool     `json:"quic"`
 	}
 	if !decode(w, r, &p) {
 		return
@@ -143,6 +149,7 @@ func (a *API) registerNode(w http.ResponseWriter, r *http.Request) {
 		Country:          p.Country,
 		Address:          net.JoinHostPort(host, strconv.Itoa(p.Port)),
 		SNI:              p.SNI,
+		SNIExtra:         p.SNIExtra,
 		PublicKey:        p.PublicKey,
 		RealityPublicKey: p.RealityPublicKey,
 		RealityShortID:   p.RealityShortID,

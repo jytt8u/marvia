@@ -325,7 +325,11 @@ func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, 
 		return nil, "", errors.New("не задан токен ноды: укажи -panel-token или MARVIA_NODE_TOKEN")
 	}
 
-	client := nodesync.New(opts.panelURL, token)
+	// Имена прикрытия нода сообщает панели сама: иначе один и тот же список
+	// пришлось бы держать руками и здесь флагом, и там полем, а разойдясь,
+	// они молча ломают подключение — клиент стучится именем, которого нода
+	// уже не принимает.
+	client := nodesync.New(opts.panelURL, token).WithCoverNames(splitList(opts.realitySNI))
 
 	// Первый список забираем синхронно: стартовать, не зная пользователей,
 	// значит на несколько секунд открыть ноду для всех подряд.

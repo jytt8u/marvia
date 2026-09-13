@@ -719,10 +719,26 @@ func (a *API) nodeUsers(w http.ResponseWriter, r *http.Request, n Node) {
 func (a *API) nodeUsage(w http.ResponseWriter, r *http.Request, n Node) {
 	var body struct {
 		Usage map[string]users.Usage `json:"usage"`
+
+		// SNIExtra — имена прикрытия, которые нода принимает на самом деле.
+		// Она сообщает их сама, чтобы один и тот же список не приходилось
+		// держать руками и на ноде, и в панели: разойдясь, они молча ломают
+		// подключение — клиент стучится именем, которого нода не знает.
+		SNIExtra []string `json:"sni_extra"`
 	}
 	if !decode(w, r, &body) {
 		return
 	}
+
+	// Пишем, только когда список и правда изменился: отчёт приходит каждые
+	// несколько секунд, и запись на каждый из них ни к чему.
+	if !sameNames(n.SNIExtra, body.SNIExtra, n.SNI) {
+		names := body.SNIExtra
+		if _, err := a.store.UpdateNode(r.Context(), n.ID, UpdateNodeParams{SNIExtra: &names}); err != nil {
+			log.Printf("имена прикрытия ноды %d не сохранились: %v", n.ID, err)
+		}
+	}
+
 	if err := a.store.ReportUsage(r.Context(), n.ID, body.Usage); err != nil {
 		fail(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1199,4 +1215,34 @@ func (a *API) setAlerts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// sameNames сравнивает списки имён без оглядки на порядок и повторы.
+//
+// Нода присылает то, что ей задали флагом, а панель хранит уже очищенное:
+// без пустых, без повторов и без основного имени. Сравнивать их построчно
+// значило бы переписывать запись на каждом отчёте.
+func sameNames(have, got []string, primary string) bool {
+	var clean []string
+	for _, n := range splitNames(strings.Join(got, ",")) {
+		// Основное имя нода шлёт вместе с запасными — оно у неё в том же
+		// флаге. Панель хранит их отдельно, и сравнивать надо с тем же
+		// набором, который она сохранит.
+		if n != primary {
+			clean = append(clean, n)
+		}
+	}
+	if len(clean) != len(have) {
+		return false
+	}
+	seen := make(map[string]bool, len(have))
+	for _, n := range have {
+		seen[n] = true
+	}
+	for _, n := range clean {
+		if !seen[n] {
+			return false
+		}
+	}
+	return true
 }

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -244,5 +245,63 @@ func TestDisabledNodeGetsForbidden(t *testing.T) {
 	}
 	if code := h.do(http.MethodGet, "/api/v1/node/users", created.Token, nil, nil); code != http.StatusOK {
 		t.Fatalf("включённая нода получила %d, ожидался 200", code)
+	}
+}
+
+// TestNodeTeachesThePanelItsCoverNames — панель узнаёт имена прикрытия от
+// самой ноды, а не из рук человека.
+//
+// Один и тот же список в двух местах — на ноде флагом, в панели полем —
+// расходится молча: клиент постучится именем, которого нода уже не принимает,
+// и соединение просто не соберётся. Поэтому нода сообщает их сама.
+func TestNodeTeachesThePanelItsCoverNames(t *testing.T) {
+	h := newHarness(t)
+	node := h.createNode("msk")
+
+	// Нода отчитывается о расходе и заодно о том, какие имена принимает.
+	// Основное среди них есть — оно у неё в том же флаге.
+	code := h.do(http.MethodPost, "/api/v1/node/usage", node.Token, map[string]any{
+		"usage":     map[string]any{},
+		"sni_extra": []string{"msk.example.com", "cdn.example", "static.example"},
+	}, nil)
+	if code != http.StatusNoContent {
+		t.Fatalf("отчёт ноды: код %d", code)
+	}
+
+	var out struct {
+		Nodes []panel.Node `json:"nodes"`
+	}
+	if code := h.do(http.MethodGet, "/api/v1/nodes", adminToken, nil, &out); code != http.StatusOK {
+		t.Fatalf("список нод: код %d", code)
+	}
+	if len(out.Nodes) != 1 {
+		t.Fatalf("нод %d", len(out.Nodes))
+	}
+	got := out.Nodes[0].SNIExtra
+	if len(got) != 2 {
+		t.Fatalf("панель записала %v: основное имя должно было отпасть", got)
+	}
+	for _, want := range []string{"cdn.example", "static.example"} {
+		if !slices.Contains(got, want) {
+			t.Errorf("имя %q не доехало: %v", want, got)
+		}
+	}
+
+	// Продавец сменил флаг на ноде и перезапустил её — панель обязана
+	// догнать, а не остаться со вчерашним списком.
+	code = h.do(http.MethodPost, "/api/v1/node/usage", node.Token, map[string]any{
+		"usage":     map[string]any{},
+		"sni_extra": []string{"msk.example.com", "other.example"},
+	}, nil)
+	if code != http.StatusNoContent {
+		t.Fatalf("второй отчёт: код %d", code)
+	}
+
+	out.Nodes = nil
+	if code := h.do(http.MethodGet, "/api/v1/nodes", adminToken, nil, &out); code != http.StatusOK {
+		t.Fatalf("список нод: код %d", code)
+	}
+	if len(out.Nodes[0].SNIExtra) != 1 || out.Nodes[0].SNIExtra[0] != "other.example" {
+		t.Fatalf("панель не догнала смену имён: %v", out.Nodes[0].SNIExtra)
 	}
 }

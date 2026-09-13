@@ -150,7 +150,7 @@ func run(opts options) error {
 		log.Printf("ссылки доступа подсказывают адреса панели: %s", strings.Join(addresses, ", "))
 	}
 
-	// Оповещения продавцу. Пока он их не включил в панели, наружу они не
+	// Оповещения. Пока их не включили в панели, наружу они не
 	// ходят вовсе — и панель не светит свой адрес телеграму.
 	alerts := panel.NewAlerts(store)
 
@@ -178,8 +178,8 @@ func run(opts options) error {
 		log.Printf("копии базы: каждые %s в %s, храним %d",
 			opts.backupEvery, backupDir, opts.backupKeep)
 		go store.KeepBackups(ctx, backupDir, opts.backupKeep, opts.backupEvery, func(path string, err error) {
-			// Про несделанную копию продавец узнаёт обычно в тот день, когда
-			// она понадобилась. Поэтому не только в журнал, но и ему в руки.
+			// О несделанной копии узнают обычно в тот день, когда она понадобилась.
+			// Поэтому не только в журнал, но и сообщением.
 			alerts.BackupFailed(ctx, err)
 			if err != nil {
 				log.Printf("копия базы не снялась: %v", err)

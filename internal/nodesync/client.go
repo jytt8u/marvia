@@ -30,6 +30,14 @@ type Client struct {
 	base  string
 	token string
 	http  *http.Client
+
+	// cover — имена прикрытия, которые нода принимает (флаг -reality-sni).
+	//
+	// Нода сообщает их панели сама, вместе с расходом. Иначе один и тот же
+	// список пришлось бы держать руками в двух местах: на ноде флагом и в
+	// панели полем. Расходятся такие списки молча — клиент постучится именем,
+	// которого нода уже не принимает, и соединение просто не соберётся.
+	cover []string
 }
 
 // New создаёт клиента панели.
@@ -39,6 +47,12 @@ func New(baseURL, token string) *Client {
 		token: token,
 		http:  &http.Client{Timeout: requestTimeout},
 	}
+}
+
+// WithCoverNames задаёт имена прикрытия, о которых нода сообщает панели.
+func (c *Client) WithCoverNames(names []string) *Client {
+	c.cover = names
+	return c
 }
 
 // ErrNodeDisabled — панель говорит, что нода выключена.
@@ -115,11 +129,14 @@ func panelSaysDisabled(body []byte) bool {
 
 // ReportUsage отправляет панели накопленный расход.
 func (c *Client) ReportUsage(ctx context.Context, report map[string]users.Usage) error {
-	if len(report) == 0 {
+	// Пустой отчёт всё равно отправляем, когда есть что сообщить о себе:
+	// иначе нода без трафика никогда не донесла бы до панели свои имена
+	// прикрытия.
+	if len(report) == 0 && len(c.cover) == 0 {
 		return nil
 	}
 
-	payload, err := json.Marshal(map[string]any{"usage": report})
+	payload, err := json.Marshal(map[string]any{"usage": report, "sni_extra": c.cover})
 	if err != nil {
 		return err
 	}
