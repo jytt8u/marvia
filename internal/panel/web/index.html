@@ -505,42 +505,6 @@
           </div>
         </sc-if>
 
-        <!--
-          Приложения. Покупатель качает их с домена панели, а не из магазина:
-          в августе 2026 провайдеры начали рубить загрузку из Google Play и
-          App Store, и ссылка «скачай приложение» отваливается раньше всего
-          остального — до того, как человек заплатил.
-
-          Продавцу нужен ответ на вопрос «почему покупателю не пришла ссылка
-          на приложение». Ответ здесь: либо файл лежит, либо нет.
-        -->
-        <sc-if value="{{ isAppsPage }}">
-          <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--gap, 12px);">
-            <sc-for list="{{ appCards }}" as="ap">
-              <div style="{{ ap.style }}">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-                  <div style="font-size: 16px; font-weight: 600; color: var(--fg);">{{ ap.title }}</div>
-                  <div style="{{ ap.badge }}">{{ ap.state }}</div>
-                </div>
-                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ ap.file }}</div>
-                <div style="display: flex; gap: 18px; flex-wrap: wrap;">
-                  <div style="display: flex; flex-direction: column; gap: 3px;">
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">{{ d18.col.size }}</div>
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--fg);">{{ ap.size }}</div>
-                  </div>
-                  <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">SHA256</div>
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--fg); overflow: hidden; text-overflow: ellipsis;">{{ ap.sum }}</div>
-                  </div>
-                </div>
-              </div>
-            </sc-for>
-            <sc-if value="{{ appsHint }}">
-              <div style="{{ hintBox }}">{{ appsHintText }}</div>
-            </sc-if>
-          </div>
-        </sc-if>
-
         <sc-if value="{{ isJournal }}">
           <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;">
             <div style="font-size: 12px; line-height: 1.5; color: var(--dim); padding-bottom: 6px;">{{ d18.journal.what }}</div>
@@ -845,7 +809,6 @@ const state = {
   nodes: [],
   stats: null,
   keys: [],
-  apps: null,
   q: "",
   rowsPage: 1,
   loading: false,
@@ -954,18 +917,16 @@ async function loadAll() {
   state.error = null;
   render();
   try {
-    const [users, nodes, stats, keys, apps] = await Promise.all([
+    const [users, nodes, stats, keys] = await Promise.all([
       api("/api/v1/users"),
       api("/api/v1/nodes"),
       api("/api/v1/stats?days=30"),
       api("/api/v1/keys"),
-      api("/api/v1/apps"),
     ]);
     state.users = (users && users.users) || [];
     state.nodes = (nodes && nodes.nodes) || [];
     state.stats = stats || null;
     state.keys = (keys && keys.keys) || [];
-    state.apps = apps || null;
 
     // Теперь мы действительно знаем, что в панели, и можем показывать числа.
     state.known = true;
@@ -1525,7 +1486,7 @@ const TEXTS = {
 
     nav: {
       dash: "Панель", clients: "Клиенты", keys: "Ключи ботов",
-      nodes: "Ноды", stats: "Статистика", apps: "Приложения", alerts: "Оповещения", journal: "Журнал", look: "Вид",
+      nodes: "Ноды", stats: "Статистика", alerts: "Оповещения", journal: "Журнал", look: "Вид",
     },
     sub: {
       dash: "Обзор за 30 дней",
@@ -1533,8 +1494,6 @@ const TEXTS = {
       alerts: "Телеграм-бот · молчащие ноды, сроки, копии базы",
       journal: "Что делали с панелью · последние 90 дней",
       look: "Тема панели · 28 готовых видов",
-      appsEmpty: "ничего не выложено",
-      appsSome: "покупатель качает их с домена панели, а не из магазина",
       clients: (shown, total, active, filtered) => filtered
         ? "найдено " + shown + " из " + total
         : total + " " + pluralRU(total, "клиент", "клиента", "клиентов") + " · " + active + " активных",
@@ -1592,11 +1551,6 @@ const TEXTS = {
 
     statsPage: {
       byDay: "Трафик по дням", byNode: "Доля нод", noShare: "Трафика за период ещё нет.",
-    },
-
-    appsPage: {
-      laid: "ВЫЛОЖЕНО",
-      empty: "Приложения пока не выложены: покупателям их раздаёт сама панель со своего домена.",
     },
 
     journal: {
@@ -1794,7 +1748,7 @@ const TEXTS = {
 
     nav: {
       dash: "Overview", clients: "Clients", keys: "Bot keys",
-      nodes: "Nodes", stats: "Statistics", apps: "Apps", alerts: "Alerts", journal: "Journal", look: "Look",
+      nodes: "Nodes", stats: "Statistics", alerts: "Alerts", journal: "Journal", look: "Look",
     },
     sub: {
       dash: "Last 30 days",
@@ -1802,8 +1756,6 @@ const TEXTS = {
       alerts: "Telegram bot · silent nodes, expiries, backups",
       journal: "What was done to the panel · last 90 days",
       look: "Panel theme · 28 ready looks",
-      appsEmpty: "nothing published yet",
-      appsSome: "buyers download them from your panel, not from a store",
       clients: (shown, total, active, filtered) => filtered
         ? "found " + shown + " of " + total
         : total + (total === 1 ? " client" : " clients") + " · " + active + " active",
@@ -1861,11 +1813,6 @@ const TEXTS = {
 
     statsPage: {
       byDay: "Traffic by day", byNode: "Share by node", noShare: "No traffic in this period yet.",
-    },
-
-    appsPage: {
-      laid: "PUBLISHED",
-      empty: "No apps published yet: the panel serves them to buyers from your own domain.",
     },
 
     journal: {
@@ -2166,7 +2113,7 @@ function daysLeft(iso) {
 // знает — пункта меню, который ведёт в выдуманное, здесь нет.
 // Порядок разделов в меню. Названия берутся из словаря по этому же ключу:
 // держать их здесь значило бы иметь два места, где они разъезжаются.
-const PAGES = ["dash", "clients", "keys", "nodes", "stats", "apps", "alerts", "journal", "look"];
+const PAGES = ["dash", "clients", "keys", "nodes", "stats", "alerts", "journal", "look"];
 
 // Сколько строк на странице. Полсотни — столько влезает в экран прокруткой и
 // столько человек ещё готов просмотреть глазами, не листая.
@@ -2242,8 +2189,7 @@ function renderVals() {
     keys: d18.sub.keys,
     nodes: state.known ? d18.sub.nodes(nodes.length, liveNodes) : d18.err.unknown,
     stats: state.known ? d18.sub.stats(bytes(total)) : d18.err.unknown,
-    apps: !state.known ? d18.err.unknown
-      : ((state.apps && state.apps.apps) || []).length === 0 ? d18.sub.appsEmpty : d18.sub.appsSome,
+
     alerts: d18.sub.alerts,
     journal: d18.sub.journal,
     look: d18.sub.look,
@@ -2615,23 +2561,6 @@ function renderVals() {
   const ghostBtn = "padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;color:" + t.dim
     + ";background:" + t.surf2;
 
-  // ── приложения ───────────────────────────────────────────────────────────
-  const APP_TITLES = { android: "Android", windows: "Windows" };
-  const laid = ((state.apps && state.apps.apps) || []);
-  const appCards = laid.map((ap) => ({
-    title: APP_TITLES[ap.name] || ap.name,
-    file: ap.file,
-    size: bytes(ap.size),
-    // Половины отпечатка хватает, чтобы сверить с тем, что скачивал, и она
-    // влезает в строку. Целиком он всё равно нечитаем глазами.
-    sum: (ap.sha256 || "").slice(0, 16) + "…",
-    state: d18.appsPage.laid,
-    style: "padding:" + d.pad + "px;border-radius:" + t.r + "px;background:" + t.surf
-      + ";border:1px solid " + t.cardLine + ";box-shadow:" + t.cardShadow + ";display:flex;flex-direction:column;gap:12px",
-    badge: "flex:none;padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
-      + t.acc + ";background:" + t.accSoft,
-  }));
-
   // ── с чего начать ────────────────────────────────────────────────────────
   //
   // Путь от пустой панели до первой продажи — три шага, и до сих пор нигде не
@@ -2701,7 +2630,6 @@ function renderVals() {
     isTable: page === "clients" || page === "keys",
     isNodesPage: page === "nodes",
     isStatsPage: page === "stats",
-    isAppsPage: page === "apps",
     isLook: page === "look",
     isAlerts: page === "alerts",
     isJournal: page === "journal",
@@ -2753,12 +2681,6 @@ function renderVals() {
       + ";border:1px solid " + t.line + ";color:" + t.fg
       + ";font-family:Onest,system-ui,sans-serif;font-size:13px;outline:none",
 
-    appCards,
-    // «Ничего не выложено» — утверждение, и до первого ответа оно ложно:
-    // список приложений ещё не пришёл. Пока !known держим подсказку скрытой.
-    appsHint: state.known && laid.length === 0,
-    appsHintText: (state.apps && state.apps.hint)
-      || d18.appsPage.empty,
     hintBox: "padding:" + d.pad + "px;border-radius:" + t.r + "px;background:" + t.surf
       + ";border:1px solid " + t.line + ";font-size:13px;line-height:1.5;color:" + t.dim,
 
