@@ -8,12 +8,14 @@ require (
 	github.com/hashicorp/yamux v0.1.2
 	github.com/jchv/go-webview2 v0.0.0-20260205173254-56598839c808
 	github.com/quic-go/quic-go v0.62.0
+	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.8.2
 	github.com/xjasonlyu/tun2socks/v2 v2.7.0
 	github.com/xtls/reality v0.0.0-20260322125925-9234c772ba8f
 	golang.org/x/crypto v0.55.0
 	golang.org/x/mobile v0.0.0-20260821190718-4776eadac327
 	golang.org/x/sys v0.47.0
+	golang.org/x/time v0.15.0
 	golang.zx2c4.com/wireguard/windows v1.0.1
 	gvisor.dev/gvisor v0.0.0-20260701204157-69c2d17aea96
 	modernc.org/sqlite v1.57.0
@@ -38,7 +40,6 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/onsi/ginkgo/v2 v2.17.2 // indirect
 	github.com/pires/go-proxyproto v0.11.0 // indirect
-	github.com/refraction-networking/uquic v0.0.6 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	go.uber.org/mock v0.5.2 // indirect
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
@@ -46,7 +47,6 @@ require (
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20260522210424-ecfc5a8d5446 // indirect

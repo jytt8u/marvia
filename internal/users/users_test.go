@@ -425,3 +425,119 @@ func TestSessionInvalidatedMidFlight(t *testing.T) {
 	}
 	session.Close()
 }
+
+// Потолок скорости общий на аккаунт, а не на соединение.
+//
+// Клиент держит пул из нескольких сессий до ноды. Своё ведро у каждой означало
+// бы, что купивший 100 Мбит/с получает их столько раз, сколько соединений
+// открыл, — то есть потолка нет вовсе.
+func TestSpeedLimitIsSharedAcrossConnections(t *testing.T) {
+	raw, encoded := newKey(t)
+
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true, SpeedLimit: 1 << 20}})
+	if err != nil {
+		t.Fatalf("реестр: %v", err)
+	}
+
+	first, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
+	if err != nil {
+		t.Fatalf("первое соединение: %v", err)
+	}
+	second, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
+	if err != nil {
+		t.Fatalf("второе соединение: %v", err)
+	}
+
+	if first.Limiter() == nil {
+		t.Fatal("потолок не выдан, хотя он задан")
+	}
+	if first.Limiter() != second.Limiter() {
+		t.Fatal("у соединений разные ведра: купивший 100 Мбит/с получил бы их дважды")
+	}
+}
+
+// Два разных аккаунта делят ноду, но не потолок: тариф одного не должен
+// зависеть от того, что качает другой.
+func TestSpeedLimitIsNotSharedBetweenAccounts(t *testing.T) {
+	rawA, encA := newKey(t)
+	rawB, encB := newKey(t)
+
+	r, err := NewRegistry([]User{
+		{Secret: encA, Enabled: true, SpeedLimit: 1 << 20},
+		{Secret: encB, Enabled: true, SpeedLimit: 1 << 20},
+	})
+	if err != nil {
+		t.Fatalf("реестр: %v", err)
+	}
+
+	a, err := r.Admit(KindVP1, rawA, addr("1.2.3.4"))
+	if err != nil {
+		t.Fatalf("аккаунт А: %v", err)
+	}
+	b, err := r.Admit(KindVP1, rawB, addr("5.6.7.8"))
+	if err != nil {
+		t.Fatalf("аккаунт Б: %v", err)
+	}
+	if a.Limiter() == b.Limiter() {
+		t.Fatal("у разных аккаунтов одно ведро на двоих")
+	}
+}
+
+// Без потолка ведра нет вовсе: у большинства покупателей лимита не будет, и
+// платить за него на каждом кадре им незачем.
+func TestNoSpeedLimitMeansNoLimiter(t *testing.T) {
+	raw, encoded := newKey(t)
+
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true}})
+	if err != nil {
+		t.Fatalf("реестр: %v", err)
+	}
+	s, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
+	if err != nil {
+		t.Fatalf("соединение: %v", err)
+	}
+	if s.Limiter() != nil {
+		t.Fatal("выдано ведро там, где потолка нет")
+	}
+}
+
+// Перечитывание списка не даёт бесплатного рывка.
+//
+// Панель обновляет список раз в несколько секунд. Новое ведро на каждое
+// обновление начиналось бы полным, и покупатель с потолком получал бы поверх
+// него всплеск ровно так часто, как нода ходит в панель.
+func TestReplaceKeepsTheSameBucketWhileSpeedIsUnchanged(t *testing.T) {
+	raw, encoded := newKey(t)
+
+	r, err := NewRegistry([]User{{Secret: encoded, Enabled: true, SpeedLimit: 1 << 20}})
+	if err != nil {
+		t.Fatalf("реестр: %v", err)
+	}
+	before, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
+	if err != nil {
+		t.Fatalf("до обновления: %v", err)
+	}
+
+	if err := r.Replace([]User{{Secret: encoded, Enabled: true, SpeedLimit: 1 << 20}}); err != nil {
+		t.Fatalf("обновление списка: %v", err)
+	}
+	after, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
+	if err != nil {
+		t.Fatalf("после обновления: %v", err)
+	}
+	if before.Limiter() != after.Limiter() {
+		t.Fatal("ведро пересоздано на том же тарифе — покупатель получил бесплатный рывок")
+	}
+
+	// А вот смена тарифа обязана подействовать сразу.
+	if err := r.Replace([]User{{Secret: encoded, Enabled: true, SpeedLimit: 2 << 20}}); err != nil {
+		t.Fatalf("смена тарифа: %v", err)
+	}
+	changed, err := r.Admit(KindVP1, raw, addr("1.2.3.4"))
+	if err != nil {
+		t.Fatalf("после смены тарифа: %v", err)
+	}
+	if changed.Limiter() == after.Limiter() {
+		t.Fatal("тариф сменился, а ведро осталось прежним")
+	}
+}

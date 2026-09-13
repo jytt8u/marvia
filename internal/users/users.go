@@ -12,6 +12,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 // Причины отказа. Наружу они не уходят: клиент в любом случае получает
@@ -64,6 +66,20 @@ type User struct {
 	// 0 означает «без ограничения». С мультиплексированием одно устройство
 	// открывает до четырёх, так что ставить сюда единицу нельзя.
 	MaxConns int `json:"max_conns,omitempty"`
+
+	// SpeedLimit — потолок скорости в байтах в секунду. 0 означает «без
+	// ограничения».
+	//
+	// Квота по объёму отвечает на «сколько всего», а этот — на «как быстро»:
+	// без него дешёвый тариф и дорогой отличаются только цифрой в гигабайтах,
+	// и продать «100 Мбит/с» отдельно нельзя. Потолок общий на аккаунт, а не
+	// на соединение: клиент держит пул из нескольких сессий, и лимит на
+	// каждую означал бы кратно больший потолок на деле.
+	//
+	// Считается по тем же байтам, что и квота, — по тому, что реально ушло в
+	// сеть вместе с добивкой. Иначе потолок «100 Мбит/с» на проводе давал бы
+	// заметно больше.
+	SpeedLimit int64 `json:"speed_limit,omitempty"`
 
 	// Account связывает несколько ключей в один аккаунт.
 	//
@@ -125,6 +141,38 @@ type account struct {
 	usage Usage
 	conns int
 	ips   map[string]time.Time
+
+	// limiter — потолок скорости, общий на все соединения аккаунта.
+	// nil означает «без ограничения».
+	limiter *rate.Limiter
+}
+
+// burstFor — размер ведра под заданную скорость.
+//
+// Четверть секунды запаса: с меньшим ведром страница грузится рывками, потому
+// что каждый кадр ждёт токенов, с большим — первые секунды идут мимо потолка
+// и человек видит скорость, которой не покупал.
+//
+// Нижняя граница — не про отказ, а про рывки: ведро меньше кадра VP1 (16 КиБ)
+// заставляло бы ждать токенов каждый отдельный кадр. Просить больше ведра за
+// раз безопасно: metered.Conn берёт частями по его размеру.
+func burstFor(bytesPerSec int64) int {
+	burst := bytesPerSec / 4
+	if burst < minBurst {
+		burst = minBurst
+	}
+	return int(burst)
+}
+
+// minBurst — ведро не меньше 64 КиБ: вчетверо больше самого крупного кадра.
+const minBurst = 64 << 10
+
+// limiterFor собирает ограничитель под скорость аккаунта.
+func limiterFor(bytesPerSec int64) *rate.Limiter {
+	if bytesPerSec <= 0 {
+		return nil
+	}
+	return rate.NewLimiter(rate.Limit(bytesPerSec), burstFor(bytesPerSec))
 }
 
 // Registry хранит аккаунты и их расход.
@@ -172,7 +220,7 @@ func (r *Registry) Replace(list []User) error {
 		id := u.AccountID()
 		acc, ok := nextAccounts[id]
 		if !ok {
-			acc = &account{id: id, user: u, ips: make(map[string]time.Time)}
+			acc = &account{id: id, user: u, ips: make(map[string]time.Time), limiter: limiterFor(u.SpeedLimit)}
 			nextAccounts[id] = acc
 		}
 		nextKeys[credentialKey(u.Kind, identity)] = acc
@@ -183,10 +231,18 @@ func (r *Registry) Replace(list []User) error {
 
 	// Переносим расход, живые соединения и известные адреса к новым записям.
 	for id, old := range r.byAccount {
-		if fresh, ok := nextAccounts[id]; ok {
-			fresh.usage = old.usage
-			fresh.conns = old.conns
-			fresh.ips = old.ips
+		fresh, ok := nextAccounts[id]
+		if !ok {
+			continue
+		}
+		fresh.usage = old.usage
+		fresh.conns = old.conns
+		fresh.ips = old.ips
+		// Ограничитель переносим вместе с накопленными токенами, пока
+		// скорость не изменилась: новый начал бы с полного ведра, и человек
+		// на каждое перечитывание списка получал бы бесплатный рывок.
+		if old.limiter != nil && fresh.limiter != nil && old.limiter.Limit() == fresh.limiter.Limit() {
+			fresh.limiter = old.limiter
 		}
 	}
 	r.byKey = nextKeys
@@ -199,6 +255,9 @@ type Session struct {
 	registry *Registry
 	id       string
 	closed   bool
+
+	// limiter — потолок скорости аккаунта, общий на все его соединения.
+	limiter *rate.Limiter
 }
 
 // Admit решает, пускать ли соединение, и открывает сессию.
@@ -238,7 +297,18 @@ func (r *Registry) Admit(kind string, identity []byte, remote net.Addr) (*Sessio
 	}
 
 	acc.conns++
-	return &Session{registry: r, id: acc.id}, nil
+	return &Session{registry: r, id: acc.id, limiter: acc.limiter}, nil
+}
+
+// Limiter отдаёт потолок скорости аккаунта или nil, если его нет.
+//
+// Один объект на все соединения аккаунта: клиент держит пул сессий, и
+// отдельный потолок на каждую означал бы кратно больший потолок на деле.
+func (s *Session) Limiter() *rate.Limiter {
+	if s == nil {
+		return nil
+	}
+	return s.limiter
 }
 
 // Add записывает израсходованные байты и сообщает, не пора ли отключать.

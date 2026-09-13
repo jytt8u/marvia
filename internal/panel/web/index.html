@@ -1052,6 +1052,7 @@ function newUserSheet() {
     field(d.user.newDays[0], "nu-days", "number", 30, d.user.newDays[1]),
     field(d.user.newGB[0], "nu-gb", "number", 100, d.user.newGB[1]),
     field(d.user.newIPs[0], "nu-ips", "number", 3, d.user.newIPs[1]),
+    field(d.user.newSpeed[0], "nu-speed", "number", 0, d.user.newSpeed[1]),
     kinds,
   ], [
     btn(d.user.create, "go", () => act(async () => {
@@ -1062,6 +1063,9 @@ function newUserSheet() {
         label: val("nu-label"),
         traffic_limit: Math.round(num("nu-gb") * 1024 * 1024 * 1024),
         max_ips: num("nu-ips"),
+        // Продавец думает мегабитами, нода считает байтами. 1 Мбит/с — ровно
+        // 125 000 Б/с, так что обратный пересчёт в панели не округляет.
+        speed_limit: Math.round(num("nu-speed") * 125000),
         kinds: picked,
       };
       const days = num("nu-days");
@@ -1087,6 +1091,7 @@ function userSheet(user) {
       : d.time.forever],
     [d.user.used, bytes(user.used) + (user.traffic_limit ? d.user.of + bytes(user.traffic_limit) : d.user.noLimit)],
     [d.user.devices, user.max_ips ? String(user.max_ips) : d.user.noDeviceLimit],
+    [d.user.speed, user.speed_limit ? Math.round(user.speed_limit / 125000) + d.user.mbit : d.user.noSpeedLimit],
   ].map(([k, v]) => el("div", { cls: "note", text: k + ": " + v }));
 
   // Доступы — списком с отзывом поштучно.
@@ -1529,6 +1534,7 @@ const TEXTS = {
       state: "Состояние", on: "включён", off: "отключён",
       term: "Срок", used: "Израсходовано", noLimit: " · без лимита", of: " из ",
       devices: "Устройств", noDeviceLimit: "без ограничения",
+      speed: "Скорость", noSpeedLimit: "без ограничения", mbit: " Мбит/с",
       creds: "Доступы:", noCreds: "Доступов нет", issued: " · выдан ",
       addMore: "Выдать ещё:",
       extend: "+30 дней", extended: "Продлено на 30 дней",
@@ -1556,6 +1562,7 @@ const TEXTS = {
       newDays: ["Срок, дней", "0 — бессрочно"],
       newGB: ["Лимит трафика, ГБ", "0 — без лимита"],
       newIPs: ["Устройств", "0 — без ограничения"],
+      newSpeed: ["Скорость, Мбит/с", "0 — без ограничения. Считается по трафику на проводе и общая на все устройства покупателя"],
       kinds: "Виды доступа",
       kindNote: { vp1: "наше приложение", vless: "чужие клиенты", trojan: "чужие клиенты" },
       create: "Завести", pickKind: "Выбери хотя бы один вид доступа",

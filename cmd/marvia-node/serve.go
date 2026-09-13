@@ -95,6 +95,9 @@ func serveVP1(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
 	rc.Commit()
 	defer tunnel.Close()
 
+	// Потолок скорости известен только теперь, после проверки ключа.
+	meter.Limit(session.Limiter())
+
 	stop := startAccounting(meter, session, tunnel)
 	defer stop()
 
@@ -132,6 +135,7 @@ func serveVLESS(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
 	rc.Commit()
 	_ = rc.SetDeadline(time.Time{})
 
+	meter.Limit(session.Limiter())
 	stop := startAccounting(meter, session, rc)
 	defer stop()
 
@@ -157,6 +161,7 @@ func serveTrojan(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
 	rc.Commit()
 	_ = rc.SetDeadline(time.Time{})
 
+	meter.Limit(session.Limiter())
 	stop := startAccounting(meter, session, rc)
 	defer stop()
 

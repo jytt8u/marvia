@@ -45,7 +45,12 @@ type User struct {
 	TrafficLimit int64      `json:"traffic_limit"`
 	MaxIPs       int        `json:"max_ips"`
 	MaxConns     int        `json:"max_conns"`
-	SubToken     string     `json:"sub_token"`
+
+	// SpeedLimit — потолок скорости в байтах в секунду, 0 означает «без
+	// ограничения». Продавцу это тарифы: «100 Мбит/с» и «без ограничений»
+	// продаются по-разному, а по одной лишь квоте в гигабайтах их не развести.
+	SpeedLimit int64  `json:"speed_limit"`
+	SubToken   string `json:"sub_token"`
 
 	// ExternalID — ключ покупателя в системе продавца, обычно telegram id.
 	//
@@ -136,6 +141,7 @@ CREATE TABLE IF NOT EXISTS users (
     traffic_limit INTEGER NOT NULL DEFAULT 0,
     max_ips       INTEGER NOT NULL DEFAULT 0,
     max_conns     INTEGER NOT NULL DEFAULT 0,
+    speed_limit   INTEGER NOT NULL DEFAULT 0,
     sub_token     TEXT    NOT NULL UNIQUE,
     external_id   TEXT,
     created_at    TEXT    NOT NULL
@@ -274,6 +280,7 @@ func migrate(db *sql.DB) error {
 		`ALTER TABLE nodes ADD COLUMN country TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN quic INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE nodes ADD COLUMN sni_extra TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE users ADD COLUMN speed_limit INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE users ADD COLUMN external_id TEXT`,
 		`CREATE TABLE IF NOT EXISTS api_keys (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, scopes TEXT NOT NULL, created_at TEXT NOT NULL, last_used_at TEXT, revoked_at TEXT)`,
 		// Индекс живёт только здесь, а не в схеме. Схема выполняется первой, и
@@ -308,6 +315,7 @@ type CreateUserParams struct {
 	TrafficLimit int64   `json:"traffic_limit"`
 	MaxIPs       int     `json:"max_ips"`
 	MaxConns     int     `json:"max_conns"`
+	SpeedLimit   int64   `json:"speed_limit"`
 
 	// Kinds — какие наборы доступа выдать сразу: vp1, vless, trojan.
 	// Пусто означает только vp1.
@@ -371,9 +379,9 @@ func (s *Store) CreateUser(ctx context.Context, p CreateUserParams) (User, []Iss
 	defer func() { _ = tx.Rollback() }()
 
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO users (label, enabled, expires_at, traffic_limit, max_ips, max_conns, sub_token, created_at, external_id)
-		 VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?)`,
-		p.Label, nullTime(p.ExpiresAt.at()), p.TrafficLimit, p.MaxIPs, p.MaxConns, subToken, format(now),
+		`INSERT INTO users (label, enabled, expires_at, traffic_limit, max_ips, max_conns, speed_limit, sub_token, created_at, external_id)
+		 VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		p.Label, nullTime(p.ExpiresAt.at()), p.TrafficLimit, p.MaxIPs, p.MaxConns, p.SpeedLimit, subToken, format(now),
 		nullString(p.ExternalID))
 	if err != nil {
 		return User{}, nil, fmt.Errorf("создание пользователя: %w", err)
@@ -428,6 +436,7 @@ type UpdateUserParams struct {
 	TrafficLimit *int64  `json:"traffic_limit,omitempty"`
 	MaxIPs       *int    `json:"max_ips,omitempty"`
 	MaxConns     *int    `json:"max_conns,omitempty"`
+	SpeedLimit   *int64  `json:"speed_limit,omitempty"`
 }
 
 // UpdateUser меняет заданные поля подписчика.
@@ -458,6 +467,10 @@ func (s *Store) UpdateUser(ctx context.Context, id int64, p UpdateUserParams) (U
 	if p.MaxConns != nil {
 		sets = append(sets, "max_conns = ?")
 		args = append(args, *p.MaxConns)
+	}
+	if p.SpeedLimit != nil {
+		sets = append(sets, "speed_limit = ?")
+		args = append(args, *p.SpeedLimit)
 	}
 	if len(sets) == 0 {
 		return s.GetUser(ctx, id)
@@ -544,7 +557,7 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 func (s *Store) queryUsers(ctx context.Context, where string, args ...any) ([]User, error) {
 	query := `
 		SELECT u.id, u.label, u.enabled, u.expires_at, u.traffic_limit, u.max_ips,
-		       u.max_conns, u.sub_token, u.created_at, u.external_id,
+		       u.max_conns, u.speed_limit, u.sub_token, u.created_at, u.external_id,
 		       COALESCE((SELECT SUM(up + down) FROM usage WHERE user_id = u.id), 0)
 		FROM users u ` + where
 
@@ -564,7 +577,7 @@ func (s *Store) queryUsers(ctx context.Context, where string, args ...any) ([]Us
 			external  sql.NullString
 		)
 		if err := rows.Scan(&u.ID, &u.Label, &enabled, &expires, &u.TrafficLimit,
-			&u.MaxIPs, &u.MaxConns, &u.SubToken, &createdAt, &external, &u.Used); err != nil {
+			&u.MaxIPs, &u.MaxConns, &u.SpeedLimit, &u.SubToken, &createdAt, &external, &u.Used); err != nil {
 			return nil, err
 		}
 		u.Enabled = enabled != 0
@@ -885,7 +898,7 @@ func (s *Store) AuthenticateNode(ctx context.Context, token string) (Node, error
 // каждой ноде отдельно.
 func (s *Store) NodeUsers(ctx context.Context, nodeID int64) ([]users.User, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT u.id, u.label, u.enabled, u.expires_at, u.traffic_limit, u.max_ips, u.max_conns,
+		SELECT u.id, u.label, u.enabled, u.expires_at, u.traffic_limit, u.max_ips, u.max_conns, u.speed_limit,
 		       c.kind, c.secret,
 		       COALESCE((SELECT SUM(up + down) FROM usage WHERE user_id = u.id AND node_id <> ?), 0)
 		FROM users u
@@ -906,11 +919,12 @@ func (s *Store) NodeUsers(ctx context.Context, nodeID int64) ([]users.User, erro
 			limit     int64
 			maxIPs    int
 			maxConns  int
+			speed     int64
 			kind      string
 			secret    string
 			elsewhere int64
 		)
-		if err := rows.Scan(&userID, &label, &enabled, &expires, &limit, &maxIPs, &maxConns,
+		if err := rows.Scan(&userID, &label, &enabled, &expires, &limit, &maxIPs, &maxConns, &speed,
 			&kind, &secret, &elsewhere); err != nil {
 			return nil, err
 		}
@@ -922,6 +936,10 @@ func (s *Store) NodeUsers(ctx context.Context, nodeID int64) ([]users.User, erro
 			Enabled:  enabled != 0,
 			MaxIPs:   maxIPs,
 			MaxConns: maxConns,
+			// Потолок скорости общий на все ноды: он про то, как быстро, а
+			// не про то, сколько всего, и делить его между нодами незачем —
+			// клиент всё равно сидит на одной за раз.
+			SpeedLimit: speed,
 			// Все наборы одного подписчика попадают в один аккаунт: квота,
 			// срок и лимит устройств у телефона, ноутбука и записи для
 			// чужого приложения общие.
