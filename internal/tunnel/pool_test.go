@@ -320,3 +320,166 @@ func TestPoolDoesNotBurstHandshakes(t *testing.T) {
 		t.Fatalf("на %d потоков открыто %d соединений, хватало одного", streams, got)
 	}
 }
+
+// TestPoolRotatesIdleSessionAfterDeadline — сессия живёт не вечно: перешагнув
+// свой срок и опустев, она закрывается, а следующий поток открывает свежую.
+// Так эфемерный ключ не живёт сутками, а картина соединений остаётся
+// браузерной.
+func TestPoolRotatesIdleSessionAfterDeadline(t *testing.T) {
+	srv := startServer(t, echoHandler)
+
+	var calls atomic.Int32
+	pool := tunnel.NewPool(dialer(t, srv, &calls), 4, 32)
+	defer pool.Close()
+
+	// Часы под нашим управлением; срок смены — минута условного времени.
+	now := time.Now()
+	clock := &now
+	var mu sync.Mutex
+	pool.SetClock(func() time.Time { mu.Lock(); defer mu.Unlock(); return *clock }, time.Minute)
+
+	ctx := context.Background()
+
+	// Первый поток поднимает первую сессию. Закроем его — сессия пуста.
+	s1, err := pool.Open(ctx)
+	if err != nil {
+		t.Fatalf("первый поток: %v", err)
+	}
+	_ = s1.Close()
+	if got := calls.Load(); got != 1 {
+		t.Fatalf("соединений после первого потока: %d, ожидалось 1", got)
+	}
+
+	// Пока срок не вышел, следующий поток берёт ту же сессию.
+	s2, err := pool.Open(ctx)
+	if err != nil {
+		t.Fatalf("второй поток: %v", err)
+	}
+	_ = s2.Close()
+	if got := calls.Load(); got != 1 {
+		t.Fatalf("до срока смены открыто соединений: %d, должна была переиспользоваться одна", got)
+	}
+
+	// Перешагиваем срок. Пустая старая сессия закрывается, новый поток
+	// поднимает свежую — второе соединение до ноды.
+	mu.Lock()
+	*clock = now.Add(2 * time.Minute)
+	mu.Unlock()
+
+	s3, err := pool.Open(ctx)
+	if err != nil {
+		t.Fatalf("третий поток: %v", err)
+	}
+	defer s3.Close()
+	if got := calls.Load(); got != 2 {
+		t.Fatalf("после срока смены открыто соединений: %d, ожидалось 2 (свежая сессия)", got)
+	}
+}
+
+// TestPoolKeepsRetiredSessionWithLiveStream — уходящую сессию с живым потоком
+// не рвём: закачка не должна прерваться ради ротации. Смена случится, только
+// когда поток договорит.
+func TestPoolKeepsRetiredSessionWithLiveStream(t *testing.T) {
+	srv := startServer(t, echoHandler)
+
+	var calls atomic.Int32
+	pool := tunnel.NewPool(dialer(t, srv, &calls), 4, 32)
+	defer pool.Close()
+
+	now := time.Now()
+	clock := &now
+	var mu sync.Mutex
+	pool.SetClock(func() time.Time { mu.Lock(); defer mu.Unlock(); return *clock }, time.Minute)
+
+	ctx := context.Background()
+
+	// Поток открыт и не закрыт — сессия занята.
+	busy, err := pool.Open(ctx)
+	if err != nil {
+		t.Fatalf("занятый поток: %v", err)
+	}
+
+	// Срок вышел, но поток жив: старую сессию не закрываем. А вот новый поток
+	// пойдёт уже в свежую, потому что старая на покое.
+	mu.Lock()
+	*clock = now.Add(2 * time.Minute)
+	mu.Unlock()
+
+	next, err := pool.Open(ctx)
+	if err != nil {
+		t.Fatalf("новый поток: %v", err)
+	}
+	defer next.Close()
+
+	// Старый поток всё ещё работает: пишем, говорим «я всё сказал» и читаем
+	// ответ. Обработчик отвечает только после конца запроса — потому и
+	// полузакрытие, а не просто чтение.
+	if _, err := busy.Write([]byte("живой поток не оборван")); err != nil {
+		t.Fatalf("запись в старый поток: %v", err)
+	}
+	type closeWriter interface{ CloseWrite() error }
+	cw, ok := busy.(closeWriter)
+	if !ok {
+		t.Fatal("поток не умеет закрывать только исходящую половину")
+	}
+	if err := cw.CloseWrite(); err != nil {
+		t.Fatalf("полузакрытие старого потока: %v", err)
+	}
+
+	_ = busy.SetReadDeadline(time.Now().Add(10 * time.Second))
+	got, err := io.ReadAll(busy)
+	if err != nil {
+		t.Fatalf("чтение из старого потока: %v", err)
+	}
+	if string(got) != "ответ: живой поток не оборван" {
+		t.Fatalf("эхо: %q", got)
+	}
+	_ = busy.Close()
+
+	if got := calls.Load(); got != 2 {
+		t.Fatalf("соединений: %d, ожидалось 2 (старая доработала, новая поднялась)", got)
+	}
+}
+
+// TestPoolClosesIdleSessionWithoutBeingAsked — молчащий туннель не держит
+// соединение до ноды вечно.
+//
+// Смена сессии, которая случается только при открытии следующего потока,
+// оставила бы простаивающий туннель с одним соединением на много часов — ровно
+// той картиной, от которой смена и уводит. Поэтому пул оглядывается на свои
+// сессии сам, без обращений снаружи.
+func TestPoolClosesIdleSessionWithoutBeingAsked(t *testing.T) {
+	srv := startServer(t, echoHandler)
+
+	pool := tunnel.NewPoolForTest(dialer(t, srv, nil), 4, 32, 10*time.Millisecond)
+	defer pool.Close()
+
+	now := time.Now()
+	clock := &now
+	var mu sync.Mutex
+	pool.SetClock(func() time.Time { mu.Lock(); defer mu.Unlock(); return *clock }, time.Minute)
+
+	// Поднимаем сессию и освобождаем её.
+	stream, err := pool.Open(context.Background())
+	if err != nil {
+		t.Fatalf("поток: %v", err)
+	}
+	_ = stream.Close()
+	if got := pool.Sessions(); got != 1 {
+		t.Fatalf("сессий после первого потока: %d, ожидалась 1", got)
+	}
+
+	// Срок вышел. Больше никто ничего не открывает — пул должен убрать
+	// сессию сам.
+	mu.Lock()
+	*clock = now.Add(2 * time.Minute)
+	mu.Unlock()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for pool.Sessions() != 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("простаивающая сессия осталась открытой: пул не убрал её сам")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
