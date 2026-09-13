@@ -53,7 +53,7 @@ func serve(conn net.Conn, d deps) {
 
 	proto, err := inbound.Classify(rc, knownVLESS)
 	if err != nil {
-		serveCover(rc, peer, err, d.fallback)
+		serveCover(rc, err, d.fallback)
 		return
 	}
 
@@ -65,7 +65,7 @@ func serve(conn net.Conn, d deps) {
 	case inbound.ProtoTrojan:
 		serveTrojan(rc, meter, peer, d)
 	default:
-		serveCover(rc, peer, errors.New("протокол не опознан"), d.fallback)
+		serveCover(rc, errors.New("протокол не опознан"), d.fallback)
 	}
 }
 
@@ -84,33 +84,35 @@ func serveVP1(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
 		}
 	}
 
-	tunnel, clientPub, err := vp1.ServerHandshake(rc, d.static, d.guard, authorize)
+	// Публичный ключ клиента дальше не нужен: по нему не за кем следить.
+	// Учёт ведёт сессия, а в журнал он не попадает — см. why и комментарий
+	// к serveCover.
+	tunnel, _, err := vp1.ServerHandshake(rc, d.static, d.guard, authorize)
 	if err != nil {
-		serveCover(rc, peer, err, d.fallback)
+		serveCover(rc, err, d.fallback)
 		return
 	}
 	rc.Commit()
 	defer tunnel.Close()
 
-	client := label(session, vp1.EncodeKey(clientPub))
-	stop := startAccounting(meter, session, tunnel, peer, client)
+	stop := startAccounting(meter, session, tunnel)
 	defer stop()
 
 	muxSession, err := mux.Server(tunnel)
 	if err != nil {
-		log.Printf("[%s] клиент %s: %v", peer, client, err)
+		log.Printf("сессия vp1 не поднялась: %s", why(err))
 		return
 	}
 	defer muxSession.Close()
 
-	log.Printf("[%s] клиент %s (vp1): сессия открыта", peer, client)
+	log.Printf("сессия vp1 открыта")
 	for {
 		stream, err := mux.Accept(muxSession)
 		if err != nil {
-			log.Printf("[%s] клиент %s (vp1): сессия закрыта", peer, client)
+			log.Printf("сессия vp1 закрыта")
 			return
 		}
-		go serveStream(stream, peer, client)
+		go serveStream(stream)
 	}
 }
 
@@ -118,31 +120,30 @@ func serveVP1(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
 func serveVLESS(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
 	request, err := inbound.ReadVLESSRequest(rc)
 	if err != nil {
-		serveCover(rc, peer, err, d.fallback)
+		serveCover(rc, err, d.fallback)
 		return
 	}
 
 	session, err := admit(d, users.KindVLESS, request.UUID, peer)
 	if err != nil {
-		serveCover(rc, peer, err, d.fallback)
+		serveCover(rc, err, d.fallback)
 		return
 	}
 	rc.Commit()
 	_ = rc.SetDeadline(time.Time{})
 
-	client := label(session, users.FormatUUID(request.UUID))
-	stop := startAccounting(meter, session, rc, peer, client)
+	stop := startAccounting(meter, session, rc)
 	defer stop()
 
 	// Ответный заголовок VLESS уедет вместе с первой порцией данных.
-	pipeSingle(inbound.NewVLESSConn(rc), request.Target, peer, client, "vless")
+	pipeSingle(inbound.NewVLESSConn(rc), request.Target, "vless")
 }
 
 // serveTrojan обслуживает чужой клиент по Trojan.
 func serveTrojan(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
 	request, err := inbound.ReadTrojanRequest(rc)
 	if err != nil {
-		serveCover(rc, peer, err, d.fallback)
+		serveCover(rc, err, d.fallback)
 		return
 	}
 
@@ -150,18 +151,17 @@ func serveTrojan(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
 	if err != nil {
 		// Пароль не подошёл — гость получает сайт, как и любой посторонний.
 		// Так и задуман Trojan: сервер неотличим от обычного веб-сервера.
-		serveCover(rc, peer, err, d.fallback)
+		serveCover(rc, err, d.fallback)
 		return
 	}
 	rc.Commit()
 	_ = rc.SetDeadline(time.Time{})
 
-	client := label(session, "trojan")
-	stop := startAccounting(meter, session, rc, peer, client)
+	stop := startAccounting(meter, session, rc)
 	defer stop()
 
 	// У Trojan ответного заголовка нет: сразу данные.
-	pipeSingle(rc, request.Target, peer, client, "trojan")
+	pipeSingle(rc, request.Target, "trojan")
 }
 
 // admit проверяет учётные данные. Пустой реестр означает отладочный режим,
@@ -179,58 +179,56 @@ func admit(d deps, kind string, identity []byte, peer net.Addr) (*users.Session,
 }
 
 // pipeSingle доводит до конца одно соединение чужого протокола.
-func pipeSingle(client net.Conn, target vp1.Address, peer net.Addr, name, proto string) {
+func pipeSingle(client net.Conn, target vp1.Address, proto string) {
 	upstream, err := net.DialTimeout("tcp", target.String(), dialTimeout)
 	if err != nil {
-		log.Printf("[%s] клиент %s (%s): не подключились к %s: %v", peer, name, proto, target, err)
+		log.Printf("%s: цель недоступна: %s", proto, why(err))
 		return
 	}
 	defer upstream.Close()
 
-	log.Printf("[%s] клиент %s (%s) -> %s", peer, name, proto, target)
 	if err := relay.Bidirectional(client, upstream); err != nil {
-		log.Printf("[%s] клиент %s (%s) -> %s: обрыв: %v", peer, name, proto, target, err)
+		log.Printf("%s: обрыв передачи: %s", proto, why(err))
 	}
 }
 
 // serveStream обслуживает один логический поток внутри сессии VP1 — то есть
 // одно соединение приложения пользователя.
-func serveStream(stream net.Conn, peer net.Addr, client string) {
+func serveStream(stream net.Conn) {
 	defer stream.Close()
 
 	_ = stream.SetReadDeadline(time.Now().Add(requestTimeout))
 	addr, kind, err := vp1.ReadRequestOf(stream)
 	if err != nil {
-		log.Printf("[%s] клиент %s: чтение запроса: %v", peer, client, err)
+		log.Printf("поток vp1: чтение запроса: %s", why(err))
 		return
 	}
 	_ = stream.SetReadDeadline(time.Time{})
 
 	switch kind {
 	case vp1.KindUDP:
-		serveDatagrams(stream, addr, peer, client)
+		serveDatagrams(stream, addr)
 		return
 	case vp1.KindProbe:
-		serveSample(stream, peer, client)
+		serveSample(stream)
 		return
 	}
 
 	target, err := net.DialTimeout("tcp", addr.String(), dialTimeout)
 	if err != nil {
-		log.Printf("[%s] клиент %s: не подключились к %s: %v", peer, client, addr, err)
+		log.Printf("поток vp1: цель недоступна: %s", why(err))
 		_ = vp1.WriteStatus(stream, vp1.StatusUnreachable)
 		return
 	}
 	defer target.Close()
 
 	if err := vp1.WriteStatus(stream, vp1.StatusOK); err != nil {
-		log.Printf("[%s] клиент %s: отправка статуса: %v", peer, client, err)
+		log.Printf("отправка статуса: %s", why(err))
 		return
 	}
 
-	log.Printf("[%s] клиент %s -> %s", peer, client, addr)
 	if err := relay.Bidirectional(stream, target); err != nil {
-		log.Printf("[%s] клиент %s -> %s: обрыв: %v", peer, client, addr, err)
+		log.Printf("поток vp1: обрыв передачи: %s", why(err))
 	}
 }
 
@@ -244,11 +242,11 @@ func serveStream(stream net.Conn, peer net.Addr, client string) {
 // Байты настоящие, и платит за них продавец. Поэтому потолок жёсткий и
 // проверяется здесь, а не только на клиенте: чужой клиент попросить может
 // сколько угодно.
-func serveSample(stream net.Conn, peer net.Addr, client string) {
+func serveSample(stream net.Conn) {
 	_ = stream.SetReadDeadline(time.Now().Add(requestTimeout))
 	size, err := vp1.ReadSampleRequest(stream)
 	if err != nil {
-		log.Printf("[%s] клиент %s: замер: %v", peer, client, err)
+		log.Printf("замер: чтение запроса: %s", why(err))
 		return
 	}
 	_ = stream.SetReadDeadline(time.Time{})
@@ -267,7 +265,7 @@ func serveSample(stream net.Conn, peer net.Addr, client string) {
 	// и трафик ноды сколько захочет.
 	_ = stream.SetWriteDeadline(time.Now().Add(sampleTimeout))
 	if err := vp1.WriteSample(stream, size); err != nil {
-		log.Printf("[%s] клиент %s: замер оборван: %v", peer, client, err)
+		log.Printf("замер оборван: %s", why(err))
 	}
 }
 
@@ -289,30 +287,28 @@ const udpIdleTimeout = 90 * time.Second
 // Цель фиксируется запросом и дальше не меняется: поток на неё и заведён.
 // Поэтому проверять адрес источника у пришедших ответов не нужно — сокет
 // подключённый, ядро само отбросит чужие.
-func serveDatagrams(stream net.Conn, addr vp1.Address, peer net.Addr, client string) {
+func serveDatagrams(stream net.Conn, addr vp1.Address) {
 	target, err := net.DialTimeout("udp", addr.String(), dialTimeout)
 	if err != nil {
-		log.Printf("[%s] клиент %s: не открыли udp до %s: %v", peer, client, addr, err)
+		log.Printf("поток udp: цель недоступна: %s", why(err))
 		_ = vp1.WriteStatus(stream, vp1.StatusUnreachable)
 		return
 	}
 	defer target.Close()
 
 	if err := vp1.WriteStatus(stream, vp1.StatusOK); err != nil {
-		log.Printf("[%s] клиент %s: отправка статуса: %v", peer, client, err)
+		log.Printf("отправка статуса: %s", why(err))
 		return
 	}
-
-	log.Printf("[%s] клиент %s -> %s (udp)", peer, client, addr)
 
 	relay.Datagrams(vp1.Datagrams(stream), target, udpIdleTimeout)
 }
 
 // startAccounting запускает учёт трафика и присмотр за подпиской.
 // Возвращённую функцию нужно вызвать по завершении: она доснимет счётчики.
-func startAccounting(meter *metered.Conn, session *users.Session, closer io.Closer, peer net.Addr, client string) func() {
+func startAccounting(meter *metered.Conn, session *users.Session, closer io.Closer) func() {
 	done := make(chan struct{})
-	go meterLoop(meter, session, closer, peer, client, done)
+	go meterLoop(meter, session, closer, done)
 
 	var once bool
 	return func() {
@@ -332,7 +328,7 @@ func startAccounting(meter *metered.Conn, session *users.Session, closer io.Clos
 
 // meterLoop переносит счётчики соединения пользователю и обрывает связь,
 // когда доступ кончился.
-func meterLoop(meter *metered.Conn, session *users.Session, closer io.Closer, peer net.Addr, client string, done <-chan struct{}) {
+func meterLoop(meter *metered.Conn, session *users.Session, closer io.Closer, done <-chan struct{}) {
 	ticker := time.NewTicker(meterInterval)
 	defer ticker.Stop()
 
@@ -350,7 +346,7 @@ func meterLoop(meter *metered.Conn, session *users.Session, closer io.Closer, pe
 			// это заметить, иначе человек пользуется сервисом до тех пор,
 			// пока сам не переподключится.
 			if err := session.Valid(); err != nil {
-				log.Printf("[%s] клиент %s: доступ прекращён (%v), отключаем", peer, client, err)
+				log.Printf("доступ прекращён посреди сессии (%v), отключаем", err)
 				_ = closer.Close()
 				return
 			}
@@ -364,24 +360,60 @@ func meterLoop(meter *metered.Conn, session *users.Session, closer io.Closer, pe
 // свои же клиенты с истёкшей подпиской или исчерпанной квотой. Реакция должна
 // быть одинаковой во всех случаях: разница в поведении сама становится
 // способом прощупать ноду.
-func serveCover(rc *rewind.Conn, peer net.Addr, cause error, cover *fallback.Handler) {
+func serveCover(rc *rewind.Conn, cause error, cover *fallback.Handler) {
 	if cover == nil {
-		log.Printf("[%s] соединение отклонено (%v), сайт-прикрытие не задан", peer, cause)
+		log.Printf("соединение отклонено (%s), сайт-прикрытие не задан", why(cause))
 		return
 	}
 	if err := rc.Rewind(); err != nil {
-		log.Printf("[%s] соединение отклонено (%v), отмотка не удалась: %v", peer, cause, err)
+		log.Printf("соединение отклонено (%s), отмотка не удалась: %s", why(cause), why(err))
 		return
 	}
 	_ = rc.SetDeadline(time.Time{})
 	cover.Serve(rc)
 }
 
-// label выбирает, как называть клиента в журнале: пометка из подписки, если
-// она есть, иначе технический идентификатор.
-func label(session *users.Session, fallbackName string) string {
-	if l := session.Label(); l != "" {
-		return l
+// why описывает неудачу, не называя места.
+//
+// Ошибки сети носят адрес внутри себя: «dial tcp 93.184.216.34:443: connect:
+// connection refused», а у разрешения имён внутри лежит само имя. Записать
+// такую ошибку целиком — значит записать, куда ходил человек, то есть завести
+// ровно тот журнал, которого у ноды нет и не должно быть. Поэтому наружу идёт
+// причина без адреса: «connect: connection refused».
+//
+// Оператору этого хватает: он узнаёт, что цели недоступны и по какой причине,
+// — а этого довольно, чтобы отличить сломанную ноду от сломанного сайта.
+// Узнать, к какому именно сайту не пустило, он может, сходив туда сам.
+func why(err error) string {
+	if err == nil {
+		return "нет ошибки"
 	}
-	return fallbackName
+
+	// DNSError печатает имя, которое искали, — это и есть «куда ходил».
+	var dns *net.DNSError
+	if errors.As(err, &dns) {
+		switch {
+		case dns.IsNotFound:
+			return "имя не найдено"
+		case dns.IsTimeout:
+			return "таймаут разрешения имени"
+		default:
+			return "имя не разрешилось"
+		}
+	}
+
+	// AddrError носит сам адрес в поле Addr.
+	var addr *net.AddrError
+	if errors.As(err, &addr) {
+		return "негодный адрес"
+	}
+
+	// OpError — обёртка, в которой адрес лежит отдельным полем, а причина
+	// внутри. Берём причину и разбираем её тем же правилом.
+	var op *net.OpError
+	if errors.As(err, &op) && op.Err != nil {
+		return why(op.Err)
+	}
+
+	return err.Error()
 }
