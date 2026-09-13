@@ -75,6 +75,18 @@ const Look = (() => {
   // Карточки: без обводки, с обводкой, с тенью.
   const CARDS = ["flat", "outline", "shadow"];
 
+  // Фон из файла. Картинка или видео за интерфейсом — единственное, что
+  // человек приносит своё, а не выбирает из готового.
+  //
+  // Как вписать: только cover и contain. Плитки нет намеренно — видео не
+  // замостить, а ручка, работающая для половины файлов, хуже её отсутствия.
+  const FITS = ["cover", "contain"];
+  const BACKDROP = { fit: "cover", dim: 0.55, blur: 0 };
+  // Больше этого не берём. Файл фона целиком живёт в браузере, и
+  // полугигабайтное видео там не столько не влезет, сколько подвесит
+  // вкладку на чтении.
+  const BACKDROP_MAX = 64 * 1024 * 1024;
+
   // Готовые виды: пресет и все ручки разом. Порядок — часть договора:
   // названия лежат в словарях страниц под теми же номерами, и перестановка
   // здесь подпишет «Изумруд» «Нефритом».
@@ -328,10 +340,77 @@ const Look = (() => {
     try { localStorage.setItem(KEY_PROFILES, JSON.stringify(list)); } catch (_) { /* не запомнится */ }
   }
 
+  // ── фон из файла ─────────────────────────────────────────────────────────
+  //
+  // Ручки фона живут отдельно от вида и в код темы не входят. Код передают
+  // другому человеку, а файла у него нет: затемнение и размытие без картинки
+  // ничего не значат, и код обещал бы то, чего не покажет.
+  const KEY_BACKDROP = "marvia-look-backdrop";
+
+  function normalizeBackdrop(v) {
+    const b = v || {}, out = Object.assign({}, BACKDROP);
+    if (FITS.indexOf(b.fit) >= 0) out.fit = b.fit;
+    if (typeof b.dim === "number" && b.dim >= 0 && b.dim <= 0.95) out.dim = Math.round(b.dim * 100) / 100;
+    if (typeof b.blur === "number" && b.blur >= 0 && b.blur <= 24) out.blur = Math.round(b.blur);
+    return out;
+  }
+
+  // backdropCss — стиль картинки и цвет пелены поверх неё.
+  //
+  // Пелена — цветом фона темы, а не чёрным: иначе светлая тема на тёмном
+  // снимке перестаёт быть светлой, и текст, посчитанный под неё, пропадает.
+  function backdropCss(raw, t) {
+    const b = normalizeBackdrop(raw);
+    const [r, g, bl] = hex(t.bg);
+    // Размытие съедает края: у размытого слоя по периметру полупрозрачная
+    // кайма, сквозь которую видно пустоту. Растягиваем на величину размытия.
+    const grow = 1 + b.blur / 40;
+    return {
+      media: "position:absolute;inset:0;width:100%;height:100%;object-fit:" + b.fit
+        + ";filter:blur(" + b.blur + "px);transform:scale(" + grow.toFixed(3) + ")",
+      veil: "rgba(" + r + "," + g + "," + bl + "," + b.dim.toFixed(2) + ")",
+    };
+  }
+
+  function loadBackdrop() {
+    try {
+      return normalizeBackdrop(JSON.parse(localStorage.getItem(KEY_BACKDROP)));
+    } catch (_) { return normalizeBackdrop(null); }
+  }
+  function saveBackdrop(b) {
+    try { localStorage.setItem(KEY_BACKDROP, JSON.stringify(normalizeBackdrop(b))); } catch (_) { /* не запомнится */ }
+  }
+
+  // Сам файл лежит в IndexedDB и никуда не уходит: ни на сервер панели, ни
+  // в код темы. localStorage не годится — там строки и пять мегабайт.
+  const DB_NAME = "marvia-look", DB_STORE = "backdrop", DB_ROW = "file";
+
+  function store(mode, run) {
+    return new Promise((done, fail) => {
+      if (typeof indexedDB === "undefined") { fail(new Error("фон здесь хранить негде")); return; }
+      const open = indexedDB.open(DB_NAME, 1);
+      open.onupgradeneeded = () => open.result.createObjectStore(DB_STORE);
+      open.onerror = () => fail(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction(DB_STORE, mode);
+        const rq = run(tx.objectStore(DB_STORE));
+        tx.oncomplete = () => { db.close(); done(rq ? rq.result : undefined); };
+        tx.onerror = () => { db.close(); fail(tx.error); };
+      };
+    });
+  }
+  const putBackdropFile = (file) => store("readwrite", (s) => s.put(file, DB_ROW));
+  const getBackdropFile = () => store("readonly", (s) => s.get(DB_ROW));
+  const dropBackdropFile = () => store("readwrite", (s) => s.delete(DB_ROW));
+
+
   // Все акценты, какие есть в пресетах, без повторов: из них выбирают цвет.
   const ACCENTS = Object.values(PRESETS).map((p) => p.acc).filter((c, i, a) => a.indexOf(c) === i);
 
   return { PRESETS, DENSITY, RADII, GLOWS, KINDS, DIRS, BUTTONS, CARDS, LOOKS, DEFAULT, KEYS, ACCENTS, KEY,
+    FITS, BACKDROP, BACKDROP_MAX, normalizeBackdrop, backdropCss, loadBackdrop, saveBackdrop,
+    putBackdropFile, getBackdropFile, dropBackdropFile,
     hex, mix, lum, ratio, bestOn, readableDim, normalize, background, theme, vars,
     encode, decode, same, load, save, loadProfiles, saveProfiles };
 })();

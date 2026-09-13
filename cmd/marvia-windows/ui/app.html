@@ -359,6 +359,14 @@
   .kind i { display: block; height: 34px; border-radius: max(calc(var(--r) - 3px), 5px); }
   .kind[aria-pressed="true"] { border: 2px solid var(--acc); background: var(--accSoft); color: var(--acc); }
   .range { width: 100%; accent-color: var(--acc); }
+  /* Свой фон. Слои стоят под всем окном; интерфейс поверх них рисуется как
+     обычно, а читаемость держит пелена, а не прозрачность карточек. */
+  #bg-layer, #bg-veil { position: fixed; inset: 0; pointer-events: none; }
+  #bg-layer { z-index: -2; overflow: hidden; }
+  #bg-veil { z-index: -1; }
+  .file-row { display: flex; gap: 6px; }
+  .file-row .pillb { flex: 1; }
+  #bg-knobs { display: flex; flex-direction: column; gap: 10px; }
   .code { padding: 10px 12px; border-radius: var(--r); background: var(--surf2); border: 1px dashed var(--acc);
     font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--fg); overflow: hidden; white-space: nowrap;
     text-overflow: ellipsis; cursor: copy; user-select: text; }
@@ -411,6 +419,8 @@
 </style>
 </head>
 <body data-state="idle">
+<div id="bg-layer" hidden></div>
+<div id="bg-veil" hidden></div>
 <div class="app">
 
   <header class="top">
@@ -613,6 +623,24 @@
               <div class="pills" id="glows"></div>
             </div>
             <div class="card">
+              <div class="k" data-t="themeBackdrop"></div>
+              <div class="file-row">
+                <button class="pillb" id="bg-pick"></button>
+                <button class="pillb" id="bg-drop" hidden data-t="themeBackdropDrop"></button>
+              </div>
+              <input type="file" id="bg-file" accept="image/*,video/*" hidden>
+              <p class="hint" id="bg-bad" hidden></p>
+              <div id="bg-knobs" hidden>
+                <div class="k" data-t="themeBackdropFit"></div>
+                <div class="pills" id="bg-fits"></div>
+                <div class="card-head"><span data-t="themeBackdropDim"></span><span class="hint" id="bg-dim-note"></span></div>
+                <input type="range" class="range" id="bg-dim" min="0" max="95">
+                <div class="card-head"><span data-t="themeBackdropBlur"></span><span class="hint" id="bg-blur-note"></span></div>
+                <input type="range" class="range" id="bg-blur" min="0" max="24">
+              </div>
+              <p class="hint" data-t="themeBackdropNote"></p>
+            </div>
+            <div class="card">
               <div class="k" data-t="themeProfiles"></div>
               <div class="pills" id="profiles"></div>
               <div class="pills">
@@ -794,6 +822,12 @@ const T = {
     themeLight: "Свет", themeLampHint: "нажми, откуда светит", themeLightOff: "свет выключен, фон ровный",
     themeDepth: "Густота тени", themeTint: "Оттенок светлой стороны",
     themeRadius: "Скругления", themeCards: "Карточки", themeButton: "Кнопка", themeGlow: "Свечение",
+    themeBackdrop: "Свой фон", themeBackdropPick: "Выбрать файл", themeBackdropChange: "Другой файл", themeBackdropDrop: "Убрать",
+    themeBackdropFit: "Как вписать", themeBackdropFits: { cover: "Заполнить", contain: "Целиком" },
+    themeBackdropDim: "Затемнение", themeBackdropBlur: "Размытие", themeBackdropSharp: "чётко",
+    themeBackdropWrong: "Это не картинка и не видео", themeBackdropBig: "Файл больше 64 МБ — окно его не возьмёт",
+    themeBackdropNoRoom: "Фон сохранить негде: окну запрещено хранить данные",
+    themeBackdropNote: "Картинка или видео за интерфейсом. Файл остаётся на этом компьютере: в код темы он не попадает, поэтому на телефоне и в панели фона не будет. Звук у видео выключен.",
     themeProfiles: "Мои профили", themeSlotFull: "Стиль", themeSlotEmpty: "Пусто", themeSaveHere: "Сохранить сюда", themeRandom: "Случайная тема",
     themeCode: "Код темы · можно передать другу", themeCopy: "Нажми, чтобы скопировать", themeCodePlaceholder: "вставить код MV-…",
     themeCodeBad: "Это не код темы Marvia",
@@ -905,6 +939,12 @@ const T = {
     themeLight: "Light", themeLampHint: "tap where the light comes from", themeLightOff: "light is off, flat background",
     themeDepth: "Shadow depth", themeTint: "Tint of the lit side",
     themeRadius: "Corners", themeCards: "Cards", themeButton: "Button", themeGlow: "Glow",
+    themeBackdrop: "Your own background", themeBackdropPick: "Choose a file", themeBackdropChange: "Another file", themeBackdropDrop: "Remove",
+    themeBackdropFit: "How it fits", themeBackdropFits: { cover: "Fill", contain: "Whole" },
+    themeBackdropDim: "Dim", themeBackdropBlur: "Blur", themeBackdropSharp: "sharp",
+    themeBackdropWrong: "Not an image and not a video", themeBackdropBig: "Over 64 MB — the window will not take it",
+    themeBackdropNoRoom: "Nowhere to keep it: this window may not store data",
+    themeBackdropNote: "An image or a video behind the interface. The file stays on this computer: it never goes into the theme code, so the phone and the panel will show no background. Video is always muted.",
     themeProfiles: "My profiles", themeSlotFull: "Style", themeSlotEmpty: "Empty", themeSaveHere: "Save here", themeRandom: "Random theme",
     themeCode: "Theme code · share it with a friend", themeCopy: "Click to copy", themeCodePlaceholder: "paste an MV-… code",
     themeCodeBad: "This is not a Marvia theme code",
@@ -1059,7 +1099,10 @@ let look = Look.load();
 
 function applyLook() {
   const t = Look.theme(look);
-  document.documentElement.style.cssText = Look.vars(t);
+  // Свой фон отменяет фон темы: иначе он его и закроет. Читаемость тогда
+  // держит пелена над картинкой, а не фон.
+  document.documentElement.style.cssText = Look.vars(t) + (backdropURL ? ";--bgcss:transparent" : "");
+  paintBackdrop();
   // Кнопка питания: вид — из темы. Ставится атрибутом, а красится в CSS.
   $("power").dataset.btn = t.btn;
   paintTheme();
@@ -1071,6 +1114,120 @@ function setLook(patch) {
   Look.save(look);
   applyLook();
 }
+
+// Свой фон: картинка или видео из файла.
+//
+// Файл остаётся на этом компьютере — в IndexedDB профиля WebView2 — и в код
+// темы не попадает: код передают, а файл вместе с ним не унесёшь. Ручки
+// (как вписать, затемнение, размытие) тоже свои, отдельно от вида.
+let backdrop = Look.loadBackdrop();
+let backdropURL = null;
+let backdropKind = "";
+
+function paintBackdrop() {
+  const layer = $("bg-layer"), veil = $("bg-veil");
+  const on = !!backdropURL;
+  layer.hidden = !on;
+  veil.hidden = !on;
+  if (!on) { layer.replaceChildren(); return; }
+
+  const t = Look.theme(look);
+  const css = Look.backdropCss(backdrop, t);
+  // Поля под «целиком» закрывает фон темы, не чёрный: у светлой темы
+  // чёрная рамка по краям выглядела бы поломкой.
+  layer.style.background = t.bg;
+  veil.style.background = css.veil;
+
+  const tag = backdropKind === "video" ? "video" : "img";
+  let media = layer.firstElementChild;
+  if (!media || media.tagName.toLowerCase() !== tag || media.src !== backdropURL) {
+    media = document.createElement(tag);
+    if (tag === "video") {
+      // Звук выключен и включить его нечем: окно, которое заговорило само,
+      // — это не фон, это происшествие.
+      media.muted = true;
+      media.autoplay = true;
+      media.loop = true;
+      media.setAttribute("playsinline", "");
+    }
+    media.src = backdropURL;
+    layer.replaceChildren(media);
+  }
+  media.setAttribute("style", css.media);
+}
+
+// useBackdropFile ставит файл фоном. Прежний адрес отзываем: иначе каждая
+// замена оставляет в памяти окна ещё одно видео.
+function useBackdropFile(file) {
+  if (backdropURL) URL.revokeObjectURL(backdropURL);
+  backdropURL = null;
+  backdropKind = "";
+  if (file) {
+    backdropURL = URL.createObjectURL(file);
+    backdropKind = String(file.type || "").startsWith("video") ? "video" : "image";
+  }
+  applyLook();
+}
+
+function setBackdrop(patch) {
+  Object.assign(backdrop, patch);
+  backdrop = Look.normalizeBackdrop(backdrop);
+  Look.saveBackdrop(backdrop);
+  paintBackdrop();
+}
+
+// paintBackdropKnobs рисует карточку «Свой фон». Ползунки не перерисовывают
+// карточку: их значения пишем в подписи на месте, иначе палец теряет
+// ползунок на первом же движении.
+function paintBackdropKnobs() {
+  const d = L();
+  const on = !!backdropURL;
+  $("bg-pick").textContent = on ? d.themeBackdropChange : d.themeBackdropPick;
+  $("bg-drop").hidden = !on;
+  $("bg-knobs").hidden = !on;
+  if (!on) return;
+  pills("bg-fits", Look.FITS, backdrop.fit, d.themeBackdropFits, (k) => { setBackdrop({ fit: k }); paintBackdropKnobs(); });
+  $("bg-dim").value = Math.round(backdrop.dim * 100);
+  $("bg-dim-note").textContent = Math.round(backdrop.dim * 100) + "%";
+  $("bg-blur").value = backdrop.blur;
+  $("bg-blur-note").textContent = backdrop.blur ? backdrop.blur + " px" : d.themeBackdropSharp;
+}
+
+async function loadBackdropFile() {
+  let file = null;
+  try { file = await Look.getBackdropFile(); } catch (_) { return; /* хранить негде — фон просто не запомнился */ }
+  if (file) useBackdropFile(file);
+}
+
+on("bg-pick", "click", () => $("bg-file").click());
+on("bg-file", "change", async (e) => {
+  const d = L();
+  const file = e.target.files && e.target.files[0];
+  // Поле чистим сразу: иначе повторный выбор того же файла не считается
+  // изменением, и события не будет вовсе.
+  e.target.value = "";
+  if (!file) return;
+  const bad = $("bg-bad");
+  const say = (text) => { bad.textContent = text; bad.hidden = !text; };
+  if (!/^(image|video)\//.test(file.type || "")) { say(d.themeBackdropWrong); return; }
+  if (file.size > Look.BACKDROP_MAX) { say(d.themeBackdropBig); return; }
+  try { await Look.putBackdropFile(file); } catch (_) { say(d.themeBackdropNoRoom); return; }
+  say("");
+  useBackdropFile(file);
+});
+on("bg-drop", "click", async () => {
+  try { await Look.dropBackdropFile(); } catch (_) { /* его там и не было */ }
+  $("bg-bad").hidden = true;
+  useBackdropFile(null);
+});
+on("bg-dim", "input", (e) => {
+  setBackdrop({ dim: Number(e.target.value) / 100 });
+  $("bg-dim-note").textContent = e.target.value + "%";
+});
+on("bg-blur", "input", (e) => {
+  setBackdrop({ blur: Number(e.target.value) });
+  $("bg-blur-note").textContent = Number(e.target.value) ? e.target.value + " px" : L().themeBackdropSharp;
+});
 
 // el — короткий конструктор элемента: тег, класс, содержимое.
 function el(tag, cls, text) {
@@ -1199,6 +1356,7 @@ function paintTheme() {
     profiles.append(b);
   });
 
+  paintBackdropKnobs();
   $("theme-code").textContent = Look.encode(look);
   $("theme-code").title = d.themeCopy;
   $("code-in").placeholder = d.themeCodePlaceholder;
@@ -1744,6 +1902,7 @@ async function tick() {
 lang = pickLang();
 applyLook();
 paintStatic();
+loadBackdropFile();
 on("lang", "click", () => setLang(lang === "ru" ? "en" : "ru"));
 
 // Программе язык сообщаем сразу: её сообщения приходят готовой строкой, и до

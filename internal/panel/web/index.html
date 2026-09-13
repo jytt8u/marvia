@@ -233,6 +233,13 @@
   </form>
 </div>
 
+<!--
+  Фон из файла. Лежит вне #app намеренно: перерисовка собирает #app заново,
+  и видео начиналось бы с начала на каждое нажатие в панели.
+-->
+<div id="bg-layer" hidden style="position: fixed; inset: 0; z-index: -2; overflow: hidden;"></div>
+<div id="bg-veil" hidden style="position: fixed; inset: 0; z-index: -1;"></div>
+
 <div id="app" hidden></div>
 
 <!--
@@ -652,6 +659,39 @@
               </div>
 
               <div style="{{ knobCard }}">
+                <div style="{{ knobTitle }}">{{ d18.look.backdrop }}</div>
+                <div style="display: flex; gap: 6px;">
+                  <div style="{{ pickStyle }}" onClick="{{ pickBackdrop }}">{{ pickLabel }}</div>
+                  <sc-if value="{{ hasBackdrop }}">
+                    <div style="{{ dropStyle }}" onClick="{{ dropBackdrop }}">{{ d18.look.backdropDrop }}</div>
+                  </sc-if>
+                </div>
+                <input id="bg-file" type="file" accept="image/*,video/*" style="display: none;" onChange="{{ tookBackdrop }}">
+                <sc-if value="{{ backdropBad }}">
+                  <div style="font-size: 12px; color: var(--warn);">{{ backdropBad }}</div>
+                </sc-if>
+                <sc-if value="{{ hasBackdrop }}">
+                  <div style="{{ knobSub }}">{{ d18.look.backdropFit }}</div>
+                  <div style="display: flex; gap: 6px;">
+                    <sc-for list="{{ fits }}" as="p">
+                      <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                    </sc-for>
+                  </div>
+                  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <div style="font-size: 13px; color: var(--fg);">{{ d18.look.backdropDim }}</div>
+                    <div id="bg-dim-note" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ dimNote }}</div>
+                  </div>
+                  <input type="range" min="0" max="95" value="{{ dimPct }}" style="{{ depthStyle }}" onInput="{{ setDim }}">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <div style="font-size: 13px; color: var(--fg);">{{ d18.look.backdropBlur }}</div>
+                    <div id="bg-blur-note" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ blurNote }}</div>
+                  </div>
+                  <input type="range" min="0" max="24" value="{{ blurPx }}" style="{{ depthStyle }}" onInput="{{ setBlur }}">
+                </sc-if>
+                <div style="font-size: 12px; line-height: 1.45; color: var(--dim);">{{ d18.look.backdropNote }}</div>
+              </div>
+
+              <div style="{{ knobCard }}">
                 <div style="{{ knobTitle }}">{{ d18.look.profiles }}</div>
                 <div style="display: flex; gap: 6px;">
                   <sc-for list="{{ profiles }}" as="p">
@@ -809,6 +849,13 @@ const state = {
   nodes: [],
   stats: null,
   keys: [],
+  // Фон: ручки живут отдельно от вида, файл — в IndexedDB и только там.
+  // null до загрузки: Look объявлен ниже по файлу, и обратиться к нему
+  // отсюда нельзя. Полный набор ручек приезжает из loadBackdrop.
+  backdrop: null,
+  backdropKind: "",
+  backdropName: "",
+  backdropBad: "",
   q: "",
   rowsPage: 1,
   loading: false,
@@ -1442,6 +1489,70 @@ function theme(ov) {
 function saveLook() { Look.save(state); }
 function loadLook() { Object.assign(state, Look.load()); }
 
+// Фон из файла.
+//
+// Файл никуда не уходит: ни на сервер панели, ни в код темы. Он лежит в
+// IndexedDB того браузера, где его выбрали, и панель к нему обращается по
+// blob-адресу. Отдельный слой вне #app — потому что перерисовка собирает
+// #app заново, и видео дёргалось бы с начала на каждое нажатие.
+let backdropURL = null;
+
+function paintBackdrop() {
+  const layer = document.getElementById("bg-layer");
+  const veil = document.getElementById("bg-veil");
+  const on = !!backdropURL;
+  layer.hidden = !on;
+  veil.hidden = !on;
+  if (!on) { layer.replaceChildren(); return; }
+
+  const t = theme();
+  const css = Look.backdropCss(state.backdrop, t);
+  // Под «вписать целиком» остаются поля — их закрывает фон темы, а не
+  // чёрный: иначе светлая тема получает чёрную рамку по краям экрана.
+  layer.style.background = t.bg;
+  veil.style.background = css.veil;
+
+  const tag = state.backdropKind === "video" ? "video" : "img";
+  let media = layer.firstElementChild;
+  if (!media || media.tagName.toLowerCase() !== tag || media.src !== backdropURL) {
+    media = document.createElement(tag);
+    if (tag === "video") {
+      // Звук выключен и включить его нечем. Панель, которая начинает
+      // говорить, когда её открыли, — это не фон, это происшествие.
+      media.muted = true;
+      media.autoplay = true;
+      media.loop = true;
+      media.setAttribute("playsinline", "");
+    }
+    media.src = backdropURL;
+    layer.replaceChildren(media);
+  }
+  media.setAttribute("style", css.media);
+}
+
+// useBackdropFile принимает выбранный файл: адрес прежнего отзываем, иначе
+// каждая замена фона оставляет в памяти вкладки ещё одно видео.
+function useBackdropFile(file) {
+  if (backdropURL) URL.revokeObjectURL(backdropURL);
+  backdropURL = null;
+  state.backdropKind = "";
+  state.backdropName = "";
+  if (file) {
+    backdropURL = URL.createObjectURL(file);
+    state.backdropKind = String(file.type || "").startsWith("video") ? "video" : "image";
+    state.backdropName = file.name || "";
+  }
+  paintBackdrop();
+}
+
+async function loadBackdrop() {
+  Object.assign(state, { backdrop: Look.loadBackdrop() });
+  let file = null;
+  try { file = await Look.getBackdropFile(); } catch (_) { return; /* приватное окно: фон просто не запомнился */ }
+  useBackdropFile(file);
+  if (state.token) render();
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
    Язык
 
@@ -1597,6 +1708,12 @@ const TEXTS = {
       density: "ПЛОТНОСТЬ",
       cards: "КАРТОЧКИ", cardKinds: { flat: "Плоские", outline: "Обводка", shadow: "С тенью" },
       glow: "СВЕЧЕНИЕ", glows: { none: "Нет", soft: "Мягко", mid: "Средне", neon: "Неон" },
+      backdrop: "СВОЙ ФОН", backdropPick: "Выбрать файл", backdropChange: "Другой файл", backdropDrop: "Убрать",
+      backdropFit: "КАК ВПИСАТЬ", fits: { cover: "Заполнить", contain: "Целиком" },
+      backdropDim: "Затемнение", backdropBlur: "Размытие", backdropSharp: "чётко",
+      backdropWrong: "Это не картинка и не видео", backdropBig: "Файл больше 64 МБ — панель его не возьмёт",
+      backdropNoRoom: "Браузеру негде хранить фон: приватное окно или запрет на данные сайта",
+      backdropNote: "Картинка или видео за интерфейсом. Файл остаётся в этом браузере: на сервер он не уходит и в код темы не попадает, поэтому в другом браузере фона не будет. Звук у видео выключен.",
       profiles: "МОИ ПРОФИЛИ", slotFull: "Стиль", slotEmpty: "Пусто", saveHere: "Сохранить сюда", random: "Случайная тема",
       code: "КОД ТЕМЫ · МОЖНО ПЕРЕДАТЬ ДРУГУ", copy: "Нажми, чтобы скопировать", codePlaceholder: "вставить код MV-…",
       codeBad: "Это не код темы Marvia", codeNote: "Один код хранит весь вид: пресет, акцент, свет, скругления, плотность, кнопку, свечение, карточки. Работает и в приложении на телефоне, и в окне на компьютере.",
@@ -1859,6 +1976,12 @@ const TEXTS = {
       density: "DENSITY",
       cards: "CARDS", cardKinds: { flat: "Flat", outline: "Outlined", shadow: "Shadowed" },
       glow: "GLOW", glows: { none: "None", soft: "Soft", mid: "Medium", neon: "Neon" },
+      backdrop: "YOUR OWN BACKGROUND", backdropPick: "Choose a file", backdropChange: "Another file", backdropDrop: "Remove",
+      backdropFit: "HOW IT FITS", fits: { cover: "Fill", contain: "Whole" },
+      backdropDim: "Dim", backdropBlur: "Blur", backdropSharp: "sharp",
+      backdropWrong: "Not an image and not a video", backdropBig: "Over 64 MB — the panel will not take it",
+      backdropNoRoom: "This browser has nowhere to keep it: private window or site data blocked",
+      backdropNote: "An image or a video behind the interface. The file stays in this browser: it never reaches the server and never goes into the theme code, so another browser will show no background. Video is always muted.",
       profiles: "MY PROFILES", slotFull: "Style", slotEmpty: "Empty", saveHere: "Save here", random: "Random theme",
       code: "THEME CODE · SHARE IT WITH A FRIEND", copy: "Click to copy", codePlaceholder: "paste an MV-… code",
       codeBad: "This is not a Marvia theme code", codeNote: "One code keeps the whole look: preset, accent, light, corners, density, button, glow, cards. Works in the phone app and the desktop window too.",
@@ -2477,6 +2600,61 @@ function renderVals() {
   const depthStyle = "width:100%;accent-color:" + t.acc;
   const setDepth = (e) => setState({ depth: Number(e.target.value) / 100 });
 
+  // Фон. Ползунки не перерисовывают панель: перерисовка собирает разметку
+  // заново, палец теряет ползунок на первом же движении, и затемнение
+  // пришлось бы подбирать щелчками. Правим слой и подпись на месте.
+  const hasBackdrop = !!state.backdropKind;
+  const bd = Look.normalizeBackdrop(state.backdrop);
+  state.backdrop = bd;
+  const dimPct = Math.round(bd.dim * 100);
+  const blurPx = bd.blur;
+  const dimNote = dimPct + "%";
+  const blurNote = blurPx ? blurPx + " px" : d18.look.backdropSharp;
+  const keepBackdrop = (patch, noteId, text) => {
+    Object.assign(state.backdrop, patch);
+    Look.saveBackdrop(state.backdrop);
+    paintBackdrop();
+    const note = document.getElementById(noteId);
+    if (note) note.textContent = text();
+  };
+  const setDim = (e) => keepBackdrop({ dim: Number(e.target.value) / 100 }, "bg-dim-note",
+    () => e.target.value + "%");
+  const setBlur = (e) => keepBackdrop({ blur: Number(e.target.value) }, "bg-blur-note",
+    () => (Number(e.target.value) ? e.target.value + " px" : d18.look.backdropSharp));
+  const fits = Look.FITS.map((k) => ({
+    label: d18.look.fits[k],
+    style: pill(bd.fit === k),
+    onClick: () => { state.backdrop.fit = k; Look.saveBackdrop(state.backdrop); paintBackdrop(); render(); },
+  }));
+  const pickLabel = hasBackdrop ? d18.look.backdropChange : d18.look.backdropPick;
+  const pickStyle = pill(false) + ";flex:2 1 0";
+  const dropStyle = pill(false) + ";color:" + t.warn;
+  const pickBackdrop = () => { const el = document.getElementById("bg-file"); if (el) el.click(); };
+  const tookBackdrop = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    // Поле чистим сразу: иначе второй выбор того же файла не считается
+    // изменением и события не будет вовсе.
+    e.target.value = "";
+    if (!file) return;
+    if (!/^(image|video)\//.test(file.type || "")) { setState({ backdropBad: d18.look.backdropWrong }); return; }
+    if (file.size > Look.BACKDROP_MAX) { setState({ backdropBad: d18.look.backdropBig }); return; }
+    try {
+      await Look.putBackdropFile(file);
+    } catch (_) {
+      setState({ backdropBad: d18.look.backdropNoRoom });
+      return;
+    }
+    state.backdropBad = "";
+    useBackdropFile(file);
+    render();
+  };
+  const dropBackdrop = async () => {
+    try { await Look.dropBackdropFile(); } catch (_) { /* его там и не было */ }
+    state.backdropBad = "";
+    useBackdropFile(null);
+    render();
+  };
+
   const radii = pills(Object.keys(Look.RADII), "radius", d18.look.radii);
   const densities = pills(Object.keys(DENSITY), "density", d18.look);
   const cards = pills(Look.CARDS, "card", d18.look.cardKinds);
@@ -2716,6 +2894,9 @@ function renderVals() {
     noShare: shareRows.length === 0,
     accents, looks, tints, knobCard, knobTitle, knobSub, lampWrap, lampHint, lampZones, lightNote, kinds,
     depthPct, depthNote, depthStyle, setDepth, radii, densities, cards, glows, profiles, saveProfile, randomize,
+    hasBackdrop, fits, dimPct, blurPx, dimNote, blurNote, setDim, setBlur,
+    pickLabel, pickStyle, dropStyle, pickBackdrop, tookBackdrop, dropBackdrop,
+    backdropBad: state.backdropBad,
     themeCode, codeStyle, copyCode, codeInput, applyCode, codeBad: !!state.codeBad, saveStyle, diceStyle,
   };
 }
@@ -2730,9 +2911,13 @@ function render() {
   const app = document.getElementById("app");
   const vals = renderVals();
 
-  app.setAttribute("style", vals.vars + ";height:100%");
+  // Свой фон отменяет фон темы: иначе он же его и закроет. Пелена поверх
+  // картинки берёт на себя то, ради чего фон темы был — читаемость текста.
+  const own = !!backdropURL;
+  app.setAttribute("style", vals.vars + ";height:100%" + (own ? ";--bgcss:transparent" : ""));
   app.classList.toggle("busy", state.loading);
-  document.body.style.background = theme().bgcss;
+  document.body.style.background = own ? "transparent" : theme().bgcss;
+  paintBackdrop();
 
   // Перерисовка собирает разметку заново, а значит поле поиска — уже другой
   // элемент, и набор текста терял бы фокус на каждой букве. Запоминаем, где
@@ -2803,6 +2988,7 @@ document.getElementById("login-lang").addEventListener("click",
 paintLogin();
 
 loadLook();
+loadBackdrop();
 
 let saved = null;
 try { saved = localStorage.getItem(TOKEN_KEY); } catch (_) { /* приватное окно */ }
