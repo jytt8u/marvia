@@ -112,6 +112,7 @@ func newServerConn(stream *quic.Stream, conn *quic.Conn) net.Conn {
 
 // QUICListener принимает соединения по QUIC.
 type QUICListener struct {
+	tr    *quic.Transport
 	ln    *quic.Listener
 	conns chan net.Conn
 	done  chan struct{}
@@ -128,15 +129,39 @@ func ListenQUIC(addr string, cert tls.Certificate) (*QUICListener, error) {
 		MinVersion:   tls.VersionTLS13,
 	}
 
-	ln, err := quic.ListenAddr(addr, tlsCfg, &quic.Config{
-		MaxIdleTimeout:  quicIdleTimeout,
-		KeepAlivePeriod: quicIdleTimeout / 3,
-	})
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("quic на %s: %w", addr, err)
+	}
+	pc, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
 		return nil, fmt.Errorf("quic на %s: %w", addr, err)
 	}
 
+	// Свой Transport, а не quic.ListenAddr, ради одной ручки: на пакет с
+	// незнакомой версией нода не отвечает. Version Negotiation перечисляет
+	// версии, которые умеет именно наш стек, — это готовый отпечаток, и
+	// сканеру хватает одного пакета, чтобы его снять. Хост без службы на
+	// такой пакет молчит; молчим и мы. Настоящий клиент говорит версией,
+	// которую мы знаем, и ему ответ на чужую не нужен.
+	//
+	// Stateless reset тоже не шлём: ключ не задан, а без него quic-go на
+	// пакеты по неизвестному соединению не отвечает. Это тот же принцип.
+	tr := &quic.Transport{
+		Conn:                             pc,
+		DisableVersionNegotiationPackets: true,
+	}
+	ln, err := tr.Listen(tlsCfg, &quic.Config{
+		MaxIdleTimeout:  quicIdleTimeout,
+		KeepAlivePeriod: quicIdleTimeout / 3,
+	})
+	if err != nil {
+		_ = pc.Close()
+		return nil, fmt.Errorf("quic на %s: %w", addr, err)
+	}
+
 	l := &QUICListener{
+		tr:    tr,
 		ln:    ln,
 		conns: make(chan net.Conn),
 		done:  make(chan struct{}),
@@ -189,7 +214,10 @@ func (l *QUICListener) Close() error {
 	default:
 		close(l.done)
 	}
-	return l.ln.Close()
+	err := l.ln.Close()
+	// Transport держит сокет; без этого порт остаётся занят после Close.
+	_ = l.tr.Close()
+	return err
 }
 
 // Addr отдаёт адрес, на котором слушаем.

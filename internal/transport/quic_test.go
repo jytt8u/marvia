@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"io"
+	"net"
 	"testing"
 	"time"
 
@@ -223,5 +224,48 @@ func TestQUICListenerCloses(t *testing.T) {
 	case <-done:
 	case <-time.After(5 * time.Second):
 		t.Fatal("Accept не вернулся после закрытия слушателя")
+	}
+}
+
+// TestQUICStaysSilentToStrangeVersions — на пакет с чужой версией нода не
+// отвечает ничем.
+//
+// Version Negotiation — это готовый отпечаток: в нём перечислены версии,
+// которые поддерживает именно наш стек, и по этому списку ноду опознают,
+// не разобрав ни байта полезной нагрузки. Хост, на котором просто нет
+// службы, на такой пакет молчит — вот на него и равняемся.
+func TestQUICStaysSilentToStrangeVersions(t *testing.T) {
+	ln, _ := quicPair(t)
+
+	probe, err := net.DialUDP("udp", nil, ln.Addr().(*net.UDPAddr))
+	if err != nil {
+		t.Fatalf("сокет зонда: %v", err)
+	}
+	defer probe.Close()
+
+	// Длинный заголовок: форма + фиксированный бит, версия, которой не
+	// бывает, DCID и SCID по восемь байт, и добивка до 1200 — короче QUIC
+	// такие пакеты не принимает вовсе, и тогда молчание ничего не доказывает.
+	pkt := make([]byte, 1200)
+	pkt[0] = 0xc0
+	copy(pkt[1:], []byte{0xde, 0xad, 0xbe, 0xef})
+	pkt[5] = 8
+	copy(pkt[6:], []byte("dcid-000"))
+	pkt[14] = 8
+	copy(pkt[15:], []byte("scid-000"))
+
+	if _, err := probe.Write(pkt); err != nil {
+		t.Fatalf("отправка зонда: %v", err)
+	}
+
+	_ = probe.SetReadDeadline(time.Now().Add(700 * time.Millisecond))
+	buf := make([]byte, 1500)
+	n, err := probe.Read(buf)
+	if err == nil {
+		t.Fatalf("нода ответила на чужую версию %d байтами: % x", n, buf[:min(n, 24)])
+	}
+	var ne net.Error
+	if !errors.As(err, &ne) || !ne.Timeout() {
+		t.Fatalf("ждали тишину по таймауту, получили: %v", err)
 	}
 }
