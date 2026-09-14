@@ -189,3 +189,37 @@ func TestSubTokenRotates(t *testing.T) {
 		t.Error("приложение отдаётся по старой ссылке подписки")
 	}
 }
+
+// TestSubscriptionTellsWhichVersionIsLaidOut — подписка называет версию
+// выложенного приложения, чтобы клиент сам заметил, что устарел.
+//
+// Версия — из файла рядом с приложением. Нет файла — нет версии, и клиент
+// про обновления молчит: лучше не сказать, чем сказать не то.
+func TestSubscriptionTellsWhichVersionIsLaidOut(t *testing.T) {
+	srv, admin := appPanel(t, map[string]string{
+		"marvia-android.apk":         fakeAPK,
+		"marvia-android.apk.version": "0.10.0\n",
+		"marvia-windows.exe":         "это как бы exe",
+	})
+	token, _ := buySubscription(t, srv, admin)
+
+	code, body := do(t, srv, "GET", "/sub/"+token+"?format=json", "", "")
+	if code != http.StatusOK {
+		t.Fatalf("подписка не отдалась: %d %s", code, body)
+	}
+	if !strings.Contains(body, `"android":{"url":"https://panel.example.test/sub/`+token+`/app/android","version":"0.10.0"}`) {
+		t.Errorf("версия android не названа: %s", body)
+	}
+	if strings.Contains(body, `"windows":{"url":"https://panel.example.test/sub/`+token+`/app/windows","version"`) {
+		t.Errorf("у windows версии нет, а подписка её обещает: %s", body)
+	}
+	if !strings.Contains(body, `/app/windows"`) {
+		t.Errorf("windows выложен, а ссылки нет: %s", body)
+	}
+
+	// Та же версия видна и продавцу в списке приложений.
+	_, list := do(t, srv, "GET", "/api/v1/apps", admin, "")
+	if !strings.Contains(list, `"version":"0.10.0"`) {
+		t.Errorf("список приложений без версии: %s", list)
+	}
+}

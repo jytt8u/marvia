@@ -314,6 +314,39 @@ if [ "$HAVE_PANEL" = 1 ] && [ -x "$tmp/marvia-keygen" ]; then
 	install -m 755 "$tmp/marvia-keygen" "$PANEL_DIR/marvia-keygen"
 fi
 
+# То, что панель раздаёт из dist, обновляем вместе с ней: бинарник ноды для
+# команды установки, генератор ключей и приложения покупателей. Иначе
+# после обновления панели новая нода ставилась бы со старым бинарником, а
+# покупатель качал бы старое приложение — и никто бы этого не заметил.
+refresh_dist() {
+	dist="$PANEL_DIR/dist"
+	[ -d "$dist" ] || return 0
+	for name in marvia-node marvia-keygen; do
+		[ -x "$tmp/$name" ] && install -m 755 "$tmp/$name" "$dist/$name"
+	done
+
+	now=$("$PANEL_DIR/marvia-panel" -version 2>/dev/null | awk '{print $2}' | sed 's/^v//')
+	for app in marvia-android.apk marvia-windows.exe; do
+		# Не скачалось — оставляем прежнее: старое приложение лучше никакого.
+		if curl -fsSL --max-time 300 -o "$tmp/$app" "$base/$app" 2>/dev/null; then
+			install -m 644 "$tmp/$app" "$dist/$app"
+			if [ -n "$now" ]; then
+				printf '%s
+' "$now" > "$dist/$app.version"
+			else
+				rm -f "$dist/$app.version"
+			fi
+			ok "$app: $now"
+		else
+			bad "$app не скачалось — оставляю прежнее"
+		fi
+	done
+}
+
+if [ "$HAVE_PANEL" = 1 ]; then
+	refresh_dist
+fi
+
 say ''
 printf '\033[32mГотово.\033[0m Проверить ноду: scripts/node-check.sh\n'
 say ''

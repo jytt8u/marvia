@@ -230,6 +230,12 @@ for app in marvia-android.apk marvia-windows.exe; do
 			-o "$DIR/dist/$app" 2>/dev/null || rm -f "$DIR/dist/$app"
 	fi
 	[ -f "$DIR/dist/$app" ] && chmod 644 "$DIR/dist/$app"
+	# Версия — файлом рядом. Приложение из того же релиза, что и панель, и
+	# панель знает его версию; по этому файлу клиенты замечают, что
+	# устарели. Файла нет — панель молчит про обновления, а не гадает.
+	if [ -f "$DIR/dist/$app" ] && [ ! -f "$BIN_DIR/$app" ]; then
+		"$DIR/marvia-panel" -version 2>/dev/null | awk '{print $2}' | sed 's/^v//' > "$DIR/dist/$app.version" || rm -f "$DIR/dist/$app.version"
+	fi
 done
 
 if [ -f "$DIR/dist/marvia-android.apk" ]; then

@@ -561,6 +561,31 @@ func (t *Tunnel) Until() string {
 	return until.Local().Format("2006-01-02")
 }
 
+// UpdateVersion — версия приложения новее нашей, которую выложила панель
+// продавца; пустая строка — обновляться не на что. current — versionName
+// приложения: ядро своей версии не знает, она у пакета.
+func (t *Tunnel) UpdateVersion(current string) string {
+	offer, _ := t.update(current)
+	return offer.Version
+}
+
+// UpdateURL — откуда скачать эту версию: с домена продавца, а не из магазина.
+func (t *Tunnel) UpdateURL(current string) string {
+	offer, _ := t.update(current)
+	return offer.URL
+}
+
+func (t *Tunnel) update(current string) (client.AppOffer, bool) {
+	t.mu.Lock()
+	dialer := t.dialer
+	t.mu.Unlock()
+
+	if dialer == nil {
+		return client.AppOffer{}, false
+	}
+	return dialer.Subscription().Update("android", current)
+}
+
 // TrafficLimit — сколько байт оплачено. Ноль означает «без ограничения».
 func (t *Tunnel) TrafficLimit() int64 {
 	t.mu.Lock()

@@ -51,6 +51,13 @@ sealed interface TunnelState {
         val until: String = "",
         val limitBytes: Long = 0,
         val leftBytes: Long = 0,
+        /**
+         * Версия новее нашей, которую выложила панель продавца, и откуда её
+         * взять. Пусто — обновляться не на что. Ссылка ведёт на домен
+         * продавца: магазин в России может не открыться вовсе.
+         */
+        val updateVersion: String = "",
+        val updateUrl: String = "",
     ) {
         val known: Boolean get() = until.isNotEmpty() || limitBytes > 0
     }

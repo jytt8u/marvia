@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Typeface
+import android.net.Uri
 import android.provider.Settings as AndroidSettings
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -236,6 +237,31 @@ class MoreScreen(
             host.startActivity(Intent(AndroidSettings.ACTION_VPN_SETTINGS))
         } catch (_: ActivityNotFoundException) {
             Toast.makeText(host, R.string.settings_always_on_missing, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /**
+     * showUpdate показывает строку «есть новая версия», когда панель продавца
+     * её выложила. Ссылка открывается браузером: скачивать apk лучше тем,
+     * чему человек уже доверяет, а ставить — системе.
+     */
+    fun showUpdate(sub: TunnelState.Subscription?) {
+        // Туннель выключили — подписки в состоянии нет, но строка остаётся:
+        // человек увидел «есть новая» и вправе вернуться к ней позже.
+        if (sub == null) return
+        val version = sub.updateVersion
+        val url = sub.updateUrl
+        val show = version.isNotEmpty() && url.isNotEmpty()
+        ui.rowUpdate.isVisible = show
+        ui.rowUpdateLine.isVisible = show
+        if (!show) return
+        ui.updateTitle.text = host.getString(R.string.settings_update, version)
+        ui.rowUpdate.setOnClickListener {
+            try {
+                host.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(host, url, Toast.LENGTH_LONG).show()
+            }
         }
     }
 

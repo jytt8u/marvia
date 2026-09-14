@@ -18,6 +18,7 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -130,6 +131,16 @@ func run(dns string, mtu uint32, urlFile string, inTray bool) error {
 	}
 
 	return showWindow(url, ctl, log, inTray, &onWindow)
+}
+
+// openLink открывает адрес в браузере человека — через проводник, по той же
+// причине, что и openInBrowser: программа работает с правами администратора,
+// и браузер, запущенный из неё напрямую, унаследовал бы их.
+func openLink(url string) error {
+	if err := exec.Command("explorer.exe", url).Start(); err != nil {
+		return fmt.Errorf("не удалось открыть браузер: %w", err)
+	}
+	return nil
 }
 
 // elevated сообщает, запущены ли мы с правами администратора.

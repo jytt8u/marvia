@@ -111,6 +111,7 @@ func serveUI(ctl *Controller, log *journal, onWindow *func(mode, tab string)) (s
 	mux.HandleFunc("POST "+prefix+"/api/nodes/measure", u.measureNodes)
 	mux.HandleFunc("POST "+prefix+"/api/nodes/select", u.selectNode)
 	mux.HandleFunc("POST "+prefix+"/api/proxy/off", u.dropProxy)
+	mux.HandleFunc("POST "+prefix+"/api/update/open", u.openUpdate)
 	mux.HandleFunc("POST "+prefix+"/api/lang", u.setLang)
 	mux.HandleFunc("POST "+prefix+"/api/window", u.window)
 	mux.HandleFunc("GET "+prefix+"/api/autostart", u.getAutostart)
@@ -221,6 +222,14 @@ func (u *ui) dropProxy(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, u.ctl.Status())
+}
+
+func (u *ui) openUpdate(w http.ResponseWriter, _ *http.Request) {
+	if err := u.ctl.OpenUpdate(); err != nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
 func writeJSON(w http.ResponseWriter, code int, payload any) {

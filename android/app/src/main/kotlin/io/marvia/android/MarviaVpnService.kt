@@ -37,6 +37,15 @@ import io.marvia.mobile.Tunnel as Core
 class MarviaVpnService : VpnService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Своя версия — сравнивать с той, что выложила панель продавца. */
+    private val ownVersion: String by lazy {
+        try {
+            packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+        } catch (_: PackageManager.NameNotFoundException) {
+            ""
+        }
+    }
     private var worker: Job? = null
 
     /** Останавливались ли мы уже. См. [shutdown] — там объяснено, зачем. */
@@ -290,6 +299,8 @@ class MarviaVpnService : VpnService() {
                 until = started.until(),
                 limitBytes = started.trafficLimit(),
                 leftBytes = started.trafficLeft(),
+                updateVersion = started.updateVersion(ownVersion),
+                updateUrl = started.updateURL(ownVersion),
             ),
             ms = ms,
             chosen = chosen?.title.orEmpty(),

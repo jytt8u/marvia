@@ -154,6 +154,8 @@
     <string name="settings_always_on_missing">This phone has no such settings screen</string>
     <string name="settings_key">Access key</string>
     <string name="settings_key_added">added on %1$s</string>
+    <string name="settings_update">New version %1$s available</string>
+    <string name="settings_update_sub">From the server of whoever gave you access, not from a store</string>
     <string name="settings_about">About</string>
     <string name="about_body">%1$s, version %2$s</string>
     <!--

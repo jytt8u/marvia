@@ -433,6 +433,7 @@ class MainActivity : AppCompatActivity() {
     private fun renderSubscription(state: TunnelState) {
         val c = ui.connectScreen
         val sub = (state as? TunnelState.On)?.subscription
+        more.showUpdate(sub)
 
         if (sub == null || !sub.known) {
             c.subCard.isVisible = false

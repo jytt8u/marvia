@@ -131,6 +131,8 @@
     <string name="settings_always_on_missing">На этом телефоне нет такого раздела настроек</string>
     <string name="settings_key">Ключ доступа</string>
     <string name="settings_key_added">добавлен %1$s</string>
+    <string name="settings_update">Есть новая версия %1$s</string>
+    <string name="settings_update_sub">С сервера того, кто дал доступ, а не из магазина</string>
     <string name="settings_about">О приложении</string>
     <string name="about_body">%1$s, версия %2$s</string>
     <string name="theme_title">Тема</string>

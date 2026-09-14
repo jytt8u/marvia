@@ -67,6 +67,12 @@ type Status struct {
 
 	Version string `json:"version"`
 
+	// Update — версия, которую панель продавца выложила и которая новее
+	// нашей; пусто, если обновляться не на что. Ссылка — с домена продавца:
+	// магазины и github в России отваливаются раньше всего остального.
+	Update    string `json:"update,omitempty"`
+	UpdateURL string `json:"update_url,omitempty"`
+
 	// Proxy — предупреждение о системном прокси, если он есть.
 	//
 	// Пока он прописан, наше «весь трафик идёт через туннель» неправда:
@@ -94,6 +100,7 @@ type Controller struct {
 	until      string
 	limitBytes int64
 	leftBytes  int64
+	update     client.AppOffer
 	account    string
 
 	dialer  *client.Supervisor
@@ -159,10 +166,26 @@ func (c *Controller) Status() Status {
 		Since:      sinceUnix(c.since),
 		History:    c.hist.minutes(time.Now()),
 		Version:    version,
+		Update:     c.update.Version,
+		UpdateURL:  c.update.URL,
 		Proxy:      c.proxy.Describe(),
 		ProxyOwner: c.proxy.Owner,
 		ProxyEnv:   c.proxy.FromEnv,
 	}
+}
+
+// OpenUpdate открывает ссылку на новую версию в браузере.
+//
+// Только ту, что пришла из подписки: страница окна не выбирает адрес сама,
+// иначе любая ошибка в разметке превращалась бы в открытие чего угодно.
+func (c *Controller) OpenUpdate() error {
+	c.mu.Lock()
+	url := c.update.URL
+	c.mu.Unlock()
+	if url == "" {
+		return errors.New("обновляться не на что")
+	}
+	return openLink(url)
 }
 
 // DropProxy снимает системный прокси и перепроверяет, что получилось.
@@ -344,6 +367,11 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 	c.dialer, c.adapter, c.bridge = dialer, adapter, bridge
 	c.node, c.ping = node, ping
 	c.until, c.limitBytes, c.leftBytes = subscriptionOf(dialer)
+	// Про обновление узнаём здесь же: подписка приходит при подключении, а
+	// ходить за ней отдельно ради версии — лишний запрос к панели в день.
+	if offer, ok := dialer.Subscription().Update("windows", version); ok {
+		c.update = offer
+	}
 	c.state = StateConnected
 	c.reason = ""
 	c.since = time.Now()

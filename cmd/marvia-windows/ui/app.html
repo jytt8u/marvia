@@ -90,6 +90,7 @@
     transition: background .15s, color .15s;
   }
   .tab .dot { width: 7px; height: 7px; border-radius: 2px; flex: none; background: var(--dim); transition: background .15s; }
+  .tab.news .dot { background: var(--acc); box-shadow: 0 0 0 3px var(--accSoft); }
   .tab:hover { color: var(--fg); }
   .tab[aria-selected="true"] { background: var(--surf2); color: var(--fg); }
   .tab[aria-selected="true"] .dot { background: var(--acc); }
@@ -660,6 +661,12 @@
 
       <!-- ----------------------------------------------------- о программе -->
       <section class="page" data-tab="about">
+        <!-- Есть новая версия: показывается только когда панель продавца
+             выложила версию новее нашей. Ссылка — с его домена. -->
+        <div class="card" id="update-card" hidden>
+          <div class="card-head"><b id="update-title"></b><button class="chip" id="update-open" type="button" data-t="updateOpen"></button></div>
+          <p class="hint" data-t="updateHint"></p>
+        </div>
         <!--
           Запуск вместе с Windows — через планировщик, с высшими правами: из
           обычной автозагрузки программа при каждом входе просила бы права
@@ -762,6 +769,7 @@ const T = {
 
     tabHome: "Туннель", tabKey: "Ключ доступа", tabLog: "Журнал", tabAbout: "О программе", tabNodes: "Страны", tabTheme: "Тема",
     wOpen: "Открыть окно", wHide: "Спрятать в трей",
+    updateTitle: (v) => "Есть новая версия " + v, updateOpen: "Скачать", updateHint: "Ссылка ведёт на сервер того, кто дал тебе доступ, а не в магазин: оттуда приложение качается и тогда, когда магазины не открываются. Скачал — закрой это окно и запусти новый файл.",
     autostart: "Запускать вместе с Windows", autostartHint: "Без окна, в трее; туннель поднимется сам, если ключ сохранён. Ставится задача планировщика с правами администратора — так Windows не спрашивает согласия при каждом входе.",
     autostartOn: "Включено", autostartOff: "Выключено",
     pages: {
@@ -879,6 +887,7 @@ const T = {
 
     tabHome: "Tunnel", tabKey: "Access key", tabLog: "Log", tabAbout: "About", tabNodes: "Countries", tabTheme: "Theme",
     wOpen: "Open the window", wHide: "Hide to tray",
+    updateTitle: (v) => "New version " + v + " available", updateOpen: "Download", updateHint: "The link goes to the server of whoever gave you access, not to a store: it works even when stores do not. Once downloaded, close this window and run the new file.",
     autostart: "Start with Windows", autostartHint: "Without a window, in the tray; the tunnel comes up by itself if a key is saved. A scheduler task with administrator rights is created, so Windows does not ask for consent at every sign-in.",
     autostartOn: "On", autostartOff: "Off",
     pages: {
@@ -1393,6 +1402,7 @@ on("code-in", "change", (e) => {
   setLook(st);
 });
 on("theme-reset", "click", () => setLook(Object.assign({}, Look.DEFAULT)));
+on("update-open", "click", () => api("POST", "api/update/open").catch(() => {}));
 
 /* ------------------------------------------------------------- прокси */
 
@@ -1682,6 +1692,10 @@ function render(s) {
     : d.power.on;
   $("elev-warn").hidden = s.elevated;
   $("version").textContent = s.version ? "v" + s.version : "";
+  $("update-card").hidden = !s.update;
+  if (s.update) $("update-title").textContent = d.updateTitle(s.update);
+  // Точка на вкладке — чтобы заметили, не заходя в «О программе».
+  document.querySelector('.tab[data-tab="about"]').classList.toggle("news", !!s.update);
 
   const detail = $("detail");
 

@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -121,6 +122,68 @@ type Subscription struct {
 	TrafficLimit int64  `json:"traffic_limit"`
 	Used         int64  `json:"used"`
 	ExpiresAt    string `json:"expires_at,omitempty"`
+
+	// Apps — что панель выложила для скачивания, по платформам: android,
+	// windows. Версия может быть пустой — тогда сравнивать не с чем.
+	Apps map[string]AppOffer `json:"apps,omitempty"`
+}
+
+// AppOffer — ссылка на приложение с домена панели и его версия.
+type AppOffer struct {
+	URL     string `json:"url"`
+	Version string `json:"version,omitempty"`
+}
+
+// Update говорит, лежит ли на панели версия новее той, что запущена.
+//
+// Новее, а не «другая»: продавец мог выложить старую сборку, и звать
+// человека на неё — значит звать назад. Версии сравниваются по числам;
+// сборка dev не обновляется никогда — это разработчик, он знает, что
+// запустил.
+func (s Subscription) Update(platform, current string) (AppOffer, bool) {
+	offer, ok := s.Apps[platform]
+	if !ok || offer.Version == "" || offer.URL == "" || current == "" || current == "dev" {
+		return AppOffer{}, false
+	}
+	if !newerVersion(offer.Version, current) {
+		return AppOffer{}, false
+	}
+	return offer, true
+}
+
+// newerVersion — a новее b. Понимает vX.Y.Z и X.Y.Z; лишний хвост вроде
+// -rc1 отбрасывается. Непонятная версия не считается новее ничего.
+func newerVersion(a, b string) bool {
+	pa, okA := versionParts(a)
+	pb, okB := versionParts(b)
+	if !okA || !okB {
+		return false
+	}
+	for i := 0; i < 3; i++ {
+		if pa[i] != pb[i] {
+			return pa[i] > pb[i]
+		}
+	}
+	return false
+}
+
+func versionParts(v string) ([3]int, bool) {
+	var out [3]int
+	v = strings.TrimPrefix(strings.TrimSpace(v), "v")
+	v, _, _ = strings.Cut(v, "-")
+	v, _, _ = strings.Cut(v, "+")
+	parts := strings.Split(v, ".")
+	if len(parts) == 0 || len(parts) > 3 {
+		return out, false
+	}
+	for i, p := range parts {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 0 {
+			return out, false
+		}
+		out[i] = n
+	}
+	return out, true
 }
 
 // Remaining возвращает остаток квоты. Ноль лимита означает «без ограничения».

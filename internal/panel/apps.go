@@ -74,6 +74,47 @@ func (a *API) appDownload(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, app.file, info.ModTime(), f)
 }
 
+// appVersion — какая версия приложения выложена.
+//
+// Читается из файла рядом: marvia-android.apk.version, одна строка. Его
+// пишет установщик и обновление панели — они качают приложения из того же
+// релиза, что и панель, и знают его версию. Файла нет — версия пустая, и
+// клиент про обновления молчит: лучше не сказать, чем сказать не то.
+// Разбирать версию из самого apk панель не берётся: это парсер чужого
+// формата ради строки, которую и так знает тот, кто файл положил.
+func (a *API) appVersion(file string) string {
+	raw, err := os.ReadFile(filepath.Join(a.distDir, file+".version"))
+	if err != nil {
+		return ""
+	}
+	line, _, _ := strings.Cut(string(raw), "\n")
+	return strings.TrimSpace(line)
+}
+
+// AppOffer — что панель говорит клиенту про выложенное приложение:
+// откуда скачать и какая это версия. По ней клиент решает, показать ли
+// «есть новая».
+type AppOffer struct {
+	URL     string `json:"url"`
+	Version string `json:"version,omitempty"`
+}
+
+// appOffers — ссылки с версиями для нашего клиента. Только то, что лежит на
+// диске, по той же причине, что и в appLinks.
+func (a *API) appOffers(subToken string) map[string]AppOffer {
+	out := map[string]AppOffer{}
+	for name, app := range appFiles {
+		if _, err := os.Stat(filepath.Join(a.distDir, app.file)); err != nil {
+			continue
+		}
+		out[name] = AppOffer{URL: a.subURL(subToken) + "/app/" + name, Version: a.appVersion(app.file)}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // appLinks — готовые ссылки на приложения для одного покупателя.
 //
 // Возвращаем только то, что есть на диске: ссылка на отсутствующий файл хуже
@@ -98,6 +139,8 @@ type AppFile struct {
 	File   string `json:"file"`
 	Size   int64  `json:"size"`
 	SHA256 string `json:"sha256"`
+	// Version — из файла рядом; пусто, если его нет.
+	Version string `json:"version,omitempty"`
 }
 
 // listApps говорит продавцу, какие приложения у него выложены.
@@ -126,7 +169,7 @@ func (a *API) listApps(w http.ResponseWriter, r *http.Request) {
 			fail(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		out = append(out, AppFile{Name: name, File: app.file, Size: info.Size(), SHA256: sum})
+		out = append(out, AppFile{Name: name, File: app.file, Size: info.Size(), SHA256: sum, Version: a.appVersion(app.file)})
 	}
 
 	answer := map[string]any{"apps": out, "dist": a.distDir}

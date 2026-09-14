@@ -370,6 +370,46 @@
                         android:background="@color/veil_border"
                         android:tag="line" />
 
+                    <!-- Есть новая версия. Видна, только когда панель продавца
+                         выложила версию новее нашей; ссылка — на его домен. -->
+                    <LinearLayout
+                        android:id="@+id/rowUpdate"
+                        style="@style/VeilRow"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/updateTitle"
+                                style="@style/VeilRowTitle"
+                                android:tag="acc" />
+
+                            <TextView
+                                style="@style/VeilRowSub"
+                                android:text="@string/settings_update_sub" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="19dp"
+                            android:layout_height="19dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron"
+                            android:tag="icon:dim"
+                            app:tint="@color/veil_chevron" />
+                    </LinearLayout>
+
+                    <View
+                        android:id="@+id/rowUpdateLine"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/veil_border"
+                        android:tag="line"
+                        android:visibility="gone" />
+
                     <LinearLayout
                         android:id="@+id/rowAbout"
                         style="@style/VeilRow">

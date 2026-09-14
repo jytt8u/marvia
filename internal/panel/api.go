@@ -878,12 +878,18 @@ func (a *API) subscriptionJSON(w http.ResponseWriter, user User, nodes []Node) {
 		})
 	}
 
-	ok(w, map[string]any{
+	answer := map[string]any{
 		"nodes":         views,
 		"traffic_limit": user.TrafficLimit,
 		"used":          user.Used,
 		"expires_at":    user.ExpiresAt,
-	})
+	}
+	// Приложения с версиями — чтобы клиент сам заметил, что устарел. Play
+	// может не показывать приложение в РФ, а панель раздаёт его молча.
+	if apps := a.appOffers(user.SubToken); apps != nil {
+		answer["apps"] = apps
+	}
+	ok(w, answer)
 }
 
 // userInfoHeader формирует заголовок с остатком квоты.
