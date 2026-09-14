@@ -216,6 +216,26 @@ func readFrame(r io.Reader, max int) ([]byte, error) {
 	return body, nil
 }
 
+// readFrameInto читает кадр в готовый буфер — путь данных, где выделять
+// память на каждый кадр слишком дорого. Лимит длины — ёмкость буфера.
+func readFrameInto(r io.Reader, buf []byte) ([]byte, error) {
+	var head [2]byte
+	if _, err := io.ReadFull(r, head[:]); err != nil {
+		return nil, err
+	}
+	n := int(binary.BigEndian.Uint16(head[:]))
+	if n == 0 {
+		return nil, errors.New("кадр нулевой длины")
+	}
+	if n > len(buf) {
+		return nil, fmt.Errorf("кадр длиной %d байт превышает лимит %d", n, len(buf))
+	}
+	if _, err := io.ReadFull(r, buf[:n]); err != nil {
+		return nil, err
+	}
+	return buf[:n], nil
+}
+
 // newServerState собирает состояние хендшейка ответчика.
 //
 // Вынесено отдельно не ради красоты: на M1 сюда добавится ветка, где мы, не
