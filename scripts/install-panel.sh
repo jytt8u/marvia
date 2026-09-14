@@ -259,7 +259,7 @@ ACME_EMAIL=''
 # и передаём ему каталог целиком, чтобы после переезда не осталось файлов,
 # которые панель не может перезаписать.
 id -u marvia >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin marvia
-chown -R marvia:marvia ""
+chown -R marvia:marvia "$DIR"
 
 cat > /etc/systemd/system/marvia-panel.service <<UNITEOF
 [Unit]
