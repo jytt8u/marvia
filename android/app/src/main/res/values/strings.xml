@@ -222,6 +222,16 @@
     <string name="theme_code_placeholder">paste an MV-… code</string>
     <string name="theme_code_bad">This is not a Marvia theme code</string>
     <string name="theme_code_copied">Theme code copied</string>
+    <string name="theme_backdrop">Your own background</string>
+    <string name="theme_backdrop_pick">Choose a photo</string>
+    <string name="theme_backdrop_change">Another photo</string>
+    <string name="theme_backdrop_drop">Remove</string>
+    <string name="theme_backdrop_fit">How it fits</string>
+    <string name="backdrop_fill">Fill</string>
+    <string name="backdrop_whole">Whole</string>
+    <string name="theme_backdrop_dim">Dim</string>
+    <string name="theme_backdrop_note">The photo stays on this phone and never goes into the theme code. No video on the phone: it would need a player of its own.</string>
+    <string name="theme_backdrop_bad">Not a photo, or it cannot be read</string>
     <string name="density_compact">Compact</string>
     <string name="density_normal">Normal</string>
     <string name="density_roomy">Roomy</string>

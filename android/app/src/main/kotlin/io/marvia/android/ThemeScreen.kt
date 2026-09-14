@@ -39,6 +39,8 @@ class ThemeScreen(
     private val host: AppCompatActivity,
     private val ui: ScreenThemeBinding,
     private val store: Store,
+    /** Открыть системный выбор фото под свой фон. */
+    private val onPickBackdrop: () -> Unit,
     /** Выбор изменился: перекрасить всё приложение. */
     private val onChanged: () -> Unit,
 ) {
@@ -73,6 +75,25 @@ class ThemeScreen(
         ui.depthSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser) choose(store.look.copy(depth = (progress + 8) / 100.0))
+            }
+            override fun onStartTrackingTouch(bar: SeekBar) = Unit
+            override fun onStopTrackingTouch(bar: SeekBar) = Unit
+        })
+
+        ui.bgPick.setOnClickListener { onPickBackdrop() }
+        ui.bgDrop.setOnClickListener {
+            store.clearBackdrop()
+            onChanged()
+        }
+        // Затемнение перекрашивает приложение на каждом шаге ползунка: пелена
+        // рисуется поверх фото, и человек должен видеть, что получает, а не
+        // угадывать по числу.
+        ui.bgDimSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
+                if (!fromUser) return
+                store.backdropDim = progress
+                ui.bgDimNote.text = "$progress%"
+                onChanged()
             }
             override fun onStartTrackingTouch(bar: SeekBar) = Unit
             override fun onStopTrackingTouch(bar: SeekBar) = Unit
@@ -122,6 +143,7 @@ class ThemeScreen(
         paintPills(ui.cardRow, t, LookTable.cards, choice.card, ::cardName) { choose(choice.copy(card = it)) }
         paintPills(ui.buttonRow, t, LookTable.buttons, choice.btn, ::btnName) { choose(choice.copy(btn = it)) }
         paintPills(ui.glowRow, t, LookTable.glows.map { it.key }, choice.glow, ::glowName) { choose(choice.copy(glow = it)) }
+        paintBackdrop(t)
         paintProfiles(t)
 
         ui.themeCode.text = Look.encode(choice)
@@ -369,6 +391,38 @@ class ThemeScreen(
 
         paintSwatches(ui.tintRows, t, listOf(0) + LookTable.accents, choice.tint) { choose(choice.copy(tint = it)) }
     }
+
+    // ------------------------------------------------------------ свой фон
+
+    /**
+     * paintBackdrop рисует карточку «Свой фон»: без фото — одна кнопка выбора,
+     * с фото — «другое», «убрать» и ручки. Ручки без фото не показываем: они
+     * ничего бы не меняли, а нарисованная ручка — обещание.
+     */
+    private fun paintBackdrop(t: Theme) {
+        val has = store.hasBackdrop()
+        ui.bgPick.text = host.getString(if (has) R.string.theme_backdrop_change else R.string.theme_backdrop_pick)
+        ui.bgPick.setTextColor(t.dim)
+        ui.bgPick.background = Paint.rounded(t.surf2, minOf(t.r, 14), dp)
+        ui.bgDrop.isVisible = has
+        ui.bgDrop.setTextColor(t.fail)
+        ui.bgDrop.background = Paint.rounded(t.surf2, minOf(t.r, 14), dp)
+        ui.bgKnobs.isVisible = has
+        if (!has) return
+
+        paintPills(ui.bgFits, t, listOf("cover", "contain"), store.backdropFit, ::fitName) {
+            store.backdropFit = it
+            onChanged()
+        }
+        ui.bgDimSeek.progress = store.backdropDim
+        ui.bgDimSeek.progressTintList = android.content.res.ColorStateList.valueOf(t.acc)
+        ui.bgDimSeek.thumbTintList = android.content.res.ColorStateList.valueOf(t.acc)
+        ui.bgDimSeek.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(t.line)
+        ui.bgDimNote.text = "${store.backdropDim}%"
+    }
+
+    private fun fitName(key: String): String =
+        host.getString(if (key == "contain") R.string.backdrop_whole else R.string.backdrop_fill)
 
     private fun rounded(radius: Float) = object : ViewOutlineProvider() {
         override fun getOutline(view: View, outline: Outline) {

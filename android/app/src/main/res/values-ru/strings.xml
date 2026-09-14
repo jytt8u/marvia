@@ -194,6 +194,16 @@
     <string name="theme_code_placeholder">вставить код MV-…</string>
     <string name="theme_code_bad">Это не код темы Marvia</string>
     <string name="theme_code_copied">Код темы скопирован</string>
+    <string name="theme_backdrop">Свой фон</string>
+    <string name="theme_backdrop_pick">Выбрать фото</string>
+    <string name="theme_backdrop_change">Другое фото</string>
+    <string name="theme_backdrop_drop">Убрать</string>
+    <string name="theme_backdrop_fit">Как вписать</string>
+    <string name="backdrop_fill">Заполнить</string>
+    <string name="backdrop_whole">Целиком</string>
+    <string name="theme_backdrop_dim">Затемнение</string>
+    <string name="theme_backdrop_note">Фото остаётся на этом телефоне и в код темы не попадает. Видео на телефоне нет: его пришлось бы крутить своим плеером.</string>
+    <string name="theme_backdrop_bad">Это не фото или оно не читается</string>
     <string name="density_compact">Плотно</string>
     <string name="density_normal">Обычно</string>
     <string name="density_roomy">Просторно</string>

@@ -1,6 +1,8 @@
 package io.marvia.android
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import io.marvia.mobile.Mobile
 import java.io.File
 
@@ -215,6 +217,102 @@ class Store(context: Context) {
             prefs.edit().putString(KEY_LANGUAGE, value).apply()
         }
 
+    /**
+     * Свой фон: фото за интерфейсом. Файл лежит в приватном каталоге
+     * приложения и никуда не уходит — как ключ и настройки. Видео нет: его
+     * пришлось бы декодировать своим плеером, а это ExoPlayer и почти
+     * удвоение пакета ради фона. В код темы фон не входит: код передают, а
+     * файл вместе с ним не унесёшь.
+     *
+     * fit — как вписать: cover (заполнить) или contain (целиком). dim —
+     * затемнение в процентах: пелена цветом фона темы поверх снимка, чтобы
+     * светлая тема на тёмном фото осталась читаемой.
+     */
+    var backdropFit: String
+        get() = prefs.getString(KEY_BG_FIT, "cover").let { if (it == "contain") it else "cover" }
+        set(value) {
+            prefs.edit().putString(KEY_BG_FIT, if (value == "contain") "contain" else "cover").apply()
+        }
+
+    var backdropDim: Int
+        get() = prefs.getInt(KEY_BG_DIM, 55).coerceIn(0, 95)
+        set(value) {
+            prefs.edit().putInt(KEY_BG_DIM, value.coerceIn(0, 95)).apply()
+        }
+
+    fun hasBackdrop(): Boolean = backdropFile().exists()
+
+    /** backdropStamp — «версия» файла фона: ноль, если его нет. По ней кэшируют декодированный снимок. */
+    fun backdropStamp(): Long {
+        val f = backdropFile()
+        if (!f.exists()) return 0L
+        return f.lastModified().let { if (it == 0L) f.length() else it }
+    }
+
+    private fun backdropFile(): File = File(app.filesDir, BACKDROP_FILE)
+
+    /**
+     * saveBackdrop берёт выбранный файл и кладёт его к себе, уменьшив до
+     * разумного размера. Полноразмерный снимок с камеры — это десятки
+     * мегапикселей, которые незачем держать и рисовать под интерфейсом: на
+     * фоне телефона больше пары тысяч точек по длинной стороне не видно, а
+     * память они съедают всерьёз.
+     *
+     * Возвращает false, если файл не картинка или не читается: тогда фон
+     * просто не меняется, а не роняет приложение.
+     */
+    fun saveBackdrop(uri: android.net.Uri): Boolean {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        try {
+            app.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        } catch (_: Exception) {
+            return false
+        }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return false
+
+        val opts = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight, BACKDROP_MAX_SIDE)
+        }
+        val bmp = try {
+            app.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
+        } catch (_: Exception) {
+            null
+        } ?: return false
+
+        return try {
+            // Во временный файл, потом переименование: прерванная запись не
+            // оставит наполовину сохранённый фон, который потом не прочитается.
+            val tmp = File(app.filesDir, "$BACKDROP_FILE.tmp")
+            tmp.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 88, it) }
+            tmp.renameTo(backdropFile())
+        } catch (_: Exception) {
+            false
+        } finally {
+            bmp.recycle()
+        }
+    }
+
+    /** backdropBitmap — фон для отрисовки или null, если его нет либо файл битый. */
+    fun backdropBitmap(): Bitmap? {
+        val f = backdropFile()
+        if (!f.exists()) return null
+        return try {
+            BitmapFactory.decodeFile(f.absolutePath)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun clearBackdrop() {
+        backdropFile().delete()
+    }
+
+    private fun sampleSize(w: Int, h: Int, max: Int): Int {
+        var s = 1
+        while (w / (s * 2) >= max || h / (s * 2) >= max) s *= 2
+        return s
+    }
+
     /** Каталог, который приложение отдаёт ядру под кэш подписки. */
     fun cacheDir(): String = app.filesDir.absolutePath
 
@@ -263,6 +361,12 @@ class Store(context: Context) {
         private const val KEY_GLOW = "look_glow"
         private const val KEY_CARD = "look_card"
         private const val KEY_PROFILE = "look_profile_"
+        private const val KEY_BG_FIT = "backdrop_fit"
+        private const val KEY_BG_DIM = "backdrop_dim"
+
+        /** Имя файла фона в приватном каталоге и потолок его длинной стороны. */
+        private const val BACKDROP_FILE = "backdrop.jpg"
+        private const val BACKDROP_MAX_SIDE = 2048
 
         /** AppCompatDelegate.MODE_NIGHT_NO — так хранилась светлая тема. */
         private const val LEGACY_LIGHT = 1

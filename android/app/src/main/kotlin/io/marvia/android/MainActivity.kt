@@ -88,6 +88,21 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission(),
     ) { }
 
+    /**
+     * Выбор фото под фон. GetContent, а не разрешение на «все файлы»: система
+     * сама показывает выбор и отдаёт нам один файл, доступа к галерее целиком
+     * не нужно. Сохраняем его к себе и перекрашиваем всё приложение.
+     */
+    private val pickBackdrop = registerForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null && store.saveBackdrop(uri)) {
+            repaint()
+        } else if (uri != null) {
+            Toast.makeText(this, R.string.theme_backdrop_bad, Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Режим ночи — по темноте пресета. Он нужен не нам, а Material:
         // диалоги и системные виджеты берут цвета оттуда, и светлый диалог
@@ -107,7 +122,7 @@ class MainActivity : AppCompatActivity() {
         wireKey()
 
         servers = ServersScreen(this, ui.serversScreen) { theme }
-        themeScreen = ThemeScreen(this, ui.themeScreen, store) { repaint() }
+        themeScreen = ThemeScreen(this, ui.themeScreen, store, { pickBackdrop.launch("image/*") }) { repaint() }
         language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
         more = MoreScreen(
             host = this,
@@ -203,6 +218,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         Paint.apply(ui.root, theme)
+        applyBackdrop()
         paintNav()
         servers.paint()
         themeScreen.paint(theme)
@@ -218,6 +234,41 @@ class MainActivity : AppCompatActivity() {
 
     private fun nightModeFor(t: Theme): Int =
         if (t.dark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+
+    /**
+     * applyBackdrop кладёт свой фон поверх фона темы. Paint уже поставил корню
+     * Backdrop(t); если у человека выбрано фото — заменяем им. Пелена цветом
+     * фона темы держит читаемость, как и в панели.
+     */
+    private fun applyBackdrop() {
+        val stamp = store.backdropStamp()
+        if (stamp == 0L) {
+            backdropBitmap?.recycle()
+            backdropBitmap = null
+            backdropStamp = 0L
+            return
+        }
+        // Снимок декодируем один раз на файл, а не на каждую перерисовку:
+        // ползунок затемнения зовёт repaint на каждом шаге, и читать JPEG в
+        // две тысячи точек на каждый — это рывки вместо плавной пелены.
+        if (backdropBitmap == null || backdropStamp != stamp) {
+            backdropBitmap?.recycle()
+            backdropBitmap = store.backdropBitmap()
+            backdropStamp = stamp
+        }
+        val bmp = backdropBitmap ?: return
+        val veil = colorWithAlpha(theme.bg, store.backdropDim)
+        ui.root.background = BackdropImage(bmp, store.backdropFit, theme.bg, veil)
+    }
+
+    private var backdropBitmap: android.graphics.Bitmap? = null
+    private var backdropStamp = 0L
+
+    /** colorWithAlpha — цвет фона темы с долей непрозрачности из процента затемнения. */
+    private fun colorWithAlpha(color: Int, dimPercent: Int): Int {
+        val a = (dimPercent.coerceIn(0, 95) * 255 / 100)
+        return (a shl 24) or (color and 0x00FFFFFF)
+    }
 
     // -------------------------------------------------------------- экраны
 
