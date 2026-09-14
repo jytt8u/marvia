@@ -745,6 +745,10 @@ func (a *API) nodeUsage(w http.ResponseWriter, r *http.Request, n Node) {
 	var body struct {
 		Usage map[string]users.Usage `json:"usage"`
 
+		// Presence — кто на связи прямо сейчас. Пустое означает «никого»: нода
+		// шлёт только тех, у кого есть соединения, а панель обнуляет остальных.
+		Presence map[string]users.Presence `json:"presence"`
+
 		// SNIExtra — имена прикрытия, которые нода принимает на самом деле.
 		// Она сообщает их сама, чтобы один и тот же список не приходилось
 		// держать руками и на ноде, и в панели: разойдясь, они молча ломают
@@ -765,6 +769,10 @@ func (a *API) nodeUsage(w http.ResponseWriter, r *http.Request, n Node) {
 	}
 
 	if err := a.store.ReportUsage(r.Context(), n.ID, body.Usage); err != nil {
+		fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := a.store.ReportPresence(r.Context(), n.ID, body.Presence); err != nil {
 		fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}

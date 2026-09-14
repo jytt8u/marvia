@@ -1198,6 +1198,11 @@ function userSheet(user) {
       : d.time.forever],
     [d.user.used, bytes(user.used) + (user.traffic_limit ? d.user.of + bytes(user.traffic_limit) : d.user.noLimit)],
     [d.user.devices, user.max_ips ? String(user.max_ips) : d.user.noDeviceLimit],
+    // Срез, а не журнал: соединений сейчас, устройств из лимита (адреса нода
+    // считает только тем, у кого лимит есть) и когда был в последний раз.
+    [d.user.presence, user.online
+      ? d.user.online(user.online) + (user.max_ips ? " · " + d.user.onlineOf(user.devices, user.max_ips) : "")
+      : (user.last_seen ? d.user.offline + d.user.seen + sinceLabel(user.last_seen) : d.user.never)],
     [d.user.speed, user.speed_limit ? Math.round(user.speed_limit / 125000) + d.user.mbit : d.user.noSpeedLimit],
   ].map(([k, v]) => el("div", { cls: "note", text: k + ": " + v }));
 
@@ -1739,6 +1744,8 @@ const TEXTS = {
       state: "Состояние", on: "включён", off: "отключён",
       term: "Срок", used: "Израсходовано", noLimit: " · без лимита", of: " из ",
       devices: "Устройств", noDeviceLimit: "без ограничения",
+      presence: "На связи", online: (n) => n + " " + pluralRU(n, "соединение", "соединения", "соединений"),
+      onlineOf: (n, max) => "устройств " + n + " из " + max, offline: "нет", seen: " · был ", never: "не подключался ни разу",
       speed: "Скорость", noSpeedLimit: "без ограничения", mbit: " Мбит/с",
       creds: "Доступы:", noCreds: "Доступов нет", issued: " · выдан ",
       addMore: "Выдать ещё:",
@@ -2007,6 +2014,8 @@ const TEXTS = {
       state: "State", on: "enabled", off: "disabled",
       term: "Expires", used: "Used", noLimit: " · no limit", of: " of ",
       devices: "Devices", noDeviceLimit: "unlimited",
+      presence: "Online", online: (n) => n + (n === 1 ? " connection" : " connections"),
+      onlineOf: (n, max) => n + " of " + max + " devices", offline: "no", seen: " · last seen ", never: "never connected",
       creds: "Access:", noCreds: "No access issued", issued: " · issued ",
       addMore: "Issue more:",
       extend: "+30 days", extended: "Extended by 30 days",
@@ -2413,7 +2422,7 @@ function renderVals() {
       rows: shown.map((u) => {
         const [status, st] = clientStatus(u);
         return [u.label || ("#" + u.id), keyShort(u), shortDate(u.expires_at),
-          String(u.max_ips || "—"), bytes(u.used), status, st];
+          (u.online ? "● " : "") + String(u.max_ips || "—"), bytes(u.used), status, st];
       }),
       empty: q ? d18.table.noFound : d18.table.noClients,
       // Строка открывает карточку подписчика. Индекс тот же, что у rows:

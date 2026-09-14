@@ -127,16 +127,13 @@ func panelSaysDisabled(body []byte) bool {
 	return strings.TrimSpace(parsed.Error) != ""
 }
 
-// ReportUsage отправляет панели накопленный расход.
-func (c *Client) ReportUsage(ctx context.Context, report map[string]users.Usage) error {
-	// Пустой отчёт всё равно отправляем, когда есть что сообщить о себе:
-	// иначе нода без трафика никогда не донесла бы до панели свои имена
-	// прикрытия.
-	if len(report) == 0 && len(c.cover) == 0 {
-		return nil
-	}
+// ReportUsage отправляет панели накопленный расход и тех, кто на связи.
+func (c *Client) ReportUsage(ctx context.Context, report map[string]users.Usage, presence map[string]users.Presence) error {
+	// Пустой отчёт тоже отправляем. Он говорит панели две вещи, которых из
+	// молчания не вывести: имена прикрытия ноды и то, что на связи никого —
+	// последний покупатель отключился, и его «на связи» пора обнулить.
 
-	payload, err := json.Marshal(map[string]any{"usage": report, "sni_extra": c.cover})
+	payload, err := json.Marshal(map[string]any{"usage": report, "presence": presence, "sni_extra": c.cover})
 	if err != nil {
 		return err
 	}
@@ -208,6 +205,23 @@ func (e Events) enabled() {
 	}
 }
 
+// gather снимает с реестра то, что уезжает панели: расход у тех, у кого он
+// есть, и присутствие у тех, кто на связи. Остальные в отчёт не попадают —
+// панель считает молчание нулём.
+func gather(registry *users.Registry) (map[string]users.Usage, map[string]users.Presence) {
+	report := make(map[string]users.Usage)
+	presence := make(map[string]users.Presence)
+	for _, s := range registry.Stats() {
+		if s.Usage.Total() > 0 {
+			report[s.Account] = s.Usage
+		}
+		if s.Conns > 0 || s.IPs > 0 {
+			presence[s.Account] = users.Presence{Conns: s.Conns, IPs: s.IPs}
+		}
+	}
+	return report, presence
+}
+
 // Run синхронизирует реестр с панелью, пока не отменят контекст.
 //
 // Порядок внутри одного цикла важен: сначала сдаём статистику, потом забираем
@@ -221,13 +235,8 @@ func (c *Client) Run(ctx context.Context, registry *users.Registry, interval tim
 	disabled := false
 
 	sync := func() {
-		report := make(map[string]users.Usage)
-		for _, s := range registry.Stats() {
-			if s.Usage.Total() > 0 {
-				report[s.Account] = s.Usage
-			}
-		}
-		usageErr := c.ReportUsage(ctx, report)
+		report, presence := gather(registry)
+		usageErr := c.ReportUsage(ctx, report, presence)
 
 		list, err := c.FetchUsers(ctx)
 		switch {
@@ -278,14 +287,11 @@ func (c *Client) Run(ctx context.Context, registry *users.Registry, interval tim
 		case <-ctx.Done():
 			// Прощальный отчёт: расход, накопленный после последнего тика,
 			// иначе он потеряется при штатной остановке ноды.
-			report := make(map[string]users.Usage)
-			for _, s := range registry.Stats() {
-				if s.Usage.Total() > 0 {
-					report[s.Account] = s.Usage
-				}
-			}
+			// На связи в этот момент уже никого: нода уходит, и панели лучше
+			// узнать об этом от неё, чем догадываться по молчанию.
+			report, _ := gather(registry)
 			farewell, cancel := context.WithTimeout(context.Background(), requestTimeout)
-			_ = c.ReportUsage(farewell, report)
+			_ = c.ReportUsage(farewell, report, nil)
 			cancel()
 			return
 		case <-ticker.C:

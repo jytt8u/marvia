@@ -65,6 +65,15 @@ type User struct {
 	// Used — суммарный расход по всем нодам, заполняется при чтении.
 	Used int64 `json:"used"`
 
+	// Online, Devices, LastSeen — на связи ли он прямо сейчас. Заполняются при
+	// чтении из последнего отчёта каждой живой ноды: соединений всего,
+	// адресов за час (только у тех, кому задан лимит устройств — остальным
+	// нода адреса не считает) и когда последний раз был на связи. Ни адресов,
+	// ни стран, ни истории: это срез, а не журнал.
+	Online   int        `json:"online"`
+	Devices  int        `json:"devices"`
+	LastSeen *time.Time `json:"last_seen,omitempty"`
+
 	// Credentials — наборы доступа. Секреты здесь публичные (публичный ключ,
 	// UUID): приватную часть панель не хранит.
 	Credentials []Credential `json:"credentials,omitempty"`
@@ -315,6 +324,7 @@ func migrate(db *sql.DB) error {
 		`CREATE TABLE IF NOT EXISTS settings (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL)`,
 		`CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, actor TEXT NOT NULL, action TEXT NOT NULL, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, node_id INTEGER REFERENCES nodes(id) ON DELETE CASCADE, detail TEXT NOT NULL DEFAULT '')`,
 		`CREATE INDEX IF NOT EXISTS events_at ON events(at)`,
+		`CREATE TABLE IF NOT EXISTS presence (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, node_id INTEGER NOT NULL REFERENCES nodes(id) ON DELETE CASCADE, conns INTEGER NOT NULL DEFAULT 0, ips INTEGER NOT NULL DEFAULT 0, seen_at TEXT, PRIMARY KEY (user_id, node_id))`,
 	}
 
 	for _, step := range steps {
@@ -632,8 +642,19 @@ func (s *Store) queryUsers(ctx context.Context, where string, args ...any) ([]Us
 	query := `
 		SELECT u.id, u.label, u.enabled, u.expires_at, u.traffic_limit, u.max_ips,
 		       u.max_conns, u.speed_limit, u.sub_token, u.created_at, u.external_id,
-		       COALESCE((SELECT SUM(up + down) FROM usage WHERE user_id = u.id), 0)
+		       COALESCE((SELECT SUM(up + down) FROM usage WHERE user_id = u.id), 0),
+		       COALESCE((SELECT SUM(p.conns) FROM presence p JOIN nodes n ON n.id = p.node_id
+		                 WHERE p.user_id = u.id AND n.last_seen >= ?), 0),
+		       COALESCE((SELECT SUM(p.ips) FROM presence p JOIN nodes n ON n.id = p.node_id
+		                 WHERE p.user_id = u.id AND n.last_seen >= ?), 0),
+		       (SELECT MAX(seen_at) FROM presence WHERE user_id = u.id)
 		FROM users u ` + where
+
+	// Присутствие считается только по нодам, которые выходили на связь
+	// недавно: у замолчавшей ноды последний отчёт застыл бы в базе, и
+	// продавец видел бы «на связи» у покупателя, чья нода выключена третий час.
+	fresh := format(time.Now().Add(-presenceStale))
+	args = append([]any{fresh, fresh}, args...)
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -649,12 +670,15 @@ func (s *Store) queryUsers(ctx context.Context, where string, args ...any) ([]Us
 			expires   sql.NullString
 			createdAt string
 			external  sql.NullString
+			seen      sql.NullString
 		)
 		if err := rows.Scan(&u.ID, &u.Label, &enabled, &expires, &u.TrafficLimit,
-			&u.MaxIPs, &u.MaxConns, &u.SpeedLimit, &u.SubToken, &createdAt, &external, &u.Used); err != nil {
+			&u.MaxIPs, &u.MaxConns, &u.SpeedLimit, &u.SubToken, &createdAt, &external, &u.Used,
+			&u.Online, &u.Devices, &seen); err != nil {
 			return nil, err
 		}
 		u.Enabled = enabled != 0
+		u.LastSeen = parseNullTime(seen)
 		u.ExpiresAt = parseNullTime(expires)
 		u.CreatedAt = parse(createdAt)
 		u.ExternalID = external.String
@@ -1134,6 +1158,65 @@ func delta(prev, now int64) int64 {
 	return now - prev
 }
 
+// presenceStale — сколько панель верит последнему отчёту ноды о том, кто
+// на связи. Нода отчитывается раз в пятнадцать секунд; шесть пропущенных
+// тиков — уже не задержка, а молчание.
+const presenceStale = 90 * time.Second
+
+// ReportPresence принимает от ноды срез «кто на связи прямо сейчас».
+//
+// Срез, а не журнал: на пару «покупатель — нода» одна строка, и каждый
+// отчёт её перезаписывает. Кого в отчёте нет, тот с этой ноды ушёл — числа
+// обнуляются, а время последней связи остаётся: оно и есть ответ на «когда
+// он был в последний раз».
+func (s *Store) ReportPresence(ctx context.Context, nodeID int64, presence map[string]users.Presence) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx, `UPDATE presence SET conns = 0, ips = 0 WHERE node_id = ?`, nodeID); err != nil {
+		return fmt.Errorf("сброс присутствия: %w", err)
+	}
+
+	now := format(time.Now().UTC())
+	for account, p := range presence {
+		userID, err := strconv.ParseInt(account, 10, 64)
+		if err != nil {
+			continue // нода с локальным файлом: там аккаунт — сам ключ
+		}
+		var exists int
+		err = tx.QueryRowContext(ctx, `SELECT 1 FROM users WHERE id = ?`, userID).Scan(&exists)
+		if errors.Is(err, sql.ErrNoRows) {
+			continue // удалили, пока нода собирала отчёт
+		}
+		if err != nil {
+			return err
+		}
+		var seen any
+		if p.Conns > 0 {
+			seen = now
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO presence (user_id, node_id, conns, ips, seen_at) VALUES (?, ?, ?, ?, ?)
+			ON CONFLICT (user_id, node_id) DO UPDATE SET conns = excluded.conns, ips = excluded.ips,
+				seen_at = COALESCE(excluded.seen_at, presence.seen_at)`,
+			userID, nodeID, p.Conns, p.IPs, seen); err != nil {
+			return fmt.Errorf("запись присутствия: %w", err)
+		}
+	}
+	return tx.Commit()
+}
+
+// PresenceRows — сколько строк присутствия в базе. Нужен тесту, который
+// следит, что срез не разросся в журнал.
+func (s *Store) PresenceRows(ctx context.Context) int {
+	var n int
+	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM presence`).Scan(&n)
+	return n
+}
+
 func format(t time.Time) string { return t.UTC().Format(time.RFC3339Nano) }
 
 func parse(s string) time.Time {
@@ -1442,8 +1525,14 @@ func (s *Store) DailyHistoryColumns() ([]string, error) {
 // В бою это делает сама нода, приходя за списком пользователей. Отдельный
 // метод нужен тестам: поднимать ради отметки живую ноду незачем.
 func (s *Store) TouchNode(ctx context.Context, id int64) error {
+	return s.TouchNodeAt(ctx, id, time.Now())
+}
+
+// TouchNodeAt — то же, но задним числом: тестам нужно изобразить ноду,
+// которая давно молчит.
+func (s *Store) TouchNodeAt(ctx context.Context, id int64, at time.Time) error {
 	res, err := s.db.ExecContext(ctx,
-		`UPDATE nodes SET last_seen = ? WHERE id = ?`, format(time.Now().UTC()), id)
+		`UPDATE nodes SET last_seen = ? WHERE id = ?`, format(at.UTC()), id)
 	if err != nil {
 		return fmt.Errorf("отметка ноды: %w", err)
 	}
