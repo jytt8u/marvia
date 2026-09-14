@@ -12,12 +12,14 @@ plugins {
 // старое и поставить новое как чужое. Утечёт — кто угодно выпустит «обновление»
 // от твоего имени, и телефоны его примут.
 //
-// Путь задаётся переменной VEIL_RELEASE_KEYS, по умолчанию — каталог veil-keys
-// рядом с репозиторием. Файла нет — сборка release выйдет неподписанной и
+// Путь задаётся переменной MARVIA_RELEASE_KEYS — той же, что читают
+// publish-apk.ps1 и руководство. По умолчанию — каталог veil-keys рядом с
+// репозиторием: сам ключ при переименовании не менялся и не мог, он один на
+// всю жизнь приложения. Файла нет — сборка release выйдет неподписанной и
 // честно об этом скажет, вместо того чтобы молча подписаться отладочным
 // ключом.
 val releaseKeysFile = file(
-    System.getenv("VEIL_RELEASE_KEYS")
+    System.getenv("MARVIA_RELEASE_KEYS")
         ?: rootProject.file("../../veil-keys/veil-release.properties").path,
 )
 
@@ -29,6 +31,25 @@ val releaseKeys = Properties().apply {
     }
 }
 
+// Версия — из метки релиза, а не из этого файла.
+//
+// publish-apk.ps1 кладёт метку в MARVIA_VERSION (v0.10.0 → 0.10.0), и та же
+// строка уезжает в панель файлом .version: по ней приложение у покупателя
+// узнаёт, что устарело. Две версии в двух местах разошлись бы в первый же
+// релиз. versionCode Play требует строго растущим на каждую загрузку —
+// считаем его из тех же трёх чисел, чтобы он рос вместе с версией сам.
+// Без переменной — dev и код 1: сборка разработчика, обновлений не ждёт.
+val appVersion: String = System.getenv("MARVIA_VERSION")?.trim()?.removePrefix("v")?.takeIf { it.isNotEmpty() } ?: "dev"
+val appVersionCode: Int = appVersion.split("-")[0].split(".").let { parts ->
+    val nums = parts.map { it.toIntOrNull() }
+    if (nums.size in 1..3 && nums.all { it != null && it in 0..99 }) {
+        val n = nums.map { it!! } + List(3 - nums.size) { 0 }
+        n[0] * 10000 + n[1] * 100 + n[2]
+    } else {
+        1
+    }
+}
+
 android {
     namespace = "io.marvia.android"
     compileSdk = 36
@@ -37,8 +58,8 @@ android {
         applicationId = "io.marvia.android"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1"
+        versionName = appVersion
+        versionCode = appVersionCode
 
         // Только ARM. На x86 работают эмуляторы и несколько редких планшетов,
         // ради которых пакет вырос бы в полтора раза: ядро на Go весит около

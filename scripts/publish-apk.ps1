@@ -33,6 +33,10 @@ Set-Location (Join-Path $PSScriptRoot '..')
 if (-not $env:ANDROID_HOME) { $env:ANDROID_HOME = 'D:\android-sdk' }
 if (-not $env:MARVIA_RELEASE_KEYS) { $env:MARVIA_RELEASE_KEYS = 'D:\veil-keys\veil-release.properties' }
 
+# Версия приложения — из метки: одна строка на apk, aab и файл .version на
+# панели, по которому покупатель узнаёт про обновление.
+$env:MARVIA_VERSION = $Tag -replace '^v', ''
+
 if (-not (Test-Path $env:MARVIA_RELEASE_KEYS)) {
     throw "нет ключа подписи: $env:MARVIA_RELEASE_KEYS. Неподписанный APK не поставится."
 }
@@ -55,7 +59,11 @@ if (-not $SkipCore) {
 Write-Host '== приложение'
 Push-Location android
 try {
-    .\gradlew.bat assembleRelease --console=plain
+    # APK — для панели продавца, AAB — для Google Play: тот принимает только
+    # bundle. Подпись одна и та же: Play App Signing получает наш ключ, а не
+    # заводит свой, иначе apk с панели и приложение из Play телефон счёл бы
+    # разными программами.
+    .\gradlew.bat assembleRelease bundleRelease --console=plain
     if ($LASTEXITCODE -ne 0) { throw 'не собралось приложение' }
 }
 finally {
@@ -75,9 +83,13 @@ Write-Host $signature[1]
 $sum = (Get-FileHash $out -Algorithm SHA256).Hash.ToLower()
 "$sum  marvia-android.apk" | Out-File -FilePath "$out.sha256" -Encoding ascii -NoNewline
 
+$aab = 'android\app\build\outputs\bundle\release\app-release.aab'
+$outAab = Join-Path ([System.IO.Path]::GetTempPath()) 'marvia-android.aab'
+Copy-Item $aab $outAab -Force
+
 Write-Host "== выкладываю в $Repo, метка $Tag"
-gh release upload $Tag $out "$out.sha256" --repo $Repo --clobber
+gh release upload $Tag $out "$out.sha256" $outAab --repo $Repo --clobber
 if ($LASTEXITCODE -ne 0) { throw 'не выложилось' }
 
 Write-Host ''
-Write-Host "готово: marvia-android.apk, sha256 $sum"
+Write-Host "готово: marvia-android.apk $env:MARVIA_VERSION, sha256 $sum; marvia-android.aab — для Play"
