@@ -15,16 +15,17 @@
         android:paddingTop="@dimen/header_pad"
         android:paddingBottom="10dp">
 
-        <TextView
+        <!-- Надпись — форма, а не шрифт: «A» с точкой. Цвет даёт тема. -->
+        <ImageView
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="14dp"
             android:layout_weight="1"
-            android:letterSpacing="0.2"
-            android:text="@string/app_name"
-            android:textAllCaps="true"
-            android:tag="dim"
-            android:textColor="@color/veil_muted"
-            android:textSize="12sp" />
+            android:adjustViewBounds="true"
+            android:scaleType="fitStart"
+            android:src="@drawable/ic_wordmark"
+            android:contentDescription="@string/app_name"
+            android:tag="icon:dim"
+            app:tint="@color/veil_muted" />
 
         <!-- Срок подписки в углу: это первое, что спрашивают у продавца. -->
         <TextView

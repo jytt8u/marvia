@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Надпись MARVIA — та же форма, что в панели и окне: геометрические буквы,
+    широкий трекинг, «A» без перекладины и с точкой. Такой буквы нет ни в одном
+    шрифте, поэтому нарисована. Цвет даёт тема через app:tint.
+
+    У VectorDrawable нет сдвига вьюпорта, поэтому вся надпись лежит в группе,
+    сдвинутой на поля: без них острые вершины «A» и «V» срезало бы краем.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="90dp"
+    android:height="20dp"
+    android:viewportWidth="610"
+    android:viewportHeight="136">
+    <group
+        android:translateX="12"
+        android:translateY="18">
+
+        <path
+            android:pathData="M9.5,100 L9.5,0 L38,58 L66.5,0 L66.5,100"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="19"
+            android:strokeLineJoin="miter"
+            android:strokeMiterLimit="10" />
+
+        <group android:translateX="116">
+            <path
+                android:pathData="M3,100 L38,0 L73,100"
+                android:strokeColor="#FFFFFFFF"
+                android:strokeWidth="19"
+                android:strokeLineJoin="miter"
+                android:strokeMiterLimit="10" />
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:pathData="M28.5,70 a9.5,9.5 0 1,0 19,0 a9.5,9.5 0 1,0 -19,0 Z" />
+        </group>
+
+        <group android:translateX="232">
+            <path
+                android:pathData="M9.5,100 L9.5,9.5 L40,9.5 A20.25,20.25 0 0 1 40,50 L9.5,50"
+                android:strokeColor="#FFFFFFFF"
+                android:strokeWidth="19"
+                android:strokeLineJoin="miter"
+                android:strokeMiterLimit="10" />
+            <path
+                android:pathData="M36,50 L66,100"
+                android:strokeColor="#FFFFFFFF"
+                android:strokeWidth="19"
+                android:strokeLineJoin="miter"
+                android:strokeMiterLimit="10" />
+        </group>
+
+        <group android:translateX="342">
+            <path
+                android:pathData="M3,0 L38,100 L73,0"
+                android:strokeColor="#FFFFFFFF"
+                android:strokeWidth="19"
+                android:strokeLineJoin="miter"
+                android:strokeMiterLimit="10" />
+        </group>
+
+        <group android:translateX="458">
+            <path
+                android:pathData="M9.5,0 L9.5,100"
+                android:strokeColor="#FFFFFFFF"
+                android:strokeWidth="19" />
+        </group>
+
+        <group android:translateX="511">
+            <path
+                android:pathData="M3,100 L38,0 L73,100"
+                android:strokeColor="#FFFFFFFF"
+                android:strokeWidth="19"
+                android:strokeLineJoin="miter"
+                android:strokeMiterLimit="10" />
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:pathData="M28.5,70 a9.5,9.5 0 1,0 19,0 a9.5,9.5 0 1,0 -19,0 Z" />
+        </group>
+    </group>
+</vector>

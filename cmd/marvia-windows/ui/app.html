@@ -140,24 +140,6 @@
   .head .title { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
   .head .sub { font-size: 13px; color: var(--dim); margin-top: 3px; }
 
-  /* Состояние туннеля — капсула в углу, на всех вкладках. Цвет говорит
-     раньше слов: акцент — защищено, янтарный — связь потеряна, красный — не
-     подключилось. */
-  .pill {
-    display: flex; align-items: center; gap: 8px; padding: 7px 13px; border-radius: 999px;
-    border: 1px solid var(--line); background: var(--surf2);
-    font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--dim);
-    transition: background .3s, border-color .3s, color .3s;
-  }
-  .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); transition: background .3s; }
-  body[data-state="connected"] .pill { background: var(--accSoft); border-color: var(--acc); color: var(--acc); }
-  body[data-state="connected"] .pill i { background: var(--acc); }
-  body[data-state="connecting"] .pill i { background: var(--acc); animation: blink 1.2s ease-in-out infinite; }
-  body[data-state="stalled"] .pill { border-color: var(--warn); color: var(--warn); }
-  body[data-state="stalled"] .pill i { background: var(--warn); }
-  body[data-state="failed"] .pill { border-color: var(--fail); color: var(--fail); }
-  body[data-state="failed"] .pill i { background: var(--fail); }
-  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 
   .page { display: none; flex: 1; min-height: 0; flex-direction: column; gap: var(--gap); }
   .page[data-open] { display: flex; }
@@ -491,7 +473,6 @@
           <div class="title" id="page-title"></div>
           <div class="sub" id="page-sub"></div>
         </div>
-        <div class="pill"><i></i><span id="pill-text"></span></div>
       </div>
 
       <!-- -------------------------------------------------------- главная -->
@@ -810,7 +791,6 @@ const T = {
       theme: ["Тема", "Окно красится сразу"],
       about: ["О программе", "Как это устроено"],
     },
-    pill: { idle: "НАПРЯМУЮ", connecting: "ПОДКЛЮЧАЮСЬ", connected: "ЗАЩИЩЕНО", failed: "НЕ ПОДКЛЮЧИЛОСЬ", stalled: "СВЯЗЬ ПОТЕРЯНА" },
 
     kSession: "Сессия", kPing: "Пинг", down: "Приём", up: "Отдача",
     chartTitle: "Трафик за час", chartFrom: "−60 мин", chartNow: "сейчас",
@@ -928,7 +908,6 @@ const T = {
       theme: ["Theme", "The window repaints at once"],
       about: ["About", "How it works"],
     },
-    pill: { idle: "DIRECT", connecting: "CONNECTING", connected: "PROTECTED", failed: "NOT CONNECTED", stalled: "CONNECTION LOST" },
 
     kSession: "Session", kPing: "Ping", down: "Down", up: "Up",
     chartTitle: "Traffic, last hour", chartFrom: "−60 min", chartNow: "now",
@@ -1711,7 +1690,6 @@ function render(s) {
   const d = L();
   document.body.dataset.state = s.state;
   $("status").textContent = d.state[s.state] || s.state;
-  $("pill-text").textContent = d.pill[s.state] || s.state;
   $("power").dataset.state = s.state;
   // Во время подключения кнопка была заблокирована, а обработчик отмену умел:
   // человек полторы минуты смотрел на замершее окно и не мог ничего сделать.
