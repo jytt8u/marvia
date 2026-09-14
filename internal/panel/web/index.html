@@ -7,7 +7,7 @@
 
 <!-- Значок нарисован прямо здесь: единственный внешний адрес в интерфейсе —
      это уже утечка, а ради иконки вкладки её допускать незачем. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c1a11'/%3E%3Cpath d='M8 10l8 14 8-14' fill='none' stroke='%2346e07a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c1a11'/%3E%3Cpath fill='%2346e07a' d='M3 7L10 5L10 26L3 26Z'/%3E%3Cpath fill='%2346e07a' d='M22 5L29 7L29 26L22 26Z'/%3E%3Cpath fill='%2346e07a' d='M9 5L16 16L23 5L23 11L16 22L9 11Z'/%3E%3Cpath fill='%23000' opacity='.28' d='M9 5L16 16L23 5L23 11L16 22L9 11Z'/%3E%3C/svg%3E">
 
 <style>
   /* Шрифты вшиты в бинарник и отдаются самой панелью. Панель для обхода
@@ -68,7 +68,27 @@
     align-items: center;
     gap: 10px;
   }
-  #login .mark img { height: 24px; width: auto; display: block; }
+
+  /*
+    Знак — лента-«M». Одна форма на все клиенты, и красится она темой, а не
+    вшита в картинку: две маски поверх цвета. Нижний слой заливается акцентом
+    (--acc), верхний — тем же силуэтом средней складки, притенённым чёрным:
+    так лента получает объём в любом цвете. Без --acc в области (экран входа)
+    берётся серый холст: бренд начинается с нейтрального.
+  */
+  :root {
+    --mark-full: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cpath%20d='M6%2014L20%2010L20%2052L6%2052Z'/%3E%3Cpath%20d='M44%2010L58%2014L58%2052L44%2052Z'/%3E%3Cpath%20d='M18%2010L32%2032L46%2010L46%2022L32%2044L18%2022Z'/%3E%3C/svg%3E");
+    --mark-fold: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cpath%20d='M18%2010L32%2032L46%2010L46%2022L32%2044L18%2022Z'/%3E%3C/svg%3E");
+  }
+  .logo { position: relative; display: inline-block; flex: none; }
+  .logo::before, .logo::after {
+    content: ""; position: absolute; inset: 0;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center; mask-position: center;
+    -webkit-mask-size: contain; mask-size: contain;
+  }
+  .logo::before { background: var(--acc, #8b96a5); -webkit-mask-image: var(--mark-full); mask-image: var(--mark-full); }
+  .logo::after  { background: rgba(0, 0, 0, .26);  -webkit-mask-image: var(--mark-fold); mask-image: var(--mark-fold); }
   #login .word {
     font-family: 'Chakra Petch', sans-serif;
     font-size: 14px;
@@ -222,7 +242,7 @@
 <div id="login">
   <form class="box" id="login-form">
     <div class="mark">
-      <img src="assets/marvia-mark.png" alt="">
+      <span class="logo" style="width: 26px; height: 26px;" aria-hidden="true"></span>
       <div class="word">MARVIA PARTNER</div>
       <button type="button" id="login-lang" class="lang"></button>
     </div>
@@ -255,7 +275,7 @@
 
     <div style="height: 46px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line, #1c2e21); background: var(--surf, #0c1a11);">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <img src="assets/marvia-mark.png" alt="" style="height: 22px; width: auto; display: block;">
+        <span class="logo" style="width: 22px; height: 22px;" aria-hidden="true"></span>
         <div style="font-family: 'Chakra Petch', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: .2em; color: #c3ccd6;">MARVIA PARTNER</div>
         <div style="{{ hostBadge }}">{{ host }}</div>
       </div>

@@ -64,7 +64,25 @@
     padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--surf);
   }
   .brand { display: flex; align-items: center; gap: 10px; }
-  .brand img { height: 22px; width: auto; display: block; }
+
+  /*
+    Знак — лента-«M», одна форма на все клиенты. Красится темой, а не вшита в
+    картинку: нижняя маска заливается акцентом, верхняя притеняет среднюю
+    складку чёрным — лента получает объём в любом цвете. Тот же приём в панели.
+  */
+  :root {
+    --mark-full: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cpath%20d='M6%2014L20%2010L20%2052L6%2052Z'/%3E%3Cpath%20d='M44%2010L58%2014L58%2052L44%2052Z'/%3E%3Cpath%20d='M18%2010L32%2032L46%2010L46%2022L32%2044L18%2022Z'/%3E%3C/svg%3E");
+    --mark-fold: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cpath%20d='M18%2010L32%2032L46%2010L46%2022L32%2044L18%2022Z'/%3E%3C/svg%3E");
+  }
+  .logo { position: relative; display: inline-block; flex: none; width: 22px; height: 22px; }
+  .logo::before, .logo::after {
+    content: ""; position: absolute; inset: 0;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center; mask-position: center;
+    -webkit-mask-size: contain; mask-size: contain;
+  }
+  .logo::before { background: var(--acc, #8b96a5); -webkit-mask-image: var(--mark-full); mask-image: var(--mark-full); }
+  .logo::after  { background: rgba(0, 0, 0, .26);  -webkit-mask-image: var(--mark-fold); mask-image: var(--mark-fold); }
   .wordmark { font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .2em; color: var(--acc); }
   .ver { font-family: var(--mono); font-size: 10px; color: var(--dim); }
   .top button.lang {
@@ -426,7 +444,7 @@
 
   <header class="top">
     <div class="brand">
-      <img src="assets/marvia-mark.png" alt="">
+      <span class="logo" aria-hidden="true"></span>
       <span class="wordmark">MARVIA</span>
       <span class="ver" id="version"></span>
     </div>
@@ -691,7 +709,7 @@
 <div class="widget" id="widget">
   <div class="w-top">
     <div class="brand">
-      <img src="assets/marvia-mark.png" alt="">
+      <span class="logo" aria-hidden="true"></span>
       <span class="wordmark">MARVIA</span>
     </div>
     <div class="acts">
