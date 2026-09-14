@@ -225,6 +225,7 @@ WireGuard:
 | [docs/architecture.md](docs/architecture.md) | на чём всё держится и почему устроено так |
 | [docs/protocol.md](docs/protocol.md) | VP1: хендшейк, кадры, добивка, что видно снаружи |
 | [docs/bot.md](docs/bot.md) | справочник для автора телеграм-бота |
+| [docs/privacy.md](docs/privacy.md) | что приложение хранит и отправляет — политика для Play и для людей |
 
 ## Сборка из исходников
 
