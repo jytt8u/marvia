@@ -1,4 +1,4 @@
-<img src="internal/look/assets/marvia-mark.svg" alt="" height="72">
+<img src="internal/look/assets/marvia-mark.png" alt="" height="72">
 
 # Marvia
 

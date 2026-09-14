@@ -66,24 +66,36 @@
   .brand { display: flex; align-items: center; gap: 10px; }
 
   /*
-    Знак — лента-«M», одна форма на все клиенты. Красится темой, а не вшита в
-    картинку: нижняя маска заливается акцентом, верхняя притеняет среднюю
-    складку чёрным — лента получает объём в любом цвете. Тот же приём в панели.
+    Знак — объёмная лента-«M», и красится она темой, оставаясь металлом. Два
+    слоя: нижний — сам знак, обесцвеченный в нейтральный металл; верхний —
+    заливка акцентом со смешением mix-blend-mode: color, которое берёт из
+    акцента тон, а свет и тень — у металла снизу. Тот же приём в панели.
   */
-  :root {
-    --mark-full: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cpath%20d='M6%2014L20%2010L20%2052L6%2052Z'/%3E%3Cpath%20d='M44%2010L58%2014L58%2052L44%2052Z'/%3E%3Cpath%20d='M18%2010L32%2032L46%2010L46%2022L32%2044L18%2022Z'/%3E%3C/svg%3E");
-    --mark-fold: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cpath%20d='M18%2010L32%2032L46%2010L46%2022L32%2044L18%2022Z'/%3E%3C/svg%3E");
+  :root { --mark-img: url("assets/marvia-mark.png"); --word-img: url("assets/marvia-word.svg"); }
+  .logo { position: relative; display: inline-block; flex: none; width: 22px; height: 22px; isolation: isolate; }
+  .logo::before, .logo::after { content: ""; position: absolute; inset: 0; }
+  .logo::before {
+    background: var(--mark-img) center / contain no-repeat;
+    filter: grayscale(1) contrast(1.03) brightness(1.02);
   }
-  .logo { position: relative; display: inline-block; flex: none; width: 22px; height: 22px; }
-  .logo::before, .logo::after {
-    content: ""; position: absolute; inset: 0;
-    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-    -webkit-mask-position: center; mask-position: center;
+  .logo::after {
+    background: var(--acc, transparent);
+    mix-blend-mode: color;
+    -webkit-mask: var(--mark-img) center / contain no-repeat;
+            mask: var(--mark-img) center / contain no-repeat;
     -webkit-mask-size: contain; mask-size: contain;
   }
-  .logo::before { background: var(--acc, #8b96a5); -webkit-mask-image: var(--mark-full); mask-image: var(--mark-full); }
-  .logo::after  { background: rgba(0, 0, 0, .26);  -webkit-mask-image: var(--mark-fold); mask-image: var(--mark-fold); }
-  .wordmark { font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .2em; color: var(--acc); }
+  /*
+    Надпись MARVIA — форма, а не шрифт: «A» без перекладины и с точкой. Текст
+    внутри остаётся для чтения с экрана, но не рисуется: форму даёт маска,
+    цвет — акцент темы. Та же надпись в панели.
+  */
+  .wordmark {
+    display: block; height: 13px; aspect-ratio: 610 / 136; font-size: 0;
+    background: var(--acc);
+    -webkit-mask: var(--word-img) center / contain no-repeat;
+            mask: var(--word-img) center / contain no-repeat;
+  }
   .ver { font-family: var(--mono); font-size: 10px; color: var(--dim); }
   .top button.lang {
     background: none; border: 1px solid var(--line); color: var(--dim);

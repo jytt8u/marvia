@@ -70,32 +70,52 @@
   }
 
   /*
-    Знак — лента-«M». Одна форма на все клиенты, и красится она темой, а не
-    вшита в картинку: две маски поверх цвета. Нижний слой заливается акцентом
-    (--acc), верхний — тем же силуэтом средней складки, притенённым чёрным:
-    так лента получает объём в любом цвете. Без --acc в области (экран входа)
-    берётся серый холст: бренд начинается с нейтрального.
+    Знак — та самая объёмная лента-«M», и красится она темой, оставаясь
+    металлом. Два слоя: нижний — сам знак, обесцвеченный в нейтральный металл
+    (grayscale); верхний — заливка акцентом со смешением mix-blend-mode: color,
+    которое берёт из акцента тон и насыщенность, а свет и тень — у металла
+    снизу. Серый металл + любой акцент = тот же знак в этом цвете, с бликом и
+    складкой на месте. Без --acc (экран входа) верхний слой прозрачен и знак
+    остаётся серым: бренд начинается с нейтрального холста.
+
+    isolation держит смешение внутри знака — иначе цвет пролился бы на фон.
   */
-  :root {
-    --mark-full: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cpath%20d='M6%2014L20%2010L20%2052L6%2052Z'/%3E%3Cpath%20d='M44%2010L58%2014L58%2052L44%2052Z'/%3E%3Cpath%20d='M18%2010L32%2032L46%2010L46%2022L32%2044L18%2022Z'/%3E%3C/svg%3E");
-    --mark-fold: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cpath%20d='M18%2010L32%2032L46%2010L46%2022L32%2044L18%2022Z'/%3E%3C/svg%3E");
+  :root { --mark-img: url("assets/marvia-mark.png"); }
+  .logo { position: relative; display: inline-block; flex: none; isolation: isolate; }
+  .logo::before, .logo::after { content: ""; position: absolute; inset: 0; }
+  .logo::before {
+    background: var(--mark-img) center / contain no-repeat;
+    filter: grayscale(1) contrast(1.03) brightness(1.02);
   }
-  .logo { position: relative; display: inline-block; flex: none; }
-  .logo::before, .logo::after {
-    content: ""; position: absolute; inset: 0;
-    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-    -webkit-mask-position: center; mask-position: center;
+  .logo::after {
+    background: var(--acc, transparent);
+    mix-blend-mode: color;
+    -webkit-mask: var(--mark-img) center / contain no-repeat;
+            mask: var(--mark-img) center / contain no-repeat;
     -webkit-mask-size: contain; mask-size: contain;
   }
-  .logo::before { background: var(--acc, #8b96a5); -webkit-mask-image: var(--mark-full); mask-image: var(--mark-full); }
-  .logo::after  { background: rgba(0, 0, 0, .26);  -webkit-mask-image: var(--mark-fold); mask-image: var(--mark-fold); }
+  /*
+    Надпись MARVIA — не шрифт, а форма: «A» без перекладины и с точкой, такой
+    буквы нет ни в одном вшитом шрифте. Идёт маской и заливается currentColor,
+    поэтому подчиняется цвету текста рядом, как если бы была набрана.
+  */
+  :root { --word-img: url("assets/marvia-word.svg"); }
+  .wordmark {
+    display: block; height: 13px; aspect-ratio: 610 / 136; background: currentColor;
+    -webkit-mask: var(--word-img) center / contain no-repeat;
+            mask: var(--word-img) center / contain no-repeat;
+  }
   #login .word {
+    display: flex;
+    align-items: center;
+    gap: 9px;
     font-family: 'Chakra Petch', sans-serif;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: .2em;
     color: #c3ccd6;
   }
+  #login .word .wordmark { height: 15px; }
   #login p { font-size: 13px; line-height: 1.55; color: #6c8a76; }
   #login input {
     width: 100%;
@@ -243,7 +263,7 @@
   <form class="box" id="login-form">
     <div class="mark">
       <span class="logo" style="width: 26px; height: 26px;" aria-hidden="true"></span>
-      <div class="word">MARVIA PARTNER</div>
+      <div class="word"><span class="wordmark" role="img" aria-label="Marvia"></span><span>PARTNER</span></div>
       <button type="button" id="login-lang" class="lang"></button>
     </div>
     <p id="login-hint"></p>
@@ -276,7 +296,7 @@
     <div style="height: 46px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line, #1c2e21); background: var(--surf, #0c1a11);">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span class="logo" style="width: 22px; height: 22px;" aria-hidden="true"></span>
-        <div style="font-family: 'Chakra Petch', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: .2em; color: #c3ccd6;">MARVIA PARTNER</div>
+        <div style="display: flex; align-items: center; gap: 8px; font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .2em; color: #c3ccd6;"><span class="wordmark" role="img" aria-label="Marvia"></span><span>PARTNER</span></div>
         <div style="{{ hostBadge }}">{{ host }}</div>
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">

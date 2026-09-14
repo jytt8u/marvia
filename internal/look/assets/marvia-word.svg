@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -18 610 136"
+     fill="none" stroke="#000" stroke-width="19" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10">
+  <!--
+    Надпись MARVIA. Геометрическая, широким трекингом, «A» без перекладины и с
+    точкой — такой детали нет ни в одном вшитом шрифте, поэтому буквы нарисованы
+    формой. Файл идёт маской: цвет ей задаёт страница, а не он сам.
+  -->
+  <path d="M9.5,100 L9.5,0 L38,58 L66.5,0 L66.5,100"/>
+  <g transform="translate(116,0)">
+    <path d="M3,100 L38,0 L73,100"/>
+    <circle cx="38" cy="70" r="9.5" fill="#000" stroke="none"/>
+  </g>
+  <g transform="translate(232,0)">
+    <path d="M9.5,100 L9.5,9.5 L40,9.5 A20.25,20.25 0 0 1 40,50 L9.5,50"/>
+    <path d="M36,50 L66,100"/>
+  </g>
+  <g transform="translate(342,0)">
+    <path d="M3,0 L38,100 L73,0"/>
+  </g>
+  <g transform="translate(458,0)">
+    <path d="M9.5,0 L9.5,100"/>
+  </g>
+  <g transform="translate(511,0)">
+    <path d="M3,100 L38,0 L73,100"/>
+    <circle cx="38" cy="70" r="9.5" fill="#000" stroke="none"/>
+  </g>
+</svg>

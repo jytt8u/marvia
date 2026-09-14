@@ -77,7 +77,14 @@ func ServeFont(w http.ResponseWriter, r *http.Request) {
 
 // ServeAsset отдаёт вшитую картинку по имени из адреса.
 func ServeAsset(w http.ResponseWriter, r *http.Request) {
-	serve(w, r.PathValue("name"), AssetName, "assets/", "image/png")
+	name := r.PathValue("name")
+	// Знак раздаётся растром, а надпись — вектором: она идёт маской, которую
+	// страница заливает цветом темы, и в растре края бы мылились.
+	mime := "image/png"
+	if strings.HasSuffix(name, ".svg") {
+		mime = "image/svg+xml"
+	}
+	serve(w, name, AssetName, "assets/", mime)
 }
 
 func serve(w http.ResponseWriter, name string, ok func(string) bool, dir, mime string) {
@@ -106,7 +113,7 @@ func serve(w http.ResponseWriter, name string, ok func(string) bool, dir, mime s
 func FontName(name string) bool { return plainName(name, ".woff2") }
 
 // AssetName проверяет имя картинки тем же правилом.
-func AssetName(name string) bool { return plainName(name, ".png") }
+func AssetName(name string) bool { return plainName(name, ".png") || plainName(name, ".svg") }
 
 // plainName разрешает имя по списку допустимых знаков, а не запрещает
 // опасные. Запретный список на путях всегда оказывается неполным: кто-нибудь
