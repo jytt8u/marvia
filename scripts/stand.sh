@@ -7,15 +7,21 @@
 # стороны, откуда ходят покупатели — с VPS в России или с домашней машины.
 #
 #   sh scripts/stand.sh -server node.example.com:443 -pubkey <ключ ноды> \
-#       [-sni cover.example.com] [-reality-pbk … -reality-sid …] [-quic]
+#       [-sni cover.example.com] [-reality-pbk … -reality-sid …] [-quic] \n#       [-key <приватный ключ покупателя>]
 #
 # Что нужно на машине: tcpdump, curl, openssl, marvia-client (собранный из
-# репозитория или из релиза), и хотя бы одно из: ndpiReader (пакет ndpi-bin
-# или сборка nDPI), zeek с пакетом ja4 (zkg install ja4). Чего нет — тот шаг
-# пропускается с пометкой, а не падает: даже один pcap уже полезен.
+# репозитория или из релиза), и хотя бы одно из: ndpiReader, zeek с пакетом
+# ja4 (zkg install ja4). Чего нет — тот шаг пропускается с пометкой, а не
+# падает: даже один pcap уже полезен.
 #
-# Скрипт ничего не меняет ни на ноде, ни на машине. Приватный ключ клиента
-# временный, на время запуска.
+# nDPI собирай из исходников (ветка 4.10+): пакет libndpi-bin в Ubuntu 22.04 —
+# это 4.2 2022 года, он не знает ни ECH, ни ALPS и метит любой современный
+# Chrome как подозрительный, а JA4 не считает вовсе.
+#
+# Скрипт ничего не меняет ни на ноде, ни на машине. Без -key ключ клиента
+# временный, и нода с базой покупателей его не знает: туннель не поднимется,
+# а сайт-прикрытие ответит — ровно как чужому. Чтобы записать трафик внутри
+# туннеля, дай ключ настоящего покупателя: он в его ссылке marvia://КЛЮЧ@…
 
 set -eu
 
@@ -34,6 +40,7 @@ SNI=''
 RPBK=''
 RSID=''
 QUIC=0
+KEY=''
 OUT=${OUT:-stand-$(date +%Y%m%d-%H%M%S)}
 CLIENT=${CLIENT:-}
 
@@ -45,6 +52,7 @@ while [ $# -gt 0 ]; do
 	-reality-pbk) RPBK=$2; shift 2 ;;
 	-reality-sid) RSID=$2; shift 2 ;;
 	-quic) QUIC=1; shift ;;
+	-key) KEY=$2; shift 2 ;;
 	-out) OUT=$2; shift 2 ;;
 	*) die "неизвестный аргумент: $1" ;;
 	esac
@@ -93,13 +101,20 @@ note "нода: $IP:$PORT, SNI $SNI"
 
 head_ 'Запись трафика до ноды'
 
-tcpdump -i any -w "$OUT/node.pcap" "host $IP and port $PORT" >/dev/null 2>&1 &
+# Интерфейс — тот, через который ходим к ноде, а не any: с -i any tcpdump пишет
+# заголовки Linux SLL2, которые ndpiReader 4.x не читает вовсе — молча
+# пропускает файл, и проверка ниже «не находила проблем» на пустом отчёте.
+IFACE=$(ip route get "$IP" 2>/dev/null | awk '{for(i=1;i<NF;i++) if($i=="dev") {print $(i+1); exit}}')
+[ -n "$IFACE" ] || IFACE=any
+note "интерфейс: $IFACE"
+tcpdump -i "$IFACE" -w "$OUT/node.pcap" "host $IP and port $PORT" >/dev/null 2>&1 &
 DUMP=$!
 sleep 1
 kill -0 "$DUMP" 2>/dev/null || die 'tcpdump не запустился (нужен root?)'
 
 set -- -server "$SERVER" -pubkey "$PUBKEY" -sni "$SNI" -listen 127.0.0.1:18080
 [ -n "$RPBK" ] && set -- "$@" -reality-pbk "$RPBK" -reality-sid "$RSID"
+[ -n "$KEY" ] && set -- "$@" -key "$KEY"
 "$CLIENT" "$@" >"$OUT/client.log" 2>&1 &
 CPID=$!
 sleep 3
@@ -175,11 +190,19 @@ if [ -n "$NDPI" ]; then
 	"$NDPI" -i "$OUT/node.pcap" -v 1 > "$OUT/ndpi.txt" 2>&1 || true
 	# Строки с нашей нодой: какой протокол им присвоен.
 	grep -E "$IP:$PORT" "$OUT/ndpi.txt" | sed 's/^/    /' | head -20
-	if grep -E "$IP:$PORT" "$OUT/ndpi.txt" | grep -qiE 'unknown|proxy|vpn|tor|wireguard'; then
+	# Пустой отчёт — не «проблем нет», а «не посмотрели»: так было с pcap
+	# в формате SLL2, который nDPI пропускает молча.
+	if ! grep -qE "$IP:$PORT" "$OUT/ndpi.txt"; then
+		bad 'nDPI не увидел ни одного потока до ноды — смотри ndpi.txt'
+	elif grep -E "$IP:$PORT" "$OUT/ndpi.txt" | grep -qiE 'unknown|proxy|vpn|tor|wireguard'; then
 		bad 'nDPI видит не TLS/HTTP: смотри ndpi.txt'
 	else
 		ok 'nDPI: TLS к сайту-прикрытию, как задумано'
 	fi
+	# Отпечаток и риски — глазами: JA4 сверяют с базой известных браузеров, а
+	# «Susp Extn» у старого nDPI значит лишь, что расширение новее его самого
+	# (ALPS 17613 и ECH — у настоящего Chrome они же).
+	"$NDPI" -i "$OUT/node.pcap" -v 2 2>/dev/null | grep -E "$IP:$PORT" | grep -oE "[(JA4|JA3C|Risk|Risk Info|ECH)[^]]*]" | sed 's/^/    /' | head -6
 else
 	skip 'nDPI пропущен'
 fi
