@@ -86,6 +86,16 @@ type RealityDialConfig struct {
 
 	// Fingerprint — чей ClientHello изображаем. По умолчанию свежий Chrome.
 	Fingerprint utls.ClientHelloID
+
+	// OnConnect, если задан, получает время установки TCP-соединения — один
+	// круг по сети до ноды, без рукопожатий поверх.
+	//
+	// Это то единственное число, которое человек называет пингом и по
+	// которому сравнивает нас с другими клиентами. Берём его здесь, из уже
+	// открываемого соединения: отдельная проба ради замера означала бы
+	// лишнее TCP-соединение, которое открылось и закрылось без TLS, — а
+	// такого браузеры не делают, и это примета.
+	OnConnect func(time.Duration)
 }
 
 func (c RealityDialConfig) fingerprint() utls.ClientHelloID {
@@ -110,9 +120,13 @@ func DialReality(ctx context.Context, addr string, cfg RealityDialConfig) (net.C
 	}
 
 	dialer := &net.Dialer{}
+	began := time.Now()
 	raw, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
+	}
+	if cfg.OnConnect != nil {
+		cfg.OnConnect(time.Since(began))
 	}
 
 	conn, err := realityHandshake(ctx, raw, cfg, shortID)

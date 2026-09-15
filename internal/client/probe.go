@@ -52,6 +52,15 @@ type Measurement struct {
 	// старой версии и такого не умеет.
 	Fetch time.Duration
 
+	// Connect — круг по сети до ноды: время установки TCP, без рукопожатий
+	// поверх. Это то число, которое человек называет пингом и по которому
+	// сравнивает нас с другими клиентами.
+	//
+	// Для выбора ноды оно не годится и туда не идёт: заблокированная нода
+	// охотно принимает TCP и роняет всё дальше, поэтому выбираем по Cost —
+	// времени до работающего туннеля. А показываем это.
+	Connect time.Duration
+
 	// dialer остаётся живым только у победителя: переустанавливать
 	// соединение сразу после удачного замера — лишний круг по сети.
 	dialer *Dialer
@@ -99,11 +108,12 @@ func Probe(ctx context.Context, node Node, key vp1.KeyPair, opts Options) Measur
 	defer cancel()
 
 	if err := dialer.Warmup(probeCtx); err != nil {
+		rtt := dialer.Connect()
 		_ = dialer.Close()
-		return Measurement{Node: node, Latency: time.Since(start), Err: err}
+		return Measurement{Node: node, Latency: time.Since(start), Connect: rtt, Err: err}
 	}
 
-	return Measurement{Node: node, Latency: time.Since(start), dialer: dialer}
+	return Measurement{Node: node, Latency: time.Since(start), Connect: dialer.Connect(), dialer: dialer}
 }
 
 // SelectBest меряет ноды и возвращает дозвон до самой быстрой живой.

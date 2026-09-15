@@ -44,6 +44,11 @@ type ClientConfig struct {
 
 	// Fingerprint — чей ClientHello изображаем. По умолчанию свежий Chrome.
 	Fingerprint utls.ClientHelloID
+
+	// OnConnect, если задан, получает время установки TCP-соединения — один
+	// круг по сети до ноды, без рукопожатий поверх. Подробности — в
+	// RealityDialConfig.
+	OnConnect func(time.Duration)
 }
 
 func (c ClientConfig) fingerprint() utls.ClientHelloID {
@@ -66,9 +71,13 @@ func Dial(ctx context.Context, addr string, cfg ClientConfig) (net.Conn, error) 
 	}
 
 	dialer := &net.Dialer{}
+	began := time.Now()
 	raw, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
+	}
+	if cfg.OnConnect != nil {
+		cfg.OnConnect(time.Since(began))
 	}
 
 	uconn := utls.UClient(raw, &utls.Config{

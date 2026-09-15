@@ -28,6 +28,17 @@ type Dialer struct {
 	// ответить «до какого числа и сколько осталось», не спрашивая продавца.
 	// Второй раз ходить за подпиской ради этого незачем — она уже в руках.
 	sub Subscription
+
+	// connectNS — сколько заняло последнее TCP-соединение до ноды, в
+	// наносекундах. Это один круг по сети и есть — то, что человек называет
+	// пингом. Полное время прогрева втрое больше: там ещё TLS и VP1.
+	connectNS atomic.Int64
+}
+
+// Connect — круг по сети до ноды при последнем соединении. Ноль означает,
+// что транспорт такого не сообщает (за CDN и по QUIC).
+func (d *Dialer) Connect() time.Duration {
+	return time.Duration(d.connectNS.Load())
 }
 
 // quicAttempt — сколько ждём дозвона по UDP, прежде чем уйти на TCP.
@@ -76,7 +87,11 @@ func NewDialer(node Node, key vp1.KeyPair, opts Options) (*Dialer, error) {
 		name = host
 	}
 
-	dial, err := transportDialer(node, name, opts)
+	// Dialer заводим раньше дозвона: замер круга пишется прямо в него.
+	d := &Dialer{node: node}
+	dial, err := transportDialer(node, name, opts, func(rtt time.Duration) {
+		d.connectNS.Store(int64(rtt))
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -94,25 +109,26 @@ func NewDialer(node Node, key vp1.KeyPair, opts Options) (*Dialer, error) {
 		return conn, nil
 	}, 0, 0)
 
-	return &Dialer{node: node, pool: pool}, nil
+	d.pool = pool
+	return d, nil
 }
 
 // transportDialer выбирает внешний слой под то, как настроена нода.
-func transportDialer(node Node, serverName string, opts Options) (func(context.Context) (net.Conn, error), error) {
+func transportDialer(node Node, serverName string, opts Options, onConnect func(time.Duration)) (func(context.Context) (net.Conn, error), error) {
 	// QUIC пробуем первым и откатываемся на TCP, если не вышло.
 	//
 	// Только для обычного TLS: под REALITY нода не может держать QUIC (там
 	// нет своего сертификата), а за CDN адрес принадлежит не ноде, и UDP до
 	// неё не дойдёт.
 	if node.QUIC && node.Transport() == TransportTLS {
-		tcp, err := tcpDialer(node, serverName, opts)
+		tcp, err := tcpDialer(node, serverName, opts, onConnect)
 		if err != nil {
 			return nil, err
 		}
 		return quicFirst(node, serverName, opts, tcp), nil
 	}
 
-	return tcpDialer(node, serverName, opts)
+	return tcpDialer(node, serverName, opts, onConnect)
 }
 
 // quicFirst пробует UDP, а потом навсегда переходит на TCP.
@@ -153,11 +169,12 @@ func quicFirst(node Node, serverName string, opts Options, tcp func(context.Cont
 }
 
 // tcpDialer собирает дозвон по TCP — тот, что был до появления QUIC.
-func tcpDialer(node Node, serverName string, opts Options) (func(context.Context) (net.Conn, error), error) {
+func tcpDialer(node Node, serverName string, opts Options, onConnect func(time.Duration)) (func(context.Context) (net.Conn, error), error) {
 	tlsCfg := transport.ClientConfig{
 		ServerName:         serverName,
 		RootCAs:            opts.RootCAs,
 		InsecureSkipVerify: opts.InsecureSkipVerify,
+		OnConnect:          onConnect,
 	}
 
 	switch node.Transport() {
@@ -190,6 +207,7 @@ func tcpDialer(node Node, serverName string, opts Options) (func(context.Context
 				ServerName: names[mrand.IntN(len(names))],
 				PublicKey:  pub,
 				ShortID:    node.RealityShortID,
+				OnConnect:  onConnect,
 			})
 		}, nil
 
