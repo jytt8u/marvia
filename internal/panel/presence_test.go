@@ -107,3 +107,39 @@ func TestPresenceIsNotAJournal(t *testing.T) {
 		t.Fatalf("после пяти отчётов строк присутствия %d, ждали одну", n)
 	}
 }
+
+// TestTrafficCountsAsBeingSeen — прошедший трафик отмечает «был на связи».
+//
+// Нода отчитывается раз в пятнадцать секунд, и сессия короче тика в отчёт о
+// присутствии не попадает вовсе. Панель тогда отвечала «не подключался ни
+// разу» про человека, у которого расход уже записан, — и на вопрос «он вообще
+// подключался?» врала при живом трафике. Поймано на живой установке.
+func TestTrafficCountsAsBeingSeen(t *testing.T) {
+	store, userID, nodeID := usageStore(t)
+	ctx := context.Background()
+	if err := store.TouchNode(ctx, nodeID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Отчёта о присутствии не было вовсе — только расход.
+	report(t, store, nodeID, userID, 12_000, 8_426)
+
+	u, err := store.GetUser(ctx, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Used == 0 {
+		t.Fatal("расход не записался — проверять нечего")
+	}
+	if u.LastSeen == nil {
+		t.Fatal("расход есть, а «был на связи» пусто: панель скажет «не подключался ни разу»")
+	}
+	if time.Since(*u.LastSeen) > time.Minute {
+		t.Fatalf("время последней связи не свежее: %v", u.LastSeen)
+	}
+
+	// Но «на связи прямо сейчас» из трафика не следует: он мог уже уйти.
+	if u.Online != 0 {
+		t.Errorf("по одному расходу насчитали %d соединений", u.Online)
+	}
+}
