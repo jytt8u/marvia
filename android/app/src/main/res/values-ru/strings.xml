@@ -19,8 +19,6 @@
     <string name="detail_node">Нода: %1$s</string>
 
     <!-- Круг на главном экране и есть выключатель, и это стоит сказать словами. -->
-    <string name="connect_tap_on">нажми на круг, чтобы подключиться</string>
-    <string name="connect_tap_off">нажми на круг, чтобы отключиться</string>
     <string name="connect_no_key">ключа доступа пока нет</string>
 
     <!--
@@ -28,7 +26,6 @@
         ядро уехало на живую: показывать в этом случае только выбор значило бы
         врать о том, куда идёт трафик.
     -->
-    <string name="connect_auto">выбрано автоматически, самое быстрое</string>
     <string name="connect_manual">эту страну выбрал ты</string>
     <string name="connect_manual_moved">ты выбрал %1$s, она замолчала — трафик идёт через эту</string>
 
@@ -73,14 +70,12 @@
 
     <!-- Экран выбора страны. -->
     <string name="servers_title">Страны</string>
-    <string name="servers_hint">Скорость меряется с твоего телефона, а не с сервера продавца.</string>
     <string name="servers_measure">Обновить</string>
     <string name="servers_auto">Автовыбор</string>
     <string name="servers_auto_mark">⚡</string>
     <string name="servers_auto_note">самая быстрая прямо сейчас — %1$s</string>
-    <string name="servers_auto_unknown">нажми «Обновить», чтобы замерить страны</string>
+    <string name="servers_auto_unknown">ещё не мерили</string>
     <string name="servers_manual">Выбрать вручную</string>
-    <string name="servers_footer">Если страна перестала открываться, приложение уйдёт на другую само — выбирать вручную нужно редко.</string>
     <string name="servers_empty">Список живёт внутри туннеля: подключись, и страны со временем отклика появятся здесь.</string>
     <string name="servers_group_other">Другие</string>
     <string name="servers_failed">Не получилось перейти: %1$s</string>

@@ -44,8 +44,6 @@
     <string name="detail_node">Node: %1$s</string>
 
     <!-- Круг на главном экране и есть выключатель, и это стоит сказать словами. -->
-    <string name="connect_tap_on">tap the circle to connect</string>
-    <string name="connect_tap_off">tap the circle to disconnect</string>
     <string name="connect_no_key">no access key yet</string>
 
     <!--
@@ -53,7 +51,6 @@
         ядро уехало на живую: показывать в этом случае только выбор значило бы
         врать о том, куда идёт трафик.
     -->
-    <string name="connect_auto">picked automatically, the fastest one</string>
     <string name="connect_manual">this country you picked yourself</string>
     <string name="connect_manual_moved">you picked %1$s, it went silent — traffic goes through this one</string>
 
@@ -96,14 +93,12 @@
 
     <!-- Экран выбора страны. -->
     <string name="servers_title">Countries</string>
-    <string name="servers_hint">Speed is measured from your phone, not from the servers of your seller.</string>
     <string name="servers_measure">Refresh</string>
     <string name="servers_auto">Automatic</string>
     <string name="servers_auto_mark">⚡</string>
     <string name="servers_auto_note">the fastest one right now is %1$s</string>
-    <string name="servers_auto_unknown">tap Refresh to measure the countries</string>
+    <string name="servers_auto_unknown">not measured yet</string>
     <string name="servers_manual">Pick by hand</string>
-    <string name="servers_footer">If a country stops opening, the app moves to another one by itself — picking by hand is rarely needed.</string>
     <string name="servers_empty">The list lives inside the tunnel: connect, and the countries with their response times appear here.</string>
     <string name="servers_group_other">Other</string>
     <string name="servers_failed">Could not move: %1$s</string>

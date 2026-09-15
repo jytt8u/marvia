@@ -152,16 +152,6 @@
                 android:textColor="@color/veil_muted"
                 android:textSize="13sp" />
 
-            <!-- Круг не выглядит кнопкой, пока об этом не сказано словами. -->
-            <TextView
-                android:id="@+id/powerHint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:gravity="center"
-                android:tag="dim"
-                android:textColor="@color/veil_muted"
-                android:textSize="12.5sp" />
 
             <!--
                 Подробности из ядра. Покупателю они не говорят ничего, поэтому

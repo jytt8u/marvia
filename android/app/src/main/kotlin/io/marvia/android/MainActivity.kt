@@ -346,7 +346,6 @@ class MainActivity : AppCompatActivity() {
                 paintPower(theme.dim)
                 c.statusText.setTextColor(theme.fg)
                 c.nodeNote.text = if (hasKey) "" else getString(R.string.connect_no_key)
-                c.powerHint.text = if (hasKey) getString(R.string.connect_tap_on) else ""
             }
 
             TunnelState.Connecting -> {
@@ -354,14 +353,12 @@ class MainActivity : AppCompatActivity() {
                 paintPower(theme.acc)
                 c.statusText.setTextColor(theme.fg)
                 c.nodeNote.setText(R.string.detail_connecting)
-                c.powerHint.text = ""
             }
 
             is TunnelState.On -> {
                 c.statusText.setText(R.string.status_on)
                 paintPower(theme.acc)
                 c.statusText.setTextColor(theme.acc)
-                c.powerHint.setText(R.string.connect_tap_off)
 
                 c.nodeLine.isVisible = true
                 c.nodeCountry.text = state.node
@@ -384,7 +381,6 @@ class MainActivity : AppCompatActivity() {
                 c.statusText.setText(R.string.status_failed)
                 paintPower(theme.fail)
                 c.statusText.setTextColor(theme.fail)
-                c.powerHint.text = if (hasKey) getString(R.string.connect_tap_on) else ""
 
                 val human = humanReasonFor(state.kind)
                 if (human == null) {
@@ -401,7 +397,6 @@ class MainActivity : AppCompatActivity() {
 
         // Пустая строка — это не строка: место под неё занимать незачем.
         c.nodeNote.isVisible = c.nodeNote.text.isNotEmpty()
-        c.powerHint.isVisible = c.powerHint.text.isNotEmpty()
 
         renderSubscription(state)
 
@@ -425,7 +420,10 @@ class MainActivity : AppCompatActivity() {
      * проверить нас не может.
      */
     private fun choiceText(state: TunnelState.On): String = when {
-        state.chosen.isEmpty() -> getString(R.string.connect_auto)
+        // Автовыбор — это молчание: он и так по умолчанию, и сообщать о нём
+        // нечего. Строка появляется, только когда есть что сказать: человек
+        // выбрал страну сам, или выбрал одну, а ядро уехало на другую.
+        state.chosen.isEmpty() -> ""
         state.chosen == state.node -> getString(R.string.connect_manual)
         else -> getString(R.string.connect_manual_moved, state.chosen)
     }
