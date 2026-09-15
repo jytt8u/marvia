@@ -34,6 +34,20 @@
             android:layout_marginEnd="9dp"
             android:visibility="gone" />
 
+        <!-- Добавить подписку: буфер обмена или руками. -->
+        <TextView
+            android:id="@+id/addSubscription"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:tag="acc"
+            android:text="+"
+            android:textColor="@color/veil_link"
+            android:textSize="22sp"
+            android:contentDescription="@string/servers_add" />
+
         <!-- «Обновить» — это перезамер всех нод с этого телефона, он не мгновенный. -->
         <TextView
             android:id="@+id/measureButton"
@@ -156,6 +170,27 @@
                         android:visibility="gone" />
                 </FrameLayout>
             </LinearLayout>
+
+            <!--
+                Подписки. Показываются, только когда их больше одной: пока
+                продавец один, заголовок и список — это шум над тем, что и так
+                очевидно.
+            -->
+            <TextView
+                android:id="@+id/subsLabel"
+                style="@style/VeilSection"
+                android:layout_marginTop="16dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/servers_subs"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/subList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/manualLabel"

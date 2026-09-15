@@ -98,6 +98,19 @@
     <string name="servers_auto_mark">⚡</string>
     <string name="servers_auto_note">the fastest one right now is %1$s</string>
     <string name="servers_auto_unknown">not measured yet</string>
+    <!-- Добавление подписки: буфер обмена или руками, как в привычных клиентах. -->
+    <string name="servers_add">Add</string>
+    <string name="servers_add_clipboard">Clipboard</string>
+    <string name="servers_add_manual">By hand</string>
+    <string name="servers_sub_name">Name</string>
+    <string name="servers_sub_link">A marvia://… link</string>
+    <string name="servers_sub_untitled">Subscription</string>
+    <string name="servers_subs">Subscriptions</string>
+    <string name="servers_sub_active">in use</string>
+    <string name="servers_sub_added">Subscription added</string>
+    <string name="servers_sub_bad">That is not a marvia:// link</string>
+    <string name="servers_sub_remove">Remove</string>
+    <string name="servers_sub_remove_ask">Remove the subscription %1$s?</string>
     <string name="servers_manual">Pick by hand</string>
     <string name="servers_empty">The list lives inside the tunnel: connect, and the countries with their response times appear here.</string>
     <string name="servers_group_other">Other</string>

@@ -1,8 +1,13 @@
 package io.marvia.android
 
+import android.content.ClipboardManager
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import android.content.res.ColorStateList
 import androidx.core.widget.ImageViewCompat
@@ -11,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import io.marvia.android.databinding.ItemCountryBinding
 import io.marvia.android.databinding.ItemNodeBinding
 import io.marvia.android.databinding.ScreenServersBinding
+import io.marvia.mobile.Mobile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,6 +39,10 @@ class ServersScreen(
     private val ui: ScreenServersBinding,
     /** Тема на сейчас: цвета выбора, пинга и карточек берутся из неё. */
     private val theme: () -> Theme,
+    /** Хранилище подписок: их список и та, что сейчас в работе. */
+    private val store: Store,
+    /** Подписка сменилась: ключ другой, туннель надо поднимать заново. */
+    private val onSubscriptionChanged: () -> Unit,
 ) {
 
     /** Идёт замер или переключение: второе нажатие в это время только мешает. */
@@ -46,6 +56,156 @@ class ServersScreen(
     init {
         ui.measureButton.setOnClickListener { load(measure = true) }
         ui.autoRow.setOnClickListener { select(AUTO) }
+        ui.addSubscription.setOnClickListener { askWhereFrom() }
+    }
+
+    // --------------------------------------------------------- подписки
+
+    /**
+     * askWhereFrom — откуда взять ссылку: из буфера или набрать руками.
+     *
+     * Два пути, потому что ссылку присылают в чате: чаще её копируют, и
+     * тогда одно нажатие лучше поля ввода. Руками — когда буфер занят
+     * другим или человек хочет назвать подписку по-своему.
+     */
+    private fun askWhereFrom() {
+        val items = arrayOf(
+            host.getString(R.string.servers_add_clipboard),
+            host.getString(R.string.servers_add_manual),
+        )
+        AlertDialog.Builder(host)
+            .setTitle(R.string.servers_add)
+            .setItems(items) { _, which -> if (which == 0) fromClipboard() else byHand() }
+            .show()
+    }
+
+    private fun fromClipboard() {
+        val clip = host.getSystemService(ClipboardManager::class.java)
+            ?.primaryClip?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)?.text?.toString().orEmpty()
+        if (clip.isBlank()) {
+            Toast.makeText(host, R.string.key_clipboard_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        add("", clip)
+    }
+
+    /** byHand — имя и ссылка. Имя необязательно: без него возьмём домен. */
+    private fun byHand() {
+        val pad = (18 * dp).toInt()
+        val box = LinearLayout(host).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, (8 * dp).toInt(), pad, 0)
+        }
+        val name = EditText(host).apply {
+            setHint(R.string.servers_sub_name)
+            setSingleLine()
+        }
+        val link = EditText(host).apply {
+            setHint(R.string.servers_sub_link)
+            setSingleLine()
+        }
+        box.addView(name)
+        box.addView(link)
+
+        AlertDialog.Builder(host)
+            .setTitle(R.string.servers_add_manual)
+            .setView(box)
+            .setPositiveButton(R.string.servers_add) { _, _ ->
+                add(name.text.toString(), link.text.toString())
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /**
+     * add принимает ссылку, проверив её ядром.
+     *
+     * Проверяем до сохранения: положить мусор и узнать об этом при следующем
+     * подключении значит объяснять человеку поломку через час после того,
+     * как он её устроил.
+     */
+    private fun add(name: String, link: String) {
+        val clean = link.trim()
+        val good = try {
+            Mobile.checkAccountLink(clean)
+            true
+        } catch (e: Exception) {
+            false
+        }
+        if (!good) {
+            Toast.makeText(host, R.string.servers_sub_bad, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val was = store.accountLink
+        store.addSubscription(name, clean)
+        Toast.makeText(host, R.string.servers_sub_added, Toast.LENGTH_SHORT).show()
+        renderSubscriptions()
+        if (store.accountLink != was) onSubscriptionChanged()
+    }
+
+    /** use делает подписку рабочей: ключ другой, туннель поднимается заново. */
+    private fun use(sub: Store.Subscription) {
+        if (sub.link == store.accountLink) return
+        store.accountLink = sub.link
+        renderSubscriptions()
+        onSubscriptionChanged()
+    }
+
+    private fun forget(sub: Store.Subscription) {
+        AlertDialog.Builder(host)
+            .setMessage(host.getString(R.string.servers_sub_remove_ask, sub.name))
+            .setPositiveButton(R.string.servers_sub_remove) { _, _ ->
+                val was = store.accountLink
+                store.removeSubscription(sub.link)
+                renderSubscriptions()
+                if (store.accountLink != was) onSubscriptionChanged()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /**
+     * renderSubscriptions рисует подписки — и только когда их больше одной.
+     *
+     * У большинства продавец один, и заголовок со списком из одной строки
+     * над ним — шум над очевидным.
+     */
+    fun renderSubscriptions() {
+        val list = store.subscriptions
+        val show = list.size > 1
+        ui.subsLabel.isVisible = show
+        ui.subList.isVisible = show
+        ui.subList.removeAllViews()
+        if (!show) return
+
+        val t = theme()
+        for (sub in list) {
+            val active = sub.link == store.accountLink
+            val row = TextView(host).apply {
+                text = if (active) {
+                    sub.name + " · " + host.getString(R.string.servers_sub_active)
+                } else {
+                    sub.name
+                }
+                textSize = 14f
+                setTextColor(if (active) t.acc else t.fg)
+                val side = (14 * dp).toInt()
+                val tall = (12 * dp).toInt()
+                setPadding(side, tall, side, tall)
+                background = Paint.rounded(t.surf, t.r, dp)
+                isClickable = true
+                setOnClickListener { use(sub) }
+                setOnLongClickListener { forget(sub); true }
+            }
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
+            lp.topMargin = (6 * dp).toInt()
+            ui.subList.addView(row, lp)
+        }
     }
 
     /**
@@ -56,6 +216,7 @@ class ServersScreen(
      * каждый, кто сюда зашёл.
      */
     fun open() {
+        renderSubscriptions()
         load(measure = MarviaState.core != null && !MarviaState.anyMeasured())
     }
 
@@ -145,6 +306,7 @@ class ServersScreen(
 
     /** paint перекрашивает экран в новую тему по тому, что уже показано. */
     fun paint() {
+        renderSubscriptions()
         if (shown.isEmpty()) renderEmpty() else render(shown)
     }
 

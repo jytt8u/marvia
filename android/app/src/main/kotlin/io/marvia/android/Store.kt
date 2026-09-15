@@ -39,11 +39,67 @@ class Store(context: Context) {
                 prefs.edit().putLong(KEY_ACCOUNT_SAVED, System.currentTimeMillis()).apply()
             }
             prefs.edit().putString(KEY_ACCOUNT_LINK, link).apply()
+            // Ключ кладут и с онбординга, и нажатием marvia:// из чата.
+            // Подхватываем его здесь, иначе добавленная позже вторая
+            // подписка окажется в списке одна, а первая — нигде.
+            if (link.isNotEmpty() && subscriptions.none { it.link == link }) {
+                subscriptions = subscriptions + Subscription(defaultSubscriptionName(link), link)
+            }
         }
 
     /** Когда ключ положили сюда. Ноль означает, что он появился до этой записи. */
     val accountSavedAt: Long
         get() = prefs.getLong(KEY_ACCOUNT_SAVED, 0)
+
+    /**
+     * Подписка: имя и ссылка от одного продавца.
+     *
+     * Их бывает несколько — у человека может быть доступ у двоих, — но
+     * работает всегда одна. Так устроен и Hiddify, откуда взят образец, и так
+     * это ничего не стоит: ядру по-прежнему отдаётся одна ссылка, а ключ
+     * покупателя остаётся один на весь список нод.
+     *
+     * Несколько подписок одновременно означали бы свой ключ у каждой ноды и
+     * переделку выбора ноды в ядре. Выгоды от этого нет: человек всё равно
+     * выходит в интернет через одну страну за раз.
+     */
+    data class Subscription(val name: String, val link: String)
+
+    /**
+     * subscriptions — что человек добавил. Хранится строками «имя\nссылка», по
+     * одной паре на запись: JSON ради двух полей — лишняя зависимость, а
+     * перевод строки в имени и так не наберёшь.
+     */
+    var subscriptions: List<Subscription>
+        get() = prefs.getStringSet(KEY_SUBSCRIPTIONS, emptySet()).orEmpty()
+            .mapNotNull(::subscriptionOf)
+            .sortedBy { it.name.lowercase() }
+        set(value) {
+            prefs.edit().putStringSet(KEY_SUBSCRIPTIONS, value.map(::rowOf).toSet()).apply()
+        }
+
+    /** addSubscription кладёт подписку и делает её рабочей. Повтор той же ссылки не двоится. */
+    fun addSubscription(name: String, link: String) {
+        val clean = link.trim()
+        val title = name.trim().ifEmpty { defaultSubscriptionName(clean) }
+        subscriptions = subscriptions.filter { it.link != clean } + Subscription(title, clean)
+        accountLink = clean
+    }
+
+    fun removeSubscription(link: String) {
+        subscriptions = subscriptions.filter { it.link != link }
+        // Убрали рабочую — остаёмся без ключа, а не с чужим втихую.
+        if (accountLink == link) accountLink = ""
+    }
+
+    /**
+     * defaultSubscriptionName — имя, когда человек его не ввёл: домен подписки.
+     *
+     * Он и отличает продавцов друг от друга, а «Подписка 1» и «Подписка 2»
+     * не отличают ничего.
+     */
+    private fun defaultSubscriptionName(link: String): String =
+        nameFromLink(link, app.getString(R.string.servers_sub_untitled))
 
     /**
      * bypassed — приложения, которые ходят мимо туннеля.
@@ -340,6 +396,25 @@ class Store(context: Context) {
 
         private const val KEY_ACCOUNT_LINK = "account_link"
         private const val KEY_ACCOUNT_SAVED = "account_saved_at"
+        private const val KEY_SUBSCRIPTIONS = "subscriptions"
+
+        /**
+         * rowOf и subscriptionOf — подписка одной строкой настроек.
+         *
+         * Пара полей, а не JSON: зависимость ради двух строк не нужна, а
+         * перевод строки в имени всё равно не наберёшь.
+         */
+        fun rowOf(sub: Subscription): String = sub.name + "\n" + sub.link
+
+        fun subscriptionOf(row: String): Subscription? {
+            val at = row.indexOf('\n')
+            return if (at <= 0) null else Subscription(row.take(at), row.substring(at + 1))
+        }
+
+        /** nameFromLink — домен панели из ссылки; порт в имя не тащим. */
+        fun nameFromLink(link: String, fallback: String): String =
+            Regex("@([^/?#]+)").find(link)?.groupValues?.get(1)?.substringBefore(':')
+                ?: fallback
         private const val KEY_BYPASSED = "bypassed_apps"
         private const val KEY_BYPASS_MODE = "bypass_mode"
         private const val KEY_DNS = "dns"

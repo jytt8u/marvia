@@ -75,6 +75,19 @@
     <string name="servers_auto_mark">⚡</string>
     <string name="servers_auto_note">самая быстрая прямо сейчас — %1$s</string>
     <string name="servers_auto_unknown">ещё не мерили</string>
+    <!-- Добавление подписки: буфер обмена или руками, как в привычных клиентах. -->
+    <string name="servers_add">Добавить</string>
+    <string name="servers_add_clipboard">Буфер обмена</string>
+    <string name="servers_add_manual">Вручную</string>
+    <string name="servers_sub_name">Имя</string>
+    <string name="servers_sub_link">Ссылка marvia://…</string>
+    <string name="servers_sub_untitled">Подписка</string>
+    <string name="servers_subs">Подписки</string>
+    <string name="servers_sub_active">рабочая</string>
+    <string name="servers_sub_added">Подписка добавлена</string>
+    <string name="servers_sub_bad">Это не ссылка marvia://</string>
+    <string name="servers_sub_remove">Убрать</string>
+    <string name="servers_sub_remove_ask">Убрать подписку «%1$s»?</string>
     <string name="servers_manual">Выбрать вручную</string>
     <string name="servers_empty">Список живёт внутри туннеля: подключись, и страны со временем отклика появятся здесь.</string>
     <string name="servers_group_other">Другие</string>

@@ -121,7 +121,13 @@ class MainActivity : AppCompatActivity() {
         wireConnect()
         wireKey()
 
-        servers = ServersScreen(this, ui.serversScreen) { theme }
+        servers = ServersScreen(
+            host = this,
+            ui = ui.serversScreen,
+            theme = { theme },
+            store = store,
+            onSubscriptionChanged = { restartTunnel() },
+        )
         themeScreen = ThemeScreen(this, ui.themeScreen, store, { pickBackdrop.launch("image/*") }) { repaint() }
         language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
         more = MoreScreen(
@@ -755,6 +761,20 @@ class MainActivity : AppCompatActivity() {
         } else {
             consent.launch(intent)
         }
+    }
+
+    /**
+     * restartTunnel — подписка сменилась, а с ней и ключ покупателя.
+     *
+     * Ядро держит ключ на всё время работы, поэтому поднятый туннель надо
+     * ронять: иначе человек сменил продавца, а трафик продолжает идти через
+     * прежнего — и нигде это не написано.
+     */
+    private fun restartTunnel() {
+        if (MarviaState.state.value !is TunnelState.On) return
+        startService(
+            Intent(this, MarviaVpnService::class.java).setAction(MarviaVpnService.ACTION_STOP),
+        )
     }
 
     private fun launchService() {
