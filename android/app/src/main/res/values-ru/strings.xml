@@ -48,11 +48,10 @@
     <string name="action_save">Сохранить ключ</string>
 
     <!-- Экран ключа. -->
-    <string name="key_title">Вставь ключ доступа</string>
-    <string name="key_body">Продавец прислал его в чате — ссылку вида marvia://… Нажми её прямо в переписке, и приложение настроится само.</string>
+    <string name="key_title">Ключ доступа</string>
     <string name="key_hint_short">marvia://…</string>
     <string name="key_paste">Вставить</string>
-    <string name="key_footer">Ключ хранится только на этом телефоне. Мы его не видим и восстановить не сможем — если потеряешь, попроси у продавца новый.</string>
+    <string name="key_footer">Ключ хранится только на этом телефоне: мы его не видим и восстановить не сможем.</string>
     <string name="key_clipboard_empty">В буфере обмена нет ссылки</string>
     <string name="key_saved">Ключ сохранён</string>
     <string name="key_empty">Поле пустое</string>
@@ -89,7 +88,7 @@
     <string name="servers_sub_remove">Убрать</string>
     <string name="servers_sub_remove_ask">Убрать подписку «%1$s»?</string>
     <string name="servers_manual">Выбрать вручную</string>
-    <string name="servers_empty">Список живёт внутри туннеля: подключись, и страны со временем отклика появятся здесь.</string>
+    <string name="servers_empty">Страны видны изнутри туннеля.</string>
     <string name="servers_group_other">Другие</string>
     <string name="servers_failed">Не получилось перейти: %1$s</string>
 

@@ -71,11 +71,10 @@
     <string name="action_save">Save the key</string>
 
     <!-- Экран ключа. -->
-    <string name="key_title">Paste the access key</string>
-    <string name="key_body">Your seller sent it in the chat — a marvia://… link. Tap it right there and the app sets itself up.</string>
+    <string name="key_title">Access key</string>
     <string name="key_hint_short">marvia://…</string>
     <string name="key_paste">Paste</string>
-    <string name="key_footer">The key lives on this phone only. We do not see it and cannot bring it back — if you lose it, ask your seller for a new one.</string>
+    <string name="key_footer">The key lives on this phone only: we do not see it and cannot bring it back.</string>
     <string name="key_clipboard_empty">There is no link in the clipboard</string>
     <string name="key_saved">Key saved</string>
     <string name="key_empty">The field is empty</string>
@@ -112,7 +111,7 @@
     <string name="servers_sub_remove">Remove</string>
     <string name="servers_sub_remove_ask">Remove the subscription %1$s?</string>
     <string name="servers_manual">Pick by hand</string>
-    <string name="servers_empty">The list lives inside the tunnel: connect, and the countries with their response times appear here.</string>
+    <string name="servers_empty">Countries are visible from inside the tunnel.</string>
     <string name="servers_group_other">Other</string>
     <string name="servers_failed">Could not move: %1$s</string>
 
