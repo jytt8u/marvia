@@ -1,183 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:minHeight="44dp"
-        android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/screen_pad"
-        android:paddingTop="@dimen/header_pad"
-        android:paddingBottom="10dp">
-
-        <!-- Надпись — форма, а не шрифт: «A» с точкой. Цвет даёт тема. -->
-        <ImageView
-            android:layout_width="0dp"
-            android:layout_height="14dp"
-            android:layout_weight="1"
-            android:adjustViewBounds="true"
-            android:scaleType="fitStart"
-            android:src="@drawable/ic_wordmark"
-            android:contentDescription="@string/app_name"
-            android:tag="icon:dim"
-            app:tint="@color/veil_muted" />
-
-        <!-- Срок подписки в углу: это первое, что спрашивают у продавца. -->
-        <TextView
-            android:id="@+id/headerUntil"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:tag="dim"
-            android:textColor="@color/veil_muted"
-            android:textSize="13sp"
-            android:visibility="gone" />
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingTop="@dimen/header_pad" android:paddingBottom="12dp">
+        <ImageView android:id="@+id/heroMark" android:layout_width="32dp" android:layout_height="24dp" android:layout_marginEnd="10dp" android:src="@drawable/marvia_mark" android:scaleType="fitCenter" android:contentDescription="@null" />
+        <ImageView android:layout_width="0dp" android:layout_height="16dp" android:layout_weight="1"
+            android:scaleType="fitStart" android:src="@drawable/ic_wordmark" android:tag="icon:fg"
+            android:contentDescription="@string/app_name" app:tint="@color/veil_text" />
+        <TextView android:id="@+id/headerUntil" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:tag="dim" android:textSize="12sp" android:visibility="gone" />
     </LinearLayout>
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:paddingHorizontal="@dimen/screen_pad">
-
-            <!--
-                Круг — и есть выключатель. Отдельной кнопки внизу нет: там
-                нижняя панель, а два органа управления одним и тем же приучают
-                нажимать наугад.
-            -->
-            <FrameLayout
-                android:id="@+id/powerOuter"
-                android:layout_width="188dp"
-                android:layout_height="188dp"
-                android:layout_marginTop="40dp"
-                android:background="@drawable/bg_circle"
-                android:clickable="true"
-                android:focusable="true">
-
-                <FrameLayout
-                    android:id="@+id/powerMiddle"
-                    android:layout_width="152dp"
-                    android:layout_height="152dp"
-                    android:layout_gravity="center"
-                    android:background="@drawable/bg_circle">
-
-                    <FrameLayout
-                        android:id="@+id/powerInner"
-                        android:layout_width="116dp"
-                        android:layout_height="116dp"
-                        android:layout_gravity="center"
-                        android:background="@drawable/bg_circle">
-
-                        <ImageView
-                            android:id="@+id/powerIcon"
-                            android:layout_width="46dp"
-                            android:layout_height="46dp"
-                            android:layout_gravity="center"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_power"
-                            android:tag="icon:accFg"
-                            app:tint="@color/veil_bg" />
-                    </FrameLayout>
-                </FrameLayout>
-            </FrameLayout>
-
-            <TextView
-                android:id="@+id/statusText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
-                android:gravity="center"
-                android:letterSpacing="-0.02"
-                android:text="@string/status_off"
-                android:textColor="@color/veil_text"
-                android:textSize="28sp"
-                android:textStyle="bold" />
-
-            <!--
-                Страна, а не имя сервера: покупателю «ae-1» не говорит ничего.
-                Строка ведёт на выбор страны — туда же, куда вкладка внизу.
-            -->
-            <LinearLayout
-                android:id="@+id/nodeLine"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="6dp"
-                android:paddingVertical="2dp">
-
-                <TextView
-                    android:id="@+id/nodeCountry"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:tag="fg"
-                    android:textColor="@color/veil_text"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/nodePing"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="9dp"
-                    android:background="@drawable/bg_pill"
-                    android:paddingHorizontal="9dp"
-                    android:paddingVertical="2dp"
-                    android:textSize="12.5sp"
-                    android:visibility="gone" />
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:fillViewport="true" android:clipToPadding="false">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:gravity="center_horizontal" android:paddingHorizontal="@dimen/screen_pad"
+            android:paddingBottom="16dp">
+            <io.marvia.android.PowerButton android:id="@+id/powerAction" android:layout_width="184dp" android:layout_height="184dp" android:layout_marginTop="16dp" android:layout_marginBottom="12dp" android:contentDescription="@string/action_connect" />
+            <TextView android:id="@+id/statusText" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:gravity="center" android:text="@string/status_off" android:textSize="24sp"
+                android:fontFamily="sans-serif-medium" android:letterSpacing="-0.02" android:accessibilityLiveRegion="polite" />
+            <TextView android:id="@+id/connectionHint" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:gravity="center" android:tag="dim" android:textSize="14sp"
+                android:lineSpacingExtra="3dp" />
+            <Button android:id="@+id/customizeAction" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="48dp" android:layout_marginTop="4dp" android:background="?attr/selectableItemBackground"
+                android:tag="dim" android:text="@string/connect_customize" android:textAllCaps="false" android:textSize="14sp" />
+            <LinearLayout android:id="@+id/nodeLine" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:orientation="vertical" android:gravity="center"
+                android:clickable="true" android:focusable="true" android:minHeight="48dp"
+                android:foreground="?attr/selectableItemBackground">
+                <TextView android:id="@+id/nodeCountry" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp" android:gravity="center" android:tag="fg" android:textSize="15sp" android:fontFamily="sans-serif-medium" />
+                <TextView android:id="@+id/nodePing" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:gravity="center" android:textSize="12sp" android:visibility="gone" />
             </LinearLayout>
-
-            <!-- Сам ли выбрал человек ноду или её выбрало ядро. -->
-            <TextView
-                android:id="@+id/nodeNote"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:gravity="center"
-                android:tag="dim"
-                android:textColor="@color/veil_muted"
-                android:textSize="13sp" />
-
-
-            <!--
-                Подробности из ядра. Покупателю они не говорят ничего, поэтому
-                мелко и бледно, — но именно их он снимет вместе с экраном и
-                пришлёт продавцу. Выделяются, чтобы не пересказывать по памяти.
-            -->
-            <TextView
-                android:id="@+id/techText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:gravity="center"
-                android:textColor="@color/veil_muted"
-                android:textIsSelectable="true"
-                android:textSize="12sp"
-                android:visibility="gone" />
-
-            <Space
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <!--
-                Срок и остаток — прямо здесь. Каждый вопрос «сколько у меня
-                осталось» стоит продавцу времени: приложение знает ответ само.
-            -->
+            <TextView android:id="@+id/nodeNote" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:tag="dim" android:textSize="13sp" android:lineSpacingExtra="3dp" />
+            <TextView android:id="@+id/techText" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" android:textIsSelectable="true" android:textSize="12sp" android:visibility="gone" />
+            <io.marvia.android.TrafficPanel android:id="@+id/trafficPanel" android:layout_width="match_parent" android:layout_height="192dp" android:layout_marginTop="16dp" />
             <LinearLayout
                 android:id="@+id/subCard"
                 android:layout_width="match_parent"

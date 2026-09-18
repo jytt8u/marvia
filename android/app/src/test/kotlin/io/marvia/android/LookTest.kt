@@ -132,4 +132,13 @@ class LookTest {
         val short = LookTable.presets.map { it.key.take(3) }
         assertEquals(short.size, short.toSet().size)
     }
+
+    @Test
+    fun malformedDepthIsRejectedLikeInThePanel() {
+        for (bad in listOf("55junk", "55.9", "5e1", "0x37", "+55", "", "7", "99")) {
+            val parts = Look.encode(Look.Choice()).split("-").toMutableList()
+            parts[4] = bad
+            assertNull(bad, Look.decode(parts.joinToString("-")))
+        }
+    }
 }

@@ -61,6 +61,9 @@ object Paint {
     }
 
     private fun paint(v: View, t: Theme) {
+        if (v.isClickable && v !is android.widget.EditText && v !is MaterialSwitch && v !is PowerButton) {
+            v.foreground = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(t.accSoft), null, rounded(android.graphics.Color.WHITE, t.r, v.resources.displayMetrics.density))
+        }
         val tag = v.tag as? String ?: return
         val dp = v.resources.displayMetrics.density
 

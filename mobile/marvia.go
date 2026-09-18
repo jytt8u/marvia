@@ -107,8 +107,9 @@ type Tunnel struct {
 
 	// Не просто дозвон, а надзор над ним: он сам меняет ноду, когда текущая
 	// замолчала, и подменяет её под мостом. Мост об этом не знает.
-	dialer *client.Supervisor
-	bridge *tunbridge.Bridge
+	dialer  *client.Supervisor
+	bridge  *tunbridge.Bridge
+	traffic *trafficDialer
 
 	nodeName string
 	running  bool
@@ -167,10 +168,11 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 	t.dialer = dialer
 	t.nodeName = dialer.Node().Title()
 
+	t.traffic = &trafficDialer{Dialer: dialer}
 	bridgeOwnsFD = true
 	bridge, err := tunbridge.Start(tunbridge.Config{
 		FD:      tunFD,
-		Dialer:  dialer,
+		Dialer:  t.traffic,
 		DNS:     dns,
 		OnError: t.note,
 	})
@@ -406,15 +408,16 @@ func (t *Tunnel) LastError() string {
 
 // NodeView — одна нода так, как её видит покупатель.
 type NodeView struct {
-	ID int64 `json:"id"`
+	SetupMS int64 `json:"setup_ms"`
+	ID      int64 `json:"id"`
 
 	// Name и Country пишет продавец. Покупателю говорит страна: имя сервера
 	// вроде vm-4823917 не значит для него ничего.
 	Name    string `json:"name"`
 	Country string `json:"country,omitempty"`
 
-	// MS — сколько нода отвечала при последнем замере с этого телефона.
-	// Ноль вместе с Alive означает, что замера ещё не было.
+	// MS — последний отклик внутри готового туннеля с этого телефона.
+	// Ноль означает, что успешного замера отклика нет.
 	MS    int64 `json:"ms"`
 	Alive bool  `json:"alive"`
 
@@ -436,7 +439,7 @@ func (t *Tunnel) Nodes() string {
 	if dialer == nil {
 		return "[]"
 	}
-	return viewsJSON(dialer, dialer.Nodes(), nil)
+	return viewsJSON(dialer, dialer.Nodes(), []client.Measurement{dialer.Measurement()})
 }
 
 // Measure меряет все ноды заново и отдаёт тот же список с временами.
@@ -511,18 +514,9 @@ func viewsJSON(dialer *client.Supervisor, nodes []client.Node, measured []client
 		}
 		if m, ok := byID[n.ID]; ok {
 			v.Alive = m.OK()
-			// Показываем круг по сети, а не полное время замера.
-			//
-			// Выбирает ядро по-прежнему по Cost — времени до работающего
-			// туннеля, и это правильный признак. Но рядом со страной человек
-			// читает число как пинг и сравнивает с другими клиентами, а там
-			// один круг. Показывали сумму из TLS, VP1 и пробной порции — и
-			// выглядели втрое медленнее, чем есть.
-			if rtt := m.Connect; rtt > 0 {
-				v.MS = rtt.Milliseconds()
-			} else if cost := m.Cost(); cost > 0 {
-				// За CDN и по QUIC круг не сообщается — тогда прежнее число.
-				v.MS = cost.Milliseconds()
+			v.MS = m.PingMS()
+			if m.OK() {
+				v.SetupMS = max(1, m.Latency.Milliseconds())
 			}
 		} else if n.ID == current {
 			// Текущую ноду мы не мерили, но знаем точно: через неё прямо

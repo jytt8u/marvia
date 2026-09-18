@@ -248,6 +248,7 @@ class MarviaVpnService : VpnService() {
      */
     private suspend fun watch(started: Core, node: String) {
         var shownNode = node
+        var previousWarning = ""
         while (scope.isActive && started.running()) {
             delay(POLL_INTERVAL_MS)
 
@@ -258,6 +259,8 @@ class MarviaVpnService : VpnService() {
             // покупатель читал его как есть.
             val trouble = started.trouble()
             val last = if (trouble.isEmpty()) started.lastError() else troubleText(trouble)
+            if (last.isNotBlank() && last != previousWarning) Journal.add(last, Journal.Level.WARN)
+            previousWarning = last
 
             val now = started.nodeName()
             if (now != shownNode) {
@@ -283,14 +286,17 @@ class MarviaVpnService : VpnService() {
      * ноды, и то, совпадает ли она с выбранной руками. Сети это не касается —
      * ядро отдаёт то, что уже знает.
      */
+    private var trafficHistory: TrafficHistory? = null
+
     private fun snapshot(started: Core, node: String, warning: String = ""): TunnelState.On {
+        if (MarviaState.state.value !is TunnelState.On) trafficHistory = TrafficHistory(this)
+        MarviaState.traffic.value = trafficHistory!!.sample(started.receivedBytes() + started.sentBytes())
         val rows = NodeRow.parse(started.nodes())
         val current = rows.firstOrNull { it.current }
         val chosen = rows.firstOrNull { it.chosen }
 
-        // Время отклика ядро между вызовами не помнит: в nodes() оно нулевое,
-        // и его приходится брать из последнего замера.
-        val ms = current?.let { if (it.ms > 0) it.ms else MarviaState.ping(it.id)?.ms ?: 0 } ?: 0
+        // Ядро отдаёт последний замер именно текущей ноды.
+        val ms = current?.ms ?: 0
 
         return TunnelState.On(
             node = node,

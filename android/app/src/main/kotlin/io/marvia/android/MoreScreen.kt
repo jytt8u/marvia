@@ -66,6 +66,7 @@ class MoreScreen(
     private var logFilter: Journal.Level? = null
 
     private val apps = AppsAdapter()
+    private val iconCache = android.util.LruCache<String, android.graphics.drawable.Drawable>(64)
     private val dp = host.resources.displayMetrics.density
 
     init {
@@ -92,6 +93,8 @@ class MoreScreen(
         }
         apps.notifyDataSetChanged()
     }
+
+    fun openLogs() { section = Section.LOGS }
 
     private fun show(next: Section) {
         section = next
@@ -204,16 +207,11 @@ class MoreScreen(
         val labels = choices.map { dnsName(it) + "  ·  " + it }.toTypedArray()
         val current = choices.indexOf(store.dns)
 
-        AlertDialog.Builder(host)
-            .setTitle(R.string.conn_dns)
-            .setSingleChoiceItems(labels, current) { dialog, which ->
-                store.dns = choices[which]
-                renderConnection()
-                onRoutesChanged()
-                dialog.dismiss()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        ChoiceSheet.show(host, theme(), host.getString(R.string.conn_dns), labels.toList(), current) { which ->
+            store.dns = choices[which]
+            renderConnection()
+            onRoutesChanged()
+        }
     }
 
     private fun dnsName(address: String): String = when (address) {
@@ -273,7 +271,7 @@ class MoreScreen(
             ""
         }
 
-        AlertDialog.Builder(host)
+        ThemedDialogs.builder(host, theme())
             .setTitle(R.string.settings_about)
             .setMessage(host.getString(R.string.about_body, host.getString(R.string.app_name), version))
             .setPositiveButton(android.R.string.ok, null)
@@ -396,9 +394,14 @@ class MoreScreen(
 
             b.appName.text = entry.label
             b.appPackage.text = entry.pkg
-            b.appInitial.text = entry.label.firstOrNull()?.uppercase().orEmpty()
-            b.appInitial.setTextColor(t.acc)
-            b.appInitial.background = Paint.rounded(t.accSoft, 10, dp)
+            b.appIcon.setImageDrawable(host.packageManager.defaultActivityIcon)
+            b.appIcon.tag = entry.pkg
+            host.lifecycleScope.launch {
+                val icon = withContext(Dispatchers.IO) {
+                    iconCache.get(entry.pkg) ?: runCatching { host.packageManager.getApplicationIcon(entry.pkg) }.getOrNull()?.also { iconCache.put(entry.pkg, it) }
+                }
+                if (b.appIcon.tag == entry.pkg && icon != null) b.appIcon.setImageDrawable(icon)
+            }
 
             val on = entry.pkg in store.bypassed
             b.appSwitch.isChecked = on

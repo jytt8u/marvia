@@ -85,12 +85,14 @@ sealed interface TunnelState {
  * что принадлежит процессу, а не экрану.
  */
 object MarviaState {
+    val traffic = MutableStateFlow(TrafficSnapshot())
     private val current = MutableStateFlow<TunnelState>(TunnelState.Off)
 
     val state: StateFlow<TunnelState> = current.asStateFlow()
 
     fun set(next: TunnelState) {
         current.value = next
+        if (next !is TunnelState.On) traffic.value = traffic.value.copy(seconds = 0, bytesPerSecond = 0.0)
     }
 
     @Volatile
@@ -129,11 +131,11 @@ object MarviaState {
     private val measured = ConcurrentHashMap<Long, Ping>()
 
     /** Что мы знаем о ноде по последнему замеру. */
-    data class Ping(val ms: Long, val alive: Boolean)
+    data class Ping(val ms: Long, val alive: Boolean, val setupMs: Long = 0)
 
     fun remember(rows: List<NodeRow>) {
         for (row in rows) {
-            measured[row.id] = Ping(row.ms, row.alive)
+            measured[row.id] = Ping(row.ms, row.alive, row.setupMs)
         }
     }
 

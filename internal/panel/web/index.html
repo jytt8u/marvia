@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Marvia Partner</title>
 
-<!-- Значок нарисован прямо здесь: единственный внешний адрес в интерфейсе —
-     это уже утечка, а ради иконки вкладки её допускать незачем. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c1a11'/%3E%3Cpath fill='%2346e07a' d='M3 7L10 5L10 26L3 26Z'/%3E%3Cpath fill='%2346e07a' d='M22 5L29 7L29 26L22 26Z'/%3E%3Cpath fill='%2346e07a' d='M9 5L16 16L23 5L23 11L16 22L9 11Z'/%3E%3Cpath fill='%23000' opacity='.28' d='M9 5L16 16L23 5L23 11L16 22L9 11Z'/%3E%3C/svg%3E">
+<!-- Тот же нейтральный знак, вшитый в бинарник; внешних запросов нет. -->
+<link rel="icon" type="image/png" href="assets/marvia-mark.png">
+<meta name="description" content="Marvia Partner — управление доступом, клиентами и нодами.">
 
 <style>
   /* Шрифты вшиты в бинарник и отдаются самой панелью. Панель для обхода
@@ -37,8 +37,8 @@
   html, body { height: 100%; }
   body {
     font-family: Onest, system-ui, sans-serif;
-    background: #05100a;
-    color: #eaf5ee;
+    background: #0c0e11;
+    color: #f1f4f7;
     overflow: hidden;
   }
   [hidden] { display: none !important; }
@@ -46,7 +46,7 @@
   /* Вход. Отдельный экран, а не модальное окно поверх панели: пока токен не
      принят, показывать нечего, и рисовать за формой пустую панель — обман. */
   #login {
-    height: 100%;
+    height: 100%; overflow-y: auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -54,14 +54,14 @@
   }
   #login .box {
     width: 100%;
-    max-width: 380px;
+    max-width: 440px;
     display: flex;
     flex-direction: column;
     gap: 18px;
-    padding: 30px;
-    border-radius: 18px;
-    background: #0c1a11;
-    border: 1px solid #1c2e21;
+    padding: 36px;
+    border-radius: 22px;
+    background: #181b20;
+    border: 1px solid #343940;
   }
   #login .mark {
     display: flex;
@@ -116,24 +116,27 @@
     color: #c3ccd6;
   }
   #login .word .wordmark { height: 15px; }
-  #login p { font-size: 13px; line-height: 1.55; color: #6c8a76; }
+  #login h1 { font-size: 28px; line-height: 1.2; letter-spacing: -.04em; font-weight: 600; margin-top: 18px; }
+  #login p { font-size: 14px; line-height: 1.6; color: #aab1bb; }
+  #login label { font-size: 12px; color: #c3ccd6; margin-bottom: -10px; }
+  #login .brand-note { border-top: 1px solid #343940; padding-top: 18px; font-size: 12px; }
   #login input {
     width: 100%;
     padding: 13px 14px;
     border-radius: 12px;
-    border: 1px solid #1c2e21;
-    background: #05100a;
-    color: #eaf5ee;
+    border: 1px solid #343940;
+    background: #0c0e11;
+    color: #f1f4f7;
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
   }
-  #login input:focus { outline: none; border-color: #46e07a; }
+  #login input:focus { outline: 2px solid #c3ccd6; outline-offset: 3px; }
   #login button {
     padding: 13px 18px;
     border-radius: 12px;
     border: none;
-    background: #46e07a;
-    color: #05130b;
+    background: #c3ccd6;
+    color: #0c0e11;
     font-family: Onest, system-ui, sans-serif;
     font-size: 14px;
     font-weight: 600;
@@ -147,16 +150,31 @@
     margin-left: auto;
     padding: 4px 10px;
     border-radius: 8px;
-    border: 1px solid #1c2e21;
+    border: 1px solid #343940;
     background: transparent;
-    color: #6c8a76;
+    color: #aab1bb;
     font: 600 11px/1 "JetBrains Mono", monospace;
     letter-spacing: .08em;
     cursor: pointer;
   }
-  #login .lang:hover { color: #eaf5ee; border-color: #46e07a; }
+  #login .lang:hover { color: #f1f4f7; border-color: #c3ccd6; }
+  #login button:disabled { opacity: .55; cursor: wait; }
+  button, [role=button] { transition: filter .18s, transform .18s; }
+  button:hover:not(:disabled), [role=button]:hover { filter: brightness(1.1); }
+  button:active:not(:disabled), [role=button]:active { transform: translateY(1px); }
+  :focus-visible { outline: 2px solid var(--fg, #f1f4f7) !important; outline-offset: 3px; }
+  .look-intro { display: flex; align-items: center; gap: 18px; padding: 20px 24px;
+    background: var(--surf); border: 1px solid var(--line); border-radius: var(--r); }
+  .look-intro .logo { width: 54px; height: 54px; }
+  .look-intro h2 { font-size: 19px; font-weight: 600; letter-spacing: -.03em; margin-bottom: 5px; }
+  .look-intro p { max-width: 64ch; color: var(--dim); font-size: 13px; line-height: 1.55; }
+  .look-intro button { margin-left: auto; flex: none; padding: 10px 14px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--surf2); color: var(--fg); font: inherit; font-size: 12px; cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
 
-  #app { height: 100%; }
+  #app { height: 100%; color: var(--fg, #f1f4f7); }
   #app.busy { opacity: .55; }
 
   /* Окно поверх панели. Цвета берутся из темы переменными, поэтому оно
@@ -197,7 +215,9 @@
     font-size: 14px;
   }
   #veil input:focus { outline: none; border-color: var(--acc, #46e07a); }
-  #veil .kinds { flex-direction: row; gap: 14px; flex-wrap: wrap; }
+  #veil .kinds { display: flex; border: 0; flex-direction: row; gap: 14px; flex-wrap: wrap; }
+  #veil .kinds legend { font-size: 12px; color: var(--dim); margin-bottom: 8px; }
+  #veil .kinds label { flex-direction: row; align-items: center; cursor: pointer; }
   #veil .kinds span { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg, #eaf5ee); }
   #veil .row { display: flex; gap: 10px; flex-wrap: wrap; }
   #veil .line {
@@ -266,10 +286,13 @@
       <div class="word"><span class="wordmark" role="img" aria-label="Marvia"></span><span>PARTNER</span></div>
       <button type="button" id="login-lang" class="lang"></button>
     </div>
+    <h1 id="login-title"></h1>
     <p id="login-hint"></p>
-    <input id="login-token" type="password" autocomplete="current-password" spellcheck="false">
-    <div class="err" id="login-err"></div>
+    <label id="login-label" for="login-token"></label>
+    <input id="login-token" type="password" autocomplete="current-password" spellcheck="false" aria-describedby="login-err">
+    <div class="err" id="login-err" role="status" aria-live="polite"></div>
     <button type="submit" id="login-enter"></button>
+    <p class="brand-note" id="login-brand"></p>
   </form>
 </div>
 
@@ -296,7 +319,7 @@
     <div style="height: 46px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line, #1c2e21); background: var(--surf, #0c1a11);">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span class="logo" style="width: 22px; height: 22px;" aria-hidden="true"></span>
-        <div style="display: flex; align-items: center; gap: 8px; font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .2em; color: #c3ccd6;"><span class="wordmark" role="img" aria-label="Marvia"></span><span>PARTNER</span></div>
+        <div style="display: flex; align-items: center; gap: 8px; font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .2em; color: var(--fg);"><span class="wordmark" role="img" aria-label="Marvia"></span><span>PARTNER</span></div>
         <div style="{{ hostBadge }}">{{ host }}</div>
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
@@ -310,7 +333,7 @@
     <div style="flex: 1; display: flex; min-height: 0;">
       <div style="width: 224px; flex: none; border-right: 1px solid var(--line, #1c2e21); background: var(--surf, #0c1a11); padding: 16px 12px; display: flex; flex-direction: column; gap: 3px;">
         <sc-for list="{{ nav }}" as="n">
-          <div style="{{ n.style }}" onClick="{{ n.onClick }}">
+          <div style="{{ n.style }}" data-focus="nav-{{ n.k }}" aria-current="{{ n.current }}" onClick="{{ n.onClick }}">
             <div style="{{ n.dot }}"></div>
             <div>{{ n.label }}</div>
           </div>
@@ -324,7 +347,7 @@
             <div style="font-size: 13px; color: var(--dim, #6c8a76); margin-top: 3px;">{{ pageSub }}</div>
           </div>
           <sc-if value="{{ hasCta }}">
-            <div style="{{ ctaStyle }}" onClick="{{ doCta }}">{{ pageCta }}</div>
+            <div style="{{ ctaStyle }}" data-focus="page-action" onClick="{{ doCta }}">{{ pageCta }}</div>
           </sc-if>
         </div>
 
@@ -335,7 +358,7 @@
         -->
         <sc-if value="{{ hasSearch }}">
           <input id="q" type="text" style="{{ searchStyle }}" value="{{ q }}"
-                 placeholder="{{ d18.search }}" autocomplete="off" spellcheck="false"
+                 placeholder="{{ d18.search }}" aria-label="{{ d18.search }}" autocomplete="off" spellcheck="false"
                  onInput="{{ doSearch }}">
         </sc-if>
 
@@ -601,12 +624,17 @@
         </sc-if>
 
         <sc-if value="{{ isLook }}">
+          <section class="look-intro" aria-label="{{ d18.look.title }}">
+            <span class="logo" aria-hidden="true"></span>
+            <div><h2>{{ d18.look.title }}</h2><p>{{ d18.look.intro }}</p></div>
+            <button type="button" data-focus="reset-look" onClick="{{ resetLook }}">{{ d18.look.reset }}</button>
+          </section>
           <div style="flex: 1; min-height: 0; display: flex; gap: var(--gap, 12px); overflow: hidden;">
 
             <!-- Готовые виды: мини-макет панели в цветах каждого. -->
             <div data-keep-scroll="looks" style="flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding-right: 4px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap, 12px); align-content: start;">
               <sc-for list="{{ looks }}" as="lk">
-                <div style="{{ lk.wrap }}" onClick="{{ lk.onClick }}">
+                <div style="{{ lk.wrap }}" data-focus="look-{{ lk.name }}" aria-pressed="{{ lk.selected }}" onClick="{{ lk.onClick }}">
                   <div style="{{ lk.canvas }}">
                     <div style="{{ lk.side }}"></div>
                     <div style="{{ lk.navA }}"></div>
@@ -632,7 +660,7 @@
                 <div style="{{ knobTitle }}">{{ d18.look.accent }}</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 7px;">
                   <sc-for list="{{ accents }}" as="a">
-                    <div style="{{ a.style }}" onClick="{{ a.onClick }}"></div>
+                    <div style="{{ a.style }}" data-focus="accent-{{ a.label }}" aria-label="{{ a.label }}" aria-pressed="{{ a.selected }}" onClick="{{ a.onClick }}"></div>
                   </sc-for>
                 </div>
               </div>
@@ -644,13 +672,13 @@
                 </div>
                 <div style="{{ lampWrap }}">
                   <sc-for list="{{ lampZones }}" as="z">
-                    <div style="{{ z.cell }}" onClick="{{ z.onClick }}"><div style="{{ z.sun }}"></div></div>
+                    <div style="{{ z.cell }}" data-focus="light-{{ z.label }}" aria-label="{{ z.label }}" aria-pressed="{{ z.selected }}" onClick="{{ z.onClick }}"><div style="{{ z.sun }}"></div></div>
                   </sc-for>
                   <div style="{{ lampHint }}">{{ d18.look.lampHint }}</div>
                 </div>
                 <div style="display: flex; gap: 6px;">
                   <sc-for list="{{ kinds }}" as="k">
-                    <div style="{{ k.wrap }}" onClick="{{ k.onClick }}">
+                    <div style="{{ k.wrap }}" data-focus="kind-{{ k.name }}" aria-pressed="{{ k.selected }}" onClick="{{ k.onClick }}">
                       <div style="{{ k.canvas }}"></div>
                       <div style="{{ k.label }}">{{ k.name }}</div>
                     </div>
@@ -661,12 +689,12 @@
                     <div style="font-size: 13px; color: var(--fg);">{{ d18.look.depth }}</div>
                     <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);">{{ depthNote }}</div>
                   </div>
-                  <input type="range" min="8" max="98" value="{{ depthPct }}" style="{{ depthStyle }}" onInput="{{ setDepth }}">
+                  <input type="range" data-focus="depth" aria-label="{{ d18.look.depth }}" min="8" max="98" value="{{ depthPct }}" style="{{ depthStyle }}" onInput="{{ setDepth }}">
                 </div>
                 <div style="{{ knobSub }}">{{ d18.look.tint }}</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 7px;">
                   <sc-for list="{{ tints }}" as="tn">
-                    <div style="{{ tn.style }}" onClick="{{ tn.onClick }}"></div>
+                    <div style="{{ tn.style }}" data-focus="tint-{{ tn.label }}" aria-label="{{ tn.label }}" aria-pressed="{{ tn.selected }}" onClick="{{ tn.onClick }}"></div>
                   </sc-for>
                 </div>
               </div>
@@ -675,25 +703,25 @@
                 <div style="{{ knobTitle }}">{{ d18.look.radius }}</div>
                 <div style="display: flex; gap: 6px;">
                   <sc-for list="{{ radii }}" as="p">
-                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                    <div style="{{ p.style }}" data-focus="{{ p.focus }}" aria-pressed="{{ p.selected }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
                   </sc-for>
                 </div>
                 <div style="{{ knobSub }}">{{ d18.look.density }}</div>
                 <div style="display: flex; gap: 6px;">
                   <sc-for list="{{ densities }}" as="p">
-                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                    <div style="{{ p.style }}" data-focus="{{ p.focus }}" aria-pressed="{{ p.selected }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
                   </sc-for>
                 </div>
                 <div style="{{ knobSub }}">{{ d18.look.cards }}</div>
                 <div style="display: flex; gap: 6px;">
                   <sc-for list="{{ cards }}" as="p">
-                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                    <div style="{{ p.style }}" data-focus="{{ p.focus }}" aria-pressed="{{ p.selected }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
                   </sc-for>
                 </div>
                 <div style="{{ knobSub }}">{{ d18.look.glow }}</div>
                 <div style="display: flex; gap: 6px;">
                   <sc-for list="{{ glows }}" as="p">
-                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                    <div style="{{ p.style }}" data-focus="{{ p.focus }}" aria-pressed="{{ p.selected }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
                   </sc-for>
                 </div>
               </div>
@@ -714,7 +742,7 @@
                   <div style="{{ knobSub }}">{{ d18.look.backdropFit }}</div>
                   <div style="display: flex; gap: 6px;">
                     <sc-for list="{{ fits }}" as="p">
-                      <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                      <div style="{{ p.style }}" data-focus="{{ p.focus }}" aria-pressed="{{ p.selected }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
                     </sc-for>
                   </div>
                   <div style="display: flex; align-items: baseline; justify-content: space-between;">
@@ -735,7 +763,7 @@
                 <div style="{{ knobTitle }}">{{ d18.look.profiles }}</div>
                 <div style="display: flex; gap: 6px;">
                   <sc-for list="{{ profiles }}" as="p">
-                    <div style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
+                    <div style="{{ p.style }}" data-focus="{{ p.focus }}" aria-pressed="{{ p.selected }}" onClick="{{ p.onClick }}">{{ p.label }}</div>
                   </sc-for>
                 </div>
                 <div style="display: flex; gap: 6px;">
@@ -743,10 +771,11 @@
                   <div style="{{ diceStyle }}" onClick="{{ randomize }}">{{ d18.look.random }}</div>
                 </div>
                 <div style="{{ knobSub }}">{{ d18.look.code }}</div>
-                <div style="{{ codeStyle }}" onClick="{{ copyCode }}" title="{{ d18.look.copy }}">{{ themeCode }}</div>
-                <input type="text" style="{{ codeInput }}" placeholder="{{ d18.look.codePlaceholder }}" autocomplete="off" spellcheck="false" onChange="{{ applyCode }}">
+                <div style="{{ codeStyle }}" data-focus="copy-code" onClick="{{ copyCode }}" title="{{ d18.look.copy }}">{{ themeCode }}</div>
+                <input type="text" data-focus="theme-code-input" aria-label="{{ d18.look.codePlaceholder }}" aria-invalid="{{ codeBad }}" value="{{ codeDraft }}" style="{{ codeInput }}" placeholder="{{ d18.look.codePlaceholder }}" autocomplete="off" spellcheck="false" onInput="{{ setCodeDraft }}" onKeydown="{{ codeKeyDown }}">
+                <div data-focus="apply-code" style="{{ diceStyle }}" onClick="{{ applyCode }}">{{ d18.look.apply }}</div>
                 <sc-if value="{{ codeBad }}">
-                  <div style="font-size: 12px; color: var(--warn);">{{ d18.look.codeBad }}</div>
+                  <div role="alert" style="font-size: 12px; color: var(--warn);">{{ d18.look.codeBad }}</div>
                 </sc-if>
                 <div style="font-size: 12px; line-height: 1.45; color: var(--dim);">{{ d18.look.codeNote }}</div>
               </div>
@@ -836,6 +865,7 @@ function buildInto(source, target, scope) {
     }
 
     const el = document.createElement(tag);
+    let clickable = false;
     for (const attr of node.attributes) {
       const name = attr.name;
       const value = attr.value;
@@ -848,7 +878,7 @@ function buildInto(source, target, scope) {
         const m = WHOLE_BINDING.exec(value);
         const fn = m ? resolvePath(m[1], scope) : null;
         if (typeof fn === "function") {
-          if (low === "onclick") el.style.cursor = "pointer";
+          if (low === "onclick") { el.style.cursor = "pointer"; clickable = true; }
           el.addEventListener(low.slice(2), fn);
         }
         continue;
@@ -864,6 +894,18 @@ function buildInto(source, target, scope) {
       el.setAttribute(name, value.includes("{{") ? interpolate(value, scope) : value);
     }
     buildInto(node, el, scope);
+    // Макет использует div для действий. Делаем их доступными с клавиатуры,
+    // сохраняя нативное поведение настоящих кнопок и полей.
+    if (clickable && !["button", "a", "input", "select", "textarea"].includes(tag)) {
+      el.setAttribute("role", "button");
+      el.tabIndex = 0;
+      el.addEventListener("keydown", (e) => {
+        if (e.target === el && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          if (!e.repeat) el.click();
+        }
+      });
+    }
     target.appendChild(el);
   }
 }
@@ -1059,22 +1101,38 @@ function toast(text, bad) {
   if (old) old.remove();
   clearTimeout(toastTimer);
 
-  const box = el("div", { id: "toast", cls: bad ? "bad" : "", text });
+  const box = el("div", { id: "toast", cls: bad ? "bad" : "", role: "status", "aria-live": "polite", text });
+  box.setAttribute("style", Look.vars(theme()));
   document.body.append(box);
   toastTimer = setTimeout(() => box.remove(), bad ? 6000 : 3200);
 }
 
 // closeSheet и sheet держат ровно одно окно: два наложенных друг на друга —
 // верный способ нажать «удалить» не там, где смотришь.
+let sheetOrigin = null;
+let sheetOnClose = null;
 function closeSheet() {
   const old = document.getElementById("veil");
-  if (old) old.remove();
+  if (!old) return;
+  old.remove();
+  const onClose = sheetOnClose;
+  sheetOnClose = null;
+  document.getElementById("app").inert = false;
+  if (sheetOrigin && sheetOrigin.isConnected) sheetOrigin.focus({ preventScroll: true });
+  else {
+    const current = document.querySelector('#app [aria-current="page"]');
+    if (current) current.focus({ preventScroll: true });
+  }
+  sheetOrigin = null;
+  if (onClose) onClose();
 }
 
-function sheet(title, body, buttons) {
+function sheet(title, body, buttons, onClose) {
   closeSheet();
+  sheetOrigin = document.activeElement;
+  sheetOnClose = onClose || null;
 
-  const box = el("div", { cls: "sheet" }, el("h2", { text: title }));
+  const box = el("div", { cls: "sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "sheet-title", tabindex: "-1" }, el("h2", { id: "sheet-title", text: title }));
   for (const part of body) box.append(part);
   if (buttons && buttons.length) {
     const row = el("div", { cls: "row" });
@@ -1087,12 +1145,27 @@ function sheet(title, body, buttons) {
   // их сюда, иначе оно нарисуется цветами из значений по умолчанию.
   veil.setAttribute("style", document.getElementById("app").getAttribute("style") || "");
   document.body.append(veil);
-  const first = box.querySelector("input");
-  if (first) first.focus();
+  document.getElementById("app").inert = true;
+  const first = box.querySelector("input:not([disabled]), button:not([disabled])");
+  (first || box).focus();
   return box;
 }
 
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+document.addEventListener("keydown", (e) => {
+  const dialog = document.querySelector('#veil [role="dialog"]');
+  if (!dialog) return;
+  if (e.key === "Escape") { e.preventDefault(); closeSheet(); return; }
+  if (e.key !== "Tab") return;
+  const controls = Array.from(dialog.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]'))
+    .filter((node) => node.getClientRects().length > 0);
+  const first = controls[0], last = controls[controls.length - 1];
+  if (!first) { e.preventDefault(); dialog.focus(); }
+  else if (e.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+    e.preventDefault(); last.focus();
+  } else if (!e.shiftKey && (document.activeElement === last || document.activeElement === dialog)) {
+    e.preventDefault(); first.focus();
+  }
+});
 
 function btn(text, cls, fn) {
   return el("button", { type: "button", cls: cls || "", text, on: { click: fn } });
@@ -1114,11 +1187,11 @@ function num(id) { return Number(document.getElementById(id).value) || 0; }
 // объяснения человек нажимает не думая.
 function ask(title, text, danger) {
   return new Promise((resolve) => {
-    const done = (v) => { closeSheet(); resolve(v); };
+    const done = (v) => { resolve(v); closeSheet(); };
     sheet(title, [el("div", { cls: "note", text })], [
       btn(danger || L().act.yes, "bad", () => done(true)),
       btn(L().act.cancel, "", () => done(false)),
-    ]);
+    ], () => resolve(false));
   });
 }
 
@@ -1187,11 +1260,11 @@ async function act(fn) {
 
 function newUserSheet() {
   const d = L();
-  const kinds = el("label", { cls: "kinds", text: d.user.kinds });
+  const kinds = el("fieldset", { cls: "kinds" }, el("legend", { text: d.user.kinds }));
   for (const kind of ["vp1", "vless", "trojan"]) {
     const input = el("input", { type: "checkbox", value: kind });
     if (kind === "vp1") input.checked = true;
-    kinds.append(el("span", {}, input, el("span", { text: kind + " · " + d.user.kindNote[kind] })));
+    kinds.append(el("label", {}, input, el("span", { text: kind + " · " + d.user.kindNote[kind] })));
   }
 
   const box = sheet(d.user.newTitle, [
@@ -1432,11 +1505,11 @@ const SCOPES = ["users", "nodes", "read"];
 
 function newKeySheet() {
   const d = L();
-  const scopes = el("label", { cls: "kinds", text: d.key.rights });
+  const scopes = el("fieldset", { cls: "kinds" }, el("legend", { text: d.key.rights }));
   for (const scope of SCOPES) {
     const input = el("input", { type: "checkbox", value: scope });
     if (scope === "users") input.checked = true;
-    scopes.append(el("span", {}, input, el("span", { text: scope + " · " + d.key.scopeNote[scope] })));
+    scopes.append(el("label", {}, input, el("span", { text: scope + " · " + d.key.scopeNote[scope] })));
   }
 
   const box = sheet(d.key.newTitle, [
@@ -1630,7 +1703,9 @@ const TEXTS = {
     switchTitle: "Switch to English",
 
     login: {
-      hint: "Панель открывается админским токеном — тем, что задан ноде переменной MARVIA_ADMIN_TOKEN.",
+      title: "Ваше пространство.",
+      brand: "Marvia начинается с серого. Цвет и характер выбираете вы — в разделе «Вид».",
+      hint: "Управляйте клиентами, доступом и нодами. Для входа нужен админский токен панели.",
       token: "админский токен",
       enter: "Войти",
       empty: "Токен пустой",
@@ -1742,6 +1817,10 @@ const TEXTS = {
       privacy: "В сообщениях только числа: «у троих кончается срок», без имён. Переписка с ботом живёт в телеграме, и списком клиентов ей становиться незачем. Пока оповещения выключены, панель наружу не ходит вовсе.",
     },
     look: {
+      title: "Теперь — по-вашему.",
+      intro: "Серый — точка отсчёта. Выберите цвет, свет и форму: знак Marvia меняется вместе с вашим пространством. Изменения применяются сразу и сохраняются в этом браузере.",
+      reset: "Вернуть серый", resetDone: "Серый вид восстановлен. Свой фон и сохранённые профили остаются.",
+      tintAuto: "Как акцент", apply: "Применить код",
       accent: "АКЦЕНТ", compact: "плотно", normal: "обычно", roomy: "просторно",
       light: "СВЕТ", lampHint: "нажми, откуда светит", lightOff: "свет выключен, фон ровный",
       dirs: { nw: "сверху слева", n: "сверху", ne: "сверху справа", w: "слева", c: "из центра",
@@ -1900,7 +1979,9 @@ const TEXTS = {
     switchTitle: "Переключить на русский",
 
     login: {
-      hint: "The panel opens with the admin token — the one you set for the service in MARVIA_ADMIN_TOKEN.",
+      title: "Your space.",
+      brand: "Marvia starts in grey. Choose your colour and character in Look.",
+      hint: "Manage clients, access and nodes. Sign in with your panel's admin token.",
       token: "admin token",
       enter: "Sign in",
       empty: "Token is empty",
@@ -2012,6 +2093,10 @@ const TEXTS = {
       privacy: "Messages carry numbers only: “three are expiring”, no names. The chat with the bot lives in Telegram, and it has no business becoming a customer list. While alerts are off, the panel makes no outbound calls at all.",
     },
     look: {
+      title: "Make it yours.",
+      intro: "Grey is the starting point. Choose colour, light and shape: the Marvia mark changes with your space. Changes apply immediately and are saved in this browser.",
+      reset: "Back to grey", resetDone: "Grey look restored. Your background and saved profiles are kept.",
+      tintAuto: "Match accent", apply: "Apply code",
       accent: "ACCENT", compact: "compact", normal: "normal", roomy: "roomy",
       light: "LIGHT", lampHint: "tap where the light comes from", lightOff: "light is off, flat background",
       dirs: { nw: "top left", n: "top", ne: "top right", w: "left", c: "from the centre",
@@ -2196,10 +2281,14 @@ function setLang(lang) {
 // проверки токена показывать панель нечего.
 function paintLogin() {
   const d = L();
+  document.getElementById("login-title").textContent = d.login.title;
+  document.getElementById("login-brand").textContent = d.login.brand;
+  document.getElementById("login-label").textContent = d.login.token;
   document.getElementById("login-hint").textContent = d.login.hint;
   document.getElementById("login-token").placeholder = d.login.token;
   document.getElementById("login-enter").textContent = d.login.enter;
   document.getElementById("login-lang").textContent = d.switchTo;
+  document.getElementById("login-lang").setAttribute("aria-label", d.switchTitle);
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -2368,7 +2457,7 @@ function renderVals() {
   };
 
   const nav = PAGES.map((k) => ({
-    k, label: d18.nav[k],
+    k, label: d18.nav[k], current: page === k ? "page" : null,
     onClick: () => setState({ page: k }),
     style: "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:" + t.r
       + "px;font-size:13px;cursor:pointer;color:" + (page === k ? t.fg : t.dim)
@@ -2599,6 +2688,7 @@ function renderVals() {
   const pill = (on) => "flex:1 1 0;min-width:0;text-align:center;padding:8px 4px;border-radius:" + Math.min(t.r, 12)
     + "px;font-size:12px;cursor:pointer;background:" + (on ? t.acc : t.surf2) + ";color:" + (on ? t.accFg : t.dim);
   const pills = (keys, field, names) => keys.map((k) => ({
+    focus: field + "-" + k, selected: state[field] === k,
     label: names[k] || k, onClick: () => setState({ [field]: k }), style: pill(state[field] === k),
   }));
   const swatch = (bg, on) => "width:26px;height:26px;border-radius:8px;cursor:pointer;background:" + bg
@@ -2610,10 +2700,12 @@ function renderVals() {
   const knobSub = knobTitle + ";margin-top:4px";
 
   const accents = Look.ACCENTS.map((c) => ({
+    label: d18.look.accent + " " + c, selected: t.acc === c,
     onClick: () => setState({ acc: c }), style: swatch(c, state.acc === c),
   }));
   // Оттенок светлой стороны: «как акцент» и любой из палитры.
   const tints = [null].concat(Look.ACCENTS).map((c) => ({
+    label: c ? d18.look.tint + " " + c : d18.look.tintAuto, selected: state.tint === c,
     onClick: () => setState({ tint: c }),
     style: swatch("linear-gradient(135deg," + (c || t.acc) + "," + mix(c || t.acc, "#000000", 0.6) + ")", state.tint === c),
   }));
@@ -2626,6 +2718,7 @@ function renderVals() {
     + ";border:1px solid " + t.line + ";display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)";
   const lampHint = "position:absolute;left:0;right:0;bottom:6px;text-align:center;pointer-events:none;font-size:11px;color:" + t.dim;
   const lampZones = LAMP.map((k) => ({
+    label: d18.look.dirs[k], selected: state.dir === k,
     onClick: () => setState({ dir: k, kind: state.kind === "flat" ? "linear" : state.kind }),
     cell: "display:flex;align-items:center;justify-content:center;cursor:pointer",
     sun: state.dir === k
@@ -2636,7 +2729,7 @@ function renderVals() {
   const kinds = Look.KINDS.map((k) => {
     const on = state.kind === k;
     return {
-      name: d18.look.kinds[k], onClick: () => setState({ kind: k }),
+      name: d18.look.kinds[k], selected: on, onClick: () => setState({ kind: k }),
       wrap: "flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:4px;cursor:pointer;padding:3px;border-radius:"
         + (t.r + 3) + "px;border:" + (on ? "2px solid " + t.acc : "1px solid " + t.line) + ";background:" + (on ? t.accSoft : "transparent"),
       canvas: "height:36px;border-radius:" + Math.max(t.r - 3, 5) + "px;background:" + litBg(k, state.dir),
@@ -2671,6 +2764,7 @@ function renderVals() {
   const setBlur = (e) => keepBackdrop({ blur: Number(e.target.value) }, "bg-blur-note",
     () => (Number(e.target.value) ? e.target.value + " px" : d18.look.backdropSharp));
   const fits = Look.FITS.map((k) => ({
+    focus: "fit-" + k, selected: bd.fit === k,
     label: d18.look.fits[k],
     style: pill(bd.fit === k),
     onClick: () => { state.backdrop.fit = k; Look.saveBackdrop(state.backdrop); paintBackdrop(); render(); },
@@ -2716,7 +2810,7 @@ function renderVals() {
     const lr = lt.r;
     return {
       name,
-      sub: d18.look[lk.density],
+      sub: d18.look[lk.density], selected: on,
       // Вид задаёт всё разом; акцент и оттенок сбрасываются: у каждого свой.
       onClick: () => setState(Object.assign({ acc: null, tint: null }, lk)),
       wrap: "min-width:0;display:flex;flex-direction:column;gap:7px;cursor:pointer;padding:4px;border-radius:"
@@ -2743,6 +2837,7 @@ function renderVals() {
   // кнопкой «сохранить сюда»; занятый по нажатию применяется.
   const slots = Look.loadProfiles();
   const profiles = [0, 1, 2].map((i) => ({
+    focus: "profile-" + i, selected: (state.slot || 0) === i,
     label: (slots[i] ? d18.look.slotFull : d18.look.slotEmpty) + " " + (i + 1),
     onClick: () => {
       const st = slots[i] ? Look.decode(slots[i]) : null;
@@ -2768,17 +2863,25 @@ function renderVals() {
   const themeCode = Look.encode(state);
   const codeStyle = "padding:11px 12px;border-radius:" + t.r + "px;background:" + t.surf2 + ";border:1px dashed " + t.acc
     + ";font-family:JetBrains Mono,monospace;font-size:12px;letter-spacing:.04em;color:" + t.fg
-    + ";overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:copy";
-  const copyCode = () => {
-    if (navigator.clipboard) navigator.clipboard.writeText(themeCode).catch(() => {});
+    + ";overflow-wrap:anywhere;user-select:text;cursor:copy";
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(themeCode);
+      toast(d18.act.copied);
+    } catch (_) { toast(d18.act.noCopy, true); }
   };
   const codeInput = "width:100%;box-sizing:border-box;padding:10px 12px;border-radius:" + t.r + "px;background:" + t.surf
     + ";border:1px solid " + t.line + ";color:" + t.fg + ";font-family:JetBrains Mono,monospace;font-size:12px;outline:none";
-  const applyCode = (e) => {
-    const st = Look.decode(e.target.value);
+  const setCodeDraft = (e) => { state.codeDraft = e.target.value; };
+  const applyCode = () => {
+    const st = Look.decode(state.codeDraft);
     if (!st) { setState({ codeBad: true }); return; }
-    e.target.value = "";
-    setState(Object.assign({ codeBad: false }, st));
+    setState(Object.assign({ codeBad: false, codeDraft: "" }, st));
+  };
+  const codeKeyDown = (e) => { if (e.key === "Enter") { e.preventDefault(); applyCode(); } };
+  const resetLook = () => {
+    setState(Object.assign({ codeBad: false, codeDraft: "" }, Look.DEFAULT));
+    toast(d18.look.resetDone);
   };
   const saveStyle = "flex:1;text-align:center;padding:9px 4px;border-radius:" + Math.min(t.r, 12)
     + "px;font-size:12px;cursor:pointer;background:" + t.acc + ";color:" + t.accFg;
@@ -2946,7 +3049,7 @@ function renderVals() {
     hasBackdrop, fits, dimPct, blurPx, dimNote, blurNote, setDim, setBlur,
     pickLabel, pickStyle, dropStyle, pickBackdrop, tookBackdrop, dropBackdrop,
     backdropBad: state.backdropBad,
-    themeCode, codeStyle, copyCode, codeInput, applyCode, codeBad: !!state.codeBad, saveStyle, diceStyle,
+    themeCode, codeStyle, copyCode, codeInput, applyCode, setCodeDraft, codeKeyDown, codeBad: !!state.codeBad, codeDraft: state.codeDraft || "", resetLook, saveStyle, diceStyle,
   };
 }
 
@@ -2963,7 +3066,7 @@ function render() {
   // Свой фон отменяет фон темы: иначе он же его и закроет. Пелена поверх
   // картинки берёт на себя то, ради чего фон темы был — читаемость текста.
   const own = !!backdropURL;
-  app.setAttribute("style", vals.vars + ";height:100%" + (own ? ";--bgcss:transparent" : ""));
+  app.setAttribute("style", vals.vars + ";height:100%;color-scheme:" + (theme().dark ? "dark" : "light") + (own ? ";--bgcss:transparent" : ""));
   app.classList.toggle("busy", state.loading);
   document.body.style.background = own ? "transparent" : theme().bgcss;
   paintBackdrop();
@@ -2974,6 +3077,8 @@ function render() {
   const old = document.getElementById("q");
   const hadFocus = old && document.activeElement === old;
   const caret = hadFocus ? old.selectionStart : null;
+  const focused = app.contains(document.activeElement) ? document.activeElement : null;
+  const focusKey = focused && focused.dataset.focus;
 
   // Прокрутка списков тоже пропадала бы с разметкой: человек листает виды,
   // нажимает один — и оказывается наверху. Запоминаем и возвращаем.
@@ -2983,6 +3088,11 @@ function render() {
   const frag = document.createDocumentFragment();
   buildInto(shell.content, frag, vals);
   app.replaceChildren(frag);
+
+  if (focusKey) {
+    const next = Array.from(app.querySelectorAll("[data-focus]")).find((e) => e.dataset.focus === focusKey);
+    if (next) next.focus({ preventScroll: true });
+  }
 
   for (const el of app.querySelectorAll("[data-keep-scroll]")) {
     if (scrolled[el.dataset.keepScroll]) el.scrollTop = scrolled[el.dataset.keepScroll];
@@ -3011,10 +3121,14 @@ function enter(token) {
 
 document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const submit = document.getElementById("login-enter");
+  if (submit.disabled) return;
   const err = document.getElementById("login-err");
   const token = document.getElementById("login-token").value.trim();
   if (!token) { err.textContent = L().login.empty; return; }
 
+  submit.disabled = true;
+  submit.textContent = L().login.checking;
   err.textContent = L().login.checking;
   state.token = token;
   try {
@@ -3027,6 +3141,9 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   } catch (e2) {
     state.token = null;
     err.textContent = e2.message === L().err.badToken ? L().login.wrong : e2.message;
+  } finally {
+    submit.disabled = false;
+    submit.textContent = L().login.enter;
   }
 });
 

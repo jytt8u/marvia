@@ -152,7 +152,8 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                MarviaState.state.collect { render(it) }
+                launch { MarviaState.state.collect { render(it) } }
+                launch { MarviaState.traffic.collect { ui.connectScreen.trafficPanel.snapshot = it } }
             }
         }
 
@@ -166,12 +167,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * firstScreen — с чего начинать: язык, пока не выбран; ключ, пока его нет;
-     * иначе подключение.
+     * После выбора языка показываем главное пространство. Ключ добавляется
+     * явной кнопкой: оформление можно выбрать ещё до подключения.
      */
     private fun firstScreen(): Screen = when {
         store.language.isEmpty() -> Screen.LANGUAGE
-        store.accountLink.isBlank() -> Screen.KEY
         else -> Screen.CONNECT
     }
 
@@ -194,7 +194,7 @@ class MainActivity : AppCompatActivity() {
                 show(Screen.MORE)
                 return
             }
-            if (screen == Screen.CONNECT || screen == Screen.LANGUAGE || store.accountLink.isBlank()) {
+            if (screen == Screen.CONNECT || screen == Screen.LANGUAGE) {
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
                 isEnabled = true
@@ -331,8 +331,11 @@ class MainActivity : AppCompatActivity() {
     // --------------------------------------------------------- подключение
 
     private fun wireConnect() {
+        if (MarviaState.state.value !is TunnelState.On) MarviaState.traffic.value = TrafficHistory(this).saved()
         val c = ui.connectScreen
-        c.powerOuter.setOnClickListener { toggle() }
+        c.powerAction.setOnClickListener { toggle() }
+        c.techText.setOnClickListener { more.openLogs(); show(Screen.MORE) }
+        c.customizeAction.setOnClickListener { show(Screen.THEME) }
         c.nodeLine.setOnClickListener { show(Screen.SERVERS) }
         // Полосу остатка скругляем по фону: иначе заливка вылезает углами.
         c.trafficTrack.clipToOutline = true
@@ -342,29 +345,36 @@ class MainActivity : AppCompatActivity() {
         val c = ui.connectScreen
         val hasKey = store.accountLink.isNotBlank()
 
+        c.connectionHint.isVisible = state !is TunnelState.On
         c.techText.isVisible = false
         c.nodeLine.isVisible = false
         c.nodePing.isVisible = false
 
         when (state) {
             TunnelState.Off -> {
-                c.statusText.setText(R.string.status_off)
-                paintPower(theme.dim)
+                c.statusText.setText(if (hasKey) R.string.status_off else R.string.connect_welcome)
+                c.connectionHint.setText(if (hasKey) R.string.connect_ready_hint else R.string.connect_start_hint)
+                c.powerAction.setText(if (hasKey) R.string.action_connect else R.string.connect_add_key)
+                paintPower(theme.acc)
                 c.statusText.setTextColor(theme.fg)
-                c.nodeNote.text = if (hasKey) "" else getString(R.string.connect_no_key)
+                c.nodeNote.text = ""
             }
 
             TunnelState.Connecting -> {
                 c.statusText.setText(R.string.status_connecting)
+                c.connectionHint.setText(R.string.detail_connecting)
+                c.powerAction.setText(R.string.status_connecting)
                 paintPower(theme.acc)
                 c.statusText.setTextColor(theme.fg)
-                c.nodeNote.setText(R.string.detail_connecting)
+                c.nodeNote.text = ""
             }
 
             is TunnelState.On -> {
                 c.statusText.setText(R.string.status_on)
+                c.connectionHint.setText(R.string.connect_on_hint)
+                c.powerAction.setText(R.string.connect_disconnect)
                 paintPower(theme.acc)
-                c.statusText.setTextColor(theme.acc)
+                c.statusText.setTextColor(theme.fg)
 
                 c.nodeLine.isVisible = true
                 c.nodeCountry.text = state.node
@@ -375,7 +385,7 @@ class MainActivity : AppCompatActivity() {
                 // ней нельзя: иначе человек видит «подключено» при наполовину
                 // живой ноде.
                 if (state.warning.isNotBlank()) {
-                    c.techText.text = state.warning
+                    c.techText.text = if (state.warning == getString(R.string.trouble_no_node)) state.warning else getString(R.string.connection_warning_details)
                     c.techText.setTextColor(theme.warn)
                     c.techText.isVisible = true
                 }
@@ -385,16 +395,20 @@ class MainActivity : AppCompatActivity() {
 
             is TunnelState.Failed -> {
                 c.statusText.setText(R.string.status_failed)
+                c.connectionHint.setText(R.string.connect_error_hint)
+                c.powerAction.setText(R.string.connect_retry)
                 paintPower(theme.fail)
                 c.statusText.setTextColor(theme.fail)
 
                 val human = humanReasonFor(state.kind)
                 if (human == null) {
                     // Вида нет — значит фраза уже человеческая, показываем её.
-                    c.nodeNote.text = state.detail
+                    c.nodeNote.setText(R.string.connect_error_hint)
+                    c.techText.setText(R.string.connection_warning_details)
+                    c.techText.isVisible = state.detail.isNotBlank()
                 } else {
                     c.nodeNote.setText(human)
-                    c.techText.text = state.detail
+                    c.techText.setText(R.string.connection_warning_details)
                     c.techText.setTextColor(theme.dim)
                     c.techText.isVisible = state.detail.isNotBlank()
                 }
@@ -403,6 +417,9 @@ class MainActivity : AppCompatActivity() {
 
         // Пустая строка — это не строка: место под неё занимать незачем.
         c.nodeNote.isVisible = c.nodeNote.text.isNotEmpty()
+        c.powerAction.isEnabled = state !is TunnelState.Connecting
+        c.powerAction.alpha = if (state is TunnelState.Connecting) 0.65f else 1f
+        c.powerAction.contentDescription = c.powerAction.text
 
         renderSubscription(state)
 
@@ -434,39 +451,22 @@ class MainActivity : AppCompatActivity() {
         else -> getString(R.string.connect_manual_moved, state.chosen)
     }
 
-    /**
-     * paintPower красит три круга: внешние — тем же цветом, но почти прозрачным.
-     * Значок — тем, что читается на диске: на бледном «отключено» это фон, на
-     * акценте — цвет текста поверх акцента.
-     */
+    /** Цвет ленты — личный выбор; состояние передаём текстом и кнопкой. */
     private fun paintPower(color: Int) {
         val c = ui.connectScreen
         val dp = resources.displayMetrics.density
-        // Стиль кнопки — из темы, но только для акцента: беда и «отключено»
-        // выглядят одинаково при любой кнопке, беда должна выглядеть как беда.
-        val styled = color == theme.acc
-        val btn = if (styled) theme.btn else "solid"
-        // Внешние круги — свечение: их прозрачность растёт с силой из темы.
-        // При акценте; у прочих цветов — как раньше, едва заметные.
-        val glow = if (styled) theme.glowA else 0.42
-        c.powerOuter.background = Paint.circle(ColorUtils.setAlphaComponent(color, (44 * glow).toInt()))
-        c.powerMiddle.background = Paint.circle(ColorUtils.setAlphaComponent(color, (62 * glow).toInt()))
-        c.powerInner.background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            when (btn) {
-                "ring" -> { setColor(0); setStroke((3 * dp).toInt(), color) }
-                "glass" -> { setColor(theme.accSoft); setStroke((1 * dp).toInt(), color) }
-                "bare" -> { setColor(0); setStroke((1 * dp).toInt(), theme.line) }
-                else -> setColor(color)
-            }
-        }
-        val icon = if (btn == "solid") Look.bestOn(color) else color
-        ImageViewCompat.setImageTintList(c.powerIcon, ColorStateList.valueOf(icon))
+        c.heroMark.clearColorFilter()
+        c.trafficPanel.theme = theme
+        c.powerAction.theme = theme.copy(acc = color)
+
     }
 
     private fun showPing(view: TextView, ms: Long) {
         if (ms <= 0) {
-            view.isVisible = false
+            view.setText(R.string.node_ping_none)
+            view.setTextColor(theme.dim)
+            view.backgroundTintList = ColorStateList.valueOf(ColorUtils.setAlphaComponent(theme.dim, 31))
+            view.isVisible = true
             return
         }
 
@@ -654,7 +654,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        AlertDialog.Builder(this)
+        ThemedDialogs.builder(this, theme)
             .setTitle(R.string.key_replace_title)
             .setMessage(R.string.key_replace_body)
             .setPositiveButton(R.string.key_replace_yes) { _, _ -> takeLink(link) }
@@ -698,7 +698,7 @@ class MainActivity : AppCompatActivity() {
         }
         store.bypassAsked = true
 
-        AlertDialog.Builder(this)
+        ThemedDialogs.builder(this, theme)
             .setTitle(R.string.bypass_ru_title)
             .setMessage(R.string.bypass_ru_body)
             .setPositiveButton(R.string.bypass_ru_yes) { _, _ ->

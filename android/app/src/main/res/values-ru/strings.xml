@@ -14,7 +14,7 @@
     <string name="status_on">Подключено</string>
     <string name="status_failed">Не подключилось</string>
 
-    <string name="detail_connecting">Выбираю самую быструю ноду</string>
+    <string name="detail_connecting">Выбираем доступный сервер</string>
     <string name="detail_no_key">Вставь ключ доступа</string>
     <string name="detail_node">Нода: %1$s</string>
 
@@ -72,7 +72,7 @@
     <string name="servers_measure">Обновить</string>
     <string name="servers_auto">Автовыбор</string>
     <string name="servers_auto_mark">⚡</string>
-    <string name="servers_auto_note">самая быстрая прямо сейчас — %1$s</string>
+    <string name="servers_auto_note">Лучший отклик: %1$s</string>
     <string name="servers_auto_unknown">ещё не мерили</string>
     <!-- Добавление подписки: буфер обмена или руками, как в привычных клиентах. -->
     <string name="servers_add">Добавить</string>
@@ -93,12 +93,13 @@
     <string name="servers_failed">Не получилось перейти: %1$s</string>
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
-    <string name="node_ping">%1$d мс</string>
-    <string name="node_ping_none">—</string>
+    <string name="node_ping">Отклик: %1$d мс</string>
+    <string name="node_ping_none">Отклик не измерен</string>
+    <string name="node_setup">Подключение: %1$d мс</string>
     <string name="node_ok">работает</string>
     <string name="node_down">сейчас недоступна</string>
     <string name="node_unmeasured">скорость ещё не мерили</string>
-    <string name="node_current">через неё идёт трафик прямо сейчас</string>
+    <string name="node_current">Подключено сейчас</string>
     <string name="node_chosen_current">выбрана тобой · через неё идёт трафик</string>
     <string name="node_chosen_silent">выбрана тобой, но молчит — трафик идёт через %1$s</string>
 
@@ -148,7 +149,7 @@
     <string name="theme_looks_hint">весь экран одним нажатием</string>
     <string name="theme_accent">Акцент</string>
     <string name="theme_density">Плотность</string>
-    <string name="theme_note">Тема хранится на этом телефоне и никуда не отправляется. Та же таблица цветов стоит в панели продавца и в приложении на компьютере.</string>
+    <string name="theme_note">Оформление сохраняется на этом устройстве.</string>
     <string name="theme_reset">Вернуть серый</string>
     <string name="theme_light">Свет</string>
     <string name="theme_lamp_hint">нажми, откуда светит</string>
@@ -209,7 +210,7 @@
     <string name="backdrop_fill">Заполнить</string>
     <string name="backdrop_whole">Целиком</string>
     <string name="theme_backdrop_dim">Затемнение</string>
-    <string name="theme_backdrop_note">Фото остаётся на этом телефоне и в код темы не попадает. Видео на телефоне нет: его пришлось бы крутить своим плеером.</string>
+    <string name="theme_backdrop_note">Фото хранится только на этом устройстве и не передаётся с кодом темы.</string>
     <string name="theme_backdrop_bad">Это не фото или оно не читается</string>
     <string name="density_compact">Плотно</string>
     <string name="density_normal">Обычно</string>
@@ -339,4 +340,26 @@
         <item quantity="many">%1$d строк</item>
         <item quantity="other">%1$d строки</item>
     </plurals>
+
+    <string name="connect_space">Ваше пространство</string>
+    <string name="connect_welcome">Здесь всё по-вашему</string>
+    <string name="connect_start_hint">Добавьте ключ доступа. Цвет и настроение выбираете вы.</string>
+    <string name="connect_ready_hint">Всё готово. Подключайтесь, когда нужно.</string>
+    <string name="connect_on_hint">Соединение с сервером установлено.</string>
+    <string name="connect_error_hint">Соединение не установлено. Подробности ниже.</string>
+    <string name="connect_add_key">Добавить ключ</string>
+    <string name="connect_disconnect">Отключиться</string>
+    <string name="connect_retry">Повторить подключение</string>
+    <string name="connect_customize">Настроить свой вид</string>
+    <string name="connect_route">Текущий сервер</string>
+    <string name="connect_change_server">Выбрать другой сервер →</string>
+    <string name="stats_today">Сегодня</string>
+    <string name="stats_session">Сессия</string>
+    <string name="stats_speed">Скорость</string>
+    <string name="stats_mbps">%1$s Мбит/с</string>
+    <string name="connection_warning_details">Некоторые запросы не прошли · Подробнее</string>
+    <string name="theme_show_all">Все темы</string>
+    <string name="theme_fewer">Свернуть</string>
+    <string name="theme_preview">Предпросмотр</string>
+    <string name="theme_advanced">Точная настройка оформления</string>
 </resources>

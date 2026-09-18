@@ -198,6 +198,7 @@ object Look {
         if (p[3].length < 4) return null
         val kind = LookTable.kinds.find(3, p[3].substring(0, 3)) ?: return null
         val dir = LookTable.dirs.map { it.key }.firstOrNull { it.uppercase() == p[3].substring(3) } ?: return null
+        if (!Regex("^[0-9]{1,2}$").matches(p[4])) return null
         val depth = (p[4].toIntOrNull() ?: return null) / 100.0
         if (depth !in 0.08..0.98) return null
         if (p[5].length != 4 || p[6].length != 6) return null

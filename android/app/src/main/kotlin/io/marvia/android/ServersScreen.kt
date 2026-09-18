@@ -73,10 +73,9 @@ class ServersScreen(
             host.getString(R.string.servers_add_clipboard),
             host.getString(R.string.servers_add_manual),
         )
-        AlertDialog.Builder(host)
-            .setTitle(R.string.servers_add)
-            .setItems(items) { _, which -> if (which == 0) fromClipboard() else byHand() }
-            .show()
+        ChoiceSheet.show(host, theme(), host.getString(R.string.servers_add), items.toList()) { which ->
+            if (which == 0) fromClipboard() else byHand()
+        }
     }
 
     private fun fromClipboard() {
@@ -108,14 +107,20 @@ class ServersScreen(
         box.addView(name)
         box.addView(link)
 
-        AlertDialog.Builder(host)
-            .setTitle(R.string.servers_add_manual)
-            .setView(box)
-            .setPositiveButton(R.string.servers_add) { _, _ ->
-                add(name.text.toString(), link.text.toString())
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        val t = theme()
+        for (field in listOf(name, link)) {
+            field.setTextColor(t.fg); field.setHintTextColor(t.dim)
+            field.backgroundTintList = ColorStateList.valueOf(t.acc)
+            field.minHeight = (54 * dp).toInt()
+        }
+        link.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        ChoiceSheet.form(host, t, host.getString(R.string.servers_add_manual), box, host.getString(R.string.servers_add)) {
+            val clean = link.text.toString().trim()
+            val valid = runCatching { Mobile.checkAccountLink(clean) }.isSuccess
+            if (!valid) link.error = host.getString(R.string.servers_sub_bad)
+            else add(name.text.toString(), clean)
+            valid
+        }
     }
 
     /**
@@ -154,7 +159,7 @@ class ServersScreen(
     }
 
     private fun forget(sub: Store.Subscription) {
-        AlertDialog.Builder(host)
+        ThemedDialogs.builder(host, theme())
             .setMessage(host.getString(R.string.servers_sub_remove_ask, sub.name))
             .setPositiveButton(R.string.servers_sub_remove) { _, _ ->
                 val was = store.accountLink
@@ -407,7 +412,10 @@ class ServersScreen(
         item.nodeFlag.isVisible = flag.isNotEmpty()
 
         item.nodeTitle.text = row.place
-        item.nodeNote.text = noteFor(row, current)
+        val setup = row.setupMs.takeIf { it > 0 } ?: MarviaState.ping(row.id)?.setupMs ?: 0
+        item.nodeNote.text = noteFor(row, current) + if (setup > 0) {
+            " · " + host.getString(R.string.node_setup, setup)
+        } else ""
 
         val seen = known(row)
         showPing(item.nodePing, if (seen?.alive == true) seen.ms else 0)
@@ -455,8 +463,8 @@ class ServersScreen(
      * список сразу после переключения страны стал бы сплошными прочерками.
      */
     private fun known(row: NodeRow): MarviaState.Ping? = when {
-        row.ms > 0 -> MarviaState.Ping(row.ms, row.alive)
-        row.current -> MarviaState.ping(row.id) ?: MarviaState.Ping(0, true)
+        row.setupMs > 0 || row.ms > 0 -> MarviaState.Ping(row.ms, row.alive, row.setupMs)
+        row.current -> MarviaState.Ping(row.ms, row.alive, row.setupMs)
         else -> MarviaState.ping(row.id)
     }
 

@@ -308,7 +308,33 @@ func (s *Supervisor) Measure(ctx context.Context) []Measurement {
 	if len(nodes) == 0 {
 		return nil
 	}
-	return MeasureAll(ctx, nodes, cfg.Key, cfg.Dial)
+	results := MeasureAll(ctx, nodes, cfg.Key, cfg.Dial)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.dialer != nil {
+		for _, m := range results {
+			if m.Node.ID == s.dialer.Node().ID {
+				m.dialer = nil
+				s.dialer.measurement.Store(&m)
+				break
+			}
+		}
+	}
+	return results
+}
+
+// Measurement возвращает замер подключения текущей ноды. После переезда
+// нельзя продолжать показывать отклик предыдущего сервера.
+func (s *Supervisor) Measurement() Measurement {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.dialer == nil {
+		return Measurement{}
+	}
+	if m := s.dialer.measurement.Load(); m != nil {
+		return *m
+	}
+	return Measurement{}
 }
 
 // Node — нода, через которую идёт трафик прямо сейчас.

@@ -386,6 +386,11 @@
   .code-in { width: 100%; padding: 9px 12px; border-radius: var(--r); background: var(--surf); border: 1px solid var(--line);
     color: var(--fg); font-family: var(--mono); font-size: 12px; outline: none; }
   .code-in:focus { border-color: var(--acc); }
+  #theme-copy-status:empty { display: none; }
+  :focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
   .preset .pv { position: relative; width: 44px; height: 30px; border-radius: 6px; flex: none; overflow: hidden; }
   .preset .pv i { position: absolute; display: block; }
   .presets::-webkit-scrollbar { width: 8px; }
@@ -660,7 +665,8 @@
                 <button class="pillb" id="theme-random" data-t="themeRandom"></button>
               </div>
               <div class="k" data-t="themeCode"></div>
-              <div class="code" id="theme-code"></div>
+              <button type="button" class="code" id="theme-code" style="text-align:left;width:100%;user-select:text;white-space:normal;overflow-wrap:anywhere;"></button>
+              <p class="hint" id="theme-copy-status" role="status" aria-live="polite"></p>
               <input type="text" class="code-in" id="code-in" autocomplete="off" spellcheck="false">
               <p class="hint" id="code-bad" hidden data-t="themeCodeBad"></p>
               <p class="lead" data-t="themeNote"></p>
@@ -792,7 +798,8 @@ const T = {
       about: ["О программе", "Как это устроено"],
     },
 
-    kSession: "Сессия", kPing: "Пинг", down: "Приём", up: "Отдача",
+    pingUnknown: "Не измерен", setupLabel: "Подключение",
+    kSession: "Сессия", kPing: "Отклик ноды", down: "Приём", up: "Отдача",
     chartTitle: "Трафик за час", chartFrom: "−60 мин", chartNow: "сейчас",
 
     nodesAll: "Все страны",
@@ -838,7 +845,7 @@ const T = {
 
     themePresets: "Готовые виды", themeAccent: "Акцент", themeDensity: "Плотность",
     themeLight: "Свет", themeLampHint: "нажми, откуда светит", themeLightOff: "свет выключен, фон ровный",
-    themeDepth: "Густота тени", themeTint: "Оттенок светлой стороны",
+    themeDepth: "Густота тени", themeTint: "Оттенок светлой стороны", themeTintAuto: "Как акцент",
     themeRadius: "Скругления", themeCards: "Карточки", themeButton: "Кнопка", themeGlow: "Свечение",
     themeBackdrop: "Свой фон", themeBackdropPick: "Выбрать файл", themeBackdropChange: "Другой файл", themeBackdropDrop: "Убрать",
     themeBackdropFit: "Как вписать", themeBackdropFits: { cover: "Заполнить", contain: "Целиком" },
@@ -851,6 +858,7 @@ const T = {
     themeCodeBad: "Это не код темы Marvia",
     themeNote: "Тема хранится на этом компьютере и никуда не отправляется. Та же таблица цветов стоит в панели продавца и в приложении на телефоне, и код темы подходит всем троим.",
     themeReset: "Вернуть серый",
+    themeCopied: "Код темы скопирован", themeCopyFailed: "Не удалось скопировать. Выделите код и скопируйте вручную.",
     dirs: { nw: "сверху слева", n: "сверху", ne: "сверху справа", w: "слева", c: "из центра", e: "справа", sw: "снизу слева", s: "снизу", se: "снизу справа" },
     kinds: { flat: "Ровный", linear: "Мягкий", radial: "Пятном", aurora: "Сияние" },
     depths: ["едва заметна", "мягкая", "заметная", "глубокая", "почти чёрная"],
@@ -909,7 +917,8 @@ const T = {
       about: ["About", "How it works"],
     },
 
-    kSession: "Session", kPing: "Ping", down: "Down", up: "Up",
+    pingUnknown: "Not measured", setupLabel: "Connection",
+    kSession: "Session", kPing: "Node response", down: "Down", up: "Up",
     chartTitle: "Traffic, last hour", chartFrom: "−60 min", chartNow: "now",
 
     nodesAll: "All countries",
@@ -955,7 +964,7 @@ const T = {
 
     themePresets: "Ready looks", themeAccent: "Accent", themeDensity: "Density",
     themeLight: "Light", themeLampHint: "tap where the light comes from", themeLightOff: "light is off, flat background",
-    themeDepth: "Shadow depth", themeTint: "Tint of the lit side",
+    themeDepth: "Shadow depth", themeTint: "Tint of the lit side", themeTintAuto: "Match accent",
     themeRadius: "Corners", themeCards: "Cards", themeButton: "Button", themeGlow: "Glow",
     themeBackdrop: "Your own background", themeBackdropPick: "Choose a file", themeBackdropChange: "Another file", themeBackdropDrop: "Remove",
     themeBackdropFit: "How it fits", themeBackdropFits: { cover: "Fill", contain: "Whole" },
@@ -975,6 +984,7 @@ const T = {
     buttons: { solid: "Disc", ring: "Ring", glass: "Glass", bare: "Outline" },
     glows: { none: "None", soft: "Soft", mid: "Medium", neon: "Neon" },
     themeReset: "Back to grey",
+    themeCopied: "Theme code copied", themeCopyFailed: "Could not copy. Select the code and copy it manually.",
     density: { compact: "Compact", normal: "Normal", roomy: "Roomy" },
     themes: [
       "Grey (default)", "Emerald", "Jade", "Lagoon", "Ice", "Cobalt", "Ultra",
@@ -1263,6 +1273,7 @@ function pills(id, keys, current, names, onPick) {
   for (const k of keys) {
     const b = el("button", "pillb", names[k] || k);
     b.type = "button";
+    b.dataset.focus = id + "-" + k;
     b.setAttribute("aria-pressed", String(current === k));
     b.addEventListener("click", () => onPick(k));
     box.append(b);
@@ -1275,6 +1286,8 @@ function swatches(id, colors, current, paint, onPick) {
   for (const c of colors) {
     const b = el("button", "swatch");
     b.type = "button";
+    b.dataset.focus = id + "-" + c;
+    b.setAttribute("aria-label", c == null ? L().themeTintAuto : (id === "accents" ? L().themeAccent : L().themeTint) + " " + c);
     b.style.background = paint(c);
     b.setAttribute("aria-pressed", String(current === c));
     b.addEventListener("click", () => onPick(c));
@@ -1287,8 +1300,10 @@ function swatches(id, colors, current, paint, onPick) {
 // Прокрутка колонки ручек при этом остаётся: перерисовываются дети, а не
 // сама колонка.
 function paintTheme() {
+  const focusKey = document.activeElement && document.activeElement.dataset.focus;
   const d = L();
   const t = Look.theme(look);
+  $("theme-copy-status").textContent = "";
 
   // Готовые виды — мини-макет окна в цветах каждого: боковая, кнопка, карточки.
   const presets = $("presets");
@@ -1297,6 +1312,7 @@ function paintTheme() {
     const lt = Look.theme(Object.assign({}, lk, { acc: null, tint: null }));
     const b = el("button", "preset");
     b.type = "button";
+    b.dataset.focus = "preset-" + i;
     b.setAttribute("aria-pressed", String(Look.same(look, lk)));
     const pv = el("span", "pv");
     pv.style.background = lt.bgcss;
@@ -1326,6 +1342,8 @@ function paintTheme() {
   for (const k of ["nw", "n", "ne", "w", "c", "e", "sw", "s", "se"]) {
     const b = el("button");
     b.type = "button";
+    b.dataset.focus = "lamp-" + k;
+    b.setAttribute("aria-label", d.dirs[k]);
     b.setAttribute("aria-pressed", String(look.dir === k));
     b.append(el("i"));
     b.addEventListener("click", () => setLook({ dir: k, kind: look.kind === "flat" ? "linear" : look.kind }));
@@ -1339,6 +1357,7 @@ function paintTheme() {
   for (const k of Look.KINDS) {
     const b = el("button", "kind");
     b.type = "button";
+    b.dataset.focus = "kind-" + k;
     b.setAttribute("aria-pressed", String(look.kind === k));
     const i = el("i");
     i.style.background = litBg(k, look.dir);
@@ -1348,6 +1367,7 @@ function paintTheme() {
   }
 
   const depth = $("depth");
+  depth.setAttribute("aria-label", d.themeDepth);
   depth.value = Math.round(look.depth * 100);
   $("depth-note").textContent = d.depths[look.depth <= 0.3 ? 0 : look.depth <= 0.5 ? 1 : look.depth <= 0.7 ? 2 : look.depth <= 0.85 ? 3 : 4];
 
@@ -1365,6 +1385,7 @@ function paintTheme() {
   slots.forEach((code, i) => {
     const b = el("button", "pillb", (code ? d.themeSlotFull : d.themeSlotEmpty) + " " + (i + 1));
     b.type = "button";
+    b.dataset.focus = "profile-" + i;
     b.setAttribute("aria-pressed", String(profileSlot === i));
     b.addEventListener("click", () => {
       profileSlot = i;
@@ -1378,6 +1399,11 @@ function paintTheme() {
   $("theme-code").textContent = Look.encode(look);
   $("theme-code").title = d.themeCopy;
   $("code-in").placeholder = d.themeCodePlaceholder;
+  $("code-in").setAttribute("aria-label", d.themeCodePlaceholder);
+  if (focusKey) {
+    const next = Array.from(document.querySelectorAll("[data-focus]")).find((e) => e.dataset.focus === focusKey);
+    if (next) next.focus({ preventScroll: true });
+  }
 }
 
 // Слот профиля, в который пишет «сохранить сюда».
@@ -1400,8 +1426,11 @@ on("theme-random", "click", () => {
     btn: pick(Look.BUTTONS), glow: pick(Object.keys(Look.GLOWS)), card: pick(Look.CARDS),
   });
 });
-on("theme-code", "click", () => {
-  if (navigator.clipboard) navigator.clipboard.writeText(Look.encode(look)).catch(() => {});
+on("theme-code", "click", async () => {
+  try {
+    await navigator.clipboard.writeText(Look.encode(look));
+    $("theme-copy-status").textContent = L().themeCopied;
+  } catch (_) { $("theme-copy-status").textContent = L().themeCopyFailed; }
 });
 on("code-in", "change", (e) => {
   const st = Look.decode(e.target.value);
@@ -1534,7 +1563,7 @@ function paintNodes(list) {
 
     const ms = document.createElement("div");
     ms.className = "ms";
-    ms.textContent = opts.ms > 0 ? opts.ms + d.ms : "";
+    ms.textContent = opts.ms > 0 ? opts.ms + d.ms : d.pingUnknown;
 
     b.append(dot, grow, bar, ms);
     b.addEventListener("click", () => chooseNode(opts.id));
@@ -1561,6 +1590,7 @@ function paintNodes(list) {
     let sub = n.country && n.country !== n.name ? n.name : "";
     const marks = [];
     if (n.current) marks.push(d.nodesCurrent);
+    if (n.setup_ms > 0) marks.push(d.setupLabel + ": " + n.setup_ms + d.ms);
     if (n.chosen) marks.push(d.nodesChosen);
     if (!n.alive && !n.current) marks.push(n.ms > 0 ? d.nodesDead : d.nodesUnknown);
     if (marks.length) sub = sub ? sub + " · " + marks.join(" · ") : marks.join(" · ");
@@ -1741,9 +1771,9 @@ function render(s) {
   if (s.node) {
     $("node-name").textContent = s.node;
     $("node-addr").textContent = s.address;
-    $("node-ping").textContent = s.ping_ms ? s.ping_ms + d.ms : "";
+    $("node-ping").textContent = s.ping_ms ? s.ping_ms + d.ms : d.pingUnknown;
     $("rule-now").textContent = s.node;
-    $("k-ping").textContent = s.ping_ms ? s.ping_ms + d.ms : "—";
+    $("k-ping").textContent = s.ping_ms ? s.ping_ms + d.ms : d.pingUnknown;
   } else {
     $("node-name").textContent = d.noNode;
     $("node-addr").textContent = d.noNodeSub;

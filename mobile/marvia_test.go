@@ -1,6 +1,7 @@
 package mobile
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -8,6 +9,20 @@ import (
 
 	"github.com/jytt8u/marvia/internal/client"
 )
+
+func TestNodeResponseSeparatesTunnelPingAndSetup(t *testing.T) {
+	node := client.Node{ID: 5}
+	for _, rtt := range []time.Duration{0, 35 * time.Millisecond} {
+		m := client.Measurement{Node: node, RTT: rtt, Connect: 90 * time.Millisecond, Latency: 600 * time.Millisecond, Fetch: time.Second}
+		var rows []NodeView
+		if err := json.Unmarshal([]byte(viewsJSON(&client.Supervisor{}, []client.Node{node}, []client.Measurement{m})), &rows); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != 1 || rows[0].MS != rtt.Milliseconds() || rows[0].SetupMS != 600 {
+			t.Fatalf("замеры смешаны: %+v", rows)
+		}
+	}
+}
 
 // TestConnectNamesFailureKind следит за тем, что вид неудачи действительно
 // доезжает до приложения.

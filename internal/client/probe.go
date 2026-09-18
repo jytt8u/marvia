@@ -45,20 +45,17 @@ const (
 type Measurement struct {
 	Node    Node
 	Latency time.Duration
-	Err     error
+	// RTT — последний запрос-ответ внутри готового туннеля; ноль — нет замера.
+	RTT time.Duration
+	Err error
 
 	// Fetch — за сколько нода отдала пробную порцию: круг до неё, разгон и
 	// сама передача вместе. Ноль, если не мерили: живая нода одна, или она
 	// старой версии и такого не умеет.
 	Fetch time.Duration
 
-	// Connect — круг по сети до ноды: время установки TCP, без рукопожатий
-	// поверх. Это то число, которое человек называет пингом и по которому
-	// сравнивает нас с другими клиентами.
-	//
-	// Для выбора ноды оно не годится и туда не идёт: заблокированная нода
-	// охотно принимает TCP и роняет всё дальше, поэтому выбираем по Cost —
-	// времени до работающего туннеля. А показываем это.
+	// Connect — время установки TCP для диагностики транспорта. Оно не
+	// заменяет RTT готового туннеля и не используется для выбора ноды.
 	Connect time.Duration
 
 	// dialer остаётся живым только у победителя: переустанавливать
@@ -113,7 +110,25 @@ func Probe(ctx context.Context, node Node, key vp1.KeyPair, opts Options) Measur
 		return Measurement{Node: node, Latency: time.Since(start), Connect: rtt, Err: err}
 	}
 
-	return Measurement{Node: node, Latency: time.Since(start), Connect: dialer.Connect(), dialer: dialer}
+	setup := time.Since(start)
+	pingCtx, pingCancel := context.WithTimeout(probeCtx, 2*time.Second)
+	defer pingCancel()
+	rtt, _ := dialer.pool.Ping(pingCtx)
+	// Неудача дополнительного замера не отменяет успешное подключение.
+	m := Measurement{Node: node, Latency: setup, RTT: rtt, Connect: dialer.Connect()}
+	snapshot := m
+	dialer.measurement.Store(&snapshot)
+	m.dialer = dialer
+	return m
+}
+
+// PingMS оставляет неизвестный отклик неизвестным. Даже очень быстрый
+// успешный замер занимает хотя бы 1 мс в интерфейсе: ноль означает отсутствие.
+func (m Measurement) PingMS() int64 {
+	if !m.OK() || m.RTT <= 0 {
+		return 0
+	}
+	return max(1, m.RTT.Milliseconds())
 }
 
 // SelectBest меряет ноды и возвращает дозвон до самой быстрой живой.
