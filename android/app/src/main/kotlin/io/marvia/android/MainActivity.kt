@@ -26,6 +26,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.TextViewCompat
 import androidx.core.view.updatePadding
 import androidx.core.widget.ImageViewCompat
 import androidx.lifecycle.Lifecycle
@@ -342,7 +343,6 @@ class MainActivity : AppCompatActivity() {
         val c = ui.connectScreen
         c.powerAction.setOnClickListener { toggle() }
         c.techText.setOnClickListener { more.openLogs(); show(Screen.MORE) }
-        c.customizeAction.setOnClickListener { show(Screen.THEME) }
         c.nodeLine.setOnClickListener { show(Screen.SERVERS) }
         // Полосу остатка скругляем по фону: иначе заливка вылезает углами.
         c.trafficTrack.clipToOutline = true
@@ -352,40 +352,42 @@ class MainActivity : AppCompatActivity() {
         val c = ui.connectScreen
         val hasKey = store.accountLink.isNotBlank()
 
-        c.connectionHint.isVisible = state !is TunnelState.On
         c.techText.isVisible = false
         c.nodeLine.isVisible = false
-        c.nodePing.isVisible = false
+        c.powerAction.glowing = state is TunnelState.On
 
         when (state) {
             TunnelState.Off -> {
-                c.statusText.setText(if (hasKey) R.string.status_off else R.string.connect_welcome)
-                c.connectionHint.setText(if (hasKey) R.string.connect_ready_hint else R.string.connect_start_hint)
+                pill(if (hasKey) R.string.status_off else R.string.connect_welcome, theme.dim, theme.surf2)
                 c.powerAction.setText(if (hasKey) R.string.action_connect else R.string.connect_add_key)
                 paintPower(theme.acc)
-                c.statusText.setTextColor(theme.fg)
                 c.nodeNote.text = ""
             }
 
             TunnelState.Connecting -> {
-                c.statusText.setText(R.string.status_connecting)
-                c.connectionHint.setText(R.string.detail_connecting)
+                pill(R.string.status_connecting, theme.dim, theme.surf2)
                 c.powerAction.setText(R.string.status_connecting)
                 paintPower(theme.acc)
-                c.statusText.setTextColor(theme.fg)
                 c.nodeNote.text = ""
             }
 
             is TunnelState.On -> {
-                c.statusText.setText(R.string.status_on)
-                c.connectionHint.setText(R.string.connect_on_hint)
+                pill(R.string.status_on, theme.acc, theme.accSoft)
                 c.powerAction.setText(R.string.connect_disconnect)
                 paintPower(theme.acc)
-                c.statusText.setTextColor(theme.fg)
 
+                // Имя ноды от ядра — «Финляндия · Хельсинки»: страна крупно,
+                // город и отклик строкой ниже.
+                val country = state.node.substringBefore('·').trim()
+                val place = state.node.substringAfter('·', "").trim()
                 c.nodeLine.isVisible = true
-                c.nodeCountry.text = state.node
-                showPing(c.nodePing, state.ms)
+                c.nodeFlag.text = Flags.of(country)
+                c.nodeFlag.isVisible = c.nodeFlag.text.isNotEmpty()
+                c.nodeCountry.text = country
+                c.nodePlace.text = listOf(place, if (state.ms > 0) getString(R.string.node_ping, state.ms) else "")
+                    .filter { it.isNotEmpty() }
+                    .joinToString(" · ")
+                c.nodePlace.isVisible = c.nodePlace.text.isNotEmpty()
                 c.nodeNote.text = choiceText(state)
 
                 // Ошибка отдельного соединения туннель не роняет, но молчать о
@@ -401,11 +403,9 @@ class MainActivity : AppCompatActivity() {
             }
 
             is TunnelState.Failed -> {
-                c.statusText.setText(R.string.status_failed)
-                c.connectionHint.setText(R.string.connect_error_hint)
+                pill(R.string.status_failed, theme.fail, ColorUtils.setAlphaComponent(theme.fail, 31))
                 c.powerAction.setText(R.string.connect_retry)
                 paintPower(theme.fail)
-                c.statusText.setTextColor(theme.fail)
 
                 val human = humanReasonFor(state.kind)
                 if (human == null) {
@@ -421,7 +421,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-
         // Пустая строка — это не строка: место под неё занимать незачем.
         c.nodeNote.isVisible = c.nodeNote.text.isNotEmpty()
         c.powerAction.isEnabled = state !is TunnelState.Connecting
@@ -458,6 +457,19 @@ class MainActivity : AppCompatActivity() {
         else -> getString(R.string.connect_manual_moved, state.chosen)
     }
 
+    /**
+     * pill красит пилюлю состояния: точка и текст — цветом состояния,
+     * подложка — его мягкой версией. Одно место, чтобы четыре состояния не
+     * разъехались по оттенкам.
+     */
+    private fun pill(text: Int, color: Int, fill: Int) {
+        val v = ui.connectScreen.statusText
+        v.setText(text)
+        v.setTextColor(if (color == theme.acc && theme.dark) theme.fg else color)
+        v.backgroundTintList = ColorStateList.valueOf(fill)
+        TextViewCompat.setCompoundDrawableTintList(v, ColorStateList.valueOf(color))
+    }
+
     /** Цвет ленты — личный выбор; состояние передаём текстом и кнопкой. */
     private fun paintPower(color: Int) {
         val c = ui.connectScreen
@@ -466,23 +478,6 @@ class MainActivity : AppCompatActivity() {
         c.trafficPanel.theme = theme
         c.powerAction.theme = theme.copy(acc = color)
 
-    }
-
-    private fun showPing(view: TextView, ms: Long) {
-        if (ms <= 0) {
-            view.setText(R.string.node_ping_none)
-            view.setTextColor(theme.dim)
-            view.backgroundTintList = ColorStateList.valueOf(ColorUtils.setAlphaComponent(theme.dim, 31))
-            view.isVisible = true
-            return
-        }
-
-        val value = pingColor(theme, ms)
-        view.text = getString(R.string.node_ping, ms)
-        view.setTextColor(value)
-        view.backgroundTintList =
-            ColorStateList.valueOf(ColorUtils.setAlphaComponent(value, 31))
-        view.isVisible = true
     }
 
     /**

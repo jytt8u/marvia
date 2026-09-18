@@ -17,24 +17,78 @@
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical" android:gravity="center_horizontal" android:paddingHorizontal="@dimen/screen_pad"
             android:paddingBottom="16dp">
-            <io.marvia.android.PowerButton android:id="@+id/powerAction" android:layout_width="184dp" android:layout_height="184dp" android:layout_marginTop="16dp" android:layout_marginBottom="12dp" android:contentDescription="@string/action_connect" />
-            <TextView android:id="@+id/statusText" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:gravity="center" android:text="@string/status_off" android:textSize="24sp"
-                android:fontFamily="sans-serif-medium" android:letterSpacing="-0.02" android:accessibilityLiveRegion="polite" />
-            <TextView android:id="@+id/connectionHint" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" android:gravity="center" android:tag="dim" android:textSize="14sp"
-                android:lineSpacingExtra="3dp" />
-            <Button android:id="@+id/customizeAction" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:minHeight="48dp" android:layout_marginTop="4dp" android:background="?attr/selectableItemBackground"
-                android:tag="dim" android:text="@string/connect_customize" android:textAllCaps="false" android:textSize="14sp" />
-            <LinearLayout android:id="@+id/nodeLine" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="12dp" android:orientation="vertical" android:gravity="center"
-                android:clickable="true" android:focusable="true" android:minHeight="48dp"
-                android:foreground="?attr/selectableItemBackground">
-                <TextView android:id="@+id/nodeCountry" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp" android:gravity="center" android:tag="fg" android:textSize="15sp" android:fontFamily="sans-serif-medium" />
-                <TextView android:id="@+id/nodePing" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:gravity="center" android:textSize="12sp" android:visibility="gone" />
+            <!--
+                Состояние — пилюлей с точкой над кнопкой, а не заголовком под
+                ней: так на экране одна вещь главная, и это кнопка. Цвета
+                пилюли ставит код по состоянию.
+            -->
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_pill"
+                android:drawablePadding="8dp"
+                android:drawableStart="@drawable/ic_dot"
+                android:gravity="center"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="8dp"
+                android:text="@string/status_off"
+                android:textSize="13.5sp"
+                android:fontFamily="sans-serif-medium"
+                android:accessibilityLiveRegion="polite" />
+
+            <!-- Вокруг кнопки запас под свечение: оно рисуется внутри вьюхи. -->
+            <io.marvia.android.PowerButton
+                android:id="@+id/powerAction"
+                android:layout_width="232dp"
+                android:layout_height="232dp"
+                android:layout_marginTop="2dp"
+                android:contentDescription="@string/action_connect" />
+
+            <!-- Страна: флаг, название, город и отклик. Нажатие ведёт к выбору. -->
+            <LinearLayout
+                android:id="@+id/nodeLine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
+                android:orientation="horizontal"
+                android:paddingHorizontal="12dp">
+
+                <TextView
+                    android:id="@+id/nodeFlag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:textSize="24sp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/nodeCountry"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:tag="fg"
+                        android:textColor="@color/veil_text"
+                        android:textSize="15.5sp" />
+
+                    <TextView
+                        android:id="@+id/nodePlace"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:tag="dim"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="12.5sp" />
+                </LinearLayout>
             </LinearLayout>
             <TextView android:id="@+id/nodeNote" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="12dp" android:tag="dim" android:textSize="13sp" android:lineSpacingExtra="3dp" />

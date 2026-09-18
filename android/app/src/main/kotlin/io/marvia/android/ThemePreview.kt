@@ -4,9 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.RadialGradient
 import android.graphics.RectF
-import android.graphics.Shader
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.View
@@ -98,21 +96,12 @@ class ThemePreview @JvmOverloads constructor(
         brush.color = if (t.dark) t.fg else t.acc
         canvas.drawText(label, pill.left + 16 * dp, pill.centerY() + 3 * dp, brush)
 
-        // Свечение под кнопкой: сила — из темы, ноль означает «без свечения».
+        // Кнопка — та же, что на главной, вместе со своим свечением.
         val cx = 100 * dp
         val cy = 116 * dp
         val r = 40 * dp
-        if (t.glowA > 0) {
-            val alpha = (t.glowA * 150).toInt().coerceIn(0, 255)
-            brush.shader = RadialGradient(
-                cx, cy, r * 1.9f,
-                intArrayOf((alpha shl 24) or (t.acc and 0xFFFFFF), t.acc and 0xFFFFFF),
-                null, Shader.TileMode.CLAMP,
-            )
-            canvas.drawCircle(cx, cy, r * 1.9f, brush)
-            brush.shader = null
-        }
-        val size = (r * 2 + 16 * dp).toInt()
+        power.glowing = true
+        val size = (r * 2 + 60 * dp).toInt()
         power.layout(0, 0, size, size)
         canvas.save()
         canvas.translate(cx - size / 2f, cy - size / 2f)

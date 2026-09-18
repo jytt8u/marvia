@@ -392,14 +392,10 @@
 
     <string name="connect_space">Your space</string>
     <string name="connect_welcome">Make it yours</string>
-    <string name="connect_start_hint">Add your access key. Choose the colors that feel like you.</string>
-    <string name="connect_ready_hint">Ready when you are.</string>
-    <string name="connect_on_hint">The connection to your server is established.</string>
     <string name="connect_error_hint">Connection failed. See the details below.</string>
     <string name="connect_add_key">Add access key</string>
     <string name="connect_disconnect">Disconnect</string>
     <string name="connect_retry">Try again</string>
-    <string name="connect_customize">Make it yours</string>
     <string name="connect_route">Current server</string>
     <string name="connect_change_server">Choose another server →</string>
     <string name="stats_today">Today</string>

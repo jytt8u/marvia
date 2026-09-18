@@ -364,14 +364,10 @@
 
     <string name="connect_space">Ваше пространство</string>
     <string name="connect_welcome">Здесь всё по-вашему</string>
-    <string name="connect_start_hint">Добавьте ключ доступа. Цвет и настроение выбираете вы.</string>
-    <string name="connect_ready_hint">Всё готово. Подключайтесь, когда нужно.</string>
-    <string name="connect_on_hint">Соединение с сервером установлено.</string>
     <string name="connect_error_hint">Соединение не установлено. Подробности ниже.</string>
     <string name="connect_add_key">Добавить ключ</string>
     <string name="connect_disconnect">Отключиться</string>
     <string name="connect_retry">Повторить подключение</string>
-    <string name="connect_customize">Настроить свой вид</string>
     <string name="connect_route">Текущий сервер</string>
     <string name="connect_change_server">Выбрать другой сервер →</string>
     <string name="stats_today">Сегодня</string>

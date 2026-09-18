@@ -20,7 +20,15 @@
         android:paddingTop="@dimen/header_pad"
         android:paddingBottom="10dp">
 
-        <!-- Надпись — форма, а не шрифт: «A» с точкой. Цвет даёт тема. -->
+        <!-- Знак и надпись — те же, что на главной: шапка одна на все экраны. -->
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="21dp"
+            android:layout_marginEnd="10dp"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter"
+            android:src="@drawable/marvia_mark" />
+
         <ImageView
             android:layout_width="0dp"
             android:layout_height="14dp"
@@ -29,8 +37,8 @@
             android:scaleType="fitStart"
             android:src="@drawable/ic_wordmark"
             android:contentDescription="@string/app_name"
-            android:tag="icon:dim"
-            app:tint="@color/veil_muted" />
+            android:tag="icon:fg"
+            app:tint="@color/veil_text" />
     </LinearLayout>
 
     <TextView

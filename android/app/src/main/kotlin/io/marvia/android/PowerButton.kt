@@ -9,35 +9,89 @@ import android.graphics.Shader
 import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatButton
 
-/** Свет и тонкий незамкнутый обод повторяют исходный макет. */
+/**
+ * PowerButton — кнопка питания: диск, незамкнутый обод, знак и подпись.
+ *
+ * Свечение рисуется здесь же, внутри вьюхи, а не отдельным слоем за ней:
+ * тогда оно есть и на главной, и в предпросмотре темы, и выглядит одинаково.
+ * Ради него у диска запас в 30dp до края вьюхи.
+ */
 class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : AppCompatButton(context, attrs) {
     private val brush = Paint(Paint.ANTI_ALIAS_FLAG)
+
     var theme: Theme = Look.theme(Look.Choice())
-        set(value) { field=value; invalidate() }
-    init { background=null; setAllCaps(false); isHapticFeedbackEnabled=true }
+        set(value) { field = value; invalidate() }
+
+    /** glowing — туннель поднят: вокруг диска свечение силой из темы. */
+    var glowing: Boolean = false
+        set(value) { field = value; invalidate() }
+
+    init { background = null; setAllCaps(false); isHapticFeedbackEnabled = true }
+
     override fun onDraw(canvas: Canvas) {
-        val dp=resources.displayMetrics.density
-        val cx=width/2f; val cy=height/2f; val radius=minOf(width,height)/2f-8*dp
-        val scale=if(isPressed) .965f else 1f
-        canvas.save();canvas.scale(scale,scale,cx,cy)
-        brush.style=Paint.Style.FILL
-        val solid=theme.btn=="solid"
-        if (theme.btn!="bare") {
-            brush.shader=RadialGradient(cx-radius*.5f,cy-radius*.65f,radius*2, if(solid) intArrayOf(theme.acc,theme.acc) else intArrayOf(theme.surf2,theme.surf),null,Shader.TileMode.CLAMP)
-            if(theme.btn=="glass") { brush.shader=null;brush.color=theme.accSoft }
-            canvas.drawCircle(cx,cy,radius,brush);brush.shader=null
+        val dp = resources.displayMetrics.density
+        val cx = width / 2f
+        val cy = height / 2f
+        val radius = minOf(width, height) / 2f - GLOW_ROOM * dp
+        val scale = if (isPressed) .965f else 1f
+        canvas.save()
+        canvas.scale(scale, scale, cx, cy)
+
+        brush.style = Paint.Style.FILL
+        if (glowing && theme.glowA > 0) {
+            val alpha = (theme.glowA * 170).toInt().coerceIn(0, 255)
+            val reach = radius + GLOW_ROOM * dp
+            brush.shader = RadialGradient(
+                cx, cy, reach,
+                intArrayOf((alpha shl 24) or (theme.acc and 0xFFFFFF), theme.acc and 0xFFFFFF),
+                floatArrayOf(radius / reach * 0.9f, 1f),
+                Shader.TileMode.CLAMP,
+            )
+            canvas.drawCircle(cx, cy, reach, brush)
+            brush.shader = null
         }
-        brush.style=Paint.Style.STROKE;brush.strokeWidth=2*dp;brush.strokeCap=Paint.Cap.ROUND;brush.color=theme.acc
-        canvas.drawArc(RectF(cx-radius,cy-radius,cx+radius,cy+radius),45f,285f,false,brush)
-        brush.color=if(solid)theme.accFg else theme.acc
-        brush.strokeWidth=3*dp
-        val r=23*dp; val y=cy-8*dp
-        canvas.drawArc(RectF(cx-r,y-r,cx+r,y+r),-50f,280f,false,brush)
-        canvas.drawLine(cx,y-r-4*dp,cx,y-5*dp,brush)
-        brush.style=Paint.Style.FILL;brush.textSize=11*resources.displayMetrics.scaledDensity;brush.textAlign=Paint.Align.CENTER
-        canvas.drawText(text.toString(),cx,cy+49*dp,brush)
+
+        val solid = theme.btn == "solid"
+        if (theme.btn != "bare") {
+            brush.shader = RadialGradient(
+                cx - radius * .5f, cy - radius * .65f, radius * 2,
+                if (solid) intArrayOf(theme.acc, theme.acc) else intArrayOf(theme.surf2, theme.surf),
+                null, Shader.TileMode.CLAMP,
+            )
+            if (theme.btn == "glass") { brush.shader = null; brush.color = theme.accSoft }
+            canvas.drawCircle(cx, cy, radius, brush)
+            brush.shader = null
+        }
+
+        brush.style = Paint.Style.STROKE
+        brush.strokeWidth = 2 * dp
+        brush.strokeCap = Paint.Cap.ROUND
+        brush.color = theme.acc
+        canvas.drawArc(RectF(cx - radius, cy - radius, cx + radius, cy + radius), 45f, 285f, false, brush)
+
+        brush.color = if (solid) theme.accFg else theme.acc
+        brush.strokeWidth = 3 * dp
+        val r = 23 * dp
+        val y = cy - 8 * dp
+        canvas.drawArc(RectF(cx - r, y - r, cx + r, y + r), -50f, 280f, false, brush)
+        canvas.drawLine(cx, y - r - 4 * dp, cx, y - 5 * dp, brush)
+
+        brush.style = Paint.Style.FILL
+        brush.textSize = 11 * resources.displayMetrics.scaledDensity
+        brush.textAlign = Paint.Align.CENTER
+        canvas.drawText(text.toString(), cx, cy + 49 * dp, brush)
         canvas.restore()
     }
+
     override fun drawableStateChanged() { super.drawableStateChanged(); invalidate() }
-    override fun performClick(): Boolean { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);return super.performClick() }
+
+    override fun performClick(): Boolean {
+        performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+        return super.performClick()
+    }
+
+    private companion object {
+        /** Запас вокруг диска под свечение, dp. */
+        const val GLOW_ROOM = 30
+    }
 }
