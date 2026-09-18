@@ -1,9 +1,12 @@
+//go:build windows
+
 package main
 
 import (
-	"github.com/jytt8u/marvia/internal/client"
 	"testing"
 	"time"
+
+	"github.com/jytt8u/marvia/internal/client"
 )
 
 func TestDisplayedPingNeverUsesSetupTime(t *testing.T) {

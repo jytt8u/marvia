@@ -89,12 +89,15 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # SDK есть в образе GitHub; версии совпадают с локальной сборкой.
-      # Ядро всегда собирается из этого commit, готовый AAR не кешируем:
-      # старый бинарник может не содержать методы текущего Kotlin.
+      # SDK есть в образе GitHub, но sdkmanager в PATH не лежит — зовём его по
+      # пути. Версии совпадают с локальной сборкой. Ядро всегда собирается из
+      # этого commit, готовый AAR не кешируем: старый бинарник может не
+      # содержать методы текущего Kotlin.
       - name: Android SDK и NDK
         run: |
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+          sdk="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdk" --licenses >/dev/null 2>&1 || true
+          "$sdk" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
 
       - name: Go-мост для Android
