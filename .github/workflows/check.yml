@@ -51,6 +51,13 @@ jobs:
       - name: Тесты
         run: go test ./...
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Тема и интерфейсы
+        run: node --test internal/look/look.test.cjs internal/panel/web.test.cjs
+
       # Те же цели, что в релизе. Файлы под Windows собираются только под
       # Windows, и без этого шага ошибка в них жила бы до первого тега.
       - name: Сборка под три цели
@@ -64,3 +71,52 @@ jobs:
           done
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
             go build -trimpath -ldflags "-H windowsgui" -o /dev/null ./cmd/marvia-windows
+
+  android:
+    name: Android — ядро, тесты и приложение
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # SDK есть в образе GitHub; версии совпадают с локальной сборкой.
+      # Ядро всегда собирается из этого commit, готовый AAR не кешируем:
+      # старый бинарник может не содержать методы текущего Kotlin.
+      - name: Android SDK и NDK
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+
+      - name: Go-мост для Android
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile
+          go install golang.org/x/mobile/cmd/gobind
+          mkdir -p android/app/libs
+          "$(go env GOPATH)/bin/gomobile" bind \
+            -target=android/arm64,android/arm -androidapi 24 \
+            -javapkg=io.marvia -o android/app/libs/marvia.aar ./mobile
+
+      - name: Kotlin-тесты и отладочное приложение
+        working-directory: android
+        run: bash ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+
+      - name: Отчёт Android-тестов
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: |
+            android/app/build/reports/tests/testDebugUnitTest/
+            android/app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 7

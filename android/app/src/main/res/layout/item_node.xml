@@ -45,7 +45,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:maxLines="2"
+            android:maxLines="4"
             android:tag="dim"
             android:textColor="@color/veil_muted"
             android:textSize="13sp" />
@@ -53,6 +53,7 @@
 
     <TextView
         android:id="@+id/nodePing"
+        android:maxWidth="120dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="11dp"

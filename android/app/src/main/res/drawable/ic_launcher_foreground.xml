@@ -1,27 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Иконка приложения: лента-«M», та же форма, что в панели, окне и на экране
-    ключа. Ноги — акцентом, средняя складка притенена: лента с объёмом.
-    Группа вписывает сетку 64 в безопасную зону адаптивной иконки.
--->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <group
-        android:scaleX="0.9375"
-        android:scaleY="0.9375"
-        android:translateX="24"
-        android:translateY="24">
-        <path
-            android:fillColor="#FF46E07A"
-            android:pathData="M6,14 L20,10 L20,52 L6,52 Z" />
-        <path
-            android:fillColor="#FF46E07A"
-            android:pathData="M44,10 L58,14 L58,52 L44,52 Z" />
-        <path
-            android:fillColor="#FF2E9A57"
-            android:pathData="M18,10 L32,32 L46,10 L46,22 L32,44 L18,22 Z" />
-    </group>
-</vector>
+<!-- Исходный серый знак. Цвет появляется внутри приложения по выбору человека. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="48dp" android:height="34dp" android:gravity="center">
+        <bitmap android:src="@drawable/marvia_mark" android:gravity="fill" android:filter="true" />
+    </item>
+</layer-list>

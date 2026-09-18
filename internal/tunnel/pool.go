@@ -8,6 +8,7 @@ import (
 	mrand "math/rand/v2"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/yamux"
@@ -103,6 +104,52 @@ type Pool struct {
 	// время последнего, чтобы выдержать разбег.
 	dialMu   sync.Mutex
 	lastDial time.Time
+	pingBusy atomic.Bool
+}
+
+// Ping меряет запрос-ответ внутри уже установленного туннеля, включая очередь
+// записи. Хендшейк сюда не входит. Отмена замера не рвёт рабочие потоки:
+// yamux завершит запрос по своему тайм-ауту; до этого второй не запускаем.
+func (p *Pool) Ping(ctx context.Context) (time.Duration, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if !p.pingBusy.CompareAndSwap(false, true) {
+		return 0, errors.New("замер уже идёт")
+	}
+	p.mu.Lock()
+	var session *yamux.Session
+	for _, s := range p.sessions {
+		if !s.sess.IsClosed() {
+			session = s.sess
+			break
+		}
+	}
+	p.mu.Unlock()
+	if session == nil {
+		p.pingBusy.Store(false)
+		return 0, errors.New("нет установленного туннеля")
+	}
+	type result struct {
+		rtt time.Duration
+		err error
+	}
+	done := make(chan result, 1)
+	go func() {
+		defer p.pingBusy.Store(false)
+		start := time.Now()
+		_, err := session.Ping()
+		done <- result{time.Since(start), err}
+	}()
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	case r := <-done:
+		if r.err != nil {
+			return 0, r.err
+		}
+		return max(time.Nanosecond, r.rtt), nil
+	}
 }
 
 // NewPool создаёт пул. Нулевые значения лимитов заменяются на умолчания.

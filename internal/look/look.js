@@ -166,6 +166,7 @@ const Look = (() => {
   }
 
   const isHex = (v) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+  const owns = (table, key) => typeof key === "string" && Object.prototype.hasOwnProperty.call(table, key);
 
   // normalize приводит любой выбор к полному и допустимому: чужое поле —
   // из вида по умолчанию, поле по полю, чтобы одна битая плотность не
@@ -173,16 +174,16 @@ const Look = (() => {
   function normalize(st) {
     const v = st || {};
     const out = Object.assign({}, DEFAULT);
-    if (PRESETS[v.preset]) out.preset = v.preset;
+    if (owns(PRESETS, v.preset)) out.preset = v.preset;
     if (isHex(v.acc)) out.acc = v.acc.toLowerCase();
     if (KINDS.indexOf(v.kind) >= 0) out.kind = v.kind;
-    if (DIRS[v.dir]) out.dir = v.dir;
+    if (owns(DIRS, v.dir)) out.dir = v.dir;
     if (typeof v.depth === "number" && v.depth >= 0.08 && v.depth <= 0.98) out.depth = Math.round(v.depth * 100) / 100;
     if (isHex(v.tint)) out.tint = v.tint.toLowerCase();
-    if (RADII[v.radius] != null) out.radius = v.radius;
-    if (DENSITY[v.density]) out.density = v.density;
+    if (owns(RADII, v.radius)) out.radius = v.radius;
+    if (owns(DENSITY, v.density)) out.density = v.density;
     if (BUTTONS.indexOf(v.btn) >= 0) out.btn = v.btn;
-    if (GLOWS[v.glow] != null) out.glow = v.glow;
+    if (owns(GLOWS, v.glow)) out.glow = v.glow;
     if (CARDS.indexOf(v.card) >= 0) out.card = v.card;
     return out;
   }
@@ -297,7 +298,10 @@ const Look = (() => {
     const preset = find(Object.keys(PRESETS), p[1], 3);
     const kind = find(KINDS, p[3].slice(0, 3), 3);
     const dir = Object.keys(DIRS).find((k) => k.toUpperCase() === p[3].slice(3));
-    const depth = parseInt(p[4], 10) / 100;
+    // parseInt принимал «55junk» и «55.9»: окно сохраняло такой код,
+    // а Android отвергал. Код переносится целиком, без догадок о числе.
+    if (!/^\d{1,2}$/.test(p[4])) return null;
+    const depth = Number(p[4]) / 100;
     const radius = find(Object.keys(RADII), p[5].slice(0, 2), 2);
     const density = find(Object.keys(DENSITY), p[5].slice(2), 2);
     const btn = find(BUTTONS, p[6].slice(0, 2), 2);

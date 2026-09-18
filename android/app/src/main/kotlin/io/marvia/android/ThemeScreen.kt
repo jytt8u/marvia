@@ -49,8 +49,11 @@ class ThemeScreen(
 
     /** Слот профиля, в который пишет «сохранить сюда». */
     private var slot = 0
+    private var allLooks = false
 
     init {
+        ui.themeExpand.setOnClickListener { allLooks = !allLooks; paint(Look.theme(store.look)) }
+        ui.themeAdvanced.setOnClickListener { ui.advancedControls.isVisible = !ui.advancedControls.isVisible }
         ui.themeReset.setOnClickListener { choose(Look.Choice()) }
         ui.profileSave.setOnClickListener {
             val list = store.profiles.toMutableList()
@@ -135,6 +138,9 @@ class ThemeScreen(
     /** paint перерисовывает выбор под текущую тему. Зовётся при каждой смене. */
     fun paint(t: Theme) {
         val choice = store.look
+        ui.previewPower.theme = t
+
+        ui.themeExpand.setText(if(allLooks) R.string.theme_fewer else R.string.theme_show_all)
         paintLooks(t, choice)
         paintSwatches(ui.accentRows, t, LookTable.accents, choice.accent) { choose(choice.copy(accent = it)) }
         paintLight(t, choice)
@@ -165,7 +171,9 @@ class ThemeScreen(
         val grid = ui.looksGrid
         grid.removeAllViews()
 
-        for (row in LookTable.looks.chunked(COLUMNS)) {
+        val preferred = setOf("steel", "emerald", "ice", "plum", "sand", "paper")
+        val visible = if (allLooks) LookTable.looks else LookTable.looks.filter { it.preset in preferred }.distinctBy { it.preset }
+        for (row in visible.chunked(COLUMNS)) {
             val line = LinearLayout(host).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = (8 * dp).toInt() }
@@ -197,11 +205,11 @@ class ThemeScreen(
             isClickable = true
             isFocusable = true
             // Вид задаёт всё разом; акцент и оттенок сбрасываются: у каждого свой.
-            setOnClickListener { choose(Look.ofLook(lk)) }
+            setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); choose(Look.ofLook(lk)) }
         }
 
         val canvas = LookCanvas(host, preview, maxOf(t.r - 3, 5) * dp)
-        wrap.addView(canvas, LinearLayout.LayoutParams(MATCH, (82 * dp).toInt()))
+        wrap.addView(canvas, LinearLayout.LayoutParams(MATCH, (64 * dp).toInt()))
 
         val label = TextView(host).apply {
             text = lookName(lk)

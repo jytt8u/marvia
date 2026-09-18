@@ -20,6 +20,7 @@ data class NodeRow(
     val current: Boolean,
     /** Её выбрал человек руками. */
     val chosen: Boolean,
+    val setupMs: Long = 0,
 ) {
 
     /**
@@ -62,6 +63,7 @@ data class NodeRow(
                     alive = o.optBoolean("alive"),
                     current = o.optBoolean("current"),
                     chosen = o.optBoolean("chosen"),
+                    setupMs = o.optLong("setup_ms"),
                 )
             }
         } catch (_: Throwable) {

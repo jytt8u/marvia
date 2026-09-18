@@ -149,12 +149,16 @@ const historyTick = 5 * time.Second
 func (c *Controller) Status() Status {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	pingMS := int64(0)
+	if c.dialer != nil {
+		pingMS = c.dialer.Measurement().PingMS()
+	}
 
 	return Status{
 		State:      c.state,
 		Node:       c.node.Title(),
 		Address:    c.node.Address,
-		PingMS:     c.ping.Milliseconds(),
+		PingMS:     pingMS,
 		Up:         c.up.Load(),
 		Down:       c.down.Load(),
 		Reason:     c.reason,
@@ -424,6 +428,7 @@ func (c *Controller) Disconnect() {
 func (c *Controller) moved(node client.Node) {
 	c.mu.Lock()
 	c.node = node
+	c.ping = 0
 	if c.state == StateStalled {
 		c.state = StateConnected
 		c.reason = ""
@@ -465,6 +470,7 @@ func (c *Controller) stall(code string) {
 
 // NodeView — одна нода так, как её видит покупатель в окне.
 type NodeView struct {
+	SetupMS int64  `json:"setup_ms"`
 	ID      int64  `json:"id"`
 	Name    string `json:"name"`
 	Country string `json:"country,omitempty"`
@@ -486,7 +492,7 @@ func (c *Controller) Nodes() []NodeView {
 	if dialer == nil {
 		return nil
 	}
-	return nodeViews(dialer, dialer.Nodes(), nil)
+	return nodeViews(dialer, dialer.Nodes(), []client.Measurement{dialer.Measurement()})
 }
 
 // MeasureNodes меряет все ноды заново — по нажатию «Обновить».
@@ -541,8 +547,9 @@ func nodeViews(dialer *client.Supervisor, nodes []client.Node, measured []client
 		}
 		if m, ok := byID[n.ID]; ok {
 			v.Alive = m.OK()
-			if cost := m.Cost(); cost > 0 {
-				v.MS = cost.Milliseconds()
+			v.MS = m.PingMS()
+			if m.OK() {
+				v.SetupMS = max(1, m.Latency.Milliseconds())
 			}
 		} else if n.ID == current {
 			// Текущую не мерили, но знаем точно: через неё идёт трафик.
@@ -627,7 +634,7 @@ func (c *countingConn) Write(b []byte) (int, error) {
 func latencyOf(measurements []client.Measurement, node client.Node) time.Duration {
 	for _, m := range measurements {
 		if m.Node.ID == node.ID && m.OK() {
-			return m.Latency
+			return time.Duration(m.PingMS()) * time.Millisecond
 		}
 	}
 	return 0

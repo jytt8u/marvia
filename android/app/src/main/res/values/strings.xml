@@ -116,8 +116,9 @@
     <string name="servers_failed">Could not move: %1$s</string>
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
-    <string name="node_ping">%1$d ms</string>
-    <string name="node_ping_none">—</string>
+    <string name="node_ping">Response: %1$d ms</string>
+    <string name="node_ping_none">Response not measured</string>
+    <string name="node_setup">Connection: %1$d ms</string>
     <string name="node_ok">works</string>
     <string name="node_down">not available right now</string>
     <string name="node_unmeasured">not measured yet</string>
@@ -367,4 +368,26 @@
         <item quantity="one">%1$d line</item>
         <item quantity="other">%1$d lines</item>
     </plurals>
+
+    <string name="connect_space">Your space</string>
+    <string name="connect_welcome">Make it yours</string>
+    <string name="connect_start_hint">Add your access key. Choose the colors that feel like you.</string>
+    <string name="connect_ready_hint">Ready when you are.</string>
+    <string name="connect_on_hint">The connection to your server is established.</string>
+    <string name="connect_error_hint">Connection failed. See the details below.</string>
+    <string name="connect_add_key">Add access key</string>
+    <string name="connect_disconnect">Disconnect</string>
+    <string name="connect_retry">Try again</string>
+    <string name="connect_customize">Make it yours</string>
+    <string name="connect_route">Current server</string>
+    <string name="connect_change_server">Choose another server →</string>
+    <string name="stats_today">Today</string>
+    <string name="stats_session">Session</string>
+    <string name="stats_speed">Speed</string>
+    <string name="stats_mbps">%1$s Mbps</string>
+    <string name="connection_warning_details">Some requests failed · View details</string>
+    <string name="theme_show_all">All themes</string>
+    <string name="theme_fewer">Show fewer</string>
+    <string name="theme_preview">Preview</string>
+    <string name="theme_advanced">More appearance settings</string>
 </resources>

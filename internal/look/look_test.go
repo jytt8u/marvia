@@ -1,12 +1,29 @@
 package look
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 )
+
+// Android упаковывает ресурсы отдельно от Go: проверяем, что копия знака
+// не разошлась с исходником панели и окна.
+func TestAndroidUsesTheSharedMark(t *testing.T) {
+	mark, err := files.ReadFile("assets/marvia-mark.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	android, err := os.ReadFile("../../android/app/src/main/res/drawable-nodpi/marvia_mark.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(mark, android) {
+		t.Fatal("знак Android не совпадает с общим знаком Marvia")
+	}
+}
 
 // Маршрут шрифтов читает вшитый файл по имени из адреса.
 //

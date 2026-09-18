@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Одно приложение в списке раздела «Приложения»: буква вместо иконки,
-    название, имя пакета мелко и переключатель. Иконки не грузим намеренно:
-    три сотни растровых значков — это секунды пролистывания и мегабайты
-    памяти ради того, чтобы человек нашёл банк, который и так узнаёт по имени.
--->
+<!-- Значки загружаются в фоне и хранятся в ограниченном кэше. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -16,13 +11,7 @@
     android:paddingVertical="10dp"
     android:tag="card">
 
-    <TextView
-        android:id="@+id/appInitial"
-        android:layout_width="34dp"
-        android:layout_height="34dp"
-        android:gravity="center"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+    <ImageView android:id="@+id/appIcon" android:layout_width="40dp" android:layout_height="40dp" android:scaleType="fitCenter" android:contentDescription="@null" />
 
     <LinearLayout
         android:layout_width="0dp"
