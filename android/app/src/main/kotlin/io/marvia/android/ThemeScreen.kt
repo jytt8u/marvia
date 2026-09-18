@@ -191,16 +191,25 @@ class ThemeScreen(
         if (index > 0) marginStart = (8 * dp).toInt()
     }
 
+    /**
+     * lookCard — вид одной карточкой: поверхность его цвета, светящаяся
+     * кнопка питания его акцентом, имя. Выбранный обведён акцентом и
+     * отмечен галочкой.
+     *
+     * Не мини-макет с полосками: с ногтя не прочесть ни шапку, ни карточки,
+     * а кнопка питания — то единственное, по чему вид узнают с одного
+     * взгляда. Светлые виды вроде «Бумаги» получают светлую карточку сами:
+     * поверхность берётся из них.
+     */
     private fun lookCard(t: Theme, lk: LookTable.Look, on: Boolean): View {
         val preview = Look.theme(Look.ofLook(lk))
-        val wrap = LinearLayout(host).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = (3 * dp).toInt()
-            setPadding(pad, pad, pad, pad)
+        val wrap = FrameLayout(host).apply {
             background = GradientDrawable().apply {
-                cornerRadius = (t.r + 3) * dp
-                setColor(if (on) t.accSoft else 0)
-                setStroke(((if (on) 2 else 1) * dp).toInt(), if (on) t.acc else t.line)
+                cornerRadius = t.r * dp
+                // Фон вида, а не его поверхность: тёмные виды дают почти чёрную
+                // карточку с едва заметным оттенком, светлые — светлую.
+                setColor(preview.bg)
+                setStroke(((if (on) 2 else 1) * dp).toInt(), if (on) t.acc else preview.line)
             }
             isClickable = true
             isFocusable = true
@@ -208,21 +217,39 @@ class ThemeScreen(
             setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); choose(Look.ofLook(lk)) }
         }
 
-        val canvas = LookCanvas(host, preview, maxOf(t.r - 3, 5) * dp)
-        wrap.addView(canvas, LinearLayout.LayoutParams(MATCH, (64 * dp).toInt()))
+        val column = LinearLayout(host).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, (14 * dp).toInt(), 0, (12 * dp).toInt())
+        }
+        column.addView(LookGlow(host, preview), LinearLayout.LayoutParams((72 * dp).toInt(), (72 * dp).toInt()))
 
         val label = TextView(host).apply {
             text = lookName(lk)
-            textSize = 11f
+            textSize = 12f
             gravity = Gravity.CENTER
             maxLines = 1
-            setTextColor(if (on) t.acc else t.dim)
-            setPadding(0, (5 * dp).toInt(), 0, (2 * dp).toInt())
+            setTextColor(preview.fg)
+            setPadding((4 * dp).toInt(), (6 * dp).toInt(), (4 * dp).toInt(), 0)
         }
-        wrap.addView(label, LinearLayout.LayoutParams(MATCH, WRAP))
+        column.addView(label, LinearLayout.LayoutParams(MATCH, WRAP))
+        wrap.addView(column, FrameLayout.LayoutParams(MATCH, WRAP))
+
+        if (on) {
+            val badge = android.widget.ImageView(host).apply {
+                setImageResource(R.drawable.ic_check)
+                setColorFilter(t.accFg)
+                background = Paint.circle(t.acc)
+                val inset = (4 * dp).toInt()
+                setPadding(inset, inset, inset, inset)
+            }
+            val lp = FrameLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt(), Gravity.TOP or Gravity.END)
+            lp.topMargin = (8 * dp).toInt()
+            lp.marginEnd = (8 * dp).toInt()
+            wrap.addView(badge, lp)
+        }
         return wrap
     }
-
     /**
      * lookName — название вида: по ключу пресета из строк приложения. Пресет
      * встречается в видах дважды (серый мягкий и серый ровный) — второму
@@ -497,58 +524,47 @@ class ThemeScreen(
     }
 
     /**
-     * LookCanvas — мини-макет главного экрана в цветах вида: фон по свету,
-     * шапка, кнопка питания и две карточки. Рисуется, а не собирается из
-     * вьюх: в сетке их двадцать восемь, и по шесть вьюх на каждый — это
-     * полторы сотни вьюх ради картинки размером с ноготь.
+     * LookGlow — кнопка питания в цветах вида: свечение, диск, знак.
+     *
+     * Рисуется, а не собирается из вьюх: в сетке их двадцать восемь, и
+     * настоящая [PowerButton] с текстом и ободом на каждой — лишнее.
      */
-    private class LookCanvas(context: Context, private val t: Theme, private val radius: Float) : View(context) {
+    private class LookGlow(context: Context, private val t: Theme) : View(context) {
         private val brush = CanvasPaint(CanvasPaint.ANTI_ALIAS_FLAG)
         private val box = RectF()
 
-        init {
-            background = Backdrop(t)
-            outlineProvider = object : ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: Outline) {
-                    outline.setRoundRect(0, 0, view.width, view.height, radius)
-                }
-            }
-            clipToOutline = true
-        }
-
         override fun onDraw(canvas: Canvas) {
-            val w = width.toFloat()
-            val h = height.toFloat()
             val dp = resources.displayMetrics.density
+            val cx = width / 2f
+            val cy = height / 2f
+            val r = 20 * dp
 
-            // Шапка — полоска текста, полупрозрачная.
+            // Свечение: сила из вида, но не меньше лёгкого ореола — на карточке
+            // без него диск выглядит наклейкой.
+            val alpha = (maxOf(t.glowA, 0.35) * 140).toInt().coerceIn(0, 255)
             brush.style = CanvasPaint.Style.FILL
-            brush.color = Look.withAlpha(t.fg, 0.5)
-            box.set(w * 0.09f, h * 0.08f, w * 0.63f, h * 0.14f)
-            canvas.drawRoundRect(box, h, h, brush)
+            brush.shader = android.graphics.RadialGradient(
+                cx, cy, r * 1.8f,
+                intArrayOf((alpha shl 24) or (t.acc and 0xFFFFFF), t.acc and 0xFFFFFF),
+                null, android.graphics.Shader.TileMode.CLAMP,
+            )
+            canvas.drawCircle(cx, cy, r * 1.8f, brush)
+            brush.shader = null
 
-            // Кнопка питания: кольцо акцентом, диск — залитый.
-            brush.style = CanvasPaint.Style.STROKE
-            brush.strokeWidth = 3 * dp
             brush.color = t.acc
-            canvas.drawCircle(w / 2, h * 0.36f, 12 * dp, brush)
-            if (t.btn == "solid") {
-                brush.style = CanvasPaint.Style.FILL
-                canvas.drawCircle(w / 2, h * 0.36f, 12 * dp, brush)
-            }
+            canvas.drawCircle(cx, cy, r, brush)
 
-            // Две карточки внизу: поверхность и поверхность потемнее.
-            brush.style = CanvasPaint.Style.FILL
-            val r = t.r * dp * 0.3f
-            brush.color = t.surf
-            box.set(w * 0.09f, h * 0.66f, w * 0.91f, h * 0.79f)
-            canvas.drawRoundRect(box, r, r, brush)
-            brush.color = t.surf2
-            box.set(w * 0.09f, h * 0.84f, w * 0.91f, h * 0.94f)
-            canvas.drawRoundRect(box, r, r, brush)
+            // Знак питания: дуга с разрывом сверху и черта.
+            brush.style = CanvasPaint.Style.STROKE
+            brush.strokeWidth = 2.2f * dp
+            brush.strokeCap = CanvasPaint.Cap.ROUND
+            brush.color = t.accFg
+            val g = 8 * dp
+            box.set(cx - g, cy - g, cx + g, cy + g)
+            canvas.drawArc(box, -50f, 280f, false, brush)
+            canvas.drawLine(cx, cy - g - 1.5f * dp, cx, cy - 2 * dp, brush)
         }
     }
-
     private companion object {
         const val COLUMNS = 3
         const val SWATCHES_PER_ROW = 7

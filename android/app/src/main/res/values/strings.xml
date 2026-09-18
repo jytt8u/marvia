@@ -410,5 +410,8 @@
     <string name="theme_show_all">All themes</string>
     <string name="theme_fewer">Show fewer</string>
     <string name="theme_preview">Preview</string>
+    <!-- Образец строки страны в предпросмотре: узнаваемо, но не про продавца. -->
+    <string name="theme_preview_country">Finland</string>
+    <string name="theme_preview_place">Helsinki · 33 ms</string>
     <string name="theme_advanced">More appearance settings</string>
 </resources>

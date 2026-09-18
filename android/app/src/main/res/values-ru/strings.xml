@@ -382,5 +382,8 @@
     <string name="theme_show_all">Все темы</string>
     <string name="theme_fewer">Свернуть</string>
     <string name="theme_preview">Предпросмотр</string>
+    <!-- Образец строки страны в предпросмотре: узнаваемо, но не про продавца. -->
+    <string name="theme_preview_country">Финляндия</string>
+    <string name="theme_preview_place">Хельсинки · 33 мс</string>
     <string name="theme_advanced">Точная настройка оформления</string>
 </resources>
