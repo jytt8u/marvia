@@ -72,12 +72,22 @@ class ThemePreview @JvmOverloads constructor(
         canvas.translate(screen.left, screen.top)
         canvas.scale(scale, scale)
 
-        // Надпись слева, шестерёнка справа — как в шапке главной.
+        // Знак и надпись слева, шестерёнка справа — как в шапке главной.
+        // Знак — та же покрашенная картинка, что в настоящей шапке: если её
+        // ещё нет в кэше, рисуем без него и перерисуемся, когда придёт.
+        var textLeft = 18 * dp
+        LogoAtlas.peek(context, t.acc) { invalidate() }?.let { mark ->
+            val mh = 10 * dp
+            val mw = mh * mark.width / mark.height
+            brush.alpha = 255
+            canvas.drawBitmap(mark, null, RectF(textLeft, 19.5f * dp, textLeft + mw, 19.5f * dp + mh), brush)
+            textLeft += mw + 5 * dp
+        }
         wordmark?.let {
             DrawableCompat.setTint(it, t.fg)
             val wh = 9 * dp
             val ww = wh * 610f / 136f
-            it.setBounds((18 * dp).toInt(), (20 * dp).toInt(), (18 * dp + ww).toInt(), (20 * dp + wh).toInt())
+            it.setBounds(textLeft.toInt(), (20 * dp).toInt(), (textLeft + ww).toInt(), (20 * dp + wh).toInt())
             it.draw(canvas)
         }
         drawGear(canvas, 200 * dp - 24 * dp, 24 * dp, 6 * dp, t.dim)

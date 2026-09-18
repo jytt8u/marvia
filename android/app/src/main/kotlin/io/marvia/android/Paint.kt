@@ -64,6 +64,11 @@ object Paint {
         if (v.isClickable && v !is android.widget.EditText && v !is MaterialSwitch && v !is PowerButton) {
             v.foreground = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(t.accSoft), null, rounded(android.graphics.Color.WHITE, t.r, v.resources.displayMetrics.density))
         }
+        // Знак красится сам: у него не тон, а светотень, и тегом её не передать.
+        if (v is MarviaLogoView) {
+            v.setTheme(t)
+            return
+        }
         val tag = v.tag as? String ?: return
         val dp = v.resources.displayMetrics.density
 
