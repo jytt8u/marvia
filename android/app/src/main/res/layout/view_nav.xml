@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Нижняя панель из макета. Своя, а не BottomNavigationView: там четыре вкладки
+    Нижняя панель из макета. Своя, а не BottomNavigationView: там пять вкладок
     со своими правилами подсветки и отступов, и подгонять их под макет вышло бы
-    длиннее, чем нарисовать четыре кнопки.
+    длиннее, чем нарисовать пять кнопок.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -49,6 +49,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/nav_connect"
+                android:maxLines="1"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -76,6 +77,35 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/nav_servers"
+                android:maxLines="1"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navStats"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:minHeight="52dp"
+            android:orientation="vertical"
+            android:paddingVertical="8dp">
+
+            <ImageView
+                android:id="@+id/navStatsIcon"
+                android:layout_width="23dp"
+                android:layout_height="23dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_chart" />
+
+            <TextView
+                android:id="@+id/navStatsLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/nav_stats"
+                android:maxLines="1"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -103,6 +133,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/nav_theme"
+                android:maxLines="1"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -130,6 +161,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/nav_more"
+                android:maxLines="1"
                 android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>

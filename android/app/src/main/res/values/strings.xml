@@ -14,9 +14,10 @@
     <string name="app_name">Marvia</string>
 
     <!-- Нижняя панель: три экрана и ничего больше. -->
-    <string name="nav_connect">Connection</string>
+    <string name="nav_connect">Tunnel</string>
     <string name="nav_servers">Countries</string>
     <string name="nav_more">More</string>
+    <string name="nav_stats">Usage</string>
     <string name="nav_theme">Theme</string>
 
     <!--
@@ -69,6 +70,26 @@
 
     <string name="action_connect">Connect</string>
     <string name="action_save">Save the key</string>
+
+    <!-- Экран расхода. Считает сам телефон: панель подённых чисел не знает. -->
+    <string name="stats_title">Usage</string>
+    <string name="stats_total">%1$d days · %2$s through the tunnel</string>
+    <string name="stats_days">Thirty days of traffic</string>
+    <string name="stats_places">Where the traffic goes</string>
+    <string name="stats_week">The week by hours</string>
+    <string name="stats_dial_number">100</string>
+    <string name="stats_dial_note">TICK = 1%</string>
+    <string name="stats_percent">%1$d%%</string>
+    <string name="stats_note">This is what one phone passed through the tunnel. Another device on the same key counts its own.</string>
+    <string-array name="weekdays_short">
+        <item>MON</item>
+        <item>TUE</item>
+        <item>WED</item>
+        <item>THU</item>
+        <item>FRI</item>
+        <item>SAT</item>
+        <item>SUN</item>
+    </string-array>
 
     <!-- Экран ключа. -->
     <string name="key_title">Access key</string>

@@ -289,8 +289,14 @@ class MarviaVpnService : VpnService() {
     private var trafficHistory: TrafficHistory? = null
 
     private fun snapshot(started: Core, node: String, warning: String = ""): TunnelState.On {
+        // Расход снимаем здесь, а не на экране: экран бывает закрыт неделями,
+        // а туннель всё это время работает. Новая сессия — новый отсчёт
+        // длительности и скорости; счёт по дням живёт дольше, в Traffic.
         if (MarviaState.state.value !is TunnelState.On) trafficHistory = TrafficHistory(this)
-        MarviaState.traffic.value = trafficHistory!!.sample(started.receivedBytes() + started.sentBytes())
+        MarviaState.traffic.value = trafficHistory!!.sample(
+            started.receivedBytes() + started.sentBytes(),
+            countryOf(node),
+        )
         val rows = NodeRow.parse(started.nodes())
         val current = rows.firstOrNull { it.current }
         val chosen = rows.firstOrNull { it.chosen }
@@ -312,6 +318,14 @@ class MarviaVpnService : VpnService() {
             chosen = chosen?.title.orEmpty(),
         )
     }
+
+    /**
+     * countryOf — страна из имени ноды, которое отдаёт ядро.
+     *
+     * Продавец пишет «Финляндия · Хельсинки»: для доли в расходе нужна
+     * только страна, иначе каждый город станет своей долей.
+     */
+    private fun countryOf(node: String): String = node.substringBefore('·').trim()
 
     /** troubleText подбирает фразу под код беды из ядра. */
     private fun troubleText(code: String): String = when (code) {

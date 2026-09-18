@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jytt8u/marvia/internal/client"
@@ -107,9 +108,8 @@ type Tunnel struct {
 
 	// Не просто дозвон, а надзор над ним: он сам меняет ноду, когда текущая
 	// замолчала, и подменяет её под мостом. Мост об этом не знает.
-	dialer  *client.Supervisor
-	bridge  *tunbridge.Bridge
-	traffic *trafficDialer
+	dialer *client.Supervisor
+	bridge *tunbridge.Bridge
 
 	nodeName string
 	running  bool
@@ -127,6 +127,11 @@ type Tunnel struct {
 	// troubleCode — держащаяся беда: нода молчит, и переехать не на что.
 	// Живёт до тех пор, пока надзор не скажет, что связь вернулась.
 	troubleCode string
+
+	// up и down — байты этой сессии. Счёт по дням ведёт приложение: ядро
+	// живёт ровно столько, сколько поднят туннель, и хранить в нём историю
+	// было бы обещанием, которого оно не выполнит.
+	up, down atomic.Int64
 }
 
 // Start поднимает туннель поверх сетевого интерфейса, полученного от системы.
@@ -168,11 +173,10 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 	t.dialer = dialer
 	t.nodeName = dialer.Node().Title()
 
-	t.traffic = &trafficDialer{Dialer: dialer}
 	bridgeOwnsFD = true
 	bridge, err := tunbridge.Start(tunbridge.Config{
 		FD:      tunFD,
-		Dialer:  t.traffic,
+		Dialer:  tunbridge.Metered(dialer, &t.up, &t.down),
 		DNS:     dns,
 		OnError: t.note,
 	})
@@ -532,6 +536,16 @@ func viewsJSON(dialer *client.Supervisor, nodes []client.Node, measured []client
 	}
 	return string(out)
 }
+
+// SentBytes и ReceivedBytes — сколько байт прошло через туннель с его
+// подъёма, со стороны человека: отправил он и получил он.
+//
+// Накопительно и с нуля при каждом подключении: приложение снимает их
+// раз в несколько секунд и кладёт разницу в свой счёт по дням. Меньше
+// прошлого значит, что туннель подняли заново.
+func (t *Tunnel) SentBytes() int64 { return t.up.Load() }
+
+func (t *Tunnel) ReceivedBytes() int64 { return t.down.Load() }
 
 // CheckAccountLink проверяет ссылку, ничего не подключая.
 //

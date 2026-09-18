@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -357,7 +356,7 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 	bridge, err := tunbridge.Start(tunbridge.Config{
 		Endpoint: adapter.Endpoint(),
 		MTU:      c.mtu,
-		Dialer:   &countingDialer{inner: dialer, up: &c.up, down: &c.down},
+		Dialer:   tunbridge.Metered(dialer, &c.up, &c.down),
 		DNS:      c.dns,
 		OnError:  func(err error) { c.log.add("%s", sayf("logConn", err)) },
 	})
@@ -584,50 +583,6 @@ func (c *Controller) finish(state State, reason string) {
 	c.reason = reason
 	c.cancel = nil
 	c.mu.Unlock()
-}
-
-// countingDialer считает байты, прошедшие через туннель.
-//
-// Считаем здесь, а не в мосту: мост общий для телефона и компьютера, а
-// показывать скорость нужно только окну.
-type countingDialer struct {
-	inner    tunbridge.Dialer
-	up, down *atomic.Int64
-}
-
-func (d *countingDialer) DialTarget(ctx context.Context, target vp1.Address) (net.Conn, error) {
-	conn, err := d.inner.DialTarget(ctx, target)
-	if err != nil {
-		return nil, err
-	}
-	return &countingConn{Conn: conn, up: d.up, down: d.down}, nil
-}
-
-func (d *countingDialer) DialDatagrams(ctx context.Context, target vp1.Address) (net.Conn, error) {
-	conn, err := d.inner.DialDatagrams(ctx, target)
-	if err != nil {
-		return nil, err
-	}
-	// Обёртка та же: она считает байты, не заглядывая внутрь, а границы
-	// датаграмм соблюдает нижележащее соединение.
-	return &countingConn{Conn: conn, up: d.up, down: d.down}, nil
-}
-
-type countingConn struct {
-	net.Conn
-	up, down *atomic.Int64
-}
-
-func (c *countingConn) Read(b []byte) (int, error) {
-	n, err := c.Conn.Read(b)
-	c.down.Add(int64(n))
-	return n, err
-}
-
-func (c *countingConn) Write(b []byte) (int, error) {
-	n, err := c.Conn.Write(b)
-	c.up.Add(int64(n))
-	return n, err
 }
 
 // latencyOf достаёт задержку выбранной ноды из замеров.

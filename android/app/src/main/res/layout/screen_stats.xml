@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingTop="@dimen/header_pad"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:letterSpacing="-0.02"
+            android:tag="fg"
+            android:text="@string/stats_title"
+            android:textColor="@color/veil_text"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <!-- Итог за тридцать дней: он же ответ на «сколько я вообще качаю». -->
+        <TextView
+            android:id="@+id/statsTotal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:tag="dim"
+            android:textColor="@color/veil_muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingHorizontal="@dimen/screen_pad">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="10dp"
+            android:paddingBottom="16dp">
+
+            <TextView
+                style="@style/VeilSection"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/stats_days" />
+
+            <io.marvia.android.DaysChart
+                android:id="@+id/daysChart"
+                android:layout_width="match_parent"
+                android:layout_height="128dp"
+                android:layout_marginTop="10dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/daysFrom"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:letterSpacing="0.12"
+                    android:tag="dim"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="9sp" />
+
+                <TextView
+                    android:id="@+id/daysMid"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:letterSpacing="0.12"
+                    android:tag="dim"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="9sp" />
+
+                <TextView
+                    android:id="@+id/daysTo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:letterSpacing="0.12"
+                    android:tag="dim"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="9sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="18dp"
+                android:background="@color/veil_border"
+                android:tag="line" />
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/stats_places" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp">
+
+                <io.marvia.android.SharesDial
+                    android:id="@+id/sharesDial"
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    android:layout_gravity="center_horizontal" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="200dp"
+                    android:layout_gravity="center_horizontal"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/dialNumber"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:tag="fg"
+                        android:text="@string/stats_dial_number"
+                        android:textColor="@color/veil_text"
+                        android:textSize="25sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:letterSpacing="0.2"
+                        android:tag="dim"
+                        android:text="@string/stats_dial_note"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="8sp" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <!-- Страны с долями собираются кодом: их столько, сколько у продавца. -->
+            <LinearLayout
+                android:id="@+id/placeList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="18dp"
+                android:background="@color/veil_border"
+                android:tag="line" />
+
+            <TextView
+                style="@style/VeilSection"
+                android:layout_marginTop="18dp"
+                android:paddingHorizontal="3dp"
+                android:tag="dim"
+                android:text="@string/stats_week" />
+
+            <!-- Семь строк по дню недели собираются кодом. -->
+            <LinearLayout
+                android:id="@+id/weekRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="vertical" />
+
+            <!--
+                Честная подпись: это расход одного телефона через туннель, а не
+                всей подписки. Другое устройство с тем же ключом считает своё.
+            -->
+            <TextView
+                android:id="@+id/statsNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:tag="dim"
+                android:text="@string/stats_note"
+                android:textColor="@color/veil_muted"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

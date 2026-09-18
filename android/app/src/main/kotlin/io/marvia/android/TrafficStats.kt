@@ -6,37 +6,50 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.View
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 data class TrafficSnapshot(val today: Long = 0, val seconds: Long = 0, val bytesPerSecond: Double = 0.0, val hours: List<Long> = List(24){0L})
 
-/** История содержит только объёмы, без адресов и списка приложений. */
+/**
+ * TrafficHistory — снимок для главного экрана: сегодня по часам, длительность
+ * сессии, скорость сейчас.
+ *
+ * Сам ничего не хранит: расход по дням ведёт [Traffic], и сегодняшние 24
+ * часа — одна его строка. Второе хранилище тех же чисел разошлось бы с
+ * первым при первой же смене суток. Здесь остаётся только то, что живёт
+ * ровно сессию: с какого момента считать длительность и прошлый отсчёт
+ * для скорости.
+ */
 class TrafficHistory(context: Context) {
-    private val prefs=context.getSharedPreferences("traffic_history",Context.MODE_PRIVATE)
-    private var date=prefs.getString("day", "").orEmpty()
-    private var hours=prefs.getString("hours", "").orEmpty().split(',').mapNotNull { it.toLongOrNull() }.let { if(it.size==24) it.toMutableList() else MutableList(24){0L} }
-    private var lastBytes=0L
-    private var lastTime=0L
-    private var start=0L
+    private val traffic = Traffic(context)
+    private var lastBytes = 0L
+    private var lastTime = 0L
+    private var start = 0L
+
+    /** saved — что показать до подключения: сегодняшний расход без сессии. */
     fun saved(): TrafficSnapshot {
-        val today=SimpleDateFormat("yyyy-MM-dd",Locale.US).format(Date())
-        return if(date==today) TrafficSnapshot(today=hours.sum(),hours=hours.toList()) else TrafficSnapshot()
+        val hours = traffic.today()
+        return TrafficSnapshot(today = hours.sum(), hours = hours)
     }
-    fun sample(bytes: Long, now: Long = android.os.SystemClock.elapsedRealtime()): TrafficSnapshot {
-        val wall=Date(); val day=SimpleDateFormat("yyyy-MM-dd",Locale.US).format(wall)
-        if(day!=date){date=day;hours=MutableList(24){0L}}
-        val hour=SimpleDateFormat("H",Locale.US).format(wall).toInt()
-        if(start==0L) start=now
-        val delta=(bytes-lastBytes).coerceAtLeast(0)
-        val rate=if(lastTime==0L||now<=lastTime) 0.0 else delta*1000.0/(now-lastTime)
-        hours[hour]+=delta;lastBytes=bytes;lastTime=now
-        prefs.edit().putString("day",date).putString("hours",hours.joinToString(",")).apply()
-        return TrafficSnapshot(hours.sum(),(now-start)/1000,rate,hours.toList())
+
+    /**
+     * sample принимает накопительный счётчик ядра.
+     *
+     * Скорость — по разнице с прошлым снятием, на монотонных часах: время
+     * телефона может прыгнуть, и скорость стала бы отрицательной или
+     * бесконечной.
+     */
+    fun sample(bytes: Long, place: String, now: Long = android.os.SystemClock.elapsedRealtime()): TrafficSnapshot {
+        traffic.note(bytes, place)
+        if (start == 0L) start = now
+        val delta = (bytes - lastBytes).coerceAtLeast(0)
+        val rate = if (lastTime == 0L || now <= lastTime) 0.0 else delta * 1000.0 / (now - lastTime)
+        lastBytes = bytes
+        lastTime = now
+        val hours = traffic.today()
+        return TrafficSnapshot(hours.sum(), (now - start) / 1000, rate, hours)
     }
 }
-
 /** Три блока исходного макета: день, длительность сессии, текущая скорость. */
 class TrafficPanel @JvmOverloads constructor(context: Context, attrs: AttributeSet?=null): View(context,attrs) {
     var theme: Theme=Look.theme(Look.Choice())

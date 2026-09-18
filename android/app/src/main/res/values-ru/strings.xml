@@ -3,9 +3,10 @@
     <string name="app_name">Marvia</string>
 
     <!-- Нижняя панель: три экрана и ничего больше. -->
-    <string name="nav_connect">Подключение</string>
+    <string name="nav_connect">Туннель</string>
     <string name="nav_servers">Страны</string>
     <string name="nav_more">Ещё</string>
+    <string name="nav_stats">Расход</string>
     <string name="nav_theme">Тема</string>
     <string name="settings_language">Язык</string>
 
@@ -46,6 +47,26 @@
 
     <string name="action_connect">Подключиться</string>
     <string name="action_save">Сохранить ключ</string>
+
+    <!-- Экран расхода. Считает сам телефон: панель подённых чисел не знает. -->
+    <string name="stats_title">Расход</string>
+    <string name="stats_total">%1$d дней · %2$s через туннель</string>
+    <string name="stats_days">Тридцать дней трафика</string>
+    <string name="stats_places">Откуда идёт трафик</string>
+    <string name="stats_week">Неделя по часам</string>
+    <string name="stats_dial_number">100</string>
+    <string name="stats_dial_note">РИСКА = 1%</string>
+    <string name="stats_percent">%1$d%%</string>
+    <string name="stats_note">Это расход одного телефона через туннель. Другое устройство с тем же ключом считает свой.</string>
+    <string-array name="weekdays_short">
+        <item>ПН</item>
+        <item>ВТ</item>
+        <item>СР</item>
+        <item>ЧТ</item>
+        <item>ПТ</item>
+        <item>СБ</item>
+        <item>ВС</item>
+    </string-array>
 
     <!-- Экран ключа. -->
     <string name="key_title">Ключ доступа</string>
