@@ -104,7 +104,7 @@ class ThemePreview @JvmOverloads constructor(
 
         val cx = vw / 2 * dp
         val cy = 116 * dp
-        power.phase = PowerButton.Phase.ON
+        power.snap(PowerButton.Phase.ON)
         val size = (2 * (40 + 22 + 18) * dp).toInt()
         power.layout(0, 0, size, size)
         canvas.save()

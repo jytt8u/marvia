@@ -299,6 +299,7 @@ class MainActivity : AppCompatActivity() {
     // -------------------------------------------------------------- экраны
 
     private fun show(next: Screen) {
+        val was = screen
         screen = next
 
         ui.keyScreen.root.isVisible = next == Screen.KEY
@@ -327,6 +328,18 @@ class MainActivity : AppCompatActivity() {
         // Панель то появляется, то нет — а отступ под системной навигацией
         // должен остаться в обоих случаях.
         ViewCompat.requestApplyInsets(ui.root)
+
+        if (was != next) Motion.rise(screenView(next))
+    }
+
+    private fun screenView(s: Screen): View = when (s) {
+        Screen.KEY -> ui.keyScreen.root
+        Screen.CONNECT -> ui.connectScreen.root
+        Screen.SERVERS -> ui.serversScreen.root
+        Screen.STATS -> ui.statsScreen.root
+        Screen.MORE -> ui.moreScreen.root
+        Screen.THEME -> ui.themeScreen.root
+        Screen.LANGUAGE -> ui.languageScreen.root
     }
 
     private fun wireNav() {
@@ -484,6 +497,7 @@ class MainActivity : AppCompatActivity() {
         val c = ui.connectScreen
         val dp = resources.displayMetrics.density
         c.halo.theme = theme
+        c.halo.alive = MarviaState.state.value is TunnelState.On
         c.trafficPanel.theme = theme
         c.powerAction.theme = theme.copy(acc = color)
 

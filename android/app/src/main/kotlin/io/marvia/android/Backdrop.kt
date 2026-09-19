@@ -27,7 +27,8 @@ import kotlin.math.sin
  */
 class Backdrop(private val t: Theme) : Drawable() {
 
-    private val brush = Paint(Paint.ANTI_ALIAS_FLAG)
+    // Дизеринг: тёмный градиент на 8-битном экране полосит, шум это прячет.
+    private val brush = Paint(Paint.ANTI_ALIAS_FLAG or Paint.DITHER_FLAG)
     private var w = 0f
     private var h = 0f
 
