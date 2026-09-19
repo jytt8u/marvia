@@ -144,7 +144,7 @@
     <string name="servers_failed">Не получилось перейти: %1$s</string>
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
-    <string name="node_ping">Отклик: %1$d мс</string>
+    <string name="node_ping">%1$d мс</string>
     <string name="node_ping_none">Отклик не измерен</string>
     <string name="node_setup">Подключение: %1$d мс</string>
     <string name="node_ok">работает</string>
@@ -197,8 +197,31 @@
     <string name="theme_title">Тема</string>
     <string name="theme_hint">Всё применяется сразу</string>
     <string name="theme_looks">Готовые виды</string>
-    <string name="theme_looks_hint">весь экран одним нажатием</string>
     <string name="theme_accent">Акцент</string>
+    <string name="theme_accent_hint">кнопка, отметки, переключатели</string>
+    <string name="theme_look_custom">свой</string>
+    <string name="theme_tint_as_accent">как акцент</string>
+    <string name="theme_tint_own">свой</string>
+    <string name="theme_depth_light">Светло</string>
+    <string name="theme_depth_dark">Чёрно</string>
+    <!-- Разделы ручек темы. -->
+    <string name="theme_tab_color">Цвет</string>
+    <string name="theme_tab_light">Свет</string>
+    <string name="theme_tab_bg">Фон</string>
+    <string name="theme_tab_shape">Форма</string>
+    <string name="theme_tab_more">Ещё</string>
+    <!-- Какой экран показывает телефон-предпросмотр. -->
+    <string name="theme_pv_main">Главная</string>
+    <string name="theme_pv_settings">Настройки</string>
+    <string name="theme_pv_servers">Серверы</string>
+    <!-- Образцы строк внутри предпросмотра: узнаваемо, но не про продавца. -->
+    <string name="theme_pv_apps_note">мимо туннеля: 3</string>
+    <string name="theme_pv_lan_note">принтер, телевизор, роутер</string>
+    <string name="theme_pv_servers_note">1 подписка · 6 серверов</string>
+    <string name="theme_pv_auto_note">быстрее всего — Финляндия</string>
+    <string name="theme_pv_provider">Доступ от Алексея</string>
+    <string name="theme_pv_provider_note">6 серверов · осталось 24 дн.</string>
+    <string name="theme_pv_node_current">Хельсинки · трафик идёт сейчас</string>
     <string name="theme_density">Плотность</string>
     <string name="theme_note">Оформление сохраняется на этом устройстве.</string>
     <string name="theme_reset">Вернуть серый</string>
@@ -405,11 +428,8 @@
     <string name="stats_speed">Скорость</string>
     <string name="stats_mbps">%1$s Мбит/с</string>
     <string name="connection_warning_details">Некоторые запросы не прошли · Подробнее</string>
-    <string name="theme_show_all">Все темы</string>
-    <string name="theme_fewer">Свернуть</string>
     <string name="theme_preview">Предпросмотр</string>
     <!-- Образец строки страны в предпросмотре: узнаваемо, но не про продавца. -->
     <string name="theme_preview_country">Финляндия</string>
     <string name="theme_preview_place">Хельсинки · 33 мс</string>
-    <string name="theme_advanced">Точная настройка оформления</string>
 </resources>

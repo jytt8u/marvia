@@ -49,11 +49,19 @@ class ThemeScreen(
 
     /** Слот профиля, в который пишет «сохранить сюда». */
     private var slot = 0
-    private var allLooks = false
+
+    /** Разделы ручек: цвет, свет, фон, форма, ещё. Открыт один. */
+    private enum class Tab(val icon: Int, val title: Int, val section: (ScreenThemeBinding) -> View) {
+        COLOR(R.drawable.ic_tab_color, R.string.theme_tab_color, { it.sectionColor }),
+        LIGHT(R.drawable.ic_tab_light, R.string.theme_tab_light, { it.sectionLight }),
+        BG(R.drawable.ic_tab_bg, R.string.theme_tab_bg, { it.sectionBg }),
+        SHAPE(R.drawable.ic_tab_shape, R.string.theme_tab_shape, { it.sectionShape }),
+        MORE(R.drawable.ic_tab_more, R.string.theme_tab_more, { it.sectionMore }),
+    }
+
+    private var tab = Tab.COLOR
 
     init {
-        ui.themeExpand.setOnClickListener { allLooks = !allLooks; paint(Look.theme(store.look)) }
-        ui.themeAdvanced.setOnClickListener { ui.advancedControls.isVisible = !ui.advancedControls.isVisible }
         ui.themeReset.setOnClickListener { choose(Look.Choice()) }
         ui.profileSave.setOnClickListener {
             val list = store.profiles.toMutableList()
@@ -139,9 +147,12 @@ class ThemeScreen(
     fun paint(t: Theme) {
         val choice = store.look
         ui.previewPower.theme = t
+        paintPicker(t)
+        paintTabs(t)
 
-        ui.themeExpand.setText(if(allLooks) R.string.theme_fewer else R.string.theme_show_all)
         paintLooks(t, choice)
+        ui.lookName.text = LookTable.looks.firstOrNull { Look.same(choice, it) }?.let { lookName(it) } ?: host.getString(R.string.theme_look_custom)
+        ui.tintName.text = if (choice.tint == 0) host.getString(R.string.theme_tint_as_accent) else host.getString(R.string.theme_tint_own)
         paintSwatches(ui.accentRows, t, LookTable.accents, choice.accent) { choose(choice.copy(accent = it)) }
         paintLight(t, choice)
         paintPills(ui.radiusRow, t, LookTable.radii.map { it.key }, choice.radius, ::radiusName) { choose(choice.copy(radius = it)) }
@@ -167,88 +178,121 @@ class ThemeScreen(
 
     // ---------------------------------------------------------------- виды
 
-    private fun paintLooks(t: Theme, choice: Look.Choice) {
-        val grid = ui.looksGrid
-        grid.removeAllViews()
-
-        val preferred = setOf("steel", "emerald", "ice", "plum", "sand", "paper")
-        val visible = if (allLooks) LookTable.looks else LookTable.looks.filter { it.preset in preferred }.distinctBy { it.preset }
-        for (row in visible.chunked(COLUMNS)) {
-            val line = LinearLayout(host).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = (8 * dp).toInt() }
+    /**
+     * paintTabs — пять круглых значков с подписью; открытый залит акцентом.
+     * Раздел под ними один: двадцать ручек одной простынёй никто не читает.
+     */
+    private fun paintTabs(t: Theme) {
+        ui.tabRow.removeAllViews()
+        for (item in Tab.values()) {
+            val on = item == tab
+            item.section(ui).isVisible = on
+            val column = LinearLayout(host).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { tab = item; paint(t) }
             }
-            for ((i, lk) in row.withIndex()) {
-                line.addView(lookCard(t, lk, Look.same(choice, lk)), cell(i))
+            val ring = android.widget.ImageView(host).apply {
+                setImageResource(item.icon)
+                setColorFilter(if (on) t.accFg else t.fg)
+                scaleType = android.widget.ImageView.ScaleType.CENTER
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(if (on) t.acc else 0)
+                    setStroke((1 * dp).toInt(), if (on) t.acc else t.line)
+                }
             }
-            // Неполный ряд добивается пустыми ячейками, чтобы карточки не растянулись.
-            repeat(COLUMNS - row.size) { i -> line.addView(View(host), cell(row.size + i)) }
-            grid.addView(line)
+            column.addView(ring, LinearLayout.LayoutParams((52 * dp).toInt(), (52 * dp).toInt()))
+            val label = TextView(host).apply {
+                setText(item.title)
+                textSize = 12f
+                gravity = Gravity.CENTER
+                typeface = if (on) Fonts.textBold(host) else Fonts.text(host)
+                setTextColor(if (on) t.fg else t.dim)
+                setPadding(0, (8 * dp).toInt(), 0, 0)
+            }
+            column.addView(label, LinearLayout.LayoutParams(WRAP, WRAP))
+            ui.tabRow.addView(column, LinearLayout.LayoutParams(0, WRAP, 1f))
         }
     }
 
-    private fun cell(index: Int) = LinearLayout.LayoutParams(0, WRAP, 1f).apply {
-        if (index > 0) marginStart = (8 * dp).toInt()
+    /** paintPicker — какой экран показывает телефон: главная, настройки, серверы. */
+    private fun paintPicker(t: Theme) {
+        ui.previewPicker.removeAllViews()
+        for (screen in ThemePreview.Screen.values()) {
+            val on = ui.previewPower.screen == screen
+            val row = TextView(host).apply {
+                setText(screen.title)
+                textSize = 15f
+                typeface = if (on) Fonts.textBold(host) else Fonts.text(host)
+                setTextColor(if (on) t.fg else t.dim)
+                compoundDrawablePadding = (10 * dp).toInt()
+                val dot = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(if (on) t.acc else t.line)
+                    setSize((10 * dp).toInt(), (10 * dp).toInt())
+                    setBounds(0, 0, (10 * dp).toInt(), (10 * dp).toInt())
+                }
+                setCompoundDrawablesRelative(dot, null, null, null)
+                setPadding(0, (10 * dp).toInt(), 0, (10 * dp).toInt())
+                isClickable = true
+                setOnClickListener { ui.previewPower.screen = screen; paintPicker(t) }
+            }
+            ui.previewPicker.addView(row, LinearLayout.LayoutParams(MATCH, WRAP))
+        }
+    }
+
+    /** paintLooks — лента готовых видов, все сразу, листается вбок. */
+    private fun paintLooks(t: Theme, choice: Look.Choice) {
+        val strip = ui.looksStrip
+        strip.removeAllViews()
+        for ((i, lk) in LookTable.looks.withIndex()) {
+            val lp = LinearLayout.LayoutParams((112 * dp).toInt(), WRAP)
+            if (i > 0) lp.marginStart = (10 * dp).toInt()
+            strip.addView(lookCard(t, lk, Look.same(choice, lk)), lp)
+        }
     }
 
     /**
-     * lookCard — вид одной карточкой: поверхность его цвета, светящаяся
-     * кнопка питания его акцентом, имя. Выбранный обведён акцентом и
-     * отмечен галочкой.
+     * lookCard — вид одной карточкой: его фон, светящийся круг его акцентом,
+     * имя. Выбранный обведён цветом текста — обводка акцентом слилась бы с
+     * кругом того же цвета.
      *
      * Не мини-макет с полосками: с ногтя не прочесть ни шапку, ни карточки,
-     * а кнопка питания — то единственное, по чему вид узнают с одного
-     * взгляда. Светлые виды вроде «Бумаги» получают светлую карточку сами:
-     * поверхность берётся из них.
+     * а круг акцента на фоне вида — то единственное, по чему вид узнают с
+     * одного взгляда.
      */
     private fun lookCard(t: Theme, lk: LookTable.Look, on: Boolean): View {
         val preview = Look.theme(Look.ofLook(lk))
-        val wrap = FrameLayout(host).apply {
-            background = GradientDrawable().apply {
-                cornerRadius = t.r * dp
-                // Фон вида, а не его поверхность: тёмные виды дают почти чёрную
-                // карточку с едва заметным оттенком, светлые — светлую.
-                setColor(preview.bg)
-                setStroke(((if (on) 2 else 1) * dp).toInt(), if (on) t.acc else preview.line)
-            }
+        val column = LinearLayout(host).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
             isClickable = true
             isFocusable = true
             // Вид задаёт всё разом; акцент и оттенок сбрасываются: у каждого свой.
             setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); choose(Look.ofLook(lk)) }
         }
-
-        val column = LinearLayout(host).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(0, (14 * dp).toInt(), 0, (12 * dp).toInt())
+        val canvas = LookGlow(host, preview).apply {
+            background = GradientDrawable().apply {
+                cornerRadius = 22 * dp
+                setColor(preview.bg)
+                setStroke(((if (on) 2 else 1) * dp).toInt(), if (on) t.fg else preview.line)
+            }
         }
-        column.addView(LookGlow(host, preview), LinearLayout.LayoutParams((72 * dp).toInt(), (72 * dp).toInt()))
-
+        column.addView(canvas, LinearLayout.LayoutParams(MATCH, (112 * dp).toInt()))
         val label = TextView(host).apply {
             text = lookName(lk)
             textSize = 12f
             gravity = Gravity.CENTER
             maxLines = 1
-            setTextColor(preview.fg)
-            setPadding((4 * dp).toInt(), (6 * dp).toInt(), (4 * dp).toInt(), 0)
+            typeface = if (on) Fonts.textBold(host) else Fonts.text(host)
+            setTextColor(if (on) t.fg else t.dim)
+            setPadding(0, (8 * dp).toInt(), 0, (2 * dp).toInt())
         }
         column.addView(label, LinearLayout.LayoutParams(MATCH, WRAP))
-        wrap.addView(column, FrameLayout.LayoutParams(MATCH, WRAP))
-
-        if (on) {
-            val badge = android.widget.ImageView(host).apply {
-                setImageResource(R.drawable.ic_check)
-                setColorFilter(t.accFg)
-                background = Paint.circle(t.acc)
-                val inset = (4 * dp).toInt()
-                setPadding(inset, inset, inset, inset)
-            }
-            val lp = FrameLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt(), Gravity.TOP or Gravity.END)
-            lp.topMargin = (8 * dp).toInt()
-            lp.marginEnd = (8 * dp).toInt()
-            wrap.addView(badge, lp)
-        }
-        return wrap
+        return column
     }
     /**
      * lookName — название вида: по ключу пресета из строк приложения. Пресет
@@ -304,8 +348,9 @@ class ThemeScreen(
             for ((i, color) in row.withIndex()) {
                 val on = color == current
                 val swatch = View(host).apply {
+                    // Круги, как в макете; выбранный обведён цветом текста.
                     background = GradientDrawable().apply {
-                        cornerRadius = 10 * dp
+                        shape = GradientDrawable.OVAL
                         if (color == 0) {
                             orientation = GradientDrawable.Orientation.TL_BR
                             setColors(intArrayOf(t.acc, Look.mix(t.acc, 0xFF000000.toInt(), 0.6)))
@@ -318,7 +363,7 @@ class ThemeScreen(
                     isFocusable = true
                     setOnClickListener { onPick(color) }
                 }
-                val size = (32 * dp).toInt()
+                val size = (44 * dp).toInt()
                 line.addView(swatch, LinearLayout.LayoutParams(size, size).apply {
                     if (i > 0) marginStart = (8 * dp).toInt()
                 })
@@ -524,50 +569,35 @@ class ThemeScreen(
     }
 
     /**
-     * LookGlow — кнопка питания в цветах вида: свечение, диск, знак.
+     * LookGlow — светящийся диск акцентом вида на его фоне.
      *
-     * Рисуется, а не собирается из вьюх: в сетке их двадцать восемь, и
-     * настоящая [PowerButton] с текстом и ободом на каждой — лишнее.
+     * Рисуется, а не собирается из вьюх: видов двадцать восемь, и по три
+     * вьюхи на каждый ради кружка — лишнее.
      */
     private class LookGlow(context: Context, private val t: Theme) : View(context) {
         private val brush = CanvasPaint(CanvasPaint.ANTI_ALIAS_FLAG)
-        private val box = RectF()
 
         override fun onDraw(canvas: Canvas) {
             val dp = resources.displayMetrics.density
             val cx = width / 2f
             val cy = height / 2f
-            val r = 20 * dp
-
-            // Свечение: сила из вида, но не меньше лёгкого ореола — на карточке
-            // без него диск выглядит наклейкой.
-            val alpha = (maxOf(t.glowA, 0.35) * 140).toInt().coerceIn(0, 255)
+            val r = 16 * dp
+            val alpha = (maxOf(t.glowA, 0.35) * 150).toInt().coerceIn(0, 255)
             brush.style = CanvasPaint.Style.FILL
             brush.shader = android.graphics.RadialGradient(
-                cx, cy, r * 1.8f,
+                cx, cy, r * 2.4f,
                 intArrayOf((alpha shl 24) or (t.acc and 0xFFFFFF), t.acc and 0xFFFFFF),
                 null, android.graphics.Shader.TileMode.CLAMP,
             )
-            canvas.drawCircle(cx, cy, r * 1.8f, brush)
+            canvas.drawCircle(cx, cy, r * 2.4f, brush)
             brush.shader = null
-
             brush.color = t.acc
             canvas.drawCircle(cx, cy, r, brush)
-
-            // Знак питания: дуга с разрывом сверху и черта.
-            brush.style = CanvasPaint.Style.STROKE
-            brush.strokeWidth = 2.2f * dp
-            brush.strokeCap = CanvasPaint.Cap.ROUND
-            brush.color = t.accFg
-            val g = 8 * dp
-            box.set(cx - g, cy - g, cx + g, cy + g)
-            canvas.drawArc(box, -50f, 280f, false, brush)
-            canvas.drawLine(cx, cy - g - 1.5f * dp, cx, cy - 2 * dp, brush)
         }
     }
     private companion object {
-        const val COLUMNS = 3
-        const val SWATCHES_PER_ROW = 7
+        /** Акценты одной лентой вбок, а не рядами: так в макете. */
+        const val SWATCHES_PER_ROW = 100
         const val MATCH = LinearLayout.LayoutParams.MATCH_PARENT
         const val WRAP = LinearLayout.LayoutParams.WRAP_CONTENT
         val LAMP = listOf("nw", "n", "ne", "w", "c", "e", "sw", "s", "se")

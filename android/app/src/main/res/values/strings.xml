@@ -163,7 +163,7 @@
     <string name="servers_failed">Could not move: %1$s</string>
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
-    <string name="node_ping">Response: %1$d ms</string>
+    <string name="node_ping">%1$d ms</string>
     <string name="node_ping_none">Response not measured</string>
     <string name="node_setup">Connection: %1$d ms</string>
     <string name="node_ok">works</string>
@@ -221,8 +221,31 @@
     <string name="theme_title">Theme</string>
     <string name="theme_hint">Everything applies at once</string>
     <string name="theme_looks">Ready looks</string>
-    <string name="theme_looks_hint">the whole screen in one tap</string>
     <string name="theme_accent">Accent</string>
+    <string name="theme_accent_hint">button, marks, switches</string>
+    <string name="theme_look_custom">custom</string>
+    <string name="theme_tint_as_accent">same as accent</string>
+    <string name="theme_tint_own">custom</string>
+    <string name="theme_depth_light">Light</string>
+    <string name="theme_depth_dark">Black</string>
+    <!-- Разделы ручек темы. -->
+    <string name="theme_tab_color">Colour</string>
+    <string name="theme_tab_light">Light</string>
+    <string name="theme_tab_bg">Backdrop</string>
+    <string name="theme_tab_shape">Shape</string>
+    <string name="theme_tab_more">More</string>
+    <!-- Какой экран показывает телефон-предпросмотр. -->
+    <string name="theme_pv_main">Home</string>
+    <string name="theme_pv_settings">Settings</string>
+    <string name="theme_pv_servers">Servers</string>
+    <!-- Образцы строк внутри предпросмотра: узнаваемо, но не про продавца. -->
+    <string name="theme_pv_apps_note">outside the tunnel: 3</string>
+    <string name="theme_pv_lan_note">printer, TV, router</string>
+    <string name="theme_pv_servers_note">1 subscription · 6 servers</string>
+    <string name="theme_pv_auto_note">fastest — Finland</string>
+    <string name="theme_pv_provider">Access from Alexey</string>
+    <string name="theme_pv_provider_note">6 servers · 24 days left</string>
+    <string name="theme_pv_node_current">Helsinki · traffic goes here now</string>
     <string name="theme_density">Density</string>
     <string name="theme_note">The theme is kept on this phone and sent nowhere. The seller panel and the desktop app use the same colour table.</string>
     <string name="theme_reset">Back to grey</string>
@@ -429,11 +452,8 @@
     <string name="stats_speed">Speed</string>
     <string name="stats_mbps">%1$s Mbps</string>
     <string name="connection_warning_details">Some requests failed · View details</string>
-    <string name="theme_show_all">All themes</string>
-    <string name="theme_fewer">Show fewer</string>
     <string name="theme_preview">Preview</string>
     <!-- Образец строки страны в предпросмотре: узнаваемо, но не про продавца. -->
     <string name="theme_preview_country">Finland</string>
     <string name="theme_preview_place">Helsinki · 33 ms</string>
-    <string name="theme_advanced">More appearance settings</string>
 </resources>

@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Тема: готовые виды, акцент, плотность. Всё применяется сразу — этот же
-    экран и есть предпросмотр, поэтому отдельной картинки «как будет» нет.
+    Тема из макета: предпросмотр телефона с выбором экрана, пять разделов
+    круглыми значками — цвет, свет, фон, форма, ещё — и под ними ручки
+    раздела. Всё применяется сразу: этот же экран и есть предпросмотр.
 
-    Сетки видов и акцентов собираются кодом: их содержимое приходит из
-    таблицы тем, а не из разметки.
+    Ряды видов, акцентов и прочего собираются кодом: их содержимое приходит
+    из таблицы тем, а не из разметки.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -15,43 +16,15 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:minHeight="44dp"
-        android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/screen_pad"
-        android:paddingTop="@dimen/header_pad"
-        android:paddingBottom="10dp">
-
-        <!-- Знак и надпись — те же, что на главной: шапка одна на все экраны. -->
-        <io.marvia.android.MarviaLogoView
-            android:layout_width="28dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="10dp"
-            android:contentDescription="@null" />
-
-        <ImageView
-            android:layout_width="0dp"
-            android:layout_height="14dp"
-            android:layout_weight="1"
-            android:adjustViewBounds="true"
-            android:scaleType="fitStart"
-            android:src="@drawable/ic_wordmark"
-            android:contentDescription="@string/app_name"
-            android:tag="icon:fg"
-            app:tint="@color/veil_text" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="@dimen/screen_pad"
-        android:paddingBottom="8dp">
+        android:paddingTop="@dimen/header_pad"
+        android:paddingBottom="12dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:letterSpacing="-0.02"
+            android:letterSpacing="-0.01"
             android:tag="fg"
             android:text="@string/theme_title"
             android:textColor="@color/veil_text"
@@ -61,7 +34,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="3dp"
             android:tag="dim"
             android:text="@string/theme_hint"
             android:textColor="@color/veil_muted"
@@ -72,7 +45,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:paddingHorizontal="@dimen/screen_pad">
+        android:paddingHorizontal="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -81,388 +54,421 @@
             android:paddingTop="4dp"
             android:paddingBottom="18dp">
 
-            <!--
-                Телефон с главным экраном в выбранной теме. Внутри карточки,
-                чтобы у корпуса был фон, на котором его видно и в светлой теме.
-            -->
-            <FrameLayout
+            <!-- Телефон с одним из трёх экранов в выбранной теме; справа — какой. -->
+            <LinearLayout
                 android:id="@+id/previewCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card"
-                android:tag="card"
-                android:paddingTop="14dp">
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="18dp"
+                android:paddingEnd="14dp"
+                android:paddingVertical="18dp"
+                android:tag="card">
 
                 <io.marvia.android.ThemePreview
                     android:id="@+id/previewPower"
-                    android:layout_width="match_parent"
-                    android:layout_height="168dp"
-                    android:layout_gravity="center_horizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="300dp"
+                    android:layout_weight="1.1"
                     android:clickable="false"
                     android:focusable="false"
                     android:importantForAccessibility="no" />
-            </FrameLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="14dp"
-                android:gravity="center"
-                android:tag="dim"
-                android:text="@string/theme_preview"
-                android:textColor="@color/veil_muted"
-                android:textSize="14sp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:baselineAligned="true"
-                android:orientation="horizontal"
-                android:paddingHorizontal="3dp">
-
-                <TextView
-                    style="@style/VeilSection"
+                <LinearLayout
+                    android:id="@+id/previewPicker"
                     android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:text="@string/theme_looks" />
-
-                <TextView
-                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:tag="dim"
-                    android:text="@string/theme_looks_hint"
-                    android:textColor="@color/veil_muted"
-                    android:textSize="11sp" />
+                    android:layout_marginBottom="18dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingStart="14dp" />
             </LinearLayout>
 
-            <!-- Три колонки мини-макетов: заполняется кодом из таблицы. -->
+            <!-- Разделы: круглый значок и подпись, активный залит. -->
             <LinearLayout
-                android:id="@+id/looksGrid"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="vertical" />
-
-            <TextView
-                android:id="@+id/themeExpand"
+                android:id="@+id/tabRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:background="@drawable/bg_pill"
-                android:foreground="?attr/selectableItemBackground"
-                android:gravity="center"
-                android:minHeight="46dp"
-                android:tag="chip"
-                android:text="@string/theme_show_all"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/themeAdvanced"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_pill"
-                android:foreground="?attr/selectableItemBackground"
-                android:gravity="center"
-                android:minHeight="46dp"
-                android:tag="chip"
-                android:text="@string/theme_advanced"
-                android:textSize="14sp" />
-            <LinearLayout android:id="@+id/advancedControls" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-            <!-- Профили и код темы: то, что уезжает другу и в другие клиенты. -->
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_profiles" />
-
-            <LinearLayout
-                android:id="@+id/profileRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="horizontal" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/profileSave"
-                    style="@style/VeilPill"
-                    android:text="@string/theme_save_here" />
-
-                <TextView
-                    android:id="@+id/themeRandom"
-                    style="@style/VeilPill"
-                    android:layout_marginStart="6dp"
-                    android:text="@string/theme_random" />
-            </LinearLayout>
-
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_code" />
-
-            <TextView
-                android:id="@+id/themeCode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:ellipsize="end"
-                android:fontFamily="@font/jetbrains_mono"
-                android:letterSpacing="0.04"
-                android:maxLines="1"
-                android:paddingHorizontal="14dp"
-                android:paddingVertical="12dp"
-                android:tag="fg"
-                android:textColor="@color/veil_text"
-                android:textSize="12sp" />
-
-            <EditText
-                android:id="@+id/codeInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:fontFamily="@font/jetbrains_mono"
-                android:hint="@string/theme_code_placeholder"
-                android:imeOptions="actionDone"
-                android:importantForAutofill="no"
-                android:inputType="textNoSuggestions|textVisiblePassword"
-                android:maxLines="1"
-                android:paddingHorizontal="14dp"
-                android:paddingVertical="11dp"
-                android:tag="fg"
-                android:textColor="@color/veil_text"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/codeBad"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:paddingHorizontal="3dp"
-                android:tag="fail"
-                android:text="@string/theme_code_bad"
-                android:textSize="12sp"
-                android:visibility="gone" />
-
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_accent" />
-
-            <LinearLayout
-                android:id="@+id/accentRows"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="vertical" />
-
-            <!-- Свет: откуда светит (лампа), характер, густота тени, оттенок. -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingHorizontal="3dp">
+                android:paddingHorizontal="6dp" />
 
-                <TextView
-                    style="@style/VeilSection"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:text="@string/theme_light" />
-
-                <TextView
-                    android:id="@+id/lightNote"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/jetbrains_mono"
-                    android:tag="acc"
-                    android:textColor="@color/veil_accent"
-                    android:textSize="10sp" />
-            </LinearLayout>
-
-            <FrameLayout
-                android:id="@+id/lamp"
+            <!-- ЦВЕТ: готовые виды, акцент, оттенок светлой стороны. -->
+            <LinearLayout
+                android:id="@+id/sectionColor"
                 android:layout_width="match_parent"
-                android:layout_height="140dp"
-                android:layout_marginTop="9dp">
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-                <GridLayout
-                    android:id="@+id/lampZones"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:columnCount="3"
-                    android:rowCount="3" />
-
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="bottom"
-                    android:gravity="center"
-                    android:paddingBottom="6dp"
-                    android:tag="dim"
-                    android:text="@string/theme_lamp_hint"
-                    android:textColor="@color/veil_muted"
-                    android:textSize="11sp" />
-            </FrameLayout>
+                    android:layout_marginTop="22dp"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="4dp">
 
-            <LinearLayout
-                android:id="@+id/kindsRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="horizontal" />
+                    <TextView
+                        style="@style/VeilSection"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/theme_looks" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="3dp">
+                    <TextView
+                        android:id="@+id/lookName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:tag="dim"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
-                <TextView
-                    android:layout_width="0dp"
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:tag="fg"
-                    android:text="@string/theme_depth"
-                    android:textColor="@color/veil_text"
-                    android:textSize="13sp" />
+                    android:layout_marginHorizontal="-16dp"
+                    android:clipToPadding="false"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:scrollbars="none">
 
-                <TextView
-                    android:id="@+id/depthNote"
-                    android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:id="@+id/looksStrip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/jetbrains_mono"
-                    android:tag="dim"
-                    android:textColor="@color/veil_muted"
-                    android:textSize="11sp" />
+                    android:layout_marginTop="14dp"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="4dp">
+
+                    <TextView
+                        style="@style/VeilSection"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/theme_accent" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:tag="dim"
+                        android:text="@string/theme_accent_hint"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="-16dp"
+                    android:clipToPadding="false"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="8dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/accentRows"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </HorizontalScrollView>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="4dp">
+
+                    <TextView
+                        style="@style/VeilSection"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/theme_tint" />
+
+                    <TextView
+                        android:id="@+id/tintName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:tag="dim"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="-16dp"
+                    android:clipToPadding="false"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="8dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/tintRows"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </HorizontalScrollView>
             </LinearLayout>
 
-            <SeekBar
-                android:id="@+id/depthSeek"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:max="90" />
-
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="14dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_tint" />
-
+            <!-- СВЕТ: откуда светит, характер, густота тени. -->
             <LinearLayout
-                android:id="@+id/tintRows"
+                android:id="@+id/sectionLight"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:visibility="gone">
 
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_cards" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="4dp">
 
-            <LinearLayout
-                android:id="@+id/cardRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="horizontal" />
+                    <TextView
+                        style="@style/VeilSection"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/theme_light" />
 
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_radius" />
+                    <TextView
+                        android:id="@+id/lightNote"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:tag="dim"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
-            <LinearLayout
-                android:id="@+id/radiusRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="horizontal" />
+                <FrameLayout
+                    android:id="@+id/lamp"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:layout_marginTop="10dp">
 
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_density" />
+                    <GridLayout
+                        android:id="@+id/lampZones"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:columnCount="3"
+                        android:padding="6dp"
+                        android:rowCount="3" />
 
-            <LinearLayout
-                android:id="@+id/densityRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="horizontal" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom"
+                        android:gravity="center"
+                        android:paddingBottom="8dp"
+                        android:tag="dim"
+                        android:text="@string/theme_lamp_hint"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="11sp" />
+                </FrameLayout>
 
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_button" />
+                <LinearLayout
+                    android:id="@+id/kindsRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal" />
 
-            <LinearLayout
-                android:id="@+id/buttonRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="horizontal" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="4dp">
 
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_glow" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/onest_medium"
+                        android:tag="fg"
+                        android:text="@string/theme_depth"
+                        android:textColor="@color/veil_text"
+                        android:textSize="15sp" />
 
-            <LinearLayout
-                android:id="@+id/glowRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="horizontal" />
+                    <TextView
+                        android:id="@+id/depthNote"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:tag="dim"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
-            <!-- Свой фон: фото за интерфейсом. Файл остаётся в приложении и в
-                 код темы не входит — код передают, а файл с ним не унесёшь. -->
-            <TextView
-                style="@style/VeilSection"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/theme_backdrop" />
+                <SeekBar
+                    android:id="@+id/depthSeek"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:max="90" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:orientation="horizontal">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="2dp">
 
-                <TextView
-                    android:id="@+id/bgPick"
-                    style="@style/VeilPill"
-                    android:layout_weight="2"
-                    android:text="@string/theme_backdrop_pick" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/jetbrains_mono"
+                        android:letterSpacing="0.16"
+                        android:tag="dim"
+                        android:text="@string/theme_depth_light"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="9sp" />
 
-                <TextView
-                    android:id="@+id/bgDrop"
-                    style="@style/VeilPill"
-                    android:layout_marginStart="6dp"
-                    android:text="@string/theme_backdrop_drop"
-                    android:visibility="gone" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/jetbrains_mono"
+                        android:letterSpacing="0.16"
+                        android:tag="dim"
+                        android:text="@string/theme_depth_dark"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="9sp" />
+                </LinearLayout>
             </LinearLayout>
 
+            <!-- ФОН: свой файл за интерфейсом. Остаётся в приложении и в код темы не входит. -->
             <LinearLayout
-                android:id="@+id/bgKnobs"
+                android:id="@+id/sectionBg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="4dp">
+
+                    <TextView
+                        style="@style/VeilSection"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/theme_backdrop" />
+
+                    <TextView
+                        android:id="@+id/bgNote"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:tag="dim"
+                        android:textColor="@color/veil_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/bgPick"
+                        style="@style/VeilPill"
+                        android:layout_weight="2"
+                        android:text="@string/theme_backdrop_pick" />
+
+                    <TextView
+                        android:id="@+id/bgDrop"
+                        style="@style/VeilPill"
+                        android:layout_marginStart="6dp"
+                        android:text="@string/theme_backdrop_drop"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/bgKnobs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        style="@style/VeilSection"
+                        android:layout_marginTop="18dp"
+                        android:paddingHorizontal="4dp"
+                        android:text="@string/theme_backdrop_fit" />
+
+                    <LinearLayout
+                        android:id="@+id/bgFits"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:baselineAligned="true"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="4dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/onest_medium"
+                            android:tag="fg"
+                            android:text="@string/theme_backdrop_dim"
+                            android:textColor="@color/veil_text"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/bgDimNote"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:tag="dim"
+                            android:textColor="@color/veil_muted"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <SeekBar
+                        android:id="@+id/bgDimSeek"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:max="95" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:lineSpacingMultiplier="1.3"
+                    android:paddingHorizontal="4dp"
+                    android:tag="dim"
+                    android:text="@string/theme_backdrop_note"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- ФОРМА: карточки, скругления, плотность, кнопка, свечение. -->
+            <LinearLayout
+                android:id="@+id/sectionShape"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -470,85 +476,183 @@
 
                 <TextView
                     style="@style/VeilSection"
-                    android:layout_marginTop="14dp"
-                    android:paddingHorizontal="3dp"
-                    android:text="@string/theme_backdrop_fit" />
+                    android:layout_marginTop="22dp"
+                    android:paddingHorizontal="4dp"
+                    android:text="@string/theme_cards" />
 
                 <LinearLayout
-                    android:id="@+id/bgFits"
+                    android:id="@+id/cardRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="9dp"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal" />
+
+                <TextView
+                    style="@style/VeilSection"
+                    android:layout_marginTop="18dp"
+                    android:paddingHorizontal="4dp"
+                    android:text="@string/theme_radius" />
+
+                <LinearLayout
+                    android:id="@+id/radiusRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal" />
+
+                <TextView
+                    style="@style/VeilSection"
+                    android:layout_marginTop="18dp"
+                    android:paddingHorizontal="4dp"
+                    android:text="@string/theme_density" />
+
+                <LinearLayout
+                    android:id="@+id/densityRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal" />
+
+                <TextView
+                    style="@style/VeilSection"
+                    android:layout_marginTop="18dp"
+                    android:paddingHorizontal="4dp"
+                    android:text="@string/theme_button" />
+
+                <LinearLayout
+                    android:id="@+id/buttonRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal" />
+
+                <TextView
+                    style="@style/VeilSection"
+                    android:layout_marginTop="18dp"
+                    android:paddingHorizontal="4dp"
+                    android:text="@string/theme_glow" />
+
+                <LinearLayout
+                    android:id="@+id/glowRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal" />
+            </LinearLayout>
+
+            <!-- ЕЩЁ: профили, код темы, случайная, сброс. -->
+            <LinearLayout
+                android:id="@+id/sectionMore"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Профили и код темы: то, что уезжает другу и в другие клиенты. -->
+                <TextView
+                    style="@style/VeilSection"
+                    android:layout_marginTop="22dp"
+                    android:paddingHorizontal="4dp"
+                    android:text="@string/theme_profiles" />
+
+                <LinearLayout
+                    android:id="@+id/profileRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
                     android:orientation="horizontal" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="3dp">
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal">
 
                     <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:tag="fg"
-                        android:text="@string/theme_backdrop_dim"
-                        android:textColor="@color/veil_text"
-                        android:textSize="13sp" />
+                        android:id="@+id/profileSave"
+                        style="@style/VeilPill"
+                        android:text="@string/theme_save_here" />
 
                     <TextView
-                        android:id="@+id/bgDimNote"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/jetbrains_mono"
-                        android:tag="dim"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="11sp" />
+                        android:id="@+id/themeRandom"
+                        style="@style/VeilPill"
+                        android:layout_marginStart="6dp"
+                        android:text="@string/theme_random" />
                 </LinearLayout>
 
-                <SeekBar
-                    android:id="@+id/bgDimSeek"
+                <TextView
+                    style="@style/VeilSection"
+                    android:layout_marginTop="18dp"
+                    android:paddingHorizontal="4dp"
+                    android:text="@string/theme_code" />
+
+                <TextView
+                    android:id="@+id/themeCode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:max="95" />
-            </LinearLayout>
+                    android:layout_marginTop="10dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/jetbrains_mono"
+                    android:letterSpacing="0.04"
+                    android:maxLines="1"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="12dp"
+                    android:tag="fg"
+                    android:textColor="@color/veil_text"
+                    android:textSize="12sp" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:paddingHorizontal="3dp"
-                android:tag="dim"
-                android:text="@string/theme_backdrop_note"
-                android:textColor="@color/veil_muted"
-                android:textSize="12.5sp" />
+                <EditText
+                    android:id="@+id/codeInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="@font/jetbrains_mono"
+                    android:hint="@string/theme_code_placeholder"
+                    android:imeOptions="actionDone"
+                    android:importantForAutofill="no"
+                    android:inputType="textNoSuggestions|textVisiblePassword"
+                    android:maxLines="1"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="11dp"
+                    android:tag="fg"
+                    android:textColor="@color/veil_text"
+                    android:textSize="12sp" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:paddingHorizontal="3dp"
-                android:tag="dim"
-                android:text="@string/theme_note"
-            android:textColor="@color/veil_muted"
-                android:textSize="12.5sp" />
+                <TextView
+                    android:id="@+id/codeBad"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:paddingHorizontal="4dp"
+                    android:tag="fail"
+                    android:text="@string/theme_code_bad"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/themeReset"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_pill"
-                android:foreground="?attr/selectableItemBackground"
-                android:paddingHorizontal="14dp"
-                android:paddingVertical="8dp"
-                android:tag="chip"
-                android:text="@string/theme_reset"
-            android:textColor="@color/veil_muted"
-                android:textSize="13sp" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:lineSpacingMultiplier="1.3"
+                    android:paddingHorizontal="4dp"
+                    android:tag="dim"
+                    android:text="@string/theme_note"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/themeReset"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_pill"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="8dp"
+                    android:tag="chip"
+                    android:text="@string/theme_reset"
+                    android:textColor="@color/veil_muted"
+                    android:textSize="13sp" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
