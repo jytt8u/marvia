@@ -1,5 +1,7 @@
 package io.marvia.android
 
+import android.graphics.Bitmap
+import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.ColorFilter
 import android.graphics.LinearGradient
@@ -27,7 +29,6 @@ import kotlin.math.sin
  */
 class Backdrop(private val t: Theme) : Drawable() {
 
-    // Дизеринг: тёмный градиент на 8-битном экране полосит, шум это прячет.
     private val brush = Paint(Paint.ANTI_ALIAS_FLAG or Paint.DITHER_FLAG)
     private var w = 0f
     private var h = 0f
@@ -105,7 +106,38 @@ class Backdrop(private val t: Theme) : Drawable() {
     override fun draw(canvas: Canvas) {
         val b = bounds
         canvas.drawRect(b, brush)
+        if (t.kind != "flat") canvas.drawRect(b, grain)
         drawDots(canvas)
+    }
+
+    /**
+     * grain — зерно поверх градиента: плёночный шум в пару единиц яркости.
+     *
+     * Тёмный градиент в восемь бит на цвет идёт кольцами: соседние ступени
+     * различаются на единицу, а глаз видит границу между ними. DITHER_FLAG
+     * на аппаратном холсте шейдеры не трогает, и кольца оставались — на
+     * эмуляторе особенно. Шум ломает границы ступеней, и глаз перестаёт их
+     * собирать в линии; сам он ниже порога заметности. Плитка 128×128
+     * повторяется, а не считается на каждый пиксель: фон рисуется на каждом
+     * кадре анимаций.
+     */
+    private val grain = Paint().apply {
+        shader = BitmapShader(grainTile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
+    }
+
+    companion object {
+        private val grainTile: Bitmap by lazy {
+            val n = 128
+            val px = IntArray(n * n)
+            val rnd = java.util.Random(7)
+            for (i in px.indices) {
+                // Половина точек чуть светлее, половина чуть темнее: среднее не
+                // сдвигается, и цвет фона остаётся тем, что задан темой.
+                val a = 4 + rnd.nextInt(4)
+                px[i] = if (rnd.nextBoolean()) (a shl 24) or 0xFFFFFF else (a shl 24)
+            }
+            Bitmap.createBitmap(px, n, n, Bitmap.Config.ARGB_8888)
+        }
     }
 
     /**

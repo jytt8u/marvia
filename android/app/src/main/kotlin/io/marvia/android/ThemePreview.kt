@@ -53,22 +53,53 @@ class ThemePreview @JvmOverloads constructor(
     var target: Screen = Screen.MAIN
         private set
 
-    /** zoom — 0…1: насколько приближены карточки. 1 — виден кусок экрана вдвое крупнее. */
-    private var zoom = 0f
+    /**
+     * Frame — кадр: телефон целиком или его кусок крупно, как в макете.
+     *
+     * Целый телефон — для цвета, света и фона: их видно на всём экране.
+     * Карточки — для формы: скругления, подача и плотность с ногтя не
+     * читаются, а крупно видны сразу. Шапка — для шрифта: заголовок и
+     * подписи почти в натуральную величину. Числа — из макета: там телефон
+     * в 390px стоит в масштабе 0.34, а крупные кадры — 0.82 и 1.0 со сдвигом
+     * на 118px и 46px; здесь то же в долях ширины кадра и в единицах vw.
+     *
+     * wide — кадр во всю карточку, а не телефон; fill — во сколько раз экран
+     * шире кадра; dx, dy — что уходит за левый и верхний край, в единицах vw.
+     */
+    enum class Frame(val wide: Float, val fill: Float, val dx: Float, val dy: Float) {
+        PHONE(0f, 1f, 0f, 0f),
+        CARDS(1f, 1.06f, 3f, 52f),
+        HEADER(1f, 1.29f, 0f, 23f),
+    }
+
+    var frame: Frame = Frame.PHONE
+        private set
+
+    // Кадр анимируется одним числом p между снимком «откуда» и целью:
+    // рамка, масштаб и сдвиг едут вместе, и телефон не прыгает ни в одной
+    // точке пути — даже если кадр сменили на полдороге: снимок берётся с
+    // текущего места. Кривая та же, что в макете: cubic-bezier(.2,.8,.2,1).
+    private var fromWide = 0f
+    private var fromFill = 1f
+    private var fromDx = 0f
+    private var fromDy = 0f
+    private var p = 1f
     private var fade = 1f
-    private var zoomAnim: ValueAnimator? = null
+    private var frameAnim: ValueAnimator? = null
     private var fadeAnim: ValueAnimator? = null
 
-    /**
-     * focus переключает экран с кроссфейдом и, если надо, приближает его.
-     *
-     * Приближение — для ручек формы: скругления и плотность карточек с
-     * ногтя не видны, а в двукратном увеличении читаются сразу. Текст на
-     * экране целиком мелкий намеренно: это телефон в руке, а не страница.
-     */
-    fun focus(to: Screen, zoom: Boolean) {
-        val target = if (zoom) 1f else 0f
-        if (to == this.target && target == this.zoom) return
+    /** onFrame — кому сообщать о смене кадра: экран прячет список за кадром. */
+    var onFrame: ((Frame, Long) -> Unit)? = null
+
+    private fun lerp(a: Float, b: Float, k: Float) = a + (b - a) * k
+    private val wideNow get() = lerp(fromWide, frame.wide, p)
+    private val fillNow get() = lerp(fromFill, frame.fill, p)
+    private val dxNow get() = lerp(fromDx, frame.dx, p)
+    private val dyNow get() = lerp(fromDy, frame.dy, p)
+
+    /** focus показывает экран в кадре: с кроссфейдом экрана и наездом кадра. */
+    fun focus(to: Screen, frame: Frame) {
+        if (to == this.target && frame == this.frame) return
         this.target = to
         val animate = ValueAnimator.areAnimatorsEnabled()
         if (to != screen) {
@@ -87,52 +118,73 @@ class ThemePreview @JvmOverloads constructor(
                 }
             } else screen = to
         }
-        zoomAnim?.cancel()
-        if (animate) {
-            zoomAnim = ValueAnimator.ofFloat(this.zoom, target).apply {
-                duration = 420
-                interpolator = android.view.animation.DecelerateInterpolator(1.6f)
-                addUpdateListener { this@ThemePreview.zoom = it.animatedValue as Float; invalidate() }
-                start()
-            }
-        } else { this.zoom = target; invalidate() }
+        if (frame != this.frame) {
+            fromWide = wideNow; fromFill = fillNow; fromDx = dxNow; fromDy = dyNow
+            this.frame = frame
+            frameAnim?.cancel()
+            onFrame?.invoke(frame, if (animate) FRAME_MS else 0L)
+            if (animate) {
+                p = 0f
+                frameAnim = ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = FRAME_MS
+                    interpolator = Motion.ease
+                    addUpdateListener { p = it.animatedValue as Float; invalidate() }
+                    start()
+                }
+            } else { p = 1f; invalidate() }
+        }
     }
 
     /** Условная ширина экрана внутри телефона, dp; всё ниже — в ней. */
     private val vw = 200f
 
+    companion object {
+        /** FRAME_MS — сколько едет кадр; столько же прячется список экранов. */
+        const val FRAME_MS = 560L
+    }
+
     override fun onDraw(canvas: Canvas) {
         val dp = resources.displayMetrics.density
         val t = theme
-
-        // Корпус вписан по высоте, 9:19, по центру.
         val h = height.toFloat()
-        val w = minOf(width.toFloat(), h * 9f / 19f)
-        val left = (width - w) / 2
-        val body = RectF(left, 0f, left + w, h)
-        val corner = 22 * dp
+        val wide = wideNow
+
+        // Два кадра, между которыми едем: телефон 9:19 по центру и широкое
+        // окно во всю карточку, чуть ниже телефона, как в макете.
+        val pw = minOf(width.toFloat(), h * 9f / 19f)
+        val phone = RectF((width - pw) / 2, 0f, (width + pw) / 2, h)
+        val window = RectF(0f, 16 * dp, width.toFloat(), h - 16 * dp)
+        val body = RectF(
+            lerp(phone.left, window.left, wide), lerp(phone.top, window.top, wide),
+            lerp(phone.right, window.right, wide), lerp(phone.bottom, window.bottom, wide),
+        )
+        val corner = lerp(22f, 18f, wide) * dp
+        // Корпус тает в тонкую обводку: у крупного кадра телефона нет, есть окно.
+        val bezel = lerp(3f, 1f, wide) * dp
 
         brush.style = Paint.Style.FILL
         brush.color = if (t.dark) 0xFF0B0C0E.toInt() else 0xFFD8DADC.toInt()
         canvas.drawRoundRect(body, corner, corner, brush)
 
-        val bezel = 3 * dp
         val screenBox = RectF(body.left + bezel, body.top + bezel, body.right - bezel, body.bottom - bezel)
         canvas.save()
         canvas.clipPath(Path().apply { addRoundRect(screenBox, corner - bezel, corner - bezel, Path.Direction.CW) })
 
+        // Масштаб — от ширины кадра: экран шире его на fill и уехал вверх и
+        // влево на dx, dy. Высота экрана в единицах vw — от целого телефона:
+        // у крупных кадров она та же, просто низ за краем.
+        val scale = screenBox.width() * fillNow / (vw * dp)
+        val vh = (phone.height() - 6 * dp) / ((phone.width() - 6 * dp) / (vw * dp)) / dp
+        canvas.translate(screenBox.left - dxNow * dp * scale, screenBox.top - dyNow * dp * scale)
+        canvas.scale(scale, scale)
+
+        // Фон — на весь экран телефона, а не на окно: крупный кадр — это
+        // кусок того же экрана, и свет в нём должен лежать там же, где на
+        // телефоне. Окно, залитое своим градиентом, внизу чернело.
         Backdrop(t).apply {
-            setBounds(screenBox.left.toInt(), screenBox.top.toInt(), screenBox.right.toInt(), screenBox.bottom.toInt())
+            setBounds(0, 0, (vw * dp).toInt(), (vh * dp).toInt())
             draw(canvas)
         }
-
-        val base = screenBox.width() / (vw * dp)
-        val vh = screenBox.height() / base / dp
-        // Приближение — вокруг карточек: на настройках они начинаются с 58dp.
-        val scale = base * (1f + 0.3f * zoom)
-        canvas.translate(screenBox.left, screenBox.top)
-        canvas.translate(-zoom * (3 * dp * base), -zoom * (40 * dp * base))
-        canvas.scale(scale, scale)
 
         when (screen) {
             Screen.MAIN -> drawMain(canvas, dp, vh)
@@ -207,8 +259,9 @@ class ThemePreview @JvmOverloads constructor(
         text(canvas, "Marvia · Android", 14 * dp, 48 * dp, 7.5f * dp, t.dim, Fonts.text(context))
 
         card(canvas, dp, 10f, 58f, vw - 10f, 94f)
-        text(canvas, context.getString(R.string.more_apps_title), 18 * dp, 73 * dp, 9f * dp, t.fg, Fonts.textBold(context))
-        text(canvas, context.getString(R.string.theme_pv_apps_note), 18 * dp, 85 * dp, 7f * dp, t.dim, Fonts.text(context))
+        tile(canvas, dp, 17f, 65f, 22f)
+        text(canvas, context.getString(R.string.more_apps_title), 46 * dp, 73 * dp, 9f * dp, t.fg, Fonts.textBold(context))
+        text(canvas, context.getString(R.string.theme_pv_apps_note), 46 * dp, 85 * dp, 7f * dp, t.dim, Fonts.text(context))
 
         text(canvas, context.getString(R.string.conn_group_protect).uppercase(), 14 * dp, 110 * dp, 5.5f * dp, t.dim, Fonts.mono(context), letter = 0.18f)
         card(canvas, dp, 10f, 116f, vw - 10f, 116f + 3 * 30f)
@@ -220,8 +273,9 @@ class ThemePreview @JvmOverloads constructor(
         for ((i, r) in rows.withIndex()) {
             val y = 116f + i * 30f
             if (i > 0) { brush.color = t.line; canvas.drawRect(10 * dp, y * dp, (vw - 10) * dp, (y + 0.5f) * dp, brush) }
-            text(canvas, context.getString(r.first), 18 * dp, (y + 13) * dp, 8f * dp, t.fg, Fonts.textBold(context), width = (vw - 62) * dp)
-            text(canvas, context.getString(r.second), 18 * dp, (y + 23) * dp, 6.5f * dp, t.dim, Fonts.text(context), width = (vw - 62) * dp)
+            tile(canvas, dp, 17f, y + 6f, 18f)
+            text(canvas, context.getString(r.first), 41 * dp, (y + 13) * dp, 8f * dp, t.fg, Fonts.textBold(context), width = (vw - 85) * dp)
+            text(canvas, context.getString(r.second), 41 * dp, (y + 23) * dp, 6.5f * dp, t.dim, Fonts.text(context), width = (vw - 85) * dp)
             switchAt(canvas, dp, vw - 36f, y + 9f, r.third)
         }
     }
@@ -305,6 +359,19 @@ class ThemePreview @JvmOverloads constructor(
             canvas.drawRoundRect(box, rad, rad, brush)
         }
         brush.style = Paint.Style.FILL
+    }
+
+    /** tile — квадратик под значок в строке: мягкий акцент, скругление темы. */
+    private fun tile(canvas: Canvas, dp: Float, x: Float, y: Float, size: Float) {
+        val t = theme
+        box.set(x * dp, y * dp, (x + size) * dp, (y + size) * dp)
+        val rad = minOf(t.r, 14) * dp * 0.7f
+        brush.style = Paint.Style.FILL
+        brush.color = t.accSoft
+        canvas.drawRoundRect(box, rad, rad, brush)
+        brush.color = t.acc
+        val c = size / 2
+        canvas.drawRoundRect((x + c - 3.5f) * dp, (y + c - 3.5f) * dp, (x + c + 3.5f) * dp, (y + c + 3.5f) * dp, 1.5f * dp, 1.5f * dp, brush)
     }
 
     private fun switchAt(canvas: Canvas, dp: Float, x: Float, y: Float, on: Boolean) {

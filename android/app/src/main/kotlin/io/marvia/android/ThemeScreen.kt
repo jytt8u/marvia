@@ -60,8 +60,44 @@ class ThemeScreen(
     }
 
     private var tab = Tab.COLOR
+    private var pickerAnim: android.animation.ValueAnimator? = null
 
     init {
+        // Крупный кадр занимает всю карточку: список экранов справа тает и
+        // отдаёт ему свою долю ширины, тем же движением и за то же время,
+        // что едет сам кадр, — иначе они спорили бы за место.
+        ui.previewPicker.setPadding((14 * dp).toInt(), 0, 0, 0)
+        ui.previewPower.onFrame = { frame, ms ->
+            val picker = ui.previewPicker
+            val lp = picker.layoutParams as LinearLayout.LayoutParams
+            val toWeight = if (frame == ThemePreview.Frame.PHONE) 1f else 0f
+            val toAlpha = toWeight
+            pickerAnim?.cancel()
+            if (ms == 0L) {
+                lp.weight = toWeight; picker.alpha = toAlpha
+                picker.setPadding((14 * dp * toWeight).toInt(), 0, 0, 0); picker.requestLayout()
+            } else {
+                val fromWeight = lp.weight
+                val fromAlpha = picker.alpha
+                pickerAnim = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = ms
+                    interpolator = Motion.ease
+                    addUpdateListener {
+                        val k = it.animatedValue as Float
+                        lp.weight = fromWeight + (toWeight - fromWeight) * k
+                        // Отступ от телефона уходит вместе с местом: иначе
+                        // у широкого кадра справа оставалась бы пустая полоса.
+                        picker.setPadding((14 * dp * lp.weight).toInt(), 0, 0, 0)
+                        // Подписи исчезают раньше, чем кончается место, и появляются
+                        // позже, чем оно появилось: текст, сжатый в две строки,
+                        // выглядел бы поломкой.
+                        picker.alpha = (if (toAlpha > fromAlpha) (k - 0.5f) * 2f else fromAlpha - k * 2f).coerceIn(0f, 1f)
+                        picker.requestLayout()
+                    }
+                    start()
+                }
+            }
+        }
         ui.themeReset.setOnClickListener { choose(Look.Choice()) }
         ui.profileSave.setOnClickListener {
             val list = store.profiles.toMutableList()
@@ -199,11 +235,14 @@ class ThemeScreen(
                     // серверы; цвет, свет и фон видны на главной целиком.
                     ui.previewPower.focus(
                         when (item) {
-                            Tab.SHAPE -> ThemePreview.Screen.SETTINGS
-                            Tab.MORE -> ThemePreview.Screen.SERVERS
+                            Tab.SHAPE, Tab.MORE -> ThemePreview.Screen.SETTINGS
                             else -> ThemePreview.Screen.MAIN
                         },
-                        zoom = item == Tab.SHAPE,
+                        when (item) {
+                            Tab.SHAPE -> ThemePreview.Frame.CARDS
+                            Tab.MORE -> ThemePreview.Frame.HEADER
+                            else -> ThemePreview.Frame.PHONE
+                        },
                     )
                     paint(t)
                 }
@@ -239,6 +278,10 @@ class ThemeScreen(
             val on = ui.previewPower.target == screen
             val row = TextView(host).apply {
                 setText(screen.title)
+                // В одну строку: пока список тает, ширины у него почти нет,
+                // и перенос по буквам растянул бы карточку в высоту.
+                isSingleLine = true
+                ellipsize = android.text.TextUtils.TruncateAt.END
                 textSize = 15f
                 typeface = if (on) Fonts.textBold(host) else Fonts.text(host)
                 setTextColor(if (on) t.fg else t.dim)
@@ -252,7 +295,7 @@ class ThemeScreen(
                 setCompoundDrawablesRelative(dot, null, null, null)
                 setPadding(0, (10 * dp).toInt(), 0, (10 * dp).toInt())
                 isClickable = true
-                setOnClickListener { ui.previewPower.focus(screen, zoom = false); paintPicker(t) }
+                setOnClickListener { ui.previewPower.focus(screen, ThemePreview.Frame.PHONE); paintPicker(t) }
             }
             ui.previewPicker.addView(row, LinearLayout.LayoutParams(MATCH, WRAP))
         }

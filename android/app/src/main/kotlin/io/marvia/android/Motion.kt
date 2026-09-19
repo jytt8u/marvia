@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.PathInterpolator
 import android.widget.ScrollView
 
 /**
@@ -15,6 +16,12 @@ import android.widget.ScrollView
  * системное «без анимаций» — тогда всё появляется сразу.
  */
 object Motion {
+
+    /**
+     * ease — кривая макета, cubic-bezier(.2,.8,.2,1): быстрый разгон и
+     * долгое мягкое торможение. Всё, что в макете «едет», едет по ней.
+     */
+    val ease: PathInterpolator get() = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
 
     /** rise запускает всплытие на экране: сам экран и детей его списка. */
     fun rise(screen: View) {

@@ -62,8 +62,7 @@
                 android:background="@drawable/bg_card"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="14dp"
+                android:paddingHorizontal="16dp"
                 android:paddingVertical="18dp"
                 android:tag="card">
 
@@ -82,8 +81,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="18dp"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:paddingStart="14dp" />
+                    android:orientation="vertical" />
             </LinearLayout>
 
             <!-- Разделы: круглый значок и подпись, активный залит. -->
