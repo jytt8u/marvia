@@ -20,8 +20,10 @@
     font-weight: 400 800; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212; }
   @font-face { font-family: Unbounded; src: url(fonts/unbounded-cyrillic.woff2) format('woff2');
     font-weight: 400 800; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
-  @font-face { font-family: 'Chakra Petch'; src: url(fonts/chakra-petch-latin.woff2) format('woff2');
-    font-weight: 700; font-display: swap; unicode-range: U+0000-00FF; }
+  @font-face { font-family: Manrope; src: url(fonts/manrope-latin.woff2) format('woff2');
+    font-weight: 400 700; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212; }
+  @font-face { font-family: Manrope; src: url(fonts/manrope-cyrillic.woff2) format('woff2');
+    font-weight: 400 700; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
 
   /*
     Цвета не написаны здесь ни разу: все они — переменные, которые ставит
@@ -29,14 +31,17 @@
     из коробки, чтобы страница не мигнула чёрным до первого скрипта.
   */
   :root {
-    --bg: #0c0e11; --surf: #18191c; --surf2: #242628; --line: #333537;
-    --fg: #f1f4f7; --dim: #9aa0a7; --acc: #c3ccd6; --accFg: #08110d;
-    --accSoft: rgba(195,204,214,0.13); --accRgb: 195,204,214;
+    --bg: #0c0e11; --lit: #43474c; --mid: #24272a; --shade: #050608;
+    --surf: #313437; --surf2: #404346; --line: #4b4e50;
+    --fg: #f1f4f7; --dim: #b3b6b9; --acc: #c3ccd6; --accFg: #08110d;
+    --accSoft: rgba(195,204,214,0.14); --accRgb: 195,204,214;
     --warn: #f2a03d; --fail: #ff6b7a;
-    --bgcss: var(--bg); --cardLine: var(--line); --cardShadow: none; --glow: none;
+    --bgcss: linear-gradient(135deg, #43474c 0%, #24272a 52%, #050608 100%);
+    --cardLine: var(--line); --cardShadow: none; --glow: none; --glowA: 0.2;
     --r: 14px; --pad: 16px; --gap: 12px;
     --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
     --display: Unbounded, Onest, system-ui, sans-serif;
+    --ease: cubic-bezier(.2,.8,.2,1);
   }
 
   * { box-sizing: border-box; }
@@ -51,17 +56,26 @@
     font: 14px/1.5 Onest, "Segoe UI", system-ui, sans-serif;
     user-select: none; overflow: hidden;
     -webkit-font-smoothing: antialiased;
-    transition: background .25s, color .25s;
+    transition: color .35s;
   }
+  /* Едва заметная точечная сетка из цвета текста — фон перестаёт быть
+     пустым, но не спорит с контентом. Та же, что на телефоне. */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(rgba(var(--accRgb), 0.06) 1px, transparent 1.5px) 0 0 / 22px 22px;
+  }
+  button { font-family: inherit; }
+  button:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 
-  .app { display: flex; flex-direction: column; height: 100%; }
+  .app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; }
 
   /* ------------------------------------------------------------- шапка */
 
   .top {
     height: 44px; flex: none;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--surf);
+    padding: 0 16px; border-bottom: 1px solid var(--line);
+    background: rgba(var(--accRgb), 0.04);
   }
   .brand { display: flex; align-items: center; gap: 10px; }
 
@@ -72,7 +86,8 @@
     акцента тон, а свет и тень — у металла снизу. Тот же приём в панели.
   */
   :root { --mark-img: url("assets/marvia-mark.png"); --word-img: url("assets/marvia-word.svg"); }
-  .logo { position: relative; display: inline-block; flex: none; width: 22px; height: 22px; isolation: isolate; }
+  .logo { position: relative; display: inline-block; flex: none; width: 24px; height: 24px; isolation: isolate;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,.4)); }
   .logo::before, .logo::after { content: ""; position: absolute; inset: 0; }
   .logo::before {
     background: var(--mark-img) center / contain no-repeat;
@@ -83,23 +98,18 @@
     mix-blend-mode: color;
     -webkit-mask: var(--mark-img) center / contain no-repeat;
             mask: var(--mark-img) center / contain no-repeat;
-    -webkit-mask-size: contain; mask-size: contain;
   }
-  /*
-    Надпись MARVIA — форма, а не шрифт: «A» без перекладины и с точкой. Текст
-    внутри остаётся для чтения с экрана, но не рисуется: форму даёт маска,
-    цвет — акцент темы. Та же надпись в панели.
-  */
   .wordmark {
-    display: block; height: 13px; aspect-ratio: 610 / 136; font-size: 0;
-    background: var(--acc);
+    display: block; height: 12px; aspect-ratio: 610 / 136; font-size: 0;
+    background: var(--fg);
     -webkit-mask: var(--word-img) center / contain no-repeat;
             mask: var(--word-img) center / contain no-repeat;
   }
   .ver { font-family: var(--mono); font-size: 10px; color: var(--dim); }
   .top button.lang {
     background: none; border: 1px solid var(--line); color: var(--dim);
-    font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 8px; cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 8px; cursor: pointer;
+    transition: color .3s, border-color .3s;
   }
   .top button.lang:hover { color: var(--fg); border-color: var(--acc); }
 
@@ -108,332 +118,318 @@
   /* ------------------------------------------------------------ боковая */
 
   aside {
-    width: 216px; flex: 0 0 216px;
-    background: var(--surf); border-right: 1px solid var(--line);
-    padding: 16px 12px; display: flex; flex-direction: column; gap: 4px;
+    width: 212px; flex: 0 0 212px;
+    background: rgba(var(--accRgb), 0.04); border-right: 1px solid var(--line);
+    padding: 14px 12px; display: flex; flex-direction: column; gap: 4px;
   }
   .tab {
     display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: var(--r);
+    min-height: 40px; padding: 0 10px; border-radius: min(var(--r), 12px);
     color: var(--dim); cursor: pointer; border: none; background: none; width: 100%;
-    font: inherit; font-size: 13px; text-align: left;
-    transition: background .15s, color .15s;
+    font: inherit; font-size: 14px; font-weight: 500; text-align: left;
+    transition: background .35s var(--ease), color .35s;
   }
-  .tab .dot { width: 7px; height: 7px; border-radius: 2px; flex: none; background: var(--dim); transition: background .15s; }
-  .tab.news .dot { background: var(--acc); box-shadow: 0 0 0 3px var(--accSoft); }
+  .tab svg { width: 18px; height: 18px; flex: none; color: var(--dim); transition: color .35s; }
   .tab:hover { color: var(--fg); }
-  .tab[aria-selected="true"] { background: var(--surf2); color: var(--fg); }
-  .tab[aria-selected="true"] .dot { background: var(--acc); }
-
+  .tab[aria-selected="true"] { background: var(--accSoft); color: var(--fg); font-weight: 700; }
+  .tab[aria-selected="true"] svg { color: var(--acc); }
+  .tab .news { display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); margin-left: auto; }
+  .tab.news .news { display: block; }
   .spacer { flex: 1; }
 
-  /* Карточка подписки внизу боковой: что с ключом и до какого числа. */
-  .sub-card { padding: 12px; border-radius: var(--r); background: var(--surf2); display: flex; flex-direction: column; gap: 5px; }
-  .sub-card .t { font-size: 12px; color: var(--fg); }
+  .sub-card {
+    padding: 12px; border-radius: var(--r);
+    background: var(--surf); border: 1px solid var(--cardLine); box-shadow: var(--cardShadow);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .sub-card .t { font-size: 13px; font-weight: 600; color: var(--fg); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .sub-card .t::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: none; }
+  body[data-state="connected"] .sub-card .t::after { background: var(--acc); box-shadow: 0 0 8px var(--acc); }
   .sub-card .s { font-family: var(--mono); font-size: 10px; color: var(--dim); line-height: 1.5; }
+  .about-link {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;
+    border: 0; background: transparent; color: var(--dim); font: inherit; font-size: 12px; cursor: pointer; text-align: left;
+    transition: color .3s;
+  }
+  .about-link:hover { color: var(--fg); }
+  .about-link .logo { width: 16px; height: 16px; opacity: .85; filter: none; }
 
-  /* -------------------------------------------------------------- центр */
+  /* ---------------------------------------------------------- основное */
 
-  main { flex: 1; min-width: 0; padding: 22px 26px; display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
-
-  .head { display: flex; align-items: flex-end; justify-content: space-between; flex: none; }
-  .head .title { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
-  .head .sub { font-size: 13px; color: var(--dim); margin-top: 3px; }
-
-
-  .page { display: none; flex: 1; min-height: 0; flex-direction: column; gap: var(--gap); }
+  main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 22px 26px; overflow: hidden; }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex: none; }
+  .head .title { font-size: 22px; font-weight: 700; letter-spacing: -.01em; color: var(--fg); }
+  .head .sub { font-size: 13px; color: var(--dim); margin-top: 2px; }
+  .page { display: none; flex: 1; min-height: 0; flex-direction: column; gap: var(--gap); animation: rise .5s var(--ease) both; }
   .page[data-open] { display: flex; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .scroll { overflow: auto; min-height: 0; }
 
   .card {
     padding: var(--pad); border-radius: var(--r);
-    background: var(--surf); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none);
+    background: var(--surf); border: 1px solid var(--cardLine); box-shadow: var(--cardShadow);
     display: flex; flex-direction: column; gap: 10px; min-width: 0;
   }
-  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .card-head b { font-size: 14px; font-weight: 600; }
-  .card-head .mono { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .card b { font-size: 14px; font-weight: 600; color: var(--fg); }
+  .k { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); }
+  .hint { font-size: 12px; line-height: 1.5; color: var(--dim); }
+  .hint.bad, .bad { color: var(--fail); }
+  .lead { margin: 0; font-size: 13px; line-height: 1.55; color: var(--dim); }
+  .mono { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .split { display: flex; gap: var(--gap); flex: 1; min-height: 0; }
+  .split > .wide { flex: 1; min-width: 0; }
+  .col { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
 
-  .k { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--dim); text-transform: uppercase; }
+  .chip, .pillb {
+    min-height: 36px; padding: 0 12px; border-radius: min(var(--r), 12px); cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 600;
+    background: var(--surf); border: 1px solid var(--line); color: var(--fg);
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background .35s var(--ease), border-color .35s, color .35s, transform .3s var(--ease);
+  }
+  .chip:hover, .pillb:hover { border-color: var(--acc); }
+  .chip:active, .pillb:active { transform: scale(.97); }
+  .chip[aria-pressed="true"], .pillb[aria-pressed="true"] { background: var(--accSoft); border-color: var(--acc); color: var(--fg); }
+  .chip[disabled] { opacity: .5; cursor: default; }
+  .primary {
+    min-height: 40px; padding: 0 16px; border-radius: min(var(--r), 12px); border: 0; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 700; background: var(--acc); color: var(--accFg);
+    box-shadow: var(--glow); transition: transform .3s var(--ease), box-shadow .4s;
+  }
+  .primary:active { transform: scale(.97); }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  textarea, input.code-in {
+    width: 100%; padding: 10px 12px; border-radius: min(var(--r), 12px); resize: none;
+    background: var(--shade); border: 1px solid var(--line); color: var(--fg);
+    font-family: var(--mono); font-size: 12px; outline: none; user-select: text;
+  }
+  textarea:focus, input.code-in:focus { border-color: var(--acc); }
+  .warn {
+    padding: 10px 14px; border-radius: min(var(--r), 12px);
+    background: rgba(242,160,61,.12); border: 1px solid rgba(242,160,61,.5); color: var(--warn); font-size: 13px;
+  }
+  .badge { padding: 4px 10px; border-radius: 999px; background: var(--surf2); color: var(--dim); font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .badge.on { background: var(--accSoft); color: var(--acc); }
+  .track { height: 5px; border-radius: 999px; background: var(--shade); overflow: hidden; }
+  .track i { display: block; height: 100%; border-radius: 999px; background: var(--acc); transition: width .6s var(--ease); }
 
-  .split { flex: 1; min-height: 0; display: flex; gap: var(--gap); }
-  .split > .card { flex: 1; }
-  .split > .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
-  .split > .wide { flex: 1.4; }
+  /* ----------------------------------------------------------- главная */
 
-  /* ------------------------------------------------------------- цифры */
-
-  .kpis { display: flex; gap: var(--gap); flex: none; }
-  .kpi { flex: 1; padding: var(--pad); border-radius: var(--r); background: var(--surf); border: 1px solid var(--line); min-width: 0; }
-  .kpi .v { font-family: var(--mono); font-size: 22px; font-weight: 700; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-  .kpi .v.acc { color: var(--acc); }
-  .kpi .t { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 2px; }
-
-  /* ------------------------------------------------------------- кнопка */
-
-  /* «safe center»: пока содержимого мало, оно по центру; когда добавилось
-     предупреждение о прокси, карточка прокручивается сверху, а не обрезает
-     кнопку. Обычный center при переполнении режет именно верх. */
-  .hero { align-items: center; justify-content: safe center; gap: 12px; overflow-y: auto; }
-  .hero::-webkit-scrollbar { width: 0; }
+  .hero { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; min-width: 0; }
+  .ring { position: relative; width: 250px; height: 250px; display: flex; align-items: center; justify-content: center; flex: none; }
+  /* Дуга вокруг кнопки: разрыв внизу справа, градиент от акцента к прозрачному.
+     Пока подключаемся — короткая и крутится; выключено — гаснет в линию. */
+  .ring > svg { position: absolute; inset: 0; pointer-events: none; width: 100%; height: 100%; transform: rotate(90deg); overflow: visible; }
+  .ring circle { fill: none; stroke: url(#arcGrad); stroke-width: 3; stroke-linecap: round;
+    stroke-dasharray: 653 0; transition: stroke-dasharray .7s var(--ease); }
+  .ring .arc-a { stop-color: var(--line); }
+  .ring .arc-b { stop-color: var(--line); stop-opacity: .3; }
+  body[data-state="connected"] .ring circle, body[data-state="stalled"] .ring circle { stroke-dasharray: 490 163; }
+  body[data-state="connected"] .ring .arc-a { stop-color: var(--acc); }
+  body[data-state="connected"] .ring .arc-b { stop-color: var(--acc); stop-opacity: .12; }
+  body[data-state="stalled"] .ring .arc-a { stop-color: var(--warn); }
+  body[data-state="connecting"] .ring circle { stroke-dasharray: 160 493; }
+  body[data-state="connecting"] .ring .arc-a { stop-color: var(--dim); }
+  body[data-state="connecting"] .ring > svg { animation: spin 1.4s linear infinite; }
+  @keyframes spin { to { transform: rotate(450deg); } }
 
   .power {
-    width: 150px; height: 150px; border-radius: 50%; flex: none;
-    border: 1px solid var(--line); background: var(--surf2);
-    cursor: pointer; display: grid; place-items: center;
-    transition: transform .18s, box-shadow .35s, background .35s, border-color .35s;
+    position: relative; z-index: 1;
+    width: 200px; height: 200px; border-radius: 50%; border: 0; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 38% 30%, var(--surf2) 0%, var(--surf) 55%, var(--shade) 100%);
+    box-shadow: inset 0 0 0 1px var(--line), 0 24px 48px rgba(0,0,0,.45);
+    transition: box-shadow .6s var(--ease), background .6s, transform .3s var(--ease);
   }
-  .power svg { width: 56px; height: 56px; color: var(--dim); transition: color .35s; }
-  .power:hover:not(:disabled) { transform: translateY(-2px); }
-  .power:active:not(:disabled) { transform: translateY(0) scale(.985); }
-  .power:disabled { cursor: default; opacity: .55; }
-
-  /* Подключено: вид кнопки — из темы. Диск, кольцо, стекло, контур; свечение
-     тоже оттуда. Остальные состояния одинаковы при любой кнопке: беда должна
-     выглядеть как беда. */
-  .power[data-state="connected"] {
-    background: var(--acc); border-color: transparent;
-    box-shadow: 0 0 0 10px var(--accSoft), var(--glow);
+  .power:active { transform: scale(.97); }
+  .power[disabled] { cursor: default; opacity: .6; }
+  .power svg { width: 64px; height: 64px; color: var(--dim); transition: color .4s; }
+  /* Подключено: диск объёмный, подсвечен акцентом изнутри и вокруг; вариант — из темы. */
+  .power[data-state="connected"], .power[data-state="stalled"] {
+    box-shadow: inset 0 0 0 1px rgba(var(--accRgb), .22), inset 0 -20px 40px rgba(var(--accRgb), .10), var(--glow), 0 24px 48px rgba(0,0,0,.5);
   }
-  .power[data-state="connected"] svg { color: var(--accFg); }
-  .power[data-state="connected"][data-btn="ring"] { background: transparent; border: 3px solid var(--acc); }
-  .power[data-state="connected"][data-btn="ring"] svg { color: var(--acc); }
-  .power[data-state="connected"][data-btn="glass"] { background: var(--accSoft); border: 1px solid var(--acc); }
-  .power[data-state="connected"][data-btn="glass"] svg { color: var(--acc); }
-  .power[data-state="connected"][data-btn="bare"] { background: transparent; border: 1px solid var(--line); box-shadow: var(--glow); }
-  .power[data-state="connected"][data-btn="bare"] svg { color: var(--acc); }
-
-  .power[data-state="failed"] { background: var(--fail); border-color: transparent; }
-  .power[data-state="failed"] svg { color: #fff; }
-
-  /* Связь потеряна — янтарный, а не красный: туннель поднят, и это не то же
-     самое, что «не подключилось». Разный цвет говорит это без слов. */
-  .power[data-state="stalled"] { background: var(--warn); border-color: transparent; }
-  .power[data-state="stalled"] svg { color: #1a1204; }
-
-  .power[data-state="connecting"] { animation: breathe 1.5s ease-in-out infinite; border-color: var(--acc); }
-  .power[data-state="connecting"] svg { color: var(--acc); }
-  @keyframes breathe {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accRgb), .34); }
-    50%      { box-shadow: 0 0 0 16px rgba(var(--accRgb), 0); }
+  .power[data-state="connected"] svg { color: var(--acc); }
+  .power[data-state="stalled"] svg { color: var(--warn); }
+  .power[data-state="connecting"] svg { color: var(--dim); }
+  .power[data-state="connected"][data-btn="solid"] {
+    background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.28), var(--acc) 60%);
+    box-shadow: inset 0 -14px 30px rgba(0,0,0,.18), var(--glow), 0 24px 48px rgba(0,0,0,.5);
   }
+  .power[data-state="connected"][data-btn="solid"] svg { color: var(--accFg); }
+  .power[data-state="connected"][data-btn="glass"] {
+    background: rgba(var(--accRgb), .16);
+    box-shadow: inset 0 0 0 1px rgba(var(--accRgb), .45), inset 0 -20px 40px rgba(var(--accRgb), .12), var(--glow), 0 24px 48px rgba(0,0,0,.5);
+  }
+  .power[data-state="connected"][data-btn="bare"] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--acc), 0 24px 48px rgba(0,0,0,.5); }
 
-  .status { font-family: var(--display); font-size: 17px; font-weight: 600; margin-top: 4px; text-align: center; }
-  .detail { color: var(--dim); text-align: center; max-width: 420px; font-size: 13px; line-height: 1.5; }
+  .status { font-size: 28px; font-weight: 700; letter-spacing: -.01em; color: var(--dim); transition: color .4s; text-align: center; }
+  body[data-state="connected"] .status { color: var(--acc); }
+  body[data-state="stalled"] .status, body[data-state="failed"] .status { color: var(--warn); }
+  .detail { font-family: var(--mono); font-size: 13px; letter-spacing: .04em; color: var(--dim); text-align: center; max-width: 420px; }
   .detail.bad { color: var(--fail); }
-
-  /* ----------------------------------------------------------- карточки */
-
-  .first-key { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
+  .quick { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+  .quick .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: background .3s, box-shadow .3s; }
+  .quick .chip[aria-pressed="true"] .dot { background: var(--acc); box-shadow: 0 0 8px rgba(var(--accRgb), .7); }
+  .first-key { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 10px; }
 
   .node {
-    width: 100%; max-width: 420px; margin-top: 6px;
-    background: var(--surf2); border: 1px solid transparent; border-radius: var(--r); padding: 12px 14px;
-    display: flex; align-items: center; gap: 12px; transition: border-color .3s;
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r);
+    background: var(--surf); border: 1px solid var(--cardLine); box-shadow: var(--cardShadow); width: 100%; max-width: 460px;
   }
-  body[data-state="connected"] .node { border-color: var(--accSoft); }
-  .node .mark { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--dim); }
-  body[data-state="connected"] .node .mark { background: var(--acc); }
-  .node .name { font-size: 13px; }
-  .node .sub { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 1px; }
-  .node .ping { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--dim); white-space: nowrap; }
-  .node .ping:empty { display: none; }
+  .node .mark { width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: none; transition: background .3s; }
+  body[data-state="connected"] .node .mark { background: var(--acc); box-shadow: 0 0 8px var(--acc); }
+  .node .name { font-size: 14px; font-weight: 600; color: var(--fg); }
+  .node .sub { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .node > div { flex: 1; min-width: 0; }
+  .node .ping { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--acc); }
 
-  /*
-    Предупреждение о прокси. Намеренно не красное: ничего не сломано, туннель
-    работает. Сломано обещание — часть трафика идёт мимо, — и об этом надо
-    сказать заметно, но без паники, иначе человек решит, что не подключился.
-  */
-  .leak {
-    width: 100%; max-width: 420px; text-align: left;
-    background: rgba(242,160,61,.09); border: 1px solid rgba(242,160,61,.3);
-    border-radius: var(--r); padding: 12px 14px;
-  }
-  .leak .head { display: flex; align-items: center; gap: 9px; }
-  .leak .head svg { width: 16px; height: 16px; flex: 0 0 16px; color: var(--warn); }
-  .leak .title { font-weight: 600; font-size: 13px; color: var(--warn); }
-  .leak .body { color: var(--dim); font-size: 12px; margin-top: 6px; line-height: 1.5; }
-  .leak .act { margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .leak button {
-    background: rgba(242,160,61,.16); border: 1px solid rgba(242,160,61,.34);
-    color: var(--warn); font: inherit; font-size: 12px; padding: 6px 12px; border-radius: 9px; cursor: pointer;
-  }
-  .leak .said { color: var(--dim); font-size: 12px; }
+  .side { width: 380px; flex: 0 0 380px; display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); }
+  .tiles.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi { padding: 12px 14px; border-radius: var(--r); background: var(--surf); border: 1px solid var(--cardLine); box-shadow: var(--cardShadow); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .kpi .k { letter-spacing: 0; text-transform: none; font-family: inherit; font-size: 12px; }
+  .kpi .v { font-family: var(--mono); font-size: 17px; font-weight: 700; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi .v.acc { color: var(--acc); }
+  .kpi .t { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+  .chart .bars { display: flex; align-items: flex-end; gap: 3px; height: 70px; }
+  .chart .bars i { flex: 1; min-width: 0; border-radius: 2px; background: rgba(var(--accRgb), .55); transition: height .5s var(--ease); }
+  .chart .bars i.hot { background: var(--acc); }
+  .chart .axis { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--dim); }
+  .row-fact { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--fg); }
+  .row-fact span:last-child { font-family: var(--mono); font-size: 12px; color: var(--acc); text-align: right; }
 
-  /*
-    Текст ошибки — единственное, что человек может отправить продавцу. Общий
-    запрет выделения делал его непередаваемым: оставалось переписывать с
-    экрана руками или фотографировать.
-  */
-  #detail, .leak .body, .leak .said, .log { user-select: text; }
+  /* Предупреждение о системном прокси: не наш трафик — не наше обещание. */
+  .leak { width: 100%; max-width: 460px; padding: 12px 14px; border-radius: var(--r); background: rgba(242,160,61,.10); border: 1px solid rgba(242,160,61,.45); display: flex; flex-direction: column; gap: 8px; }
+  .leak .head { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--warn); font-weight: 600; }
+  .leak .head svg { width: 16px; height: 16px; }
+  .leak .body { font-size: 12px; line-height: 1.5; color: var(--fg); }
+  .leak .act { display: flex; align-items: center; gap: 10px; }
+  .leak .said { font-size: 12px; color: var(--dim); }
 
-  .warn {
-    background: rgba(255,107,122,.1); border: 1px solid rgba(255,107,122,.3);
-    color: var(--fail); border-radius: var(--r); padding: 11px 15px; font-size: 13px; flex: none;
-  }
+  /* ----------------------------------------------------------- серверы */
 
-  /* -------------------------------------------------------------- график */
-
-  .chart { flex: 1; }
-  .bars { flex: 1; min-height: 60px; display: flex; align-items: flex-end; gap: 2px; }
-  .bars i { flex: 1; min-height: 2px; border-radius: 2px; background: var(--surf2); }
-  .bars i.hot { background: var(--acc); }
-  .axis { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--dim); }
-
-  /* --------------------------------------------------------------- ноды */
-
-  .list { overflow: hidden; }
-  .nodes { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
-  .nodes::-webkit-scrollbar { width: 8px; }
-  .nodes::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+  .nodes { display: flex; flex-direction: column; gap: 2px; overflow: auto; min-height: 0; }
   .row-node {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 12px; border-radius: var(--r); cursor: pointer;
-    background: var(--surf2); border: 1px solid transparent;
-    color: var(--fg); text-align: left; font: inherit; width: 100%;
+    display: grid; grid-template-columns: 22px 1fr 120px 92px; gap: 12px; align-items: center;
+    padding: 10px; min-height: 52px; border: 0; border-radius: min(var(--r), 10px); cursor: pointer; text-align: left;
+    background: transparent; color: var(--fg); font: inherit; transition: background .3s;
   }
-  .row-node:hover { border-color: var(--line); }
-  .row-node[data-chosen] { border-color: var(--acc); }
+  .row-node:hover { background: rgba(var(--accRgb), .06); }
   .row-node[data-current] { background: var(--accSoft); }
-  .row-node .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--dim); }
-  .row-node[data-alive] .dot { background: var(--acc); }
-  .row-node .grow { flex: 1; min-width: 0; }
-  .row-node .name { font-size: 13px; }
-  .row-node .sub { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .row-node .bar { width: 70px; height: 3px; border-radius: 2px; flex: none; background: var(--surf); overflow: hidden; }
-  .row-node .bar i { display: block; height: 100%; background: var(--acc); }
-  .row-node .ms { font-family: var(--mono); font-size: 12px; width: 56px; text-align: right; flex: none; }
+  .row-node .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); justify-self: center; }
+  .row-node[data-alive] .dot { background: var(--dim); }
+  .row-node[data-current] .dot { background: var(--acc); box-shadow: 0 0 8px var(--acc); }
+  .row-node .name { font-size: 14px; font-weight: 600; }
+  .row-node[data-chosen] .name::after { content: " ✓"; color: var(--acc); }
+  .row-node .sub { font-size: 12px; color: var(--dim); }
+  .row-node .bar { height: 5px; border-radius: 999px; background: var(--shade); overflow: hidden; }
+  .row-node .bar i { display: block; height: 100%; border-radius: 999px; background: var(--acc); }
+  .row-node .ms { font-family: var(--mono); font-size: 13px; font-weight: 700; text-align: right; white-space: nowrap; color: var(--fg); }
+  .row-node[data-current] .ms { color: var(--acc); }
+  .row-node:not([data-alive]) .name, .row-node:not([data-alive]) .ms { color: var(--dim); }
 
-  .row-fact { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: var(--r); background: var(--surf2); font-size: 13px; }
-  .row-fact span:last-child { font-family: var(--mono); font-size: 11px; color: var(--acc); text-align: right; }
+  /* ---------------------------------------------------------------- тема */
 
-  /* ------------------------------------------------------------- вкладки */
-
-  .lead { color: var(--dim); font-size: 13px; margin: 0; line-height: 1.55; }
-
-  textarea {
-    width: 100%; background: var(--surf2); color: var(--fg);
-    border: 1px solid var(--line); border-radius: var(--r);
-    padding: 12px 14px; font: 12px/1.5 var(--mono);
-    resize: none; user-select: text; transition: border-color .15s;
-  }
-  textarea:focus { outline: none; border-color: var(--acc); }
-
-  button.primary {
-    background: var(--acc); color: var(--accFg); border: none;
-    padding: 10px 20px; border-radius: var(--r); cursor: pointer;
-    font: inherit; font-weight: 600; transition: filter .15s;
-  }
-  button.primary:hover { filter: brightness(1.08); }
-  button.chip {
-    background: var(--surf2); color: var(--dim); border: none;
-    padding: 7px 12px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 12px;
-  }
-  button.chip:hover { color: var(--fg); }
-  button.chip[data-on="true"] { background: var(--acc); color: var(--accFg); }
-  button.chip:disabled { opacity: .5; cursor: default; }
-
-  .row { display: flex; gap: 12px; align-items: center; }
-  .hint { color: var(--dim); font-size: 12px; margin: 0; }
-  .bad { color: var(--fail); }
-
-  /* Ключ: карточка с фактами, как в макете, — трафик, срок, статус. */
-  .keycard .facts { display: flex; gap: 32px; margin-top: 6px; }
-  .keycard .fact .v { font-family: var(--mono); font-size: 16px; margin-top: 4px; }
-  .keycard .host { font-family: var(--mono); font-size: 11px; color: var(--dim); }
-  .badge { padding: 5px 10px; border-radius: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; background: var(--surf2); color: var(--dim); white-space: nowrap; }
-  .badge.on { background: var(--accSoft); color: var(--acc); }
-  .track { height: 5px; border-radius: 3px; overflow: hidden; background: var(--surf2); margin-top: 8px; }
-  .track i { display: block; height: 100%; background: var(--acc); }
-
-  /* Журнал: время отдельно от текста, как в макете. */
-  .log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-  .log::-webkit-scrollbar { width: 8px; }
-  .log::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
-  .log .ln { display: flex; gap: 12px; align-items: flex-start; font-family: var(--mono); font-size: 12px; line-height: 1.5; }
-  .log .ln .tm { color: var(--dim); white-space: nowrap; }
-
-  /* Тема: пресеты — карточки с фоном пресета, чтобы выбирать по виду, а не
-     по названию. */
-  .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; padding-right: 4px; align-content: start; }
-  .knobs { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: var(--gap); }
-  .knobs::-webkit-scrollbar { width: 8px; }
-  .knobs::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
-  .knobs .card { flex: none; }
-  .lamp { position: relative; height: 110px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line);
-    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); }
-  .lamp button { background: none; border: none; cursor: pointer; display: grid; place-items: center; }
-  .lamp button i { width: 7px; height: 7px; border-radius: 50%; background: var(--fg); opacity: .22; display: block; }
-  .lamp button[aria-pressed="true"] i { width: 22px; height: 22px; opacity: 1; background: var(--acc);
-    box-shadow: 0 0 0 5px var(--accSoft), 0 0 22px 4px rgba(var(--accRgb), .55); }
-  .lamp .hint { position: absolute; left: 0; right: 0; bottom: 5px; text-align: center; pointer-events: none; font-size: 11px; }
-  .kinds { display: flex; gap: 6px; }
-  .kind { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 3px; cursor: pointer;
-    border-radius: calc(var(--r) + 3px); border: 1px solid var(--line); background: transparent; font: inherit; font-size: 10px; color: var(--dim); }
-  .kind i { display: block; height: 34px; border-radius: max(calc(var(--r) - 3px), 5px); }
-  .kind[aria-pressed="true"] { border: 2px solid var(--acc); background: var(--accSoft); color: var(--acc); }
-  .range { width: 100%; accent-color: var(--acc); }
-  /* Свой фон. Слои стоят под всем окном; интерфейс поверх них рисуется как
-     обычно, а читаемость держит пелена, а не прозрачность карточек. */
-  #bg-layer, #bg-veil { position: fixed; inset: 0; pointer-events: none; }
-  #bg-layer { z-index: -2; overflow: hidden; }
-  #bg-veil { z-index: -1; }
-  .file-row { display: flex; gap: 6px; }
-  .file-row .pillb { flex: 1; }
-  #bg-knobs { display: flex; flex-direction: column; gap: 10px; }
-  .code { padding: 10px 12px; border-radius: var(--r); background: var(--surf2); border: 1px dashed var(--acc);
-    font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--fg); overflow: hidden; white-space: nowrap;
-    text-overflow: ellipsis; cursor: copy; user-select: text; }
-  .code-in { width: 100%; padding: 9px 12px; border-radius: var(--r); background: var(--surf); border: 1px solid var(--line);
-    color: var(--fg); font-family: var(--mono); font-size: 12px; outline: none; }
-  .code-in:focus { border-color: var(--acc); }
-  #theme-copy-status:empty { display: none; }
-  :focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { transition: none !important; animation: none !important; }
-  }
-  .preset .pv { position: relative; width: 44px; height: 30px; border-radius: 6px; flex: none; overflow: hidden; }
-  .preset .pv i { position: absolute; display: block; }
-  .presets::-webkit-scrollbar { width: 8px; }
-  .presets::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+  .presets { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 8px; }
   .preset {
-    display: flex; align-items: center; gap: 10px; padding: 10px 11px;
-    border-radius: var(--r); cursor: pointer; border: 1px solid var(--line); font: inherit; text-align: left;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0; height: 66px;
+    border-radius: min(calc(var(--r) + 4px), 18px); cursor: pointer; overflow: hidden;
+    border: 1px solid var(--line); background: var(--surf);
+    transition: border-color .35s, box-shadow .35s, transform .3s var(--ease);
   }
-  .preset[aria-pressed="true"] { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc); }
-  .preset .sw { width: 18px; height: 18px; border-radius: 6px; flex: none; }
-  .preset .nm { font-size: 12px; font-weight: 500; }
+  .preset[aria-pressed="true"] { border: 2px solid var(--acc); box-shadow: 0 0 0 3px rgba(var(--accRgb), .25); }
+  .preset .pv { position: relative; flex: 1; width: 100%; display: block; }
+  .preset .pv i { position: absolute; display: block; }
+  .preset .nm { font-size: 10px; color: var(--dim); padding-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .preset[aria-pressed="true"] .nm { color: var(--fg); font-weight: 700; }
   .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
-  .swatch { width: 26px; height: 26px; border-radius: 8px; cursor: pointer; border: none; outline: 2px solid transparent; outline-offset: 2px; }
-  .swatch[aria-pressed="true"] { outline-color: var(--fg); }
-  .pills { display: flex; gap: 6px; }
-  .pillb { flex: 1; text-align: center; padding: 9px 0; border-radius: 10px; font: inherit; font-size: 12px; cursor: pointer; background: var(--surf2); color: var(--dim); border: none; }
-  .pillb[aria-pressed="true"] { background: var(--acc); color: var(--accFg); }
+  .swatch { width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; padding: 0; box-shadow: 0 0 0 1px rgba(0,0,0,.25); transition: transform .3s var(--ease), box-shadow .3s; }
+  .swatch[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--shade), 0 0 0 5px var(--acc); transform: scale(1.05); }
+  .lamp {
+    position: relative; height: 126px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line);
+    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 6px;
+  }
+  .lamp button { border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .lamp button i { width: 7px; height: 7px; border-radius: 50%; background: rgba(var(--accRgb), .4); transition: all .3s var(--ease); }
+  .lamp button[aria-pressed="true"] i { width: 18px; height: 18px; background: #fff; box-shadow: 0 0 0 5px rgba(255,255,255,.18), 0 0 20px rgba(255,255,255,.8); }
+  .lamp .hint { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 11px; pointer-events: none; }
+  .kinds { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .kind {
+    display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 5px 5px 7px; border-radius: min(var(--r), 12px);
+    border: 1px solid var(--line); background: var(--surf); color: var(--fg); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .kind[aria-pressed="true"] { background: var(--accSoft); border-color: var(--acc); }
+  .kind i { display: block; width: 100%; height: 34px; border-radius: max(calc(var(--r) - 6px), 4px); border: 1px solid var(--line); }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pills .pillb { flex: 1; min-width: 0; padding: 0 8px; }
+  .range { width: 100%; accent-color: var(--acc); }
+  .file-row { display: flex; gap: 8px; }
+  .code { font-family: var(--mono); font-size: 12px; padding: 10px 12px; border-radius: min(var(--r), 12px); background: var(--shade); border: 1px solid var(--line); color: var(--fg); cursor: pointer; }
+  .knobs { width: 340px; flex: 0 0 340px; overflow: auto; min-height: 0; padding-right: 2px; }
 
-  /* ---------------------------------------------------------- виджет */
+  /* ---------------------------------------------------------- настройки */
 
-  /* Трей-виджет из макета: 380×520 без рамки. Это та же страница в другой
-     шкуре — body.as-widget прячет окно и показывает виджет. Рамку рисуем сами:
-     у окна без заголовка её нет, а без неё виджет сливается с тем, что под ним. */
+  .settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); align-content: start; overflow: auto; min-height: 0; }
+  .group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .group .k { padding: 0 4px; }
+  .rows { border-radius: var(--r); background: var(--surf); border: 1px solid var(--cardLine); box-shadow: var(--cardShadow); display: flex; flex-direction: column; overflow: hidden; }
+  .rows > div { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 56px; }
+  .rows > div + div { border-top: 1px solid var(--line); }
+  .rows .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .rows .name { font-size: 14px; font-weight: 600; color: var(--fg); }
+  .rows .sub { font-size: 12px; color: var(--dim); }
+  .rows .stack { flex-direction: column; align-items: stretch; gap: 10px; }
+  .log { max-height: 220px; overflow: auto; font-family: var(--mono); font-size: 11px; display: flex; flex-direction: column; gap: 4px; user-select: text; }
+  .log .ln { display: flex; gap: 10px; color: var(--fg); }
+  .log .tm { color: var(--dim); flex: none; }
+  .about { margin: 0; font-size: 13px; line-height: 1.6; color: var(--dim); }
+  .about b { color: var(--fg); }
+  .facts { display: flex; gap: 28px; }
+  .fact .k { letter-spacing: .16em; }
+  .fact .v { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--fg); margin-top: 4px; white-space: nowrap; }
+  .host { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+
+  /* --------------------------------------------------------- трей-виджет */
+
+  /*
+    Страница одна: та же разметка и тот же скрипт, только в другой шкуре —
+    body.as-widget прячет окно и показывает виджет. Рамку рисуем сами: окно
+    у трея без системной.
+  */
+  .widget { display: none; }
+  body.as-widget { background: transparent; }
+  body.as-widget::before { display: none; }
   body.as-widget .app { display: none; }
-  .widget { display: none; height: 100%; flex-direction: column; border: 1px solid var(--line); box-sizing: border-box; }
-  body.as-widget .widget { display: flex; }
-  .w-top { height: 44px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 16px; border-bottom: 1px solid var(--line); background: var(--surf); }
-  .w-top .acts { display: flex; gap: 4px; }
-  .w-top .acts button { width: 30px; height: 30px; border-radius: 8px; border: none; background: none; color: var(--dim); font-size: 15px; cursor: pointer; }
-  .w-top .acts button:hover { background: var(--surf2); color: var(--fg); }
-  .w-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px 20px; }
-  .w-hero .power { width: 128px; height: 128px; }
-  .w-hero .power svg { width: 48px; height: 48px; }
-  .w-meta { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: var(--dim); }
-  .w-node { margin: 0 16px; display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: var(--r); background: var(--surf); border: 1px solid var(--cardLine, var(--line)); box-shadow: var(--cardShadow, none); }
-  .w-node .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-  .w-node .ping { font-family: var(--mono); font-size: 12px; color: var(--dim); }
-  .w-links { display: flex; gap: 6px; padding: 12px 16px 16px; }
-  .w-links button { flex: 1; padding: 9px 0; border-radius: 10px; border: none; background: var(--surf2); color: var(--dim); font: inherit; font-size: 12px; cursor: pointer; }
-  .w-links button:hover { color: var(--fg); }
+  body.as-widget .widget {
+    position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%;
+    border-radius: 16px; border: 1px solid var(--line); overflow: hidden;
+    background: radial-gradient(rgba(var(--accRgb), 0.06) 1px, transparent 1.5px) 0 0 / 22px 22px, var(--bgcss, var(--bg));
+  }
+  .w-top { height: 42px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 10px 0 14px; border-bottom: 1px solid var(--line); background: rgba(var(--accRgb), 0.05); }
+  .w-top .acts { display: flex; gap: 2px; }
+  .w-top .acts button { width: 34px; height: 30px; border: 0; background: transparent; color: var(--dim); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+  .w-top .acts button:hover { color: var(--fg); background: var(--accSoft); }
+  .w-top .acts svg { width: 14px; height: 14px; }
+  .w-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 8px 0; }
+  .w-hero .ring { width: 196px; height: 196px; }
+  .w-hero .power { width: 156px; height: 156px; }
+  .w-hero .power svg { width: 50px; height: 50px; }
+  .w-hero .status { font-size: 20px; }
+  .w-meta { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--dim); }
+  .w-bottom { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .w-node { max-width: none; cursor: pointer; font: inherit; text-align: left; }
+  .w-node > div { flex: 1; min-width: 0; }
+  .w-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .w-tiles .kpi { padding: 10px 12px; }
+  .w-tiles .kpi .k { font-size: 11px; }
+  .w-tiles .kpi .v { font-size: 14px; }
+  .w-open { min-height: 40px; }
 
-  p.about { color: var(--dim); max-width: 580px; font-size: 13.5px; margin: 0; line-height: 1.55; }
-  p.about b { color: var(--fg); font-weight: 600; }
+  /* Свой фон: картинка или видео под всем окном; пелена держит читаемость. */
+  #bg-layer { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+  #bg-layer img, #bg-layer video { width: 100%; height: 100%; display: block; }
+  #bg-veil { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 </style>
 </head>
 <body data-state="idle">
@@ -452,12 +448,23 @@
 
   <div class="body">
     <aside>
-      <button class="tab" data-tab="home" aria-selected="true"><i class="dot"></i><span data-t="tabHome">Туннель</span></button>
-      <button class="tab" data-tab="nodes"><i class="dot"></i><span data-t="tabNodes">Страны</span></button>
-      <button class="tab" data-tab="key"><i class="dot"></i><span data-t="tabKey">Ключ доступа</span></button>
-      <button class="tab" data-tab="log"><i class="dot"></i><span data-t="tabLog">Журнал</span></button>
-      <button class="tab" data-tab="theme"><i class="dot"></i><span data-t="tabTheme">Тема</span></button>
-      <button class="tab" data-tab="about"><i class="dot"></i><span data-t="tabAbout">О программе</span></button>
+      <button class="tab" data-tab="home" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>
+        <span data-t="tabHome">Туннель</span>
+      </button>
+      <button class="tab" data-tab="nodes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+        <span data-t="tabNodes">Серверы</span>
+      </button>
+      <button class="tab" data-tab="theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5S14 15 15 15h2a4 4 0 0 0 4-4 8 8 0 0 0-9-8z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15.5" cy="7.5" r="1"/></svg>
+        <span data-t="tabTheme">Тема</span>
+      </button>
+      <button class="tab" data-tab="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <span data-t="tabSettings">Настройки</span>
+        <i class="news"></i>
+      </button>
 
       <div class="spacer"></div>
 
@@ -470,6 +477,12 @@
         <div class="t" id="sub-title"></div>
         <div class="s" id="subscription"></div>
       </div>
+
+      <!-- «О нас» живёт в настройках; ссылка снизу — короткий путь туда. -->
+      <button class="about-link" id="about-link" type="button" data-about>
+        <span class="logo" aria-hidden="true"></span>
+        <span data-t="tabAbout">О нас</span>
+      </button>
     </aside>
 
     <main>
@@ -484,27 +497,38 @@
       <section class="page" data-tab="home" data-open>
         <div id="elev-warn" class="warn" data-t="elevWarn" hidden></div>
 
-        <div class="kpis">
-          <div class="kpi"><div class="k" data-t="kSession"></div><div class="v" id="k-session">—</div></div>
-          <div class="kpi"><div class="k" data-t="down"></div><div class="v" id="s-down">0</div><div class="t" id="t-down"></div></div>
-          <div class="kpi"><div class="k" data-t="up"></div><div class="v" id="s-up">0</div><div class="t" id="t-up"></div></div>
-          <div class="kpi"><div class="k" data-t="kPing"></div><div class="v acc" id="k-ping">—</div></div>
-        </div>
-
         <div class="split">
-          <div class="card hero wide">
-            <button class="power" id="power" data-state="idle" title="">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
-                <path d="M12 3.2v9.2"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/>
+          <div class="hero wide">
+            <div class="ring">
+              <!--
+                Дуга рисуется отдельно от кнопки: у кнопки свой объём и свои
+                варианты из темы, а дуга одна на все — и она же крутится,
+                пока подключаемся.
+              -->
+              <svg viewBox="0 0 216 216" aria-hidden="true">
+                <defs>
+                  <linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop class="arc-a" offset="0"/>
+                    <stop class="arc-b" offset="1"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="108" cy="108" r="104"/>
               </svg>
-            </button>
+              <button class="power" id="power" data-state="idle" title="">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/>
+                </svg>
+              </button>
+            </div>
 
-            <div class="status" id="status"></div>
-            <div class="detail" id="detail"></div>
+            <div>
+              <div class="status" id="status"></div>
+              <div class="detail" id="detail"></div>
+            </div>
 
             <!--
               Поле ключа прямо на первом экране, пока ключа нет. Когда ключ
-              уже сохранён, поле здесь не нужно — оно остаётся на своей вкладке.
+              уже сохранён, поле здесь не нужно — оно остаётся в настройках.
             -->
             <div class="first-key" id="first-key" hidden>
               <textarea id="first-account" rows="2" spellcheck="false" placeholder="marvia://…"></textarea>
@@ -531,23 +555,29 @@
               <div class="body" id="proxy-text"></div>
               <div class="body" id="proxy-care" data-t="proxyCare"></div>
               <div class="act">
-                <button id="proxy-off" data-t="proxyOff"></button>
+                <button class="chip" id="proxy-off" data-t="proxyOff"></button>
                 <span class="said" id="proxy-msg"></span>
               </div>
             </div>
           </div>
 
-          <div class="col">
+          <div class="side">
             <div class="card chart">
               <div class="card-head"><b data-t="chartTitle"></b><span class="mono" id="hour-total"></span></div>
               <div class="bars" id="bars"></div>
               <div class="axis"><span data-t="chartFrom"></span><span data-t="chartNow"></span></div>
             </div>
+            <div class="tiles two">
+              <div class="kpi"><div class="k" data-t="kSession"></div><div class="v" id="k-session">—</div></div>
+              <div class="kpi"><div class="k" data-t="kPing"></div><div class="v acc" id="k-ping">—</div></div>
+              <div class="kpi"><div class="k" data-t="down"></div><div class="v" id="s-down">0</div><div class="t" id="t-down"></div></div>
+              <div class="kpi"><div class="k" data-t="up"></div><div class="v" id="s-up">0</div><div class="t" id="t-up"></div></div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- --------------------------------------------------------- страны -->
+      <!-- -------------------------------------------------------- серверы -->
       <section class="page" data-tab="nodes">
         <div class="split">
           <div class="card list wide">
@@ -558,7 +588,7 @@
             <span id="nodes-msg" class="hint"></span>
             <div class="nodes" id="nodes-list"></div>
           </div>
-          <div class="col">
+          <div class="col side">
             <div class="card">
               <b data-t="nodesAutoTitle"></b>
               <p class="lead" data-t="nodesLead"></p>
@@ -570,62 +600,43 @@
         </div>
       </section>
 
-      <!-- ----------------------------------------------------------- ключ -->
-      <section class="page" data-tab="key">
-        <div class="card keycard">
-          <div class="card-head">
-            <div>
-              <b id="key-label"></b>
-              <div class="host" id="key-host"></div>
-            </div>
-            <span class="badge" id="key-state"></span>
-          </div>
-          <div class="facts">
-            <div class="fact"><div class="k" data-t="factTraffic"></div><div class="v" id="f-traffic">—</div></div>
-            <div class="fact"><div class="k" data-t="factUntil"></div><div class="v" id="f-until">—</div></div>
-          </div>
-          <div class="track"><i id="f-fill" style="width:0"></i></div>
-          <span class="hint" id="key-note"></span>
-        </div>
-        <div class="card">
-          <p class="lead" data-t="keyLead"></p>
-          <textarea id="account" rows="3" spellcheck="false" placeholder="marvia://…"></textarea>
-          <div class="row">
-            <button class="primary" id="save" data-t="keySave"></button>
-            <span id="save-msg" class="hint"></span>
-          </div>
-          <p class="hint" data-t="keyHint"></p>
-        </div>
-      </section>
-
-      <!-- --------------------------------------------------------- журнал -->
-      <section class="page" data-tab="log">
-        <div class="card list">
-          <p class="lead" data-t="logLead"></p>
-          <div class="log" id="log"></div>
-        </div>
-      </section>
-
       <!-- ----------------------------------------------------------- тема -->
       <section class="page" data-tab="theme">
         <div class="split">
-          <div class="card list wide">
-            <div class="k" data-t="themePresets"></div>
-            <div class="presets" id="presets"></div>
-          </div>
-          <div class="col knobs">
+          <div class="col wide scroll">
+            <div class="card">
+              <div class="k" data-t="themePresets"></div>
+              <div class="presets" id="presets"></div>
+            </div>
             <div class="card">
               <div class="k" data-t="themeAccent"></div>
               <div class="swatches" id="accents"></div>
+              <div class="k" data-t="themeTint"></div>
+              <div class="swatches" id="tints"></div>
             </div>
+            <div class="card">
+              <div class="k" data-t="themeProfiles"></div>
+              <div class="pills" id="profiles"></div>
+              <div class="pills">
+                <button class="pillb" id="profile-save" data-t="themeSaveHere" aria-pressed="true"></button>
+                <button class="pillb" id="theme-random" data-t="themeRandom"></button>
+              </div>
+              <div class="k" data-t="themeCode"></div>
+              <button type="button" class="code" id="theme-code" style="text-align:left;width:100%;user-select:text;white-space:normal;overflow-wrap:anywhere;"></button>
+              <p class="hint" id="theme-copy-status" role="status" aria-live="polite"></p>
+              <input type="text" class="code-in" id="code-in" autocomplete="off" spellcheck="false">
+              <p class="hint" id="code-bad" hidden data-t="themeCodeBad"></p>
+              <p class="lead" data-t="themeNote"></p>
+              <div class="row"><button class="chip" id="theme-reset" data-t="themeReset"></button></div>
+            </div>
+          </div>
+          <div class="col knobs">
             <div class="card">
               <div class="card-head"><div class="k" data-t="themeLight"></div><span class="hint" id="light-note"></span></div>
               <div class="lamp" id="lamp"></div>
               <div class="kinds" id="kinds"></div>
               <div class="card-head"><span data-t="themeDepth"></span><span class="hint" id="depth-note"></span></div>
               <input type="range" class="range" id="depth" min="8" max="98">
-              <div class="k" data-t="themeTint"></div>
-              <div class="swatches" id="tints"></div>
             </div>
             <div class="card">
               <div class="k" data-t="themeRadius"></div>
@@ -657,47 +668,89 @@
               </div>
               <p class="hint" data-t="themeBackdropNote"></p>
             </div>
-            <div class="card">
-              <div class="k" data-t="themeProfiles"></div>
-              <div class="pills" id="profiles"></div>
-              <div class="pills">
-                <button class="pillb" id="profile-save" data-t="themeSaveHere" aria-pressed="true"></button>
-                <button class="pillb" id="theme-random" data-t="themeRandom"></button>
-              </div>
-              <div class="k" data-t="themeCode"></div>
-              <button type="button" class="code" id="theme-code" style="text-align:left;width:100%;user-select:text;white-space:normal;overflow-wrap:anywhere;"></button>
-              <p class="hint" id="theme-copy-status" role="status" aria-live="polite"></p>
-              <input type="text" class="code-in" id="code-in" autocomplete="off" spellcheck="false">
-              <p class="hint" id="code-bad" hidden data-t="themeCodeBad"></p>
-              <p class="lead" data-t="themeNote"></p>
-              <div class="row"><button class="chip" id="theme-reset" data-t="themeReset"></button></div>
-            </div>
           </div>
         </div>
       </section>
 
-      <!-- ----------------------------------------------------- о программе -->
-      <section class="page" data-tab="about">
-        <!-- Есть новая версия: показывается только когда панель продавца
-             выложила версию новее нашей. Ссылка — с его домена. -->
-        <div class="card" id="update-card" hidden>
-          <div class="card-head"><b id="update-title"></b><button class="chip" id="update-open" type="button" data-t="updateOpen"></button></div>
-          <p class="hint" data-t="updateHint"></p>
-        </div>
-        <!--
-          Запуск вместе с Windows — через планировщик, с высшими правами: из
-          обычной автозагрузки программа при каждом входе просила бы права
-          администратора. Стартует в трее без окна и поднимает туннель сама.
-        -->
-        <div class="card">
-          <div class="card-head"><b data-t="autostart"></b><button class="chip" id="autostart" type="button"></button></div>
-          <p class="hint" data-t="autostartHint"></p>
-          <p class="hint" id="autostart-msg"></p>
-        </div>
-        <div class="card">
-          <p class="about" data-html="about1"></p>
-          <p class="about" data-html="about2"></p>
-          <p class="about" data-t="about3"></p>
+      <!-- ------------------------------------------------------ настройки -->
+      <!--
+        Ключ, автозапуск, обновление, журнал и «о программе» — одна страница
+        двумя колонками: каждое по отдельности слишком мало для своей вкладки,
+        а вместе они и есть настройки.
+      -->
+      <section class="page" data-tab="settings">
+        <div class="settings">
+          <div class="col">
+            <div class="group">
+              <div class="k" data-t="tabKey"></div>
+              <div class="card keycard">
+                <div class="card-head">
+                  <div>
+                    <b id="key-label"></b>
+                    <div class="host" id="key-host"></div>
+                  </div>
+                  <span class="badge" id="key-state"></span>
+                </div>
+                <div class="facts">
+                  <div class="fact"><div class="k" data-t="factTraffic"></div><div class="v" id="f-traffic">—</div></div>
+                  <div class="fact"><div class="k" data-t="factUntil"></div><div class="v" id="f-until">—</div></div>
+                </div>
+                <div class="track"><i id="f-fill" style="width:0"></i></div>
+                <span class="hint" id="key-note"></span>
+                <p class="lead" data-t="keyLead"></p>
+                <textarea id="account" rows="3" spellcheck="false" placeholder="marvia://…"></textarea>
+                <div class="row">
+                  <button class="primary" id="save" data-t="keySave"></button>
+                  <span id="save-msg" class="hint"></span>
+                </div>
+                <p class="hint" data-t="keyHint"></p>
+              </div>
+            </div>
+
+            <div class="group">
+              <div class="k" data-t="tabLog"></div>
+              <div class="card list">
+                <p class="lead" data-t="logLead"></p>
+                <div class="log" id="log"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="group">
+              <div class="k" data-t="settingsApp"></div>
+              <div class="rows">
+                <!-- Есть новая версия: показывается только когда панель продавца
+                     выложила версию новее нашей. Ссылка — с его домена. -->
+                <div id="update-card" hidden>
+                  <div class="grow"><span class="name" id="update-title"></span><span class="sub" data-t="updateHint"></span></div>
+                  <button class="chip" id="update-open" type="button" data-t="updateOpen"></button>
+                </div>
+                <!--
+                  Запуск вместе с Windows — через планировщик, с высшими правами: из
+                  обычной автозагрузки программа при каждом входе просила бы права
+                  администратора. Стартует в трее без окна и поднимает туннель сама.
+                -->
+                <div>
+                  <div class="grow"><span class="name" data-t="autostart"></span><span class="sub" data-t="autostartHint"></span><span class="sub" id="autostart-msg"></span></div>
+                  <button class="chip" id="autostart" type="button"></button>
+                </div>
+                <div>
+                  <div class="grow"><span class="name" data-t="settingsLang"></span><span class="sub" data-t="settingsLangHint"></span></div>
+                  <button class="chip" id="lang-2" type="button"></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="group" id="about">
+              <div class="k" data-t="tabAbout"></div>
+              <div class="card">
+                <p class="about" data-html="about1"></p>
+                <p class="about" data-html="about2"></p>
+                <p class="about" data-t="about3"></p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -712,28 +765,55 @@
       <span class="wordmark">MARVIA</span>
     </div>
     <div class="acts">
-      <button id="w-full" type="button" title="">⚙</button>
-      <button id="w-hide" type="button" title="">✕</button>
+      <button id="w-full" type="button" title="">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-8 8"/><path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4"/></svg>
+      </button>
+      <button id="w-hide" type="button" title="">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
     </div>
   </div>
   <div class="w-hero">
-    <button class="power" id="w-power" data-state="idle" title="">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
-        <path d="M12 3.2v9.2"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/>
+    <div class="ring">
+      <svg viewBox="0 0 216 216" aria-hidden="true">
+        <defs>
+          <linearGradient id="arcGradW" x1="0" y1="0" x2="1" y2="1">
+            <stop class="arc-a" offset="0"/>
+            <stop class="arc-b" offset="1"/>
+          </linearGradient>
+        </defs>
+        <circle cx="108" cy="108" r="104" style="stroke:url(#arcGradW)"/>
       </svg>
+      <button class="power" id="w-power" data-state="idle" title="">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/>
+        </svg>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+      <div class="status" id="w-status"></div>
+      <div class="w-meta" id="w-meta"></div>
+    </div>
+  </div>
+  <div class="w-bottom w-links">
+    <button class="node w-node" type="button" data-open="nodes">
+      <i class="mark"></i>
+      <div>
+        <div class="name" id="w-node"></div>
+        <div class="sub" data-t="tabNodes"></div>
+      </div>
+      <span class="ping" id="w-ping"></span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dim)"><path d="M9 6l6 6-6 6"/></svg>
     </button>
-    <div class="status" id="w-status"></div>
-    <div class="w-meta" id="w-meta"></div>
-  </div>
-  <div class="w-node node">
-    <i class="mark"></i>
-    <span class="name" id="w-node"></span>
-    <span class="ping" id="w-ping"></span>
-  </div>
-  <div class="w-links">
-    <button type="button" data-open="nodes" data-t="tabNodes"></button>
-    <button type="button" data-open="key" data-t="tabKey"></button>
-    <button type="button" data-open="theme" data-t="tabTheme"></button>
+    <div class="w-tiles">
+      <div class="kpi"><span class="k" data-t="kSession"></span><span class="v" id="w-session">—</span></div>
+      <div class="kpi"><span class="k" data-t="down"></span><span class="v" id="w-down">—</span></div>
+      <div class="kpi"><span class="k" data-t="kPing"></span><span class="v acc" id="w-kping">—</span></div>
+    </div>
+    <button class="chip w-open" type="button" data-open="home">
+      <span data-t="wOpen"></span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
   </div>
 </div>
 
@@ -784,18 +864,17 @@ const T = {
   ru: {
     lang: "ru", switchTo: "EN", switchTitle: "Switch to English",
 
-    tabHome: "Туннель", tabKey: "Ключ доступа", tabLog: "Журнал", tabAbout: "О программе", tabNodes: "Страны", tabTheme: "Тема",
+    tabHome: "Туннель", tabKey: "Ключ доступа", tabLog: "Журнал", tabAbout: "О нас", tabNodes: "Серверы", tabTheme: "Тема", tabSettings: "Настройки",
+    settingsApp: "Программа", settingsLang: "Язык интерфейса", settingsLangHint: "Русский или английский; окно переключается сразу.",
     wOpen: "Открыть окно", wHide: "Спрятать в трей",
     updateTitle: (v) => "Есть новая версия " + v, updateOpen: "Скачать", updateHint: "Ссылка ведёт на сервер того, кто дал тебе доступ, а не в магазин: оттуда приложение качается и тогда, когда магазины не открываются. Скачал — закрой это окно и запусти новый файл.",
     autostart: "Запускать вместе с Windows", autostartHint: "Без окна, в трее; туннель поднимется сам, если ключ сохранён. Ставится задача планировщика с правами администратора — так Windows не спрашивает согласия при каждом входе.",
     autostartOn: "Включено", autostartOff: "Выключено",
     pages: {
       home: ["Туннель", "Состояние и трафик"],
-      nodes: ["Страны", "Через какую идти"],
-      key: ["Ключ доступа", "Ссылка от бота после оплаты"],
-      log: ["Журнал", "Что программа делала"],
+      nodes: ["Серверы", "Через какой идти"],
       theme: ["Тема", "Окно красится сразу"],
-      about: ["О программе", "Как это устроено"],
+      settings: ["Настройки", "Ключ, запуск, журнал и о программе"],
     },
 
     pingUnknown: "Не измерен", setupLabel: "Подключение",
@@ -903,18 +982,17 @@ const T = {
   en: {
     lang: "en", switchTo: "RU", switchTitle: "Переключить на русский",
 
-    tabHome: "Tunnel", tabKey: "Access key", tabLog: "Log", tabAbout: "About", tabNodes: "Countries", tabTheme: "Theme",
+    tabHome: "Tunnel", tabKey: "Access key", tabLog: "Log", tabAbout: "About us", tabNodes: "Servers", tabTheme: "Theme", tabSettings: "Settings",
+    settingsApp: "Program", settingsLang: "Interface language", settingsLangHint: "Russian or English; the window switches at once.",
     wOpen: "Open the window", wHide: "Hide to tray",
     updateTitle: (v) => "New version " + v + " available", updateOpen: "Download", updateHint: "The link goes to the server of whoever gave you access, not to a store: it works even when stores do not. Once downloaded, close this window and run the new file.",
     autostart: "Start with Windows", autostartHint: "Without a window, in the tray; the tunnel comes up by itself if a key is saved. A scheduler task with administrator rights is created, so Windows does not ask for consent at every sign-in.",
     autostartOn: "On", autostartOff: "Off",
     pages: {
       home: ["Tunnel", "State and traffic"],
-      nodes: ["Countries", "Which one to go through"],
-      key: ["Access key", "The link the bot sends after payment"],
-      log: ["Log", "What the program did"],
+      nodes: ["Servers", "Which one to go through"],
       theme: ["Theme", "The window repaints at once"],
-      about: ["About", "How it works"],
+      settings: ["Settings", "Key, startup, log and about"],
     },
 
     pingUnknown: "Not measured", setupLabel: "Connection",
@@ -1052,6 +1130,8 @@ function paintStatic() {
 
   $("lang").textContent = d.switchTo;
   $("lang").title = d.switchTitle;
+  $("lang-2").textContent = d.switchTo;
+  $("lang-2").title = d.switchTitle;
   $("w-full").title = d.wOpen;
   $("w-hide").title = d.wHide;
 
@@ -1102,16 +1182,25 @@ document.querySelectorAll(".tab").forEach((tab) => {
 });
 
 // Вкладка из адреса: так виджет открывает полное окно сразу на нужной.
+// Ключ, журнал и «о программе» переехали в настройки; старые имена из
+// трея и ярлыков ведут туда же, чтобы ничего не открылось в пустоту.
 {
-  const want = pageParams.get("tab");
+  let want = pageParams.get("tab");
+  if (want === "key" || want === "log" || want === "about") want = "settings";
   const tab = want && document.querySelector('.tab[data-tab="' + want + '"]');
   if (tab) tab.click();
 }
 
 // Виджет просит программу переключить окно: полное на вкладку или в трей.
-for (const b of document.querySelectorAll(".w-links button")) {
+for (const b of document.querySelectorAll(".w-links button[data-open]")) {
   b.addEventListener("click", () => api("POST", "api/window", { mode: "full", tab: b.dataset.open }).catch(() => {}));
 }
+// «О нас» в низу боковой — это раздел настроек; ссылка открывает вкладку и
+// докручивает до него.
+on("about-link", "click", () => {
+  document.querySelector('.tab[data-tab="settings"]').click();
+  $("about").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 on("w-full", "click", () => api("POST", "api/window", { mode: "full", tab: "home" }).catch(() => {}));
 on("w-hide", "click", () => api("POST", "api/window", { mode: "hide" }).catch(() => {}));
 
@@ -1732,8 +1821,8 @@ function render(s) {
   $("version").textContent = s.version ? "v" + s.version : "";
   $("update-card").hidden = !s.update;
   if (s.update) $("update-title").textContent = d.updateTitle(s.update);
-  // Точка на вкладке — чтобы заметили, не заходя в «О программе».
-  document.querySelector('.tab[data-tab="about"]').classList.toggle("news", !!s.update);
+  // Точка на вкладке — чтобы заметили, не заходя в настройки.
+  document.querySelector('.tab[data-tab="settings"]').classList.toggle("news", !!s.update);
 
   const detail = $("detail");
 
@@ -1816,6 +1905,9 @@ function render(s) {
   $("w-meta").textContent = wmeta.length ? wmeta.join(" · ") : $("detail").textContent;
   $("w-node").textContent = $("node-name").textContent;
   $("w-ping").textContent = $("node-ping").textContent;
+  $("w-session").textContent = $("k-session").textContent;
+  $("w-down").textContent = $("t-down").textContent || $("s-down").textContent;
+  $("w-kping").textContent = $("k-ping").textContent;
 }
 
 // paintKeyCard — заголовок карточки ключа: метка и хост из ссылки.
@@ -1956,6 +2048,7 @@ applyLook();
 paintStatic();
 loadBackdropFile();
 on("lang", "click", () => setLang(lang === "ru" ? "en" : "ru"));
+on("lang-2", "click", () => setLang(lang === "ru" ? "en" : "ru"));
 
 // Программе язык сообщаем сразу: её сообщения приходят готовой строкой, и до
 // первого такого сообщения она должна знать, на каком языке его собирать.

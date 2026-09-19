@@ -269,7 +269,7 @@ func (u *ui) window(w http.ResponseWriter, r *http.Request) {
 	// Вкладку проверяем по списку: она уходит в адрес страницы, и мусор в
 	// ней — это мусор в адресной строке движка.
 	switch body.Tab {
-	case "", "home", "nodes", "key", "log", "theme", "about":
+	case "", "home", "nodes", "theme", "settings":
 	default:
 		body.Tab = ""
 	}
