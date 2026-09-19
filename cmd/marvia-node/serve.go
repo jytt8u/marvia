@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log"
 	"net"
 	"time"
 
+	"github.com/jytt8u/marvia/internal/egress"
 	"github.com/jytt8u/marvia/internal/fallback"
 	"github.com/jytt8u/marvia/internal/inbound"
 	"github.com/jytt8u/marvia/internal/metered"
@@ -109,15 +111,34 @@ func serveVP1(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
 	defer muxSession.Close()
 
 	log.Printf("сессия vp1 открыта")
+	// Потолок открытых потоков в сессии. У yamux его нет, а у каждого потока
+	// окно приёма в 4 МиБ: клиент, открывший тысячу потоков к молчащей цели
+	// и заливающий в каждый, удержал бы у ноды гигабайты. Браузеру хватает
+	// десятков соединений; сотни — уже не браузер.
+	live := make(chan struct{}, maxStreamsPerSession)
 	for {
 		stream, err := mux.Accept(muxSession)
 		if err != nil {
 			log.Printf("сессия vp1 закрыта")
 			return
 		}
-		go serveStream(stream)
+		select {
+		case live <- struct{}{}:
+		default:
+			// Лишний поток закрывается сразу: клиент увидит обрыв одного
+			// соединения, а не медленную смерть всей ноды.
+			_ = stream.Close()
+			continue
+		}
+		go func() {
+			defer func() { <-live }()
+			serveStream(stream)
+		}()
 	}
 }
+
+// maxStreamsPerSession — сколько потоков одна сессия держит одновременно.
+const maxStreamsPerSession = 256
 
 // serveVLESS обслуживает чужой клиент по VLESS: одно соединение — одна цель.
 func serveVLESS(rc *rewind.Conn, meter *metered.Conn, peer net.Addr, d deps) {
@@ -185,7 +206,9 @@ func admit(d deps, kind string, identity []byte, peer net.Addr) (*users.Session,
 
 // pipeSingle доводит до конца одно соединение чужого протокола.
 func pipeSingle(client net.Conn, target vp1.Address, proto string) {
-	upstream, err := net.DialTimeout("tcp", target.String(), dialTimeout)
+	// У чужих протоколов нет ответного статуса: закрытая цель выглядит для
+	// клиента как недоступная, и это правильно — объяснять ему нечего.
+	upstream, err := egress.Dial(context.Background(), "tcp", target.String(), dialTimeout)
 	if err != nil {
 		log.Printf("%s: цель недоступна: %s", proto, why(err))
 		return
@@ -219,10 +242,10 @@ func serveStream(stream net.Conn) {
 		return
 	}
 
-	target, err := net.DialTimeout("tcp", addr.String(), dialTimeout)
+	target, err := egress.Dial(context.Background(), "tcp", addr.String(), dialTimeout)
 	if err != nil {
 		log.Printf("поток vp1: цель недоступна: %s", why(err))
-		_ = vp1.WriteStatus(stream, vp1.StatusUnreachable)
+		_ = vp1.WriteStatus(stream, statusOf(err))
 		return
 	}
 	defer target.Close()
@@ -235,6 +258,16 @@ func serveStream(stream net.Conn) {
 	if err := relay.Bidirectional(stream, target); err != nil {
 		log.Printf("поток vp1: обрыв передачи: %s", why(err))
 	}
+}
+
+// statusOf — что ответить клиенту про несостоявшийся дозвон. Закрытая цель
+// названа закрытой: клиент не будет перебирать ноды в поисках той, что
+// пустит внутрь.
+func statusOf(err error) byte {
+	if errors.Is(err, egress.ErrForbidden) || errors.Is(err, egress.ErrPort) {
+		return vp1.StatusForbidden
+	}
+	return vp1.StatusUnreachable
 }
 
 // serveSample отдаёт клиенту порцию байт, чтобы тот померил скорость.
@@ -293,10 +326,10 @@ const udpIdleTimeout = 90 * time.Second
 // Поэтому проверять адрес источника у пришедших ответов не нужно — сокет
 // подключённый, ядро само отбросит чужие.
 func serveDatagrams(stream net.Conn, addr vp1.Address) {
-	target, err := net.DialTimeout("udp", addr.String(), dialTimeout)
+	target, err := egress.Dial(context.Background(), "udp", addr.String(), dialTimeout)
 	if err != nil {
 		log.Printf("поток udp: цель недоступна: %s", why(err))
-		_ = vp1.WriteStatus(stream, vp1.StatusUnreachable)
+		_ = vp1.WriteStatus(stream, statusOf(err))
 		return
 	}
 	defer target.Close()
