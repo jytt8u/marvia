@@ -52,13 +52,27 @@
 
     <!-- Экран расхода. Считает сам телефон: панель подённых чисел не знает. -->
     <string name="stats_title">Расход</string>
-    <string name="stats_total">%1$d дней · %2$s через туннель</string>
-    <string name="stats_days">Тридцать дней трафика</string>
-    <string name="stats_places">Откуда идёт трафик</string>
+    <string name="stats_subtitle">этот телефон, через туннель</string>
+    <string name="stats_range_week">7 дн</string>
+    <string name="stats_range_month">30 дн</string>
+    <string name="stats_dial_week">Всего за неделю</string>
+    <string name="stats_dial_month">Всего за 30 дней</string>
+    <string name="stats_average">в среднем %1$s в день</string>
+    <string name="stats_peak">пик · %1$s</string>
+    <string name="stats_today_word">сегодня</string>
+    <string name="stats_days_ago">%1$d дн. назад</string>
+    <string name="stats_left_days">осталось · %1$d дн.</string>
+    <string name="stats_left_word">осталось</string>
+    <string name="stats_no_limit">без лимита</string>
+    <string name="stats_no_limit_until">без лимита · до %1$s</string>
+    <string name="stats_days_in_period">дней в периоде</string>
+    <string name="stats_line_week">Неделя</string>
+    <string name="stats_line_month">Тридцать дней</string>
+    <string name="stats_line_note">больше всего — %1$s, %2$s</string>
+    <string name="stats_places">Через какие страны</string>
+    <string name="stats_share">%1$d%% · %2$s</string>
     <string name="stats_week">Неделя по часам</string>
-    <string name="stats_dial_number">100</string>
-    <string name="stats_dial_note">РИСКА = 1%</string>
-    <string name="stats_percent">%1$d%%</string>
+    <string name="stats_week_peak">пик — %1$s, %2$d:00</string>
     <string name="stats_note">Это расход одного телефона через туннель. Другое устройство с тем же ключом считает свой.</string>
     <string-array name="weekdays_short">
         <item>ПН</item>
