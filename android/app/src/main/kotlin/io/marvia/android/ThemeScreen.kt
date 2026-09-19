@@ -192,7 +192,21 @@ class ThemeScreen(
                 gravity = Gravity.CENTER_HORIZONTAL
                 isClickable = true
                 isFocusable = true
-                setOnClickListener { tab = item; paint(t) }
+                setOnClickListener {
+                    tab = item
+                    // Раздел сам ставит экран в телефоне и приближает то, что
+                    // меняется: форму — на карточки настроек, «ещё» — на
+                    // серверы; цвет, свет и фон видны на главной целиком.
+                    ui.previewPower.focus(
+                        when (item) {
+                            Tab.SHAPE -> ThemePreview.Screen.SETTINGS
+                            Tab.MORE -> ThemePreview.Screen.SERVERS
+                            else -> ThemePreview.Screen.MAIN
+                        },
+                        zoom = item == Tab.SHAPE,
+                    )
+                    paint(t)
+                }
             }
             val ring = android.widget.ImageView(host).apply {
                 setImageResource(item.icon)
@@ -222,7 +236,7 @@ class ThemeScreen(
     private fun paintPicker(t: Theme) {
         ui.previewPicker.removeAllViews()
         for (screen in ThemePreview.Screen.values()) {
-            val on = ui.previewPower.screen == screen
+            val on = ui.previewPower.target == screen
             val row = TextView(host).apply {
                 setText(screen.title)
                 textSize = 15f
@@ -238,7 +252,7 @@ class ThemeScreen(
                 setCompoundDrawablesRelative(dot, null, null, null)
                 setPadding(0, (10 * dp).toInt(), 0, (10 * dp).toInt())
                 isClickable = true
-                setOnClickListener { ui.previewPower.screen = screen; paintPicker(t) }
+                setOnClickListener { ui.previewPower.focus(screen, zoom = false); paintPicker(t) }
             }
             ui.previewPicker.addView(row, LinearLayout.LayoutParams(MATCH, WRAP))
         }

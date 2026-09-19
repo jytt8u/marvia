@@ -20,12 +20,10 @@ import kotlin.math.roundToInt
 object LogoTint {
 
     /**
-     * Акцент вида из коробки — серый. С ним знак показывается как нарисован:
-     * серебряная лента и есть оригинал, красить её в серый — только портить.
+     * key — ключ кэша по акценту. Ноль занят оригиналом, поэтому чёрный
+     * акцент получает единицу: разница в один шаг синего глазом не видна.
      */
-    val STOCK_ACCENT: Int get() = Look.preset(Look.DEFAULT.preset).acc.toInt()
-
-    fun isStock(acc: Int): Boolean = rgb(acc) == rgb(STOCK_ACCENT)
+    fun key(acc: Int): Int = (acc and 0xFFFFFF).let { if (it == 0) 1 else it }
 
     /** Три тона акцента: тень, середина, блик. */
     data class Palette(val shadow: Int, val mid: Int, val highlight: Int)

@@ -1,7 +1,7 @@
 package io.marvia.android
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -63,11 +63,12 @@ class LogoTintTest {
         assertTrue(LogoTint.luminance(out[0]) < LogoTint.luminance(out[3]))
     }
 
+    /** Серый из коробки красится как любой другой: знак не должен спорить с темой. */
     @Test
-    fun stockGreyAccentMeansTheOriginalPicture() {
-        assertTrue(LogoTint.isStock(LogoTint.STOCK_ACCENT))
-        assertTrue(LogoTint.isStock(LogoTint.STOCK_ACCENT or (0xFF shl 24)))
-        assertFalse(LogoTint.isStock(0x1FD18D))
+    fun theStockGreyAccentIsTintedLikeAnyOther() {
+        val grey = Look.preset(Look.DEFAULT.preset).acc.toInt()
+        assertTrue(LogoTint.key(grey) != 0)
+        assertTrue(LogoTint.key(grey) == LogoTint.key(grey or (0xFF shl 24)))
     }
 
     @Test

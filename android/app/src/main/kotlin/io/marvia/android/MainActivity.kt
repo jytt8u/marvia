@@ -364,6 +364,14 @@ class MainActivity : AppCompatActivity() {
      */
     private fun paintTab(icon: ImageView, label: TextView, active: Boolean) {
         val color = if (active) theme.fg else theme.dim
+        // Значок выбранной вкладки чуть подпрыгивает: отклик на нажатие.
+        val was = icon.backgroundTintList?.defaultColor ?: 0
+        if (active && was == 0 && android.animation.ValueAnimator.areAnimatorsEnabled()) {
+            icon.scaleX = 0.85f; icon.scaleY = 0.85f
+            icon.animate().cancel()
+            icon.animate().scaleX(1f).scaleY(1f).setDuration(320)
+                .setInterpolator(android.view.animation.OvershootInterpolator(2.5f)).start()
+        }
         ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(color))
         icon.backgroundTintList = ColorStateList.valueOf(if (active) theme.accSoft else 0)
         label.setTextColor(color)
@@ -489,8 +497,19 @@ class MainActivity : AppCompatActivity() {
     /** status — заголовок состояния под кнопкой: слово и его цвет. */
     private fun status(text: Int, color: Int) {
         val v = ui.connectScreen.statusText
+        val changed = v.text.toString() != getString(text)
         v.setText(text)
         v.setTextColor(color)
+        // Новое слово проявляется, а не подменяется: так видно, что оно новое.
+        if (changed && android.animation.ValueAnimator.areAnimatorsEnabled()) {
+            val dp = resources.displayMetrics.density
+            for (view in listOf(v, ui.connectScreen.nodeLine)) {
+                view.alpha = 0f
+                view.translationY = 6 * dp
+                view.animate().cancel()
+                view.animate().alpha(1f).translationY(0f).setDuration(280).start()
+            }
+        }
     }
     /** Цвет ленты — личный выбор; состояние передаём текстом и кнопкой. */
     private fun paintPower(color: Int) {

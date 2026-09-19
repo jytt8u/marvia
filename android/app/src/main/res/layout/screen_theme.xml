@@ -70,8 +70,8 @@
                 <io.marvia.android.ThemePreview
                     android:id="@+id/previewPower"
                     android:layout_width="0dp"
-                    android:layout_height="300dp"
-                    android:layout_weight="1.1"
+                    android:layout_height="360dp"
+                    android:layout_weight="1.35"
                     android:clickable="false"
                     android:focusable="false"
                     android:importantForAccessibility="no" />

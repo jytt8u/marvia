@@ -1,5 +1,6 @@
 package io.marvia.android
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -46,7 +47,56 @@ class ThemePreview @JvmOverloads constructor(
         }
 
     var screen: Screen = Screen.MAIN
-        set(value) { field = value; invalidate() }
+        private set
+
+    /** target — куда переключаемся; screen догоняет на середине кроссфейда. */
+    var target: Screen = Screen.MAIN
+        private set
+
+    /** zoom — 0…1: насколько приближены карточки. 1 — виден кусок экрана вдвое крупнее. */
+    private var zoom = 0f
+    private var fade = 1f
+    private var zoomAnim: ValueAnimator? = null
+    private var fadeAnim: ValueAnimator? = null
+
+    /**
+     * focus переключает экран с кроссфейдом и, если надо, приближает его.
+     *
+     * Приближение — для ручек формы: скругления и плотность карточек с
+     * ногтя не видны, а в двукратном увеличении читаются сразу. Текст на
+     * экране целиком мелкий намеренно: это телефон в руке, а не страница.
+     */
+    fun focus(to: Screen, zoom: Boolean) {
+        val target = if (zoom) 1f else 0f
+        if (to == this.target && target == this.zoom) return
+        this.target = to
+        val animate = ValueAnimator.areAnimatorsEnabled()
+        if (to != screen) {
+            fadeAnim?.cancel()
+            if (animate) {
+                fadeAnim = ValueAnimator.ofFloat(1f, 0f, 1f).apply {
+                    duration = 360
+                    addUpdateListener {
+                        val v = it.animatedValue as Float
+                        // На середине — подмена экрана: в темноте её не видно.
+                        if (it.animatedFraction >= 0.5f && screen != to) screen = to
+                        fade = v
+                        invalidate()
+                    }
+                    start()
+                }
+            } else screen = to
+        }
+        zoomAnim?.cancel()
+        if (animate) {
+            zoomAnim = ValueAnimator.ofFloat(this.zoom, target).apply {
+                duration = 420
+                interpolator = android.view.animation.DecelerateInterpolator(1.6f)
+                addUpdateListener { this@ThemePreview.zoom = it.animatedValue as Float; invalidate() }
+                start()
+            }
+        } else { this.zoom = target; invalidate() }
+    }
 
     /** Условная ширина экрана внутри телефона, dp; всё ниже — в ней. */
     private val vw = 200f
@@ -76,10 +126,13 @@ class ThemePreview @JvmOverloads constructor(
             draw(canvas)
         }
 
-        val scale = screenBox.width() / (vw * dp)
+        val base = screenBox.width() / (vw * dp)
+        val vh = screenBox.height() / base / dp
+        // Приближение — вокруг карточек: на настройках они начинаются с 58dp.
+        val scale = base * (1f + 0.3f * zoom)
         canvas.translate(screenBox.left, screenBox.top)
+        canvas.translate(-zoom * (3 * dp * base), -zoom * (40 * dp * base))
         canvas.scale(scale, scale)
-        val vh = screenBox.height() / scale / dp
 
         when (screen) {
             Screen.MAIN -> drawMain(canvas, dp, vh)
@@ -88,6 +141,13 @@ class ThemePreview @JvmOverloads constructor(
         }
         drawNav(canvas, dp, vh)
         canvas.restore()
+
+        // Кроссфейд: пелена цветом корпуса поверх экрана, пока он подменяется.
+        if (fade < 1f) {
+            brush.style = Paint.Style.FILL
+            brush.color = Look.withAlpha(if (t.dark) 0xFF0B0C0E.toInt() else 0xFFD8DADC.toInt(), (1f - fade).toDouble())
+            canvas.drawRoundRect(screenBox, corner - bezel, corner - bezel, brush)
+        }
     }
 
     // ------------------------------------------------------------ главная
@@ -112,8 +172,8 @@ class ThemePreview @JvmOverloads constructor(
         power.draw(canvas)
         canvas.restore()
 
-        text(canvas, context.getString(R.string.status_on), cx, 192 * dp, 13f * dp, t.fg, Fonts.textBold(context), Paint.Align.CENTER)
-        text(canvas, sample(), cx, 206 * dp, 7f * dp, t.dim, Fonts.mono(context), Paint.Align.CENTER)
+        text(canvas, context.getString(R.string.status_on), cx, 192 * dp, 15f * dp, t.fg, Fonts.textBold(context), Paint.Align.CENTER)
+        text(canvas, sample(), cx, 206 * dp, 8f * dp, t.dim, Fonts.mono(context), Paint.Align.CENTER)
 
         // Сегодня по часам, сессия и скорость — как на главной, вполовину.
         val top = vh - 42 - 108
@@ -133,9 +193,9 @@ class ThemePreview @JvmOverloads constructor(
         val row = top + 64
         card(canvas, dp, 10f, row, vw / 2 - 3, row + 38f)
         card(canvas, dp, vw / 2 + 3, row, vw - 10f, row + 38f)
-        text(canvas, context.getString(R.string.stats_session), 18 * dp, (row + 13) * dp, 6.5f * dp, t.dim, Fonts.text(context))
+        text(canvas, context.getString(R.string.stats_session), 18 * dp, (row + 13) * dp, 7.5f * dp, t.dim, Fonts.text(context))
         text(canvas, "01:12:34", 18 * dp, (row + 29) * dp, 10f * dp, t.fg, Fonts.monoBold(context))
-        text(canvas, context.getString(R.string.stats_speed), (vw / 2 + 11) * dp, (row + 13) * dp, 6.5f * dp, t.dim, Fonts.text(context))
+        text(canvas, context.getString(R.string.stats_speed), (vw / 2 + 11) * dp, (row + 13) * dp, 7.5f * dp, t.dim, Fonts.text(context))
         text(canvas, context.getString(R.string.stats_mbps, "48"), (vw / 2 + 11) * dp, (row + 29) * dp, 10f * dp, t.fg, Fonts.monoBold(context))
     }
 
@@ -143,12 +203,12 @@ class ThemePreview @JvmOverloads constructor(
 
     private fun drawSettings(canvas: Canvas, dp: Float) {
         val t = theme
-        text(canvas, context.getString(R.string.theme_pv_settings), 14 * dp, 36 * dp, 13f * dp, t.fg, Fonts.textBold(context))
-        text(canvas, "Marvia · Android", 14 * dp, 48 * dp, 6.5f * dp, t.dim, Fonts.text(context))
+        text(canvas, context.getString(R.string.theme_pv_settings), 14 * dp, 36 * dp, 15f * dp, t.fg, Fonts.textBold(context))
+        text(canvas, "Marvia · Android", 14 * dp, 48 * dp, 7.5f * dp, t.dim, Fonts.text(context))
 
         card(canvas, dp, 10f, 58f, vw - 10f, 94f)
-        text(canvas, context.getString(R.string.more_apps_title), 18 * dp, 73 * dp, 8f * dp, t.fg, Fonts.textBold(context))
-        text(canvas, context.getString(R.string.theme_pv_apps_note), 18 * dp, 85 * dp, 6f * dp, t.dim, Fonts.text(context))
+        text(canvas, context.getString(R.string.more_apps_title), 18 * dp, 73 * dp, 9f * dp, t.fg, Fonts.textBold(context))
+        text(canvas, context.getString(R.string.theme_pv_apps_note), 18 * dp, 85 * dp, 7f * dp, t.dim, Fonts.text(context))
 
         text(canvas, context.getString(R.string.conn_group_protect).uppercase(), 14 * dp, 110 * dp, 5.5f * dp, t.dim, Fonts.mono(context), letter = 0.18f)
         card(canvas, dp, 10f, 116f, vw - 10f, 116f + 3 * 30f)
@@ -160,8 +220,8 @@ class ThemePreview @JvmOverloads constructor(
         for ((i, r) in rows.withIndex()) {
             val y = 116f + i * 30f
             if (i > 0) { brush.color = t.line; canvas.drawRect(10 * dp, y * dp, (vw - 10) * dp, (y + 0.5f) * dp, brush) }
-            text(canvas, context.getString(r.first), 18 * dp, (y + 13) * dp, 7f * dp, t.fg, Fonts.textBold(context), width = (vw - 62) * dp)
-            text(canvas, context.getString(r.second), 18 * dp, (y + 23) * dp, 5.8f * dp, t.dim, Fonts.text(context), width = (vw - 62) * dp)
+            text(canvas, context.getString(r.first), 18 * dp, (y + 13) * dp, 8f * dp, t.fg, Fonts.textBold(context), width = (vw - 62) * dp)
+            text(canvas, context.getString(r.second), 18 * dp, (y + 23) * dp, 6.5f * dp, t.dim, Fonts.text(context), width = (vw - 62) * dp)
             switchAt(canvas, dp, vw - 36f, y + 9f, r.third)
         }
     }
@@ -170,18 +230,18 @@ class ThemePreview @JvmOverloads constructor(
 
     private fun drawServers(canvas: Canvas, dp: Float) {
         val t = theme
-        text(canvas, context.getString(R.string.servers_title), 14 * dp, 36 * dp, 13f * dp, t.fg, Fonts.textBold(context))
-        text(canvas, context.getString(R.string.theme_pv_servers_note), 14 * dp, 48 * dp, 6.5f * dp, t.dim, Fonts.text(context))
+        text(canvas, context.getString(R.string.servers_title), 14 * dp, 36 * dp, 15f * dp, t.fg, Fonts.textBold(context))
+        text(canvas, context.getString(R.string.theme_pv_servers_note), 14 * dp, 48 * dp, 7.5f * dp, t.dim, Fonts.text(context))
 
         card(canvas, dp, 10f, 58f, vw - 10f, 92f, stroke = t.acc)
-        text(canvas, context.getString(R.string.servers_auto), 18 * dp, 72 * dp, 8f * dp, t.fg, Fonts.textBold(context))
-        text(canvas, context.getString(R.string.theme_pv_auto_note), 18 * dp, 84 * dp, 6f * dp, t.dim, Fonts.text(context))
+        text(canvas, context.getString(R.string.servers_auto), 18 * dp, 72 * dp, 9f * dp, t.fg, Fonts.textBold(context))
+        text(canvas, context.getString(R.string.theme_pv_auto_note), 18 * dp, 84 * dp, 7f * dp, t.dim, Fonts.text(context))
         brush.color = t.acc
         canvas.drawCircle((vw - 22) * dp, 75 * dp, 6 * dp, brush)
 
         card(canvas, dp, 10f, 100f, vw - 10f, 100f + 34f + 3 * 30f)
-        text(canvas, context.getString(R.string.theme_pv_provider), 18 * dp, 114 * dp, 8f * dp, t.fg, Fonts.textBold(context))
-        text(canvas, context.getString(R.string.theme_pv_provider_note), 18 * dp, 125 * dp, 6f * dp, t.dim, Fonts.text(context))
+        text(canvas, context.getString(R.string.theme_pv_provider), 18 * dp, 114 * dp, 9f * dp, t.fg, Fonts.textBold(context))
+        text(canvas, context.getString(R.string.theme_pv_provider_note), 18 * dp, 125 * dp, 7f * dp, t.dim, Fonts.text(context))
         brush.color = t.line
         canvas.drawRect(10 * dp, 134 * dp, (vw - 10) * dp, 134.5f * dp, brush)
 
@@ -194,8 +254,8 @@ class ThemePreview @JvmOverloads constructor(
             val y = 134f + i * 30f
             if (i == 0) { brush.color = Look.withAlpha(t.fg, 0.04); canvas.drawRect(10 * dp, y * dp, (vw - 10) * dp, (y + 30) * dp, brush) }
             if (i > 0) { brush.color = t.line; canvas.drawRect(10 * dp, y * dp, (vw - 10) * dp, (y + 0.5f) * dp, brush) }
-            text(canvas, n.first, 18 * dp, (y + 13) * dp, 7.5f * dp, t.fg, Fonts.textBold(context))
-            text(canvas, n.second, 18 * dp, (y + 23) * dp, 5.8f * dp, t.dim, Fonts.text(context))
+            text(canvas, n.first, 18 * dp, (y + 13) * dp, 8.5f * dp, t.fg, Fonts.textBold(context))
+            text(canvas, n.second, 18 * dp, (y + 23) * dp, 6.5f * dp, t.dim, Fonts.text(context))
             text(canvas, context.getString(R.string.node_ping, n.third), (vw - 18) * dp, (y + 18) * dp, 7f * dp, if (i == 0) t.fg else t.dim, Fonts.monoBold(context), Paint.Align.RIGHT)
         }
     }
@@ -225,15 +285,25 @@ class ThemePreview @JvmOverloads constructor(
         }
     }
 
+    /** card — карточка в цветах и форме темы: скругление и подача — из неё. */
     private fun card(canvas: Canvas, dp: Float, l: Float, tp: Float, r: Float, b: Float, stroke: Int = theme.line) {
+        val t = theme
         box.set(l * dp, tp * dp, r * dp, b * dp)
+        val rad = t.r * dp * 0.7f
+        if (t.card == "shadow") {
+            brush.style = Paint.Style.FILL
+            brush.color = 0x40000000
+            canvas.drawRoundRect(box.left, box.top + 3 * dp, box.right, box.bottom + 3 * dp, rad, rad, brush)
+        }
         brush.style = Paint.Style.FILL
-        brush.color = theme.surf
-        canvas.drawRoundRect(box, 8 * dp, 8 * dp, brush)
-        brush.style = Paint.Style.STROKE
-        brush.strokeWidth = 0.6f * dp
-        brush.color = stroke
-        canvas.drawRoundRect(box, 8 * dp, 8 * dp, brush)
+        brush.color = t.surf
+        canvas.drawRoundRect(box, rad, rad, brush)
+        if (t.card != "flat" || stroke != t.line) {
+            brush.style = Paint.Style.STROKE
+            brush.strokeWidth = 0.6f * dp
+            brush.color = stroke
+            canvas.drawRoundRect(box, rad, rad, brush)
+        }
         brush.style = Paint.Style.FILL
     }
 

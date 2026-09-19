@@ -49,6 +49,9 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private var press = 1f
     private var spin = 0f
     private var breath = 0f
+    /** flash — вспышка при подключении: кольцо разбегается от диска и тает. */
+    private var flash = 0f
+    private var flashAnim: ValueAnimator? = null
 
     private var onAnim: ValueAnimator? = null
     private var busyAnim: ValueAnimator? = null
@@ -62,6 +65,16 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
             onAnim = glide(onAnim, on, if (value == Phase.ON) 1f else 0f) { on = it }
             busyAnim = glide(busyAnim, busy, if (value == Phase.CONNECTING) 1f else 0f) { busy = it }
             breathe(value == Phase.ON)
+            if (value == Phase.ON && ValueAnimator.areAnimatorsEnabled()) {
+                flashAnim?.cancel()
+                flashAnim = ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = 900
+                    interpolator = DecelerateInterpolator(2f)
+                    addUpdateListener { flash = it.animatedValue as Float; invalidate() }
+                    start()
+                }
+                performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            }
             invalidate()
         }
 
@@ -126,6 +139,26 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
             )
             canvas.drawCircle(cx, cy, reach, brush)
             brush.shader = null
+        }
+
+        // Тень под диском: 14dp вниз, мягкая — диск лежит над экраном, а не
+        // нарисован на нём. В макете это box-shadow 0 24px 48px.
+        if (t.btn != "bare" && t.btn != "glass") {
+            brush.shader = RadialGradient(
+                cx, cy + 14 * dp, disc + 26 * dp,
+                intArrayOf(0x66000000, 0x00000000), floatArrayOf(0.62f, 1f), Shader.TileMode.CLAMP,
+            )
+            canvas.drawCircle(cx, cy + 14 * dp, disc + 26 * dp, brush)
+            brush.shader = null
+        }
+
+        // Вспышка: кольцо от диска до края, тает по пути.
+        if (flash > 0f && flash < 1f) {
+            brush.style = Paint.Style.STROKE
+            brush.strokeWidth = (3f - 2f * flash) * dp
+            brush.color = Look.withAlpha(t.acc, 0.7 * (1.0 - flash))
+            canvas.drawCircle(cx, cy, disc + (outer + ROOM * dp - disc) * flash, brush)
+            brush.style = Paint.Style.FILL
         }
 
         // Диск: объём от света в верхнем левом углу, как в макете.
@@ -213,6 +246,7 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     override fun onDetachedFromWindow() {
         breathAnim?.cancel()
+        flashAnim?.cancel()
         super.onDetachedFromWindow()
     }
 
