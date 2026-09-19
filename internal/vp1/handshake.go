@@ -150,17 +150,22 @@ func ServerHandshake(conn net.Conn, static KeyPair, guard *ReplayGuard, allow Au
 		return nil, nil, fmt.Errorf("длина payload msg1 %d байт, ожидается %d", len(payload), timestampLen)
 	}
 
-	stamp := time.Unix(0, int64(binary.BigEndian.Uint64(payload)))
-	if err := guard.Check(msg1, stamp); err != nil {
-		return nil, nil, err
-	}
-
 	clientPub := hs.PeerStatic()
 	if len(clientPub) != KeyLen {
 		return nil, nil, errors.New("клиент не предъявил статический ключ")
 	}
 	if err := allow(clientPub); err != nil {
 		return nil, nil, fmt.Errorf("%w: %w", ErrUnauthorized, err)
+	}
+
+	// Память повторов — только после проверки ключа. Разобрать msg1 может
+	// любой, кто знает публичный ключ ноды, а он в каждой ссылке подписки:
+	// проверяй раньше — и чужак с одной ссылкой засыпал бы память ноды
+	// свежими хендшейками с любых ключей. Повтор настоящего клиента ловится
+	// и здесь: его ключ в списке.
+	stamp := time.Unix(0, int64(binary.BigEndian.Uint64(payload)))
+	if err := guard.Check(msg1, stamp); err != nil {
+		return nil, nil, err
 	}
 
 	msg2, csRecv, csSend, err := hs.WriteMessage(nil, packPadded(nil, handshakePad()))

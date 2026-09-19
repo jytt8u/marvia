@@ -24,10 +24,11 @@ var ErrClockSkew = errors.New("время в хендшейке вне допу�
 // Решение то же, что у WireGuard: клиент кладёт в msg1 своё время, сервер
 // отбрасывает всё за пределами окна и помнит уже виденное внутри окна.
 type ReplayGuard struct {
-	mu     sync.Mutex
-	window time.Duration
-	seen   map[[sha256.Size]byte]time.Time
-	now    func() time.Time
+	mu        sync.Mutex
+	window    time.Duration
+	seen      map[[sha256.Size]byte]time.Time
+	lastSweep time.Time
+	now       func() time.Time
 }
 
 // NewReplayGuard создаёт защиту с заданным допуском на расхождение часов.
@@ -62,7 +63,15 @@ func (g *ReplayGuard) Check(message []byte, stamp time.Time) error {
 
 // evictLocked выбрасывает записи, вышедшие за окно: их всё равно отсечёт
 // проверка времени, а память они занимают.
+//
+// Обход всей карты — на каждом хендшейке под замком: у продавца с тысячами
+// клиентов это тысячи записей на каждое подключение. Поэтому не чаще раза
+// в секунду: за секунду лишнего не накопится.
 func (g *ReplayGuard) evictLocked(now time.Time) {
+	if now.Sub(g.lastSweep) < time.Second && !now.Before(g.lastSweep) {
+		return
+	}
+	g.lastSweep = now
 	deadline := now.Add(-2 * g.window)
 	for k, seenAt := range g.seen {
 		if seenAt.Before(deadline) {

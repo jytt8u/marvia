@@ -270,3 +270,29 @@ func TestTamperedFrame(t *testing.T) {
 		t.Fatal("испорченный кадр был принят")
 	}
 }
+
+// TestStrangerLeavesNoTraceInReplayMemory: msg1 разбирает любой, кто знает
+// публичный ключ ноды, а он в каждой ссылке. Чужой ключ не должен
+// занимать память повторов — иначе одна ссылка даёт способ её засыпать.
+func TestStrangerLeavesNoTraceInReplayMemory(t *testing.T) {
+	serverKey, _ := GenerateKeyPair()
+	guard := NewReplayGuard(ClockSkew)
+	deny := func([]byte) error { return errors.New("нет в списке") }
+
+	for i := 0; i < 3; i++ {
+		clientKey, _ := GenerateKeyPair()
+		c1, c2 := net.Pipe()
+		done := make(chan struct{})
+		go func() {
+			_, _, _ = ServerHandshake(c2, serverKey, guard, deny)
+			_ = c2.Close()
+			close(done)
+		}()
+		_, _ = ClientHandshake(c1, clientKey, serverKey.Public)
+		_ = c1.Close()
+		<-done
+	}
+	if n := guard.Size(); n != 0 {
+		t.Fatalf("чужие хендшейки заняли %d записей памяти повторов", n)
+	}
+}
