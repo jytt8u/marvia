@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -148,7 +149,23 @@ func (s Subscription) Update(platform, current string) (AppOffer, bool) {
 	if !newerVersion(offer.Version, current) {
 		return AppOffer{}, false
 	}
+	// Ссылку клиент отдаёт системе: на Windows — explorer.exe, на Android —
+	// ACTION_VIEW. Панель для покупателя — чужой сервер, и `file:`, UNC-путь
+	// или `intent:` оттуда открывать нельзя: только страница в браузере.
+	if !webLink(offer.URL) {
+		return AppOffer{}, false
+	}
 	return offer, true
+}
+
+// webLink — ссылка, которую безопасно отдать браузеру: http или https с
+// именем хоста.
+func webLink(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	return u.Scheme == "http" || u.Scheme == "https"
 }
 
 // newerVersion — a новее b. Понимает vX.Y.Z и X.Y.Z; лишний хвост вроде
