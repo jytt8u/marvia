@@ -78,8 +78,15 @@ func run(dns string, mtu uint32, urlFile string, inTray bool) error {
 	// Схему регистрируем на каждом запуске, а ссылку из аргументов принимаем
 	// сразу: покупатель нажал её в телеграме, и это первое, что он делает
 	// после оплаты. Подробности в scheme_windows.go.
+	//
+	// Замена уже стоящего ключа — с вопросом, как на телефоне: ссылку
+	// marvia:// открывает любая страница в браузере, и подменённая увела бы
+	// весь трафик на серверы того, кто её подсунул, а заметить это нечем.
 	if link := setupScheme(log); link != "" {
-		if err := ctl.SetAccount(link); err != nil {
+		old := ctl.Account()
+		if old != "" && old != link && !confirm(say("replaceKeyTitle"), say("replaceKeyBody")) {
+			log.add("%s", say("logKeyKept"))
+		} else if err := ctl.SetAccount(link); err != nil {
 			log.add("ссылка из телеграма не подошла: %v", err)
 		} else {
 			log.add("ключ доступа взят из ссылки")
