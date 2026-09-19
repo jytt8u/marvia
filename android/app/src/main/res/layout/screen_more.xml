@@ -600,20 +600,20 @@
                                 app:tint="@color/veil_accent" />
                         </FrameLayout>
 
-                        <TextView
-                            style="@style/VeilRowTitle"
+                        <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:text="@string/more_logs_title" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginEnd="9dp"
-                            android:tag="dim"
-                            android:text="@string/more_logs_value"
-                            android:textColor="@color/veil_muted"
-                            android:textSize="14sp" />
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/VeilRowTitle"
+                                android:text="@string/more_logs_title" />
+
+                            <TextView
+                                style="@style/VeilRowSub"
+                                android:text="@string/more_logs_value" />
+                        </LinearLayout>
 
                         <ImageView
                             android:layout_width="19dp"
