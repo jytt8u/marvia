@@ -21,13 +21,11 @@
         android:paddingBottom="10dp">
 
         <!-- Знак и надпись — те же, что на главной: шапка одна на все экраны. -->
-        <ImageView
+        <io.marvia.android.MarviaLogoView
             android:layout_width="28dp"
             android:layout_height="21dp"
             android:layout_marginEnd="10dp"
-            android:contentDescription="@null"
-            android:scaleType="fitCenter"
-            android:src="@drawable/marvia_mark" />
+            android:contentDescription="@null" />
 
         <ImageView
             android:layout_width="0dp"

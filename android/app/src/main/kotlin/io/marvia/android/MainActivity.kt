@@ -474,7 +474,6 @@ class MainActivity : AppCompatActivity() {
     private fun paintPower(color: Int) {
         val c = ui.connectScreen
         val dp = resources.displayMetrics.density
-        c.heroMark.clearColorFilter()
         c.trafficPanel.theme = theme
         c.powerAction.theme = theme.copy(acc = color)
 

@@ -5,7 +5,7 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:gravity="center_vertical" android:paddingHorizontal="@dimen/screen_pad"
         android:paddingTop="@dimen/header_pad" android:paddingBottom="12dp">
-        <ImageView android:id="@+id/heroMark" android:layout_width="32dp" android:layout_height="24dp" android:layout_marginEnd="10dp" android:src="@drawable/marvia_mark" android:scaleType="fitCenter" android:contentDescription="@null" />
+        <io.marvia.android.MarviaLogoView android:id="@+id/heroMark" android:layout_width="32dp" android:layout_height="24dp" android:layout_marginEnd="10dp" android:contentDescription="@null" />
         <ImageView android:layout_width="0dp" android:layout_height="16dp" android:layout_weight="1"
             android:scaleType="fitStart" android:src="@drawable/ic_wordmark" android:tag="icon:fg"
             android:contentDescription="@string/app_name" app:tint="@color/veil_text" />
