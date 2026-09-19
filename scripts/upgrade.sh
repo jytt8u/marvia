@@ -323,7 +323,23 @@ refresh_dist() {
 	[ -d "$dist" ] || return 0
 	for name in marvia-node marvia-keygen; do
 		[ -x "$tmp/$name" ] && install -m 755 "$tmp/$name" "$dist/$name"
+		[ -x "$tmp/$name" ] && install -m 755 "$tmp/$name" "$dist/$name-$arch"
 	done
+
+	# Ноды другой разрядности ставятся из файла с её суффиксом — его тоже
+	# нельзя оставить старым. Второй архив сверяем по тем же SHA256SUMS.
+	case "$arch" in amd64) other=arm64 ;; *) other=amd64 ;; esac
+	other_archive="marvia_linux_$other.tar.gz"
+	if curl -fsSL -o "$tmp/$other_archive" "$base/$other_archive" 2>/dev/null &&
+		( cd "$tmp" && grep "[ *]$other_archive\$" SHA256SUMS | sha256sum -c - >/dev/null 2>&1 ) &&
+		mkdir -p "$tmp/$other" && tar -xzf "$tmp/$other_archive" -C "$tmp/$other" marvia-node marvia-keygen 2>/dev/null; then
+		for name in marvia-node marvia-keygen; do
+			install -m 755 "$tmp/$other/$name" "$dist/$name-$other"
+		done
+		ok "ядро ноды для $other обновлено"
+	else
+		bad "ядро ноды для $other не скачалось — ноды на $other будут ставиться со старым"
+	fi
 
 	now=$("$PANEL_DIR/marvia-panel" -version 2>/dev/null | awk '{print $2}' | sed 's/^v//')
 	for app in marvia-android.apk marvia-windows.exe; do

@@ -23,6 +23,7 @@ const adminToken = "тестовый-админский-токен-достат�
 type harness struct {
 	t      *testing.T
 	server *httptest.Server
+	dist   string // каталог, из которого панель раздаёт бинарники нодам
 }
 
 func newHarness(t *testing.T) *harness {
@@ -34,11 +35,12 @@ func newHarness(t *testing.T) *harness {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	api := panel.NewAPI(store, adminToken, "https://sub.example.com", t.TempDir())
+	dist := t.TempDir()
+	api := panel.NewAPI(store, adminToken, "https://sub.example.com", dist)
 	server := httptest.NewServer(api.Handler())
 	t.Cleanup(server.Close)
 
-	return &harness{t: t, server: server}
+	return &harness{t: t, server: server, dist: dist}
 }
 
 // do выполняет запрос и разбирает ответ.

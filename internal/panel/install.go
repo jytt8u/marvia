@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"text/template"
@@ -65,6 +66,13 @@ func (a *API) installScript(w http.ResponseWriter, r *http.Request) {
 }
 
 // installBinary отдаёт бинарник ноды по тому же приглашению.
+//
+// Нода называет свою разрядность (?arch=arm64): дешёвые машины под ноды
+// нередко ARM, а панель стоит на amd64, и без этого нода получала бы чужой
+// бинарник — и падала бы с «Exec format error» уже после того, как ключи
+// выпущены и приглашение сгорело. Файл на нужную разрядность лежит в dist
+// под именем с суффиксом; без него отдаётся общий, и заголовок X-Marvia-Arch
+// честно говорит, для чего он собран, чтобы установщик остановился до ключей.
 func (a *API) installBinary(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	name := r.PathValue("name")
@@ -81,6 +89,13 @@ func (a *API) installBinary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	path := filepath.Join(a.distDir, name)
+	served := runtime.GOARCH
+	if arch := r.URL.Query().Get("arch"); arch == "amd64" || arch == "arm64" {
+		if _, err := os.Stat(path + "-" + arch); err == nil {
+			path += "-" + arch
+			served = arch
+		}
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		fail(w, http.StatusServiceUnavailable,
@@ -88,6 +103,7 @@ func (a *API) installBinary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer f.Close()
+	w.Header().Set("X-Marvia-Arch", served)
 
 	info, err := f.Stat()
 	if err != nil {

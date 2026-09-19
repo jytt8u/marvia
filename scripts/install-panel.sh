@@ -211,6 +211,48 @@ cp "$BIN_DIR/marvia-node" "$DIR/dist/marvia-node"
 cp "$BIN_DIR/marvia-keygen" "$DIR/dist/marvia-keygen"
 chmod 755 "$DIR/marvia-panel" "$DIR/dist/marvia-node" "$DIR/dist/marvia-keygen"
 
+# Ноде нужен бинарник под её разрядность, а не под разрядность панели:
+# дешёвые машины под ноды нередко ARM. Панель раздаёт из dist файл с
+# суффиксом разрядности, если он есть, поэтому кладём оба: свой — копией,
+# второй — из соседнего архива релиза. Не скачался — не беда: нода на той же
+# разрядности встанет по общему файлу, а на другой установщик скажет,
+# какой файл сюда положить.
+case "$(uname -m)" in
+x86_64 | amd64) HOST_ARCH=amd64 OTHER_ARCH=arm64 ;;
+aarch64 | arm64) HOST_ARCH=arm64 OTHER_ARCH=amd64 ;;
+*) HOST_ARCH='' OTHER_ARCH='' ;;
+esac
+if [ -n "$HOST_ARCH" ]; then
+	cp "$DIR/dist/marvia-node" "$DIR/dist/marvia-node-$HOST_ARCH"
+	cp "$DIR/dist/marvia-keygen" "$DIR/dist/marvia-keygen-$HOST_ARCH"
+	OTHER_FROM="https://github.com/$REPO/releases/latest/download/marvia_linux_$OTHER_ARCH.tar.gz"
+	[ -n "$FROM" ] && OTHER_FROM=$(printf '%s' "$FROM" | sed "s/_$HOST_ARCH\.tar\.gz\$/_$OTHER_ARCH.tar.gz/")
+	[ -n "$WORK" ] || { WORK=$(mktemp -d); }
+	say "скачиваю ядро ноды для $OTHER_ARCH"
+	if curl -fsSL --max-time 300 "$OTHER_FROM" -o "$WORK/other.tar.gz" 2>/dev/null; then
+		OTHER_OK=1
+		if [ -f "$WORK/SHA256SUMS" ] && command -v sha256sum >/dev/null 2>&1; then
+			WANT=$(awk -v f="marvia_linux_$OTHER_ARCH.tar.gz" '$2 == f || $2 == "*"f {print $1}' "$WORK/SHA256SUMS" | head -1)
+			GOT=$(sha256sum "$WORK/other.tar.gz" | awk '{print $1}')
+			if [ -n "$WANT" ] && [ "$WANT" != "$GOT" ]; then
+				say "ВНИМАНИЕ: контрольная сумма архива для $OTHER_ARCH не сошлась, его не кладу"
+				OTHER_OK=0
+			fi
+		fi
+		if [ "$OTHER_OK" = 1 ]; then
+			mkdir -p "$WORK/other"
+			tar -xzf "$WORK/other.tar.gz" -C "$WORK/other" marvia-node marvia-keygen 2>/dev/null &&
+				cp "$WORK/other/marvia-node" "$DIR/dist/marvia-node-$OTHER_ARCH" &&
+				cp "$WORK/other/marvia-keygen" "$DIR/dist/marvia-keygen-$OTHER_ARCH" &&
+				chmod 755 "$DIR/dist/marvia-node-$OTHER_ARCH" "$DIR/dist/marvia-keygen-$OTHER_ARCH" ||
+				say "ВНИМАНИЕ: архив для $OTHER_ARCH не распаковался, ноды на $OTHER_ARCH ставить будет не из чего"
+		fi
+	else
+		say "ВНИМАНИЕ: ядро для $OTHER_ARCH не скачалось — ноды на $OTHER_ARCH поставить будет не из чего."
+		say "Положи его руками: $DIR/dist/marvia-node-$OTHER_ARCH и marvia-keygen-$OTHER_ARCH из marvia_linux_$OTHER_ARCH.tar.gz"
+	fi
+fi
+
 # Приложения покупателей кладём рядом: раздавать их будет сама панель, с
 # домена продавца.
 #

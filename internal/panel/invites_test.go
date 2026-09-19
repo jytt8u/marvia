@@ -3,6 +3,9 @@ package panel_test
 import (
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -194,4 +197,46 @@ func readAll(t *testing.T, resp *http.Response) string {
 		t.Fatalf("чтение ответа: %v", err)
 	}
 	return string(raw)
+}
+
+// TestNodeGetsTheBinaryForItsOwnArch — нода на ARM не получает бинарник для
+// amd64 молча. Файл на её разрядность есть — отдаётся он; нет — отдаётся
+// общий, но с заголовком, по которому установщик остановится до ключей.
+func TestNodeGetsTheBinaryForItsOwnArch(t *testing.T) {
+	h := newHarness(t)
+	if err := os.WriteFile(filepath.Join(h.dist, "marvia-node"), []byte("общий"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(h.dist, "marvia-node-arm64"), []byte("arm"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var invite inviteResponse
+	if code := h.do(http.MethodPost, "/api/v1/nodes/invite", adminToken, nil, &invite); code != http.StatusOK {
+		t.Fatalf("выпуск приглашения: код %d", code)
+	}
+
+	get := func(query string) (string, string) {
+		resp, err := h.server.Client().Get(h.server.URL + "/install/" + invite.Token + "/marvia-node" + query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("бинарник отдался с кодом %d", resp.StatusCode)
+		}
+		return readAll(t, resp), resp.Header.Get("X-Marvia-Arch")
+	}
+
+	if body, arch := get("?arch=arm64"); body != "arm" || arch != "arm64" {
+		t.Errorf("для arm64 отдано %q с разрядностью %q", body, arch)
+	}
+	if body, arch := get("?arch=amd64"); body != "общий" || arch != runtime.GOARCH {
+		t.Errorf("без файла на amd64 отдано %q с разрядностью %q, ожидался общий и %s", body, arch, runtime.GOARCH)
+	}
+	if body, arch := get(""); body != "общий" || arch != runtime.GOARCH {
+		t.Errorf("без разрядности отдано %q с %q", body, arch)
+	}
+	if body, _ := get("?arch=../../etc"); body != "общий" {
+		t.Errorf("чужая разрядность прочитала %q", body)
+	}
 }
