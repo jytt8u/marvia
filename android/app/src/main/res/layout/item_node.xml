@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Одна нода в списке стран. -->
+<!--
+    Одна нода внутри карточки подписки: флаг, страна, город с именем и
+    состоянием, полоски сигнала и отклик. Между строками — линия карточки.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="10dp"
-    android:background="@drawable/bg_card"
-    android:tag="gap"
     android:clickable="true"
     android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minHeight="60dp"
+    android:minHeight="62dp"
     android:orientation="horizontal"
-    android:paddingHorizontal="15dp"
-    android:paddingVertical="13dp">
+    android:paddingHorizontal="14dp"
+    android:paddingVertical="11dp">
 
     <!-- Флаг. Страну не узнали — места он не занимает: выдумывать флаг нельзя. -->
     <TextView
@@ -36,7 +37,7 @@
             android:maxLines="1"
             android:tag="fg"
             android:textColor="@color/veil_text"
-            android:textSize="15.5sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <!-- Здесь же разводятся «выбрана» и «трафик идёт сейчас»: это разное. -->
@@ -44,35 +45,28 @@
             android:id="@+id/nodeNote"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:ellipsize="end"
-            android:maxLines="4"
+            android:maxLines="3"
             android:tag="dim"
             android:textColor="@color/veil_muted"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
     </LinearLayout>
+
+    <io.marvia.android.SignalBars
+        android:id="@+id/nodeBars"
+        android:layout_width="22dp"
+        android:layout_height="14dp"
+        android:layout_marginStart="10dp" />
 
     <TextView
         android:id="@+id/nodePing"
-        android:maxWidth="120dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="11dp"
-        android:textSize="13.5sp" />
-
-    <FrameLayout
-        android:id="@+id/nodeMark"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
-        android:layout_marginStart="11dp"
-        android:background="@drawable/bg_ring">
-
-        <ImageView
-            android:id="@+id/nodeMarkCheck"
-            android:layout_width="13dp"
-            android:layout_height="13dp"
-            android:layout_gravity="center"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_check"
-            android:visibility="gone" />
-    </FrameLayout>
+        android:layout_marginStart="8dp"
+        android:fontFamily="@font/jetbrains_mono"
+        android:minWidth="52dp"
+        android:gravity="end"
+        android:textSize="13sp"
+        android:textStyle="bold" />
 </LinearLayout>

@@ -91,7 +91,7 @@
     <string name="key_replace_no">Оставить прежний</string>
 
     <!-- Экран выбора страны. -->
-    <string name="servers_title">Страны</string>
+    <string name="servers_title">Серверы</string>
     <string name="servers_measure">Обновить</string>
     <string name="servers_auto">Автовыбор</string>
     <string name="servers_auto_mark">⚡</string>
@@ -110,9 +110,23 @@
     <string name="servers_sub_bad">Это не ссылка marvia://</string>
     <string name="servers_sub_remove">Убрать</string>
     <string name="servers_sub_remove_ask">Убрать подписку «%1$s»?</string>
-    <string name="servers_manual">Выбрать вручную</string>
-    <string name="servers_empty">Страны видны изнутри туннеля.</string>
-    <string name="servers_group_other">Другие</string>
+    <string name="servers_sub_use">Сделать рабочей</string>
+    <string name="servers_sub_actions">Действия с подпиской</string>
+    <string name="servers_sub_collapsed">свёрнуто · нажатие переключит</string>
+    <string name="servers_sub_days_left">Осталось %1$d дн.</string>
+    <plurals name="servers_subs_count">
+        <item quantity="one">%d подписка</item>
+        <item quantity="few">%d подписки</item>
+        <item quantity="many">%d подписок</item>
+        <item quantity="other">%d подписки</item>
+    </plurals>
+    <plurals name="servers_nodes_count">
+        <item quantity="one">%d сервер</item>
+        <item quantity="few">%d сервера</item>
+        <item quantity="many">%d серверов</item>
+        <item quantity="other">%d сервера</item>
+    </plurals>
+    <string name="servers_empty">Серверы видны изнутри туннеля.</string>
     <string name="servers_failed">Не получилось перейти: %1$s</string>
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->

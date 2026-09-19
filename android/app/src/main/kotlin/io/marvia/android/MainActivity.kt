@@ -118,6 +118,12 @@ class MainActivity : AppCompatActivity() {
         // диалоги и системные виджеты берут цвета оттуда, и светлый диалог
         // над «Полночью» выглядел бы дырой в экране.
         store = Store(this)
+        // Язык человек выбрал у нас, а хранит его система (с Android 13 — как
+        // настройку приложения). Восстановление из копии или чистка данных
+        // приносит наш выбор без системного — тогда ставим его заново.
+        if (store.language.isNotEmpty() && AppCompatDelegate.getApplicationLocales().isEmpty) {
+            AppCompatDelegate.setApplicationLocales(androidx.core.os.LocaleListCompat.forLanguageTags(store.language))
+        }
         theme = Look.theme(store.look)
         AppCompatDelegate.setDefaultNightMode(nightModeFor(theme))
         enableEdgeToEdge()

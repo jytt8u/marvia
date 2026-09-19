@@ -13,7 +13,7 @@ import android.content.res.ColorStateList
 import androidx.core.widget.ImageViewCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import io.marvia.android.databinding.ItemCountryBinding
+import io.marvia.android.databinding.ItemProviderBinding
 import io.marvia.android.databinding.ItemNodeBinding
 import io.marvia.android.databinding.ScreenServersBinding
 import io.marvia.mobile.Mobile
@@ -171,48 +171,10 @@ class ServersScreen(
             .show()
     }
 
-    /**
-     * renderSubscriptions рисует подписки — и только когда их больше одной.
-     *
-     * У большинства продавец один, и заголовок со списком из одной строки
-     * над ним — шум над очевидным.
-     */
+    /** renderSubscriptions — перерисовать карточки по тому, что уже показано. */
     fun renderSubscriptions() {
-        val list = store.subscriptions
-        val show = list.size > 1
-        ui.subsLabel.isVisible = show
-        ui.subList.isVisible = show
-        ui.subList.removeAllViews()
-        if (!show) return
-
-        val t = theme()
-        for (sub in list) {
-            val active = sub.link == store.accountLink
-            val row = TextView(host).apply {
-                text = if (active) {
-                    sub.name + " · " + host.getString(R.string.servers_sub_active)
-                } else {
-                    sub.name
-                }
-                textSize = 14f
-                setTextColor(if (active) t.acc else t.fg)
-                val side = (14 * dp).toInt()
-                val tall = (12 * dp).toInt()
-                setPadding(side, tall, side, tall)
-                background = Paint.rounded(t.surf, t.r, dp)
-                isClickable = true
-                setOnClickListener { use(sub) }
-                setOnLongClickListener { forget(sub); true }
-            }
-            val lp = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-            lp.topMargin = (6 * dp).toInt()
-            ui.subList.addView(row, lp)
-        }
+        if (shown.isEmpty()) renderEmpty() else render(shown)
     }
-
     /**
      * open зовётся при каждом показе экрана: ядро могло смениться.
      *
@@ -221,7 +183,6 @@ class ServersScreen(
      * каждый, кто сюда зашёл.
      */
     fun open() {
-        renderSubscriptions()
         load(measure = MarviaState.core != null && !MarviaState.anyMeasured())
     }
 
@@ -312,18 +273,16 @@ class ServersScreen(
     /** paint перекрашивает экран в новую тему по тому, что уже показано. */
     fun paint() {
         renderSubscriptions()
-        if (shown.isEmpty()) renderEmpty() else render(shown)
     }
 
     private fun renderEmpty() {
         shown = emptyList()
         ui.autoRow.isVisible = false
-        ui.manualLabel.isVisible = false
-        ui.nodeList.removeAllViews()
-        // Мерить нечего — и кнопки «Обновить» тоже быть не должно.
+        // Мерить нечего — и кнопки перезамера тоже быть не должно.
         ui.measureButton.isVisible = false
         ui.serversEmpty.setText(R.string.servers_empty)
         ui.serversEmpty.isVisible = true
+        renderProviders(emptyList())
     }
 
     private fun render(rows: List<NodeRow>) {
@@ -336,16 +295,14 @@ class ServersScreen(
         ui.measureButton.isVisible = true
         ui.serversEmpty.isVisible = false
         ui.autoRow.isVisible = true
-        ui.manualLabel.isVisible = true
 
         // Главный экран узнаёт о переезде отсюда же: иначе он до следующего
         // круга опроса показывал бы страну, через которую трафик уже не идёт.
         publish(rows)
 
         renderAuto(rows)
-        renderList(rows)
+        renderProviders(rows)
     }
-
     /** publish переносит выбор и текущую ноду в общее состояние. */
     private fun publish(rows: List<NodeRow>) {
         val on = MarviaState.state.value as? TunnelState.On ?: return
@@ -370,6 +327,7 @@ class ServersScreen(
 
         val t = theme()
         ui.autoRow.background = Paint.card(t, dp, stroke = if (manual) t.line else t.acc)
+        ui.autoIcon.background = Paint.rounded(t.accSoft, 12, dp)
         ui.autoMark.background = Paint.ring(t, dp, chosen = !manual)
         ImageViewCompat.setImageTintList(ui.autoMarkCheck, ColorStateList.valueOf(t.accFg))
         ui.autoMarkCheck.isVisible = !manual
@@ -379,31 +337,94 @@ class ServersScreen(
         } else {
             host.getString(R.string.servers_auto_note, label(fastest.first))
         }
-
-        // Пока не мерили, самой быстрой нет — и числа тоже нет, только прочерк.
-        showPing(ui.autoPing, fastest?.second?.ms ?: 0)
     }
 
-    private fun renderList(rows: List<NodeRow>) {
+    /**
+     * renderProviders — по карточке на подписку, как в макете.
+     *
+     * Рабочая раскрыта: её серверы — это и есть список нод из ядра, а строка
+     * остатка — то, что панель прислала при подключении. Остальные свёрнуты
+     * до имени: их серверов и остатка телефон не знает, пока не переключится,
+     * а рисовать вместо них прочерки — обещать то, чего нет.
+     */
+    private fun renderProviders(rows: List<NodeRow>) {
+        val t = theme()
         val inflater = LayoutInflater.from(host)
-        ui.nodeList.removeAllViews()
-
+        val subs = store.subscriptions
+        val on = MarviaState.state.value as? TunnelState.On
         val current = rows.firstOrNull { it.current }
 
-        for ((country, group) in rows.groupBy { it.group }) {
-            val header = ItemCountryBinding.inflate(inflater, ui.nodeList, false)
-            header.root.text = country.ifEmpty { host.getString(R.string.servers_group_other) }
-            Paint.apply(header.root, theme())
-            ui.nodeList.addView(header.root)
+        // Кнопки в шапке красятся здесь: у картинки один тег, и он занят значком.
+        ui.addSubscription.backgroundTintList = ColorStateList.valueOf(t.acc)
+        ui.measureButton.backgroundTintList = ColorStateList.valueOf(t.surf)
+        ui.serversSubtitle.text = host.resources.getQuantityString(R.plurals.servers_subs_count, subs.size, subs.size) +
+            if (rows.isEmpty()) "" else " · " + host.resources.getQuantityString(R.plurals.servers_nodes_count, rows.size, rows.size)
 
-            for (row in group) {
-                ui.nodeList.addView(nodeView(inflater, row, current))
+        ui.providerList.removeAllViews()
+        for (sub in subs) {
+            val active = sub.link == store.accountLink
+            val card = ItemProviderBinding.inflate(inflater, ui.providerList, false)
+            card.providerName.text = sub.name
+            card.providerMeta.text = when {
+                !active -> host.getString(R.string.servers_sub_collapsed)
+                rows.isEmpty() -> host.getString(R.string.servers_sub_active)
+                else -> host.resources.getQuantityString(R.plurals.servers_nodes_count, rows.size, rows.size)
             }
+            card.providerChevron.rotation = if (active) 0f else -90f
+            card.providerHead.setOnClickListener { if (!active) use(sub) }
+            card.providerMenu.setOnClickListener { actions(sub, active) }
+
+            val quota = on?.subscription?.takeIf { active && it.known }
+            card.providerQuota.isVisible = quota != null
+            if (quota != null) {
+                val days = if (quota.until.isEmpty()) null else Format.daysLeft(quota.until)
+                card.providerLeft.text = if (days == null) "" else host.getString(R.string.servers_sub_days_left, days)
+                card.providerLeft.isVisible = days != null
+                val limited = quota.limitBytes > 0
+                card.providerTrack.isVisible = limited
+                card.providerUsage.text = if (limited) {
+                    host.getString(R.string.traffic_of, Format.size(host, quota.leftBytes), Format.size(host, quota.limitBytes))
+                } else "∞"
+                if (limited) {
+                    val left = (quota.leftBytes.toFloat() / quota.limitBytes).coerceIn(0f, 1f)
+                    (card.providerFill.layoutParams as LinearLayout.LayoutParams).weight = left
+                    (card.providerRest.layoutParams as LinearLayout.LayoutParams).weight = 1f - left
+                }
+                card.providerTrack.clipToOutline = true
+            }
+
+            if (active && rows.isNotEmpty()) {
+                card.providerRule.isVisible = true
+                card.providerNodes.isVisible = true
+                for ((i, row) in rows.withIndex()) {
+                    if (i > 0) card.providerNodes.addView(rule(t))
+                    card.providerNodes.addView(nodeView(inflater, card.providerNodes, row, current))
+                }
+            }
+
+            card.providerMenu.backgroundTintList = ColorStateList.valueOf(t.surf2)
+            Paint.apply(card.root, t)
+            ui.providerList.addView(card.root)
         }
     }
 
-    private fun nodeView(inflater: LayoutInflater, row: NodeRow, current: NodeRow?): View {
-        val item = ItemNodeBinding.inflate(inflater, ui.nodeList, false)
+    /** rule — линия между серверами внутри карточки. */
+    private fun rule(t: Theme): View = View(host).apply {
+        setBackgroundColor(t.line)
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt())
+    }
+
+    /** actions — что можно сделать с подпиской: сделать рабочей, убрать. */
+    private fun actions(sub: Store.Subscription, active: Boolean) {
+        val items = mutableListOf(host.getString(R.string.servers_sub_remove))
+        if (!active) items.add(0, host.getString(R.string.servers_sub_use))
+        ChoiceSheet.show(host, theme(), sub.name, items) { which ->
+            if (!active && which == 0) use(sub) else forget(sub)
+        }
+    }
+
+    private fun nodeView(inflater: LayoutInflater, parent: android.view.ViewGroup, row: NodeRow, current: NodeRow?): View {
+        val item = ItemNodeBinding.inflate(inflater, parent, false)
 
         // Флаг только для узнанной страны: чужой флаг увёл бы человека не
         // туда, куда он собирался, и он бы этого не заметил.
@@ -411,27 +432,38 @@ class ServersScreen(
         item.nodeFlag.text = flag
         item.nodeFlag.isVisible = flag.isNotEmpty()
 
-        item.nodeTitle.text = row.place
+        // Страна крупно, город с именем ноды и состоянием — под ней.
+        item.nodeTitle.text = row.group.ifEmpty { row.name }
         val setup = row.setupMs.takeIf { it > 0 } ?: MarviaState.ping(row.id)?.setupMs ?: 0
-        item.nodeNote.text = noteFor(row, current) + if (setup > 0) {
-            " · " + host.getString(R.string.node_setup, setup)
-        } else ""
-
-        val seen = known(row)
-        showPing(item.nodePing, if (seen?.alive == true) seen.ms else 0)
+        item.nodeNote.text = listOf(
+            row.place.takeIf { it != row.name && it.isNotEmpty() }.orEmpty(),
+            row.name,
+            noteFor(row, current),
+            if (setup > 0) host.getString(R.string.node_setup, setup) else "",
+        ).filter { it.isNotEmpty() }.joinToString(" · ")
 
         val t = theme()
-        item.root.background = Paint.card(t, dp, stroke = if (row.chosen) t.acc else t.line)
-        item.nodeMark.background = Paint.ring(t, dp, chosen = row.chosen)
-        ImageViewCompat.setImageTintList(item.nodeMarkCheck, ColorStateList.valueOf(t.accFg))
-        item.nodeMarkCheck.isVisible = row.chosen
+        val seen = known(row)
+        val ms = if (seen?.alive == true) seen.ms else 0L
+        item.nodeBars.show(ms, seen?.alive == true, t)
+        showPing(item.nodePing, ms)
+
+        // Выбранная руками — залита мягким акцентом; та, через которую идёт
+        // трафик, — чуть светлее остальных.
+        item.root.setBackgroundColor(
+            when {
+                row.chosen -> t.accSoft
+                row.current -> Look.withAlpha(t.fg, 0.04)
+                else -> 0
+            },
+        )
+        item.nodeTitle.alpha = if (seen?.alive == false) 0.55f else 1f
         // Строка собрана из разметки после общей покраски — красим её здесь.
         Paint.apply(item.root, t)
         item.root.setOnClickListener { select(row.id) }
 
         return item.root
     }
-
     /**
      * noteFor — строка под названием.
      *

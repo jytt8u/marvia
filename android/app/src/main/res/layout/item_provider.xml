@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Карточка подписки: шапка с именем и счётом серверов, кнопка действий,
+    строка остатка и — у рабочей подписки — её серверы. Свёрнутая подписка
+    показывает только шапку; нажатие делает её рабочей.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="14dp"
+    android:background="@drawable/bg_card"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/providerHead"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:minHeight="62dp"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="10dp"
+        android:paddingVertical="10dp">
+
+        <ImageView
+            android:id="@+id/providerChevron"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_chevron_down"
+            android:tag="icon:dim"
+            app:tint="@color/veil_muted" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/providerName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:tag="fg"
+                android:textColor="@color/veil_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/providerMeta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:tag="dim"
+                android:textColor="@color/veil_muted"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/providerMenu"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/bg_circle"
+            android:contentDescription="@string/servers_sub_actions"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:scaleType="center"
+            android:src="@drawable/ic_more_dots"
+            android:tag="icon:fg"
+            app:tint="@color/veil_text" />
+    </LinearLayout>
+
+    <!-- Остаток по подписке: дни и полоса трафика. Только когда продавец их задал. -->
+    <LinearLayout
+        android:id="@+id/providerQuota"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/providerLeft"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:tag="dim"
+            android:textColor="@color/veil_muted"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:id="@+id/providerTrack"
+            android:layout_width="0dp"
+            android:layout_height="5dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_track"
+            android:orientation="horizontal"
+            android:tag="track">
+
+            <View
+                android:id="@+id/providerFill"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@color/veil_accent"
+                android:tag="fill" />
+
+            <View
+                android:id="@+id/providerRest"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/providerUsage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:fontFamily="@font/jetbrains_mono"
+            android:tag="fg"
+            android:textColor="@color/veil_text"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/providerRule"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/veil_border"
+        android:tag="line"
+        android:visibility="gone" />
+
+    <!-- Серверы рабочей подписки, по строке на ноду. -->
+    <LinearLayout
+        android:id="@+id/providerNodes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone" />
+</LinearLayout>

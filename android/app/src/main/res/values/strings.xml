@@ -114,7 +114,7 @@
     <string name="key_replace_no">Keep the old one</string>
 
     <!-- Экран выбора страны. -->
-    <string name="servers_title">Countries</string>
+    <string name="servers_title">Servers</string>
     <string name="servers_measure">Refresh</string>
     <string name="servers_auto">Automatic</string>
     <string name="servers_auto_mark">⚡</string>
@@ -133,9 +133,19 @@
     <string name="servers_sub_bad">That is not a marvia:// link</string>
     <string name="servers_sub_remove">Remove</string>
     <string name="servers_sub_remove_ask">Remove the subscription %1$s?</string>
-    <string name="servers_manual">Pick by hand</string>
-    <string name="servers_empty">Countries are visible from inside the tunnel.</string>
-    <string name="servers_group_other">Other</string>
+    <string name="servers_sub_use">Make it the working one</string>
+    <string name="servers_sub_actions">Subscription actions</string>
+    <string name="servers_sub_collapsed">collapsed · a tap switches to it</string>
+    <string name="servers_sub_days_left">%1$d days left</string>
+    <plurals name="servers_subs_count">
+        <item quantity="one">%d subscription</item>
+        <item quantity="other">%d subscriptions</item>
+    </plurals>
+    <plurals name="servers_nodes_count">
+        <item quantity="one">%d server</item>
+        <item quantity="other">%d servers</item>
+    </plurals>
+    <string name="servers_empty">Servers are visible from inside the tunnel.</string>
     <string name="servers_failed">Could not move: %1$s</string>
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->

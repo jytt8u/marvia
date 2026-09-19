@@ -71,9 +71,18 @@ class Store(context: Context) {
      * перевод строки в имени и так не наберёшь.
      */
     var subscriptions: List<Subscription>
-        get() = prefs.getStringSet(KEY_SUBSCRIPTIONS, emptySet()).orEmpty()
-            .mapNotNull(::subscriptionOf)
-            .sortedBy { it.name.lowercase() }
+        get() {
+            val list = prefs.getStringSet(KEY_SUBSCRIPTIONS, emptySet()).orEmpty()
+                .mapNotNull(::subscriptionOf)
+                .sortedBy { it.name.lowercase() }
+            // Установки до появления списка: ключ есть, записи о нём нет.
+            // Показываем его подпиской, а не пустым экраном.
+            val link = accountLink
+            if (list.none { it.link == link } && link.isNotEmpty()) {
+                return list + Subscription(defaultSubscriptionName(link), link)
+            }
+            return list
+        }
         set(value) {
             prefs.edit().putStringSet(KEY_SUBSCRIPTIONS, value.map(::rowOf).toSet()).apply()
         }
