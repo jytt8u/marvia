@@ -513,7 +513,7 @@ class MoreScreen(
         row.addView(
             TextView(host).apply {
                 text = e.time
-                typeface = Typeface.MONOSPACE
+                typeface = Fonts.mono(context)
                 textSize = 10f
                 setTextColor(t.dim)
             },
@@ -528,7 +528,7 @@ class MoreScreen(
         row.addView(
             TextView(host).apply {
                 text = tag
-                typeface = Typeface.MONOSPACE
+                typeface = Fonts.mono(context)
                 textSize = 9f
                 gravity = Gravity.CENTER
                 setTextColor(color)
@@ -541,7 +541,7 @@ class MoreScreen(
         row.addView(
             TextView(host).apply {
                 text = e.text
-                typeface = Typeface.MONOSPACE
+                typeface = Fonts.mono(context)
                 textSize = 11f
                 setTextColor(t.fg)
             },

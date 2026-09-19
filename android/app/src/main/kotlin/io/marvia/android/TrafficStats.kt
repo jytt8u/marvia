@@ -63,9 +63,9 @@ class TrafficPanel @JvmOverloads constructor(context: Context, attrs: AttributeS
         canvas.drawRoundRect(0f,0f,w,top,theme.r*dp,theme.r*dp,brush)
         canvas.drawRoundRect(0f,top+gap,half,height.toFloat(),theme.r*dp,theme.r*dp,brush)
         canvas.drawRoundRect(half+gap,top+gap,w,height.toFloat(),theme.r*dp,theme.r*dp,brush)
-        fun label(s:String,x:Float,y:Float,size:Float,color:Int,mono:Boolean=false){brush.color=color;brush.textSize=size*resources.displayMetrics.scaledDensity;brush.typeface=if(mono)Typeface.MONOSPACE else Typeface.DEFAULT;canvas.drawText(s,x,y,brush)}
+        fun label(s:String,x:Float,y:Float,size:Float,color:Int,mono:Boolean=false){brush.color=color;brush.textSize=size*resources.displayMetrics.scaledDensity;brush.typeface=if(mono)Fonts.mono(context) else Typeface.DEFAULT;canvas.drawText(s,x,y,brush)}
         label(context.getString(R.string.stats_today),14*dp,25*dp,12f,theme.dim)
-        val total=Format.size(context,snapshot.today);brush.textSize=14*resources.displayMetrics.scaledDensity;brush.typeface=Typeface.MONOSPACE
+        val total=Format.size(context,snapshot.today);brush.textSize=14*resources.displayMetrics.scaledDensity;brush.typeface=Fonts.mono(context)
         label(total,w-14*dp-brush.measureText(total),25*dp,14f,theme.fg,true)
         val max=(snapshot.hours.maxOrNull()?:0L).coerceAtLeast(1);val bw=(w-28*dp)/24
         snapshot.hours.forEachIndexed { i,v ->brush.color=if(v==0L)theme.line else theme.acc;val h=if(v==0L)2*dp else (v.toDouble()/max*49*dp).toFloat().coerceAtLeast(3*dp);canvas.drawRoundRect(14*dp+i*bw,91*dp-h,14*dp+(i+1)*bw-3*dp,91*dp,2*dp,2*dp,brush)}

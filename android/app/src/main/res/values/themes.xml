@@ -13,6 +13,9 @@
         <item name="android:colorBackground">@color/veil_bg</item>
         <item name="android:textColorPrimary">@color/veil_text</item>
         <item name="android:textColorSecondary">@color/veil_muted</item>
+        <!-- Шрифт макета: Onest всему тексту, цифры — JetBrains Mono кодом. -->
+        <item name="android:fontFamily">@font/onest</item>
+        <item name="fontFamily">@font/onest</item>
     </style>
 
     <!-- Заголовок раздела в списках: «Выбрать вручную», «Ключ доступа». -->
@@ -21,7 +24,7 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textSize">15sp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textColor">@color/veil_text</item>
     </style>
 

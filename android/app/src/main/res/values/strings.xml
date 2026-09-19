@@ -15,8 +15,8 @@
 
     <!-- Нижняя панель: три экрана и ничего больше. -->
     <string name="nav_connect">Tunnel</string>
-    <string name="nav_servers">Countries</string>
-    <string name="nav_more">More</string>
+    <string name="nav_servers">Servers</string>
+    <string name="nav_more">Settings</string>
     <string name="nav_stats">Usage</string>
     <string name="nav_theme">Theme</string>
 
@@ -38,6 +38,8 @@
     <string name="status_off">Disconnected</string>
     <string name="status_connecting">Connecting…</string>
     <string name="status_on">Connected</string>
+    <!-- Под надписью в шапке, когда её раскрыли нажатием на знак. -->
+    <string name="hero_version">VP1 · your own tunnel · %1$s</string>
     <string name="status_failed">Could not connect</string>
 
     <string name="detail_connecting">Picking the fastest node</string>

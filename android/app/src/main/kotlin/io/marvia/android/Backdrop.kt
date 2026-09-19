@@ -104,7 +104,36 @@ class Backdrop(private val t: Theme) : Drawable() {
     override fun draw(canvas: Canvas) {
         val b = bounds
         canvas.drawRect(b, brush)
+        drawDots(canvas)
     }
+
+    /**
+     * drawDots — точечная сетка из макета: точка в 1dp через каждые 22dp,
+     * цветом текста на 5%. Она едва видна и нужна ровно за этим: плоский
+     * градиент без неё читается как пустота, а с ней — как поверхность.
+     */
+    private fun drawDots(canvas: Canvas) {
+        val dp = density
+        if (dp <= 0f) return
+        dots.color = Look.withAlpha(t.fg, 0.05)
+        val step = 22 * dp
+        val r = 0.7f * dp
+        var y = bounds.top + step / 2
+        while (y < bounds.bottom) {
+            var x = bounds.left + step / 2
+            while (x < bounds.right) {
+                canvas.drawCircle(x, y, r, dots)
+                x += step
+            }
+            y += step
+        }
+    }
+
+    private val dots = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    /** density — плотность экрана; у Drawable нет контекста, берём системную. */
+    private val density: Float
+        get() = android.content.res.Resources.getSystem().displayMetrics.density
 
     override fun setAlpha(alpha: Int) {
         brush.alpha = alpha

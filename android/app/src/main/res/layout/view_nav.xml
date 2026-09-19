@@ -3,6 +3,8 @@
     Нижняя панель из макета. Своя, а не BottomNavigationView: там пять вкладок
     со своими правилами подсветки и отступов, и подгонять их под макет вышло бы
     длиннее, чем нарисовать пять кнопок.
+
+    Активная вкладка — значок на пилюле и подпись жирнее; цвета ставит код.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -22,8 +24,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingHorizontal="6dp"
-        android:paddingVertical="6dp">
+        android:paddingHorizontal="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="6dp">
 
         <LinearLayout
             android:id="@+id/navConnect"
@@ -34,23 +37,25 @@
             android:gravity="center"
             android:minHeight="52dp"
             android:orientation="vertical"
-            android:paddingVertical="8dp">
+            android:paddingVertical="4dp">
 
             <ImageView
                 android:id="@+id/navConnectIcon"
-                android:layout_width="23dp"
-                android:layout_height="23dp"
+                android:layout_width="44dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_pill"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_power" />
+                android:scaleType="center"
+                android:src="@drawable/ic_nav_tunnel" />
 
             <TextView
                 android:id="@+id/navConnectLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/nav_connect"
                 android:maxLines="1"
-                android:textSize="12sp" />
+                android:text="@string/nav_connect"
+                android:textSize="10.5sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -62,23 +67,25 @@
             android:gravity="center"
             android:minHeight="52dp"
             android:orientation="vertical"
-            android:paddingVertical="8dp">
+            android:paddingVertical="4dp">
 
             <ImageView
                 android:id="@+id/navServersIcon"
-                android:layout_width="23dp"
-                android:layout_height="23dp"
+                android:layout_width="44dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_pill"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_globe" />
+                android:scaleType="center"
+                android:src="@drawable/ic_nav_servers" />
 
             <TextView
                 android:id="@+id/navServersLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/nav_servers"
                 android:maxLines="1"
-                android:textSize="12sp" />
+                android:text="@string/nav_servers"
+                android:textSize="10.5sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -90,23 +97,25 @@
             android:gravity="center"
             android:minHeight="52dp"
             android:orientation="vertical"
-            android:paddingVertical="8dp">
+            android:paddingVertical="4dp">
 
             <ImageView
                 android:id="@+id/navStatsIcon"
-                android:layout_width="23dp"
-                android:layout_height="23dp"
+                android:layout_width="44dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_pill"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_chart" />
+                android:scaleType="center"
+                android:src="@drawable/ic_nav_stats" />
 
             <TextView
                 android:id="@+id/navStatsLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/nav_stats"
                 android:maxLines="1"
-                android:textSize="12sp" />
+                android:text="@string/nav_stats"
+                android:textSize="10.5sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -118,23 +127,25 @@
             android:gravity="center"
             android:minHeight="52dp"
             android:orientation="vertical"
-            android:paddingVertical="8dp">
+            android:paddingVertical="4dp">
 
             <ImageView
                 android:id="@+id/navThemeIcon"
-                android:layout_width="23dp"
-                android:layout_height="23dp"
+                android:layout_width="44dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_pill"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_palette" />
+                android:scaleType="center"
+                android:src="@drawable/ic_nav_theme" />
 
             <TextView
                 android:id="@+id/navThemeLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/nav_theme"
                 android:maxLines="1"
-                android:textSize="12sp" />
+                android:text="@string/nav_theme"
+                android:textSize="10.5sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -146,23 +157,25 @@
             android:gravity="center"
             android:minHeight="52dp"
             android:orientation="vertical"
-            android:paddingVertical="8dp">
+            android:paddingVertical="4dp">
 
             <ImageView
                 android:id="@+id/navMoreIcon"
-                android:layout_width="23dp"
-                android:layout_height="23dp"
+                android:layout_width="44dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_pill"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_more" />
+                android:scaleType="center"
+                android:src="@drawable/ic_nav_settings" />
 
             <TextView
                 android:id="@+id/navMoreLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/nav_more"
                 android:maxLines="1"
-                android:textSize="12sp" />
+                android:text="@string/nav_more"
+                android:textSize="10.5sp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

@@ -27,7 +27,7 @@
         <TextView
             android:id="@+id/appPackage"
             style="@style/VeilRowSub"
-            android:fontFamily="monospace"
+            android:fontFamily="@font/jetbrains_mono"
             android:textSize="10.5sp" />
     </LinearLayout>
 
