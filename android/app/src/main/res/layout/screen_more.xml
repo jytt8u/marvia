@@ -10,35 +10,42 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <!-- На подэкранах — «‹ Настройки», на главном списке этой строки нет. -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/moreBack"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="@dimen/header_pad"
+        android:background="?attr/selectableItemBackgroundBorderless"
         android:gravity="center_vertical"
-        android:minHeight="44dp"
+        android:minHeight="40dp"
         android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/screen_pad"
-        android:paddingTop="@dimen/header_pad"
-        android:paddingBottom="10dp">
-
-        <!-- Знак и надпись — те же, что на главной: шапка одна на все экраны. -->
-        <io.marvia.android.MarviaLogoView
-            android:layout_width="28dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="10dp"
-            android:contentDescription="@null" />
+        android:paddingHorizontal="10dp"
+        android:visibility="gone">
 
         <ImageView
-            android:layout_width="0dp"
-            android:layout_height="14dp"
-            android:layout_weight="1"
-            android:adjustViewBounds="true"
-            android:scaleType="fitStart"
-            android:src="@drawable/ic_wordmark"
-            android:contentDescription="@string/app_name"
-            android:tag="icon:fg"
-            app:tint="@color/veil_text" />
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_back"
+            android:tag="icon:dim"
+            app:tint="@color/veil_muted" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:tag="dim"
+            android:text="@string/more_title"
+            android:textColor="@color/veil_muted"
+            android:textSize="16sp" />
     </LinearLayout>
 
+    <Space
+        android:id="@+id/moreTop"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/header_pad" />
     <TextView
         android:id="@+id/moreTitle"
         android:layout_width="match_parent"
@@ -61,33 +68,6 @@
         android:textColor="@color/veil_muted"
         android:textSize="13sp" />
 
-    <!-- Таблетки разделов. Красятся кодом: активная — акцентом. -->
-    <LinearLayout
-        android:id="@+id/morePills"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/screen_pad"
-        android:paddingBottom="12dp">
-
-        <TextView
-            android:id="@+id/pillConn"
-            style="@style/VeilPill"
-            android:text="@string/more_conn" />
-
-        <TextView
-            android:id="@+id/pillApps"
-            style="@style/VeilPill"
-            android:layout_marginStart="6dp"
-            android:text="@string/more_apps" />
-
-        <TextView
-            android:id="@+id/pillLogs"
-            style="@style/VeilPill"
-            android:layout_marginStart="6dp"
-            android:text="@string/more_logs" />
-    </LinearLayout>
-
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -106,8 +86,84 @@
                 android:orientation="vertical"
                 android:paddingBottom="18dp">
 
+                <!-- Прокси по приложениям: свой экран, здесь — вход и сводка. -->
+                <LinearLayout
+                    android:id="@+id/rowApps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:tag="card">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:id="@+id/appsIcon"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:layout_marginEnd="14dp"
+                            android:background="@drawable/bg_card"
+                            android:contentDescription="@null"
+                            android:scaleType="center"
+                            android:src="@drawable/ic_row_apps"
+                            android:tag="icon:fg"
+                            app:tint="@color/veil_text" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/onest_medium"
+                                android:tag="fg"
+                                android:text="@string/more_apps_title"
+                                android:textColor="@color/veil_text"
+                                android:textSize="16sp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:tag="dim"
+                                android:text="@string/more_apps_sub"
+                                android:textColor="@color/veil_muted"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="19dp"
+                            android:layout_height="19dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron"
+                            android:tag="icon:dim"
+                            app:tint="@color/veil_chevron" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/appsLine"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:tag="fg"
+                        android:textColor="@color/veil_text"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
                 <TextView
                     style="@style/VeilSection"
+                    android:paddingTop="18dp"
                     android:paddingBottom="8dp"
                     android:text="@string/conn_group_protect" />
 
@@ -121,6 +177,22 @@
                     <LinearLayout
                         android:id="@+id/rowAutostart"
                         style="@style/VeilRow">
+                        <FrameLayout
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
+                            android:tag="box">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:scaleType="center"
+                                android:src="@drawable/ic_row_phone"
+                                android:tag="icon:acc"
+                                app:tint="@color/veil_accent" />
+                        </FrameLayout>
+
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -155,6 +227,22 @@
                     <LinearLayout
                         android:id="@+id/rowAlwaysOn"
                         style="@style/VeilRow">
+                        <FrameLayout
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
+                            android:tag="box">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:scaleType="center"
+                                android:src="@drawable/ic_row_external"
+                                android:tag="icon:acc"
+                                app:tint="@color/veil_accent" />
+                        </FrameLayout>
+
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -197,6 +285,22 @@
                     <LinearLayout
                         android:id="@+id/rowDns"
                         style="@style/VeilRow">
+                        <FrameLayout
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
+                            android:tag="box">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:scaleType="center"
+                                android:src="@drawable/ic_row_server"
+                                android:tag="icon:acc"
+                                app:tint="@color/veil_accent" />
+                        </FrameLayout>
+
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -234,6 +338,22 @@
                     <LinearLayout
                         android:id="@+id/rowLan"
                         style="@style/VeilRow">
+                        <FrameLayout
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
+                            android:tag="box">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:scaleType="center"
+                                android:src="@drawable/ic_row_list"
+                                android:tag="icon:acc"
+                                app:tint="@color/veil_accent" />
+                        </FrameLayout>
+
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -269,6 +389,17 @@
                     <LinearLayout
                         android:id="@+id/rowRussian"
                         style="@style/VeilRow">
+
+                        <TextView
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
+                            android:background="@drawable/bg_card"
+                            android:gravity="center"
+                            android:tag="box"
+                            android:text="🇷🇺"
+                            android:textSize="17sp" />
+
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -311,6 +442,22 @@
                     <LinearLayout
                         android:id="@+id/rowLanguage"
                         style="@style/VeilRow">
+                        <FrameLayout
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
+                            android:tag="box">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:scaleType="center"
+                                android:src="@drawable/ic_row_language"
+                                android:tag="icon:acc"
+                                app:tint="@color/veil_accent" />
+                        </FrameLayout>
+
 
                         <TextView
                             style="@style/VeilRowTitle"
@@ -345,6 +492,22 @@
                     <LinearLayout
                         android:id="@+id/rowKey"
                         style="@style/VeilRow">
+                        <FrameLayout
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
+                            android:tag="box">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:scaleType="center"
+                                android:src="@drawable/ic_row_key"
+                                android:tag="icon:acc"
+                                app:tint="@color/veil_accent" />
+                        </FrameLayout>
+
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -418,8 +581,64 @@
                         android:visibility="gone" />
 
                     <LinearLayout
+                        android:id="@+id/rowLogs"
+                        style="@style/VeilRow">
+
+                        <FrameLayout
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
+                            android:tag="box">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:scaleType="center"
+                                android:src="@drawable/ic_row_journal"
+                                android:tag="icon:acc"
+                                app:tint="@color/veil_accent" />
+                        </FrameLayout>
+
+                        <TextView
+                            style="@style/VeilRowTitle"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:text="@string/more_logs_title" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="9dp"
+                            android:tag="dim"
+                            android:text="@string/more_logs_value"
+                            android:textColor="@color/veil_muted"
+                            android:textSize="14sp" />
+
+                        <ImageView
+                            android:layout_width="19dp"
+                            android:layout_height="19dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron"
+                            android:tag="icon:dim"
+                            app:tint="@color/veil_chevron" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/veil_border"
+                        android:tag="line" />
+
+                    <LinearLayout
                         android:id="@+id/rowAbout"
                         style="@style/VeilRow">
+
+                        <io.marvia.android.MarviaLogoView
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
+                            android:contentDescription="@null" />
 
                         <TextView
                             style="@style/VeilRowTitle"
@@ -488,15 +707,25 @@
                 android:orientation="horizontal"
                 android:paddingBottom="10dp">
 
-                <TextView
-                    android:id="@+id/appsLoading"
+                <!-- Поиск по имени и пакету: список длинный, а нужны два-три. -->
+                <EditText
+                    android:id="@+id/appSearch"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
-                    android:tag="dim"
-                    android:text="@string/bypass_loading"
-                    android:textColor="@color/veil_muted"
-                    android:textSize="12.5sp" />
+                    android:background="@drawable/bg_pill"
+                    android:drawablePadding="8dp"
+                    android:drawableStart="@drawable/ic_search"
+                    android:hint="@string/bypass_search"
+                    android:imeOptions="actionSearch"
+                    android:importantForAutofill="no"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:minHeight="44dp"
+                    android:paddingHorizontal="14dp"
+                    android:tag="chip"
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/presetChip"
@@ -509,6 +738,17 @@
                     android:textColor="@color/veil_muted"
                     android:textSize="12sp" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/appsLoading"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="10dp"
+                android:tag="dim"
+                android:text="@string/bypass_loading"
+                android:textColor="@color/veil_muted"
+                android:textSize="12.5sp"
+                android:visibility="gone" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/appList"

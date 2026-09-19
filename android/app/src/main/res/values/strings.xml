@@ -183,6 +183,7 @@
     <string name="bypass_preset">Government services and banks</string>
     <string name="bypass_restart">Changes apply on the next connection</string>
     <string name="bypass_loading">Looking at what is installed…</string>
+    <string name="bypass_search">Find an app</string>
 
     <!--
         Местные сайты мимо туннеля. Предлагаем при первом удачном подключении:
@@ -385,20 +386,19 @@
         Вкладка «Ещё»: соединение, приложения, логи. Три раздела под одним
         заголовком, как в макете; заголовок и подпись меняются вместе с ними.
     -->
-    <string name="more_conn">Connection</string>
-    <string name="more_apps">Apps</string>
-    <string name="more_logs">Log</string>
-    <string name="more_conn_title">Connection</string>
-    <string name="more_conn_sub">Protection, DNS, routing</string>
-    <string name="more_apps_title">Apps</string>
-    <string name="more_logs_title">Log</string>
+    <string name="more_title">Settings</string>
+    <string name="more_sub">Marvia for Android · %1$s</string>
+    <string name="more_apps_title">Proxy by app</string>
+    <string name="more_logs_title">Connection log</string>
+    <string name="more_apps_sub">apps and Russian sites outside the tunnel</string>
+    <string name="more_logs_value">no site addresses</string>
     <plurals name="more_logs_sub">
         <item quantity="one">last %1$d line</item>
         <item quantity="other">last %1$d lines</item>
     </plurals>
     <string name="more_logs_sub_empty">the log is empty so far</string>
-    <string name="conn_group_protect">Protection</string>
-    <string name="conn_group_net">Network</string>
+    <string name="conn_group_protect">Connection</string>
+    <string name="conn_group_net">Routes and DNS</string>
     <string name="conn_group_app">App</string>
     <string name="conn_dns">DNS</string>
     <string name="conn_dns_sub">resolver inside the tunnel</string>

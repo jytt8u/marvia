@@ -211,6 +211,8 @@ class MainActivity : AppCompatActivity() {
                 show(Screen.MORE)
                 return
             }
+            // С подэкрана настроек — на их список, а не из приложения.
+            if (screen == Screen.MORE && more.back()) return
             if (screen == Screen.CONNECT || screen == Screen.LANGUAGE) {
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()

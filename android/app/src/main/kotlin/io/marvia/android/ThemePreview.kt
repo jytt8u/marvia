@@ -147,7 +147,7 @@ class ThemePreview @JvmOverloads constructor(
         text(canvas, "Marvia · Android", 14 * dp, 48 * dp, 6.5f * dp, t.dim, Fonts.text(context))
 
         card(canvas, dp, 10f, 58f, vw - 10f, 94f)
-        text(canvas, context.getString(R.string.more_apps), 18 * dp, 73 * dp, 8f * dp, t.fg, Fonts.textBold(context))
+        text(canvas, context.getString(R.string.more_apps_title), 18 * dp, 73 * dp, 8f * dp, t.fg, Fonts.textBold(context))
         text(canvas, context.getString(R.string.theme_pv_apps_note), 18 * dp, 85 * dp, 6f * dp, t.dim, Fonts.text(context))
 
         text(canvas, context.getString(R.string.conn_group_protect).uppercase(), 14 * dp, 110 * dp, 5.5f * dp, t.dim, Fonts.mono(context), letter = 0.18f)

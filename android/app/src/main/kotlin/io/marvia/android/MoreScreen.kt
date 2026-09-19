@@ -70,9 +70,10 @@ class MoreScreen(
     private val dp = host.resources.displayMetrics.density
 
     init {
-        ui.pillConn.setOnClickListener { show(Section.CONN) }
-        ui.pillApps.setOnClickListener { show(Section.APPS) }
-        ui.pillLogs.setOnClickListener { show(Section.LOGS) }
+        // Приложения и журнал — подэкраны: вход с главного списка, выход назад.
+        ui.rowApps.setOnClickListener { show(Section.APPS) }
+        ui.rowLogs.setOnClickListener { show(Section.LOGS) }
+        ui.moreBack.setOnClickListener { show(Section.CONN) }
 
         wireConnection()
         wireApps()
@@ -86,7 +87,6 @@ class MoreScreen(
 
     /** paint перекрашивает то, что красится кодом: таблетки и строки логов. */
     fun paint() {
-        paintPills()
         paintModes()
         if (section == Section.LOGS) {
             renderLogs()
@@ -96,39 +96,47 @@ class MoreScreen(
 
     fun openLogs() { section = Section.LOGS }
 
+    /** back уводит с подэкрана на список настроек; false — уже на нём. */
+    fun back(): Boolean {
+        if (section == Section.CONN) return false
+        show(Section.CONN)
+        return true
+    }
+
     private fun show(next: Section) {
         section = next
         ui.sectionConn.isVisible = next == Section.CONN
         ui.sectionApps.isVisible = next == Section.APPS
         ui.sectionLogs.isVisible = next == Section.LOGS
+        ui.moreBack.isVisible = next != Section.CONN
+        ui.moreTop.isVisible = next == Section.CONN
 
-        val (title, sub) = when (next) {
-            Section.CONN -> R.string.more_conn_title to R.string.more_conn_sub
-            Section.APPS -> R.string.more_apps_title to 0
-            Section.LOGS -> R.string.more_logs_title to 0
-        }
-        ui.moreTitle.setText(title)
+        ui.moreTitle.setText(
+            when (next) {
+                Section.CONN -> R.string.more_title
+                Section.APPS -> R.string.more_apps_title
+                Section.LOGS -> R.string.more_logs_title
+            },
+        )
         ui.moreSub.text = when (next) {
-            Section.CONN -> host.getString(sub)
+            Section.CONN -> host.getString(R.string.more_sub, version())
             Section.APPS -> appsSummary()
             Section.LOGS -> logsSub()
         }
-        paintPills()
 
         when (next) {
-            Section.CONN -> renderConnection()
+            Section.CONN -> { renderConnection(); ui.appsLine.text = appsSummary() }
             Section.APPS -> openApps()
             Section.LOGS -> renderLogs()
         }
     }
 
-    private fun paintPills() {
-        val t = theme()
-        pill(ui.pillConn, t, section == Section.CONN)
-        pill(ui.pillApps, t, section == Section.APPS)
-        pill(ui.pillLogs, t, section == Section.LOGS)
+    /** version — своя версия: под заголовком настроек и в «о приложении». */
+    private fun version(): String = try {
+        host.packageManager.getPackageInfo(host.packageName, 0).versionName.orEmpty()
+    } catch (_: PackageManager.NameNotFoundException) {
+        ""
     }
-
     /** pill красит таблетку: активная — акцентом, остальные — второй поверхностью. */
     private fun pill(view: TextView, t: Theme, on: Boolean) {
         view.background = Paint.rounded(if (on) t.acc else t.surf2, minOf(t.r, 14), dp)
@@ -265,11 +273,7 @@ class MoreScreen(
 
     /** about отвечает на «какая у тебя версия» — первый вопрос продавца. */
     private fun about() {
-        val version = try {
-            host.packageManager.getPackageInfo(host.packageName, 0).versionName.orEmpty()
-        } catch (_: PackageManager.NameNotFoundException) {
-            ""
-        }
+        val version = version()
 
         ThemedDialogs.builder(host, theme())
             .setTitle(R.string.settings_about)
@@ -291,6 +295,11 @@ class MoreScreen(
 
         // Набор одной кнопкой: отмечает госуслуги и банки из тех, что стоят.
         // Только добавляет — снимать чужие отметки за человека нельзя.
+        ui.appSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable) { apps.filter(s.toString()) }
+            override fun beforeTextChanged(s: CharSequence, a: Int, b: Int, c: Int) = Unit
+            override fun onTextChanged(s: CharSequence, a: Int, b: Int, c: Int) = Unit
+        })
         ui.presetChip.setOnClickListener {
             val chosen = store.bypassed.toMutableSet()
             val installed = apps.entries.map { it.pkg }.toSet()
@@ -356,7 +365,7 @@ class MoreScreen(
      */
     private fun openApps() {
         paintModes()
-        if (apps.entries.isNotEmpty()) {
+        if (apps.all.isNotEmpty()) {
             apps.notifyDataSetChanged()
             return
         }
@@ -364,16 +373,25 @@ class MoreScreen(
         host.lifecycleScope.launch {
             val entries = withContext(Dispatchers.IO) { Bypass.installed(host) }
             val chosen = store.bypassed
-            apps.entries = entries.sortedWith(
+            apps.all = entries.sortedWith(
                 compareByDescending<Bypass.Entry> { it.pkg in chosen }.thenBy { it.label.lowercase() },
             )
             ui.appsLoading.isVisible = false
-            apps.notifyDataSetChanged()
+            apps.filter(ui.appSearch.text.toString())
         }
     }
 
     private inner class AppsAdapter : RecyclerView.Adapter<AppHolder>() {
+        /** all — всё установленное; entries — то, что прошло поиск. */
+        var all: List<Bypass.Entry> = emptyList()
         var entries: List<Bypass.Entry> = emptyList()
+
+        /** filter оставляет приложения, у которых имя или пакет содержит запрос. */
+        fun filter(query: String) {
+            val q = query.trim().lowercase()
+            entries = if (q.isEmpty()) all else all.filter { it.label.lowercase().contains(q) || it.pkg.lowercase().contains(q) }
+            notifyDataSetChanged()
+        }
 
         override fun getItemCount() = entries.size
 

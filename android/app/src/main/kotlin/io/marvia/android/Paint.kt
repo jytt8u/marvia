@@ -45,6 +45,8 @@ object Paint {
     private const val FILL = "fill"
     private const val GAP = "gap"
     private const val SWITCH = "switch"
+    /** Квадратик под значком строки: мягкий акцент, скругление 10. */
+    private const val BOX = "box"
     private const val ICON = "icon:"
 
     fun apply(root: View, t: Theme) {
@@ -94,6 +96,7 @@ object Paint {
                 v.background = rounded(t.surf2, minOf(t.r, 10), dp)
                 text(v, t.dim, t.dim)
             }
+            tag == BOX -> v.background = rounded(t.accSoft, 10, dp)
             tag == TRACK -> v.background = rounded(t.bg, 999, dp)
             tag == FILL -> v.setBackgroundColor(t.acc)
             tag == GAP -> (v.layoutParams as? ViewGroup.MarginLayoutParams)?.let {

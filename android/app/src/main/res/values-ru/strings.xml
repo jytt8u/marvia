@@ -164,6 +164,7 @@
     <string name="bypass_preset">Госуслуги и банки</string>
     <string name="bypass_restart">Изменения применятся при следующем подключении</string>
     <string name="bypass_loading">Смотрю, что установлено…</string>
+    <string name="bypass_search">Найти приложение</string>
 
     <!--
         Российские сайты мимо туннеля. Предлагаем при первом удачном
@@ -357,13 +358,12 @@
     <string name="log_moved">нода замолчала, переехали на %1$s</string>
     <string name="trouble_no_node">нода молчит, и переехать не на что — сейчас ничего не работает</string>
     <string name="log_failed">не поднялся: %1$s — %2$s</string>
-    <string name="more_conn">Соединение</string>
-    <string name="more_apps">Приложения</string>
-    <string name="more_logs">Логи</string>
-    <string name="more_conn_title">Соединение</string>
-    <string name="more_conn_sub">Защита, DNS, маршруты</string>
-    <string name="more_apps_title">Приложения</string>
-    <string name="more_logs_title">Логи</string>
+    <string name="more_title">Настройки</string>
+    <string name="more_sub">Marvia для Android · %1$s</string>
+    <string name="more_apps_title">Прокси по приложениям</string>
+    <string name="more_logs_title">Журнал соединений</string>
+    <string name="more_apps_sub">приложения и российские сайты мимо туннеля</string>
+    <string name="more_logs_value">без адресов сайтов</string>
     <plurals name="more_logs_sub">
         <item quantity="one">последняя %1$d строка</item>
         <item quantity="few">последние %1$d строки</item>
@@ -371,8 +371,8 @@
         <item quantity="other">последние %1$d строки</item>
     </plurals>
     <string name="more_logs_sub_empty">журнал пока пуст</string>
-    <string name="conn_group_protect">Защита</string>
-    <string name="conn_group_net">Сеть</string>
+    <string name="conn_group_protect">Подключение</string>
+    <string name="conn_group_net">Маршруты и DNS</string>
     <string name="conn_group_app">Приложение</string>
     <string name="conn_dns">DNS</string>
     <string name="conn_dns_sub">резолвер внутри туннеля</string>
