@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
@@ -156,7 +157,6 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { MarviaState.state.collect { render(it) } }
-                launch { MarviaState.traffic.collect { ui.connectScreen.trafficPanel.snapshot = it } }
             }
         }
 
@@ -293,9 +293,10 @@ class MainActivity : AppCompatActivity() {
         ui.themeScreen.root.isVisible = next == Screen.THEME
         ui.languageScreen.root.isVisible = next == Screen.LANGUAGE
 
-        // Пока ключа нет, ходить некуда: панель появится вместе с ним. На
-        // выборе языка её тоже нет — это экран одного действия.
-        ui.nav.root.isVisible = store.accountLink.isNotBlank() && next != Screen.LANGUAGE
+        // Панель есть и без ключа: подписка добавляется на «Серверах», а тему
+        // можно выбрать до подключения. На выборе языка её нет — это экран
+        // одного действия.
+        ui.nav.root.isVisible = next != Screen.LANGUAGE
         paintNav()
 
         when (next) {
@@ -322,15 +323,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun paintNav() {
-        paintTab(ui.nav.navConnectIcon, ui.nav.navConnectLabel, screen == Screen.CONNECT)
-        paintTab(ui.nav.navServersIcon, ui.nav.navServersLabel, screen == Screen.SERVERS)
-        paintTab(ui.nav.navStatsIcon, ui.nav.navStatsLabel, screen == Screen.STATS)
-        paintTab(ui.nav.navThemeIcon, ui.nav.navThemeLabel, screen == Screen.THEME)
-        paintTab(ui.nav.navMoreIcon, ui.nav.navMoreLabel, screen == Screen.MORE)
+        val n = ui.nav
+        paintTab(n.navConnectPill, n.navConnectIcon, n.navConnectLabel, screen == Screen.CONNECT)
+        paintTab(n.navServersPill, n.navServersIcon, n.navServersLabel, screen == Screen.SERVERS)
+        paintTab(n.navStatsPill, n.navStatsIcon, n.navStatsLabel, screen == Screen.STATS)
+        paintTab(n.navThemePill, n.navThemeIcon, n.navThemeLabel, screen == Screen.THEME)
+        paintTab(n.navMorePill, n.navMoreIcon, n.navMoreLabel, screen == Screen.MORE)
     }
 
-    private fun paintTab(icon: ImageView, label: TextView, active: Boolean) {
-        val color = if (active) theme.acc else theme.dim
+    /**
+     * Вкладка из макета: под активным значком таблетка мягким акцентом, сам
+     * значок и подпись — цветом текста; остальные — приглушённые. Акцентом
+     * красится только таблетка: он на экране и так есть, на кнопке.
+     */
+    private fun paintTab(pill: View, icon: ImageView, label: TextView, active: Boolean) {
+        val dp = resources.displayMetrics.density
+        val color = if (active) theme.fg else theme.dim
+        pill.background = if (active) Paint.rounded(theme.accSoft, 999, dp) else null
         ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(color))
         label.setTextColor(color)
         label.typeface = if (active) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
@@ -344,8 +353,40 @@ class MainActivity : AppCompatActivity() {
         c.powerAction.setOnClickListener { toggle() }
         c.techText.setOnClickListener { more.openLogs(); show(Screen.MORE) }
         c.nodeLine.setOnClickListener { show(Screen.SERVERS) }
-        // Полосу остатка скругляем по фону: иначе заливка вылезает углами.
-        c.trafficTrack.clipToOutline = true
+
+        // Имя не висит в шапке постоянно — знака достаточно. Нажатие на знак
+        // выдвигает имя и строку про протокол и версию; второе — прячет.
+        val version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+        c.heroTagline.text = getString(R.string.hero_tagline, version)
+        // Имя — металлом, как знак: сверху светлое, книзу в приглушённый.
+        c.heroWord.doOnLayout {
+            c.heroWord.paint.shader = android.graphics.LinearGradient(
+                0f, 0f, 0f, c.heroWord.height.toFloat(),
+                intArrayOf(theme.fg, theme.fg, theme.dim), floatArrayOf(0f, 0.42f, 1f), android.graphics.Shader.TileMode.CLAMP,
+            )
+            c.heroWord.invalidate()
+        }
+        c.heroMarkButton.setOnClickListener {
+            val show = !c.heroName.isVisible
+            if (show) {
+                c.heroName.alpha = 0f
+                c.heroName.translationX = -10 * resources.displayMetrics.density
+                c.heroName.isVisible = true
+                c.heroName.animate().alpha(1f).translationX(0f).setDuration(450).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+            } else {
+                c.heroName.animate().alpha(0f).setDuration(200).withEndAction { c.heroName.isVisible = false }.start()
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                MarviaState.traffic.collect { t ->
+                    c.todayTotal.text = Format.size(this@MainActivity, t.today)
+                    c.todayBars.hours = t.hours
+                    c.sessionValue.text = String.format(java.util.Locale.US, "%02d:%02d:%02d", t.seconds / 3600, t.seconds / 60 % 60, t.seconds % 60)
+                    c.speedValue.text = getString(R.string.stats_mbps, String.format(java.util.Locale.getDefault(), "%.1f", t.bytesPerSecond * 8 / 1_000_000))
+                }
+            }
+        }
     }
 
     private fun render(state: TunnelState) {
@@ -353,41 +394,42 @@ class MainActivity : AppCompatActivity() {
         val hasKey = store.accountLink.isNotBlank()
 
         c.techText.isVisible = false
-        c.nodeLine.isVisible = false
-        c.powerAction.glowing = state is TunnelState.On
+        c.powerAction.state = when (state) {
+            TunnelState.Off -> PowerButton.State.OFF
+            TunnelState.Connecting -> PowerButton.State.CONNECTING
+            is TunnelState.On -> PowerButton.State.ON
+            is TunnelState.Failed -> PowerButton.State.FAILED
+        }
+        // Строка под состоянием: нода, а пока её нет — что делаем. Нажатие
+        // ведёт к выбору сервера, поэтому строка есть и без туннеля.
+        c.nodeLine.text = when (state) {
+            TunnelState.Connecting -> getString(R.string.connect_choosing)
+            is TunnelState.On -> listOf(state.node, if (state.ms > 0) getString(R.string.node_ms, state.ms) else "")
+                .filter { it.isNotEmpty() }.joinToString(" · ")
+            else -> lastNode
+        }
+        if (state is TunnelState.On) lastNode = state.node
+        c.nodeLine.isVisible = c.nodeLine.text.isNotEmpty()
 
         when (state) {
             TunnelState.Off -> {
-                pill(if (hasKey) R.string.status_off else R.string.connect_welcome, theme.dim, theme.surf2)
-                c.powerAction.setText(if (hasKey) R.string.action_connect else R.string.connect_add_key)
+                status(if (hasKey) R.string.status_off else R.string.connect_welcome, theme.dim)
+                c.powerAction.contentDescription = getString(if (hasKey) R.string.action_connect else R.string.connect_add_key)
                 paintPower(theme.acc)
                 c.nodeNote.text = ""
             }
 
             TunnelState.Connecting -> {
-                pill(R.string.status_connecting, theme.dim, theme.surf2)
-                c.powerAction.setText(R.string.status_connecting)
+                status(R.string.status_connecting, theme.dim)
+                c.powerAction.contentDescription = getString(R.string.status_connecting)
                 paintPower(theme.acc)
                 c.nodeNote.text = ""
             }
 
             is TunnelState.On -> {
-                pill(R.string.status_on, theme.acc, theme.accSoft)
-                c.powerAction.setText(R.string.connect_disconnect)
+                status(R.string.status_on, if (theme.dark) theme.fg else theme.acc)
+                c.powerAction.contentDescription = getString(R.string.connect_disconnect)
                 paintPower(theme.acc)
-
-                // Имя ноды от ядра — «Финляндия · Хельсинки»: страна крупно,
-                // город и отклик строкой ниже.
-                val country = state.node.substringBefore('·').trim()
-                val place = state.node.substringAfter('·', "").trim()
-                c.nodeLine.isVisible = true
-                c.nodeFlag.text = Flags.of(country)
-                c.nodeFlag.isVisible = c.nodeFlag.text.isNotEmpty()
-                c.nodeCountry.text = country
-                c.nodePlace.text = listOf(place, if (state.ms > 0) getString(R.string.node_ping, state.ms) else "")
-                    .filter { it.isNotEmpty() }
-                    .joinToString(" · ")
-                c.nodePlace.isVisible = c.nodePlace.text.isNotEmpty()
                 c.nodeNote.text = choiceText(state)
 
                 // Ошибка отдельного соединения туннель не роняет, но молчать о
@@ -403,8 +445,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             is TunnelState.Failed -> {
-                pill(R.string.status_failed, theme.fail, ColorUtils.setAlphaComponent(theme.fail, 31))
-                c.powerAction.setText(R.string.connect_retry)
+                status(R.string.status_failed, theme.fail)
+                c.powerAction.contentDescription = getString(R.string.connect_retry)
                 paintPower(theme.fail)
 
                 val human = humanReasonFor(state.kind)
@@ -423,9 +465,6 @@ class MainActivity : AppCompatActivity() {
         }
         // Пустая строка — это не строка: место под неё занимать незачем.
         c.nodeNote.isVisible = c.nodeNote.text.isNotEmpty()
-        c.powerAction.isEnabled = state !is TunnelState.Connecting
-        c.powerAction.alpha = if (state is TunnelState.Connecting) 0.65f else 1f
-        c.powerAction.contentDescription = c.powerAction.text
 
         renderSubscription(state)
 
@@ -457,88 +496,29 @@ class MainActivity : AppCompatActivity() {
         else -> getString(R.string.connect_manual_moved, state.chosen)
     }
 
-    /**
-     * pill красит пилюлю состояния: точка и текст — цветом состояния,
-     * подложка — его мягкой версией. Одно место, чтобы четыре состояния не
-     * разъехались по оттенкам.
-     */
-    private fun pill(text: Int, color: Int, fill: Int) {
+    /** Последняя нода, через которую шёл трафик: её показываем и выключенными. */
+    private var lastNode = ""
+
+    /** Состояние — одной крупной строкой под кнопкой, цветом состояния. */
+    private fun status(text: Int, color: Int) {
         val v = ui.connectScreen.statusText
         v.setText(text)
-        v.setTextColor(if (color == theme.acc && theme.dark) theme.fg else color)
-        v.backgroundTintList = ColorStateList.valueOf(fill)
-        TextViewCompat.setCompoundDrawableTintList(v, ColorStateList.valueOf(color))
+        v.setTextColor(color)
     }
 
-    /** Цвет ленты — личный выбор; состояние передаём текстом и кнопкой. */
+    /** Цвет ленты — личный выбор; состояние передаём дугой и строкой. */
     private fun paintPower(color: Int) {
         val c = ui.connectScreen
-        val dp = resources.displayMetrics.density
-        c.trafficPanel.theme = theme
+        c.todayBars.theme = theme
         c.powerAction.theme = theme.copy(acc = color)
-
     }
 
     /**
-     * renderSubscription — срок и остаток трафика.
-     *
-     * Пустая карточка означает, что показывать нечего: продавец не поставил ни
-     * срока, ни квоты. Врать «безлимит» в этом случае нельзя — он мог просто
-     * не заполнить поля.
+     * renderSubscription — срок и остаток живут на «Серверах», у своего
+     * провайдера. Здесь от подписки остаётся одно: есть ли новая версия.
      */
     private fun renderSubscription(state: TunnelState) {
-        val c = ui.connectScreen
-        val sub = (state as? TunnelState.On)?.subscription
-        more.showUpdate(sub)
-
-        if (sub == null || !sub.known) {
-            c.subCard.isVisible = false
-            c.headerUntil.isVisible = false
-            return
-        }
-
-        c.subCard.isVisible = true
-
-        val day = if (sub.until.isEmpty()) "" else Format.day(this, sub.until)
-        c.headerUntil.isVisible = day.isNotEmpty()
-        if (day.isNotEmpty()) {
-            c.headerUntil.text = getString(R.string.header_until, day)
-        }
-
-        val quota = sub.limitBytes > 0
-        c.trafficLine.isVisible = quota
-        c.trafficTrack.isVisible = quota
-        if (quota) {
-            c.trafficValue.text = getString(
-                R.string.traffic_of,
-                Format.size(this, sub.leftBytes),
-                Format.size(this, sub.limitBytes),
-            )
-            val left = (sub.leftBytes.toFloat() / sub.limitBytes).coerceIn(0f, 1f)
-            weigh(c.trafficFill, left)
-            weigh(c.trafficRest, 1f - left)
-        }
-
-        c.untilLine.isVisible = day.isNotEmpty()
-        if (day.isNotEmpty()) {
-            val days = Format.daysLeft(sub.until)
-            c.untilLine.text = if (days == null) {
-                getString(R.string.sub_until_only, day)
-            } else {
-                getString(
-                    R.string.sub_until_days,
-                    day,
-                    resources.getQuantityString(R.plurals.days_left, days, days),
-                )
-            }
-        }
-    }
-
-    /** Полоса остатка рисуется весами: своего вида полосы под это в Android нет. */
-    private fun weigh(view: View, weight: Float) {
-        val params = view.layoutParams as android.widget.LinearLayout.LayoutParams
-        params.weight = weight
-        view.layoutParams = params
+        more.showUpdate((state as? TunnelState.On)?.subscription)
     }
 
     // --------------------------------------------------------------- ключ

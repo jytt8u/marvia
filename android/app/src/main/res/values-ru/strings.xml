@@ -4,8 +4,10 @@
 
     <!-- Нижняя панель: три экрана и ничего больше. -->
     <string name="nav_connect">Туннель</string>
-    <string name="nav_servers">Страны</string>
-    <string name="nav_more">Ещё</string>
+    <string name="nav_servers">Серверы</string>
+    <string name="nav_more">Настройки</string>
+    <string name="hero_tagline">VP1 · СВОЙ ТУННЕЛЬ · %1$s</string>
+    <string name="connect_choosing">выбираю самую быструю ноду</string>
     <string name="nav_stats">Расход</string>
     <string name="nav_theme">Тема</string>
     <string name="settings_language">Язык</string>
@@ -89,7 +91,39 @@
     <string name="key_replace_no">Оставить прежний</string>
 
     <!-- Экран выбора страны. -->
-    <string name="servers_title">Страны</string>
+    <string name="servers_title">Серверы</string>
+    <string name="servers_refresh_all">Обновить все подписки</string>
+    <string name="servers_refresh">Обновить подписку</string>
+    <string name="servers_more">Ещё действия с подпиской</string>
+    <string name="servers_use">Сделать рабочей</string>
+    <string name="servers_collapsed">свернуто</string>
+    <string name="servers_stale">Панель не ответила — список вчерашний</string>
+    <string name="servers_no_subs">Подписок пока нет. Нажми «+» и добавь ссылку marvia:// от того, кто дал доступ.</string>
+    <string name="servers_unlimited">∞</string>
+    <string name="servers_quota">%1$s / %2$s</string>
+    <string name="servers_days_left">Осталось %1$s</string>
+    <string name="servers_no_term">без срока</string>
+    <string name="servers_age_now">только что</string>
+    <string name="servers_age_min">%1$d мин</string>
+    <string name="servers_age_hours">%1$d ч</string>
+    <string name="servers_age_days">%1$d дн</string>
+    <string name="servers_measuring">замер…</string>
+    <string name="servers_auto_fastest">сейчас быстрее всего — %1$s</string>
+    <string name="servers_auto_idle">самая быстрая нода рабочей подписки</string>
+    <string name="node_picked">выбрал ты</string>
+    <string name="node_traffic_now">трафик идёт сейчас</string>
+    <plurals name="servers_providers">
+        <item quantity="one">%1$d провайдер</item>
+        <item quantity="few">%1$d провайдера</item>
+        <item quantity="many">%1$d провайдеров</item>
+        <item quantity="other">%1$d провайдера</item>
+    </plurals>
+    <plurals name="servers_count">
+        <item quantity="one">%1$d сервер</item>
+        <item quantity="few">%1$d сервера</item>
+        <item quantity="many">%1$d серверов</item>
+        <item quantity="other">%1$d сервера</item>
+    </plurals>
     <string name="servers_measure">Обновить</string>
     <string name="servers_auto">Автовыбор</string>
     <string name="servers_auto_mark">⚡</string>
@@ -115,6 +149,7 @@
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
     <string name="node_ping">Отклик: %1$d мс</string>
+    <string name="node_ms">%1$d мс</string>
     <string name="node_ping_none">Отклик не измерен</string>
     <string name="node_setup">Подключение: %1$d мс</string>
     <string name="node_ok">работает</string>

@@ -1,171 +1,129 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Главный экран по макету «Туннель»: знак сверху (нажатие показывает имя),
+    диск с дугой, состояние и строка ноды, внизу — «Сегодня» по часам и две
+    плитки. Цвета ставит Paint по тегам.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:gravity="center_vertical" android:paddingHorizontal="@dimen/screen_pad"
-        android:paddingTop="@dimen/header_pad" android:paddingBottom="12dp">
-        <io.marvia.android.MarviaLogoView android:id="@+id/heroMark" android:layout_width="32dp" android:layout_height="24dp" android:layout_marginEnd="10dp" android:contentDescription="@null" />
-        <ImageView android:layout_width="0dp" android:layout_height="16dp" android:layout_weight="1"
-            android:scaleType="fitStart" android:src="@drawable/ic_wordmark" android:tag="icon:fg"
-            android:contentDescription="@string/app_name" app:tint="@color/veil_text" />
-        <TextView android:id="@+id/headerUntil" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:tag="dim" android:textSize="12sp" android:visibility="gone" />
-    </LinearLayout>
+        android:gravity="center_vertical" android:paddingStart="22dp" android:paddingEnd="16dp"
+        android:paddingTop="@dimen/header_pad" android:paddingBottom="0dp">
+        <FrameLayout android:id="@+id/heroMarkButton" android:layout_width="44dp" android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless" android:clickable="true" android:focusable="true"
+            android:contentDescription="@string/app_name">
+            <io.marvia.android.MarviaLogoView android:id="@+id/heroMark" android:layout_width="40dp" android:layout_height="34dp"
+                android:layout_gravity="center" android:contentDescription="@null" />
+        </FrameLayout>
+        <LinearLayout android:id="@+id/heroName" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="12dp" android:orientation="vertical" android:visibility="gone">
+            <TextView android:id="@+id/heroWord" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:fontFamily="@font/unbounded" android:textStyle="bold" android:textSize="18sp"
+                android:letterSpacing="0.16" android:includeFontPadding="false" android:text="@string/app_name_caps" android:tag="fg" />
+            <TextView android:id="@+id/heroTagline" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="3dp" android:fontFamily="@font/mono" android:textSize="9sp"
+                android:letterSpacing="0.16" android:tag="dim" />
+        </LinearLayout>
+        <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />    </LinearLayout>
+
     <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-        android:fillViewport="true" android:clipToPadding="false">
+        android:fillViewport="true" android:clipToPadding="false" android:clipChildren="false">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:gravity="center_horizontal" android:paddingHorizontal="@dimen/screen_pad"
-            android:paddingBottom="16dp">
-            <!--
-                Состояние — пилюлей с точкой над кнопкой, а не заголовком под
-                ней: так на экране одна вещь главная, и это кнопка. Цвета
-                пилюли ставит код по состоянию.
-            -->
+            android:orientation="vertical" android:gravity="center_horizontal" android:paddingHorizontal="16dp"
+            android:paddingBottom="16dp" android:clipChildren="false">
+
+            <!-- Вокруг дуги запас под свечение: оно рисуется внутри вьюхи. -->
+            <io.marvia.android.PowerButton
+                android:id="@+id/powerAction"
+                android:layout_width="248dp"
+                android:layout_height="248dp"
+                android:layout_marginTop="14dp"
+                android:contentDescription="@string/action_connect" />
+
             <TextView
                 android:id="@+id/statusText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_pill"
-                android:drawablePadding="8dp"
-                android:drawableStart="@drawable/ic_dot"
+                android:layout_marginTop="2dp"
                 android:gravity="center"
-                android:paddingHorizontal="14dp"
-                android:paddingVertical="8dp"
                 android:text="@string/status_off"
-                android:textSize="13.5sp"
-                android:fontFamily="sans-serif-medium"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:letterSpacing="-0.01"
                 android:accessibilityLiveRegion="polite" />
 
-            <!-- Вокруг кнопки запас под свечение: оно рисуется внутри вьюхи. -->
-            <io.marvia.android.PowerButton
-                android:id="@+id/powerAction"
-                android:layout_width="232dp"
-                android:layout_height="232dp"
-                android:layout_marginTop="2dp"
-                android:contentDescription="@string/action_connect" />
-
-            <!-- Страна: флаг, название, город и отклик. Нажатие ведёт к выбору. -->
-            <LinearLayout
+            <!-- Нода одной строкой: страна · город · отклик. Нажатие ведёт к выбору. -->
+            <TextView
                 android:id="@+id/nodeLine"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="center_vertical"
-                android:minHeight="48dp"
-                android:orientation="horizontal"
-                android:paddingHorizontal="12dp">
+                android:gravity="center"
+                android:minHeight="32dp"
+                android:paddingHorizontal="12dp"
+                android:fontFamily="@font/mono"
+                android:letterSpacing="0.04"
+                android:tag="dim"
+                android:textSize="13sp" />
 
-                <TextView
-                    android:id="@+id/nodeFlag"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="10dp"
-                    android:textSize="24sp" />
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/nodeCountry"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:tag="fg"
-                        android:textColor="@color/veil_text"
-                        android:textSize="15.5sp" />
-
-                    <TextView
-                        android:id="@+id/nodePlace"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="1dp"
-                        android:tag="dim"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="12.5sp" />
-                </LinearLayout>
-            </LinearLayout>
             <TextView android:id="@+id/nodeNote" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="12dp" android:tag="dim" android:textSize="13sp" android:lineSpacingExtra="3dp" />
+                android:layout_marginTop="10dp" android:gravity="center" android:tag="dim" android:textSize="13sp" android:lineSpacingExtra="3dp" />
             <TextView android:id="@+id/techText" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="10dp" android:textIsSelectable="true" android:textSize="12sp" android:visibility="gone" />
-            <io.marvia.android.TrafficPanel android:id="@+id/trafficPanel" android:layout_width="match_parent" android:layout_height="192dp" android:layout_marginTop="16dp" />
+                android:layout_marginTop="8dp" android:gravity="center" android:textIsSelectable="true" android:textSize="12sp" android:visibility="gone" />
+
+            <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:minHeight="18dp" />
+
+            <!-- Сегодня по часам. -->
             <LinearLayout
-                android:id="@+id/subCard"
+                android:id="@+id/todayCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="16dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:tag="card.pad"
+                android:tag="card"
                 android:paddingHorizontal="16dp"
-                android:paddingVertical="15dp"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:id="@+id/trafficLine"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:baselineAligned="true"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/traffic_left"
-                        android:tag="dim"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:id="@+id/trafficValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:tag="fg"
-                        android:textColor="@color/veil_text"
-                        android:textSize="15sp" />
+                android:paddingVertical="14dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:baselineAligned="true">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/stats_today" android:tag="dim" android:textSize="14sp" />
+                    <TextView android:id="@+id/todayTotal" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:fontFamily="@font/mono" android:textStyle="bold" android:tag="fg" android:textSize="16sp" />
                 </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/trafficTrack"
-                    android:layout_width="match_parent"
-                    android:layout_height="7dp"
-                    android:layout_marginTop="11dp"
-                    android:background="@drawable/bg_track"
-                    android:tag="track"
-                    android:orientation="horizontal">
-
-                    <View
-                        android:id="@+id/trafficFill"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="@color/veil_accent"
-                        android:tag="fill" />
-
-                    <View
-                        android:id="@+id/trafficRest"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="0" />
+                <io.marvia.android.HourBars android:id="@+id/todayBars" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="12dp" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:fontFamily="@font/mono" android:text="00" android:tag="dim" android:textSize="10sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:fontFamily="@font/mono" android:text="23" android:tag="dim" android:textSize="10sp" />
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/untilLine"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="11dp"
-                    android:tag="dim"
-                    android:textColor="@color/veil_muted"
-                    android:textSize="13sp" />
             </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:orientation="horizontal" android:baselineAligned="false">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:layout_marginEnd="6dp" android:background="@drawable/bg_card" android:orientation="vertical"
+                    android:tag="card" android:paddingHorizontal="16dp" android:paddingVertical="14dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/stats_session" android:tag="dim" android:textSize="13sp" />
+                    <TextView android:id="@+id/sessionValue" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:fontFamily="@font/mono" android:textStyle="bold" android:tag="fg"
+                        android:textSize="20sp" android:text="00:00:00" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:layout_marginStart="6dp" android:background="@drawable/bg_card" android:orientation="vertical"
+                    android:tag="card" android:paddingHorizontal="16dp" android:paddingVertical="14dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/stats_speed" android:tag="dim" android:textSize="13sp" />
+                    <TextView android:id="@+id/speedValue" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:fontFamily="@font/mono" android:textStyle="bold" android:tag="fg"
+                        android:textSize="20sp" android:maxLines="1" />
+                </LinearLayout>
+            </LinearLayout>
+
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

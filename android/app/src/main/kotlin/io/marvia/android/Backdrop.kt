@@ -104,6 +104,22 @@ class Backdrop(private val t: Theme) : Drawable() {
     override fun draw(canvas: Canvas) {
         val b = bounds
         canvas.drawRect(b, brush)
+        // Точечная сетка из цвета текста, едва заметная: фон перестаёт быть
+        // пустым, но не спорит с содержимым. Та же, что на телефоне в макете.
+        // Одна точка в плитке, плитка повторяется шейдером: рисовать тысячи
+        // кругов на каждый кадр — дорого, а плитка — один вызов.
+        canvas.drawRect(b, dots)
+    }
+
+    /** Плотность экрана — у Drawable своей нет, берём системную. Объявлена до точек: они её читают при создании. */
+    private val density = android.content.res.Resources.getSystem().displayMetrics.density
+
+    private val dots = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val step = (22 * density).toInt().coerceAtLeast(2)
+        val tile = android.graphics.Bitmap.createBitmap(step, step, android.graphics.Bitmap.Config.ARGB_8888)
+        val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = androidx.core.graphics.ColorUtils.setAlphaComponent(t.fg, 13) }
+        Canvas(tile).drawCircle(step / 2f, step / 2f, density, dot)
+        shader = android.graphics.BitmapShader(tile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
     }
 
     override fun setAlpha(alpha: Int) {

@@ -32,6 +32,7 @@ object Paint {
     /** Словарь тегов. Один тег на вьюху; составные роли — отдельными вьюхами. */
     private const val BG = "bg"
     private const val SURF = "surf"
+    private const val NAVBAR = "navbar"
     private const val CARD = "card"
     private const val CARD_PAD = "card.pad"
     private const val LINE = "line"
@@ -75,6 +76,8 @@ object Paint {
         when {
             tag == BG -> v.background = Backdrop(t)
             tag == SURF -> v.setBackgroundColor(t.surf)
+            // Нижняя панель — средний тон фона, чуть прозрачный, как в макете.
+            tag == NAVBAR -> v.setBackgroundColor(androidx.core.graphics.ColorUtils.setAlphaComponent(t.mid, 235))
             tag == LINE -> v.setBackgroundColor(t.line)
             tag == CARD -> skin(v, t, dp)
             tag == CARD_PAD -> {

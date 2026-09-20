@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    «Серверы» по макету: заголовок с двумя кнопками (обновить все, добавить),
+    карточка автовыбора и по карточке на провайдера — каждая со своими нодами,
+    сроком и остатком. Карточки провайдеров собираются кодом из item_provider.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -9,101 +13,98 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:minHeight="44dp"
-        android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingStart="22dp"
+        android:paddingEnd="16dp"
         android:paddingTop="@dimen/header_pad"
-        android:paddingBottom="10dp">
+        android:paddingBottom="12dp">
 
-        <!-- Знак и надпись — те же, что на главной: шапка одна на все экраны. -->
-        <io.marvia.android.MarviaLogoView
-            android:layout_width="28dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="10dp"
-            android:contentDescription="@null" />
-
-        <ImageView
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="14dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:adjustViewBounds="true"
-            android:scaleType="fitStart"
-            android:src="@drawable/ic_wordmark"
-            android:contentDescription="@string/app_name"
-            android:tag="icon:fg"
-            app:tint="@color/veil_text" />
+            android:orientation="vertical">
 
-        <ProgressBar
-            android:id="@+id/measureSpinner"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_marginEnd="9dp"
-            android:visibility="gone" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/servers_title"
+                android:tag="fg"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:letterSpacing="-0.01" />
 
-        <!-- Добавить подписку: буфер обмена или руками. -->
-        <TextView
+            <TextView
+                android:id="@+id/serversSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:tag="dim"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/refreshAll"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:focusable="true"
+            android:tag="card"
+            android:contentDescription="@string/servers_refresh_all">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_refresh"
+                android:tag="icon:fg" />
+
+            <ProgressBar
+                android:id="@+id/refreshSpinner"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <FrameLayout
             android:id="@+id/addSubscription"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="4dp"
-            android:tag="acc"
-            android:text="+"
-            android:textColor="@color/veil_link"
-            android:textSize="22sp"
-            android:contentDescription="@string/servers_add" />
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_accent_button"
+            android:clickable="true"
+            android:focusable="true"
+            android:tag="btn"
+            android:contentDescription="@string/servers_add">
 
-        <!-- «Обновить» — это перезамер всех нод с этого телефона, он не мгновенный. -->
-        <TextView
-            android:id="@+id/measureButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="4dp"
-            android:text="@string/servers_measure"
-            android:tag="acc"
-            android:textColor="@color/veil_link"
-            android:textSize="13sp" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="@dimen/screen_pad"
-        android:paddingBottom="8dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:letterSpacing="-0.02"
-            android:text="@string/servers_title"
-            android:tag="fg"
-            android:textColor="@color/veil_text"
-            android:textSize="26sp"
-            android:textStyle="bold" />
-
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_plus"
+                android:tag="icon:accFg" />
+        </FrameLayout>
     </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:paddingHorizontal="@dimen/screen_pad">
+        android:clipToPadding="false"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp">
+            android:paddingHorizontal="16dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="16dp">
 
-            <!--
-                Автовыбор отдельной строкой сверху, а не галочкой в списке:
-                это не одна из стран, а отказ выбирать страну вручную.
-            -->
+            <!-- Автовыбор: самая быстрая нода рабочего провайдера. Обводка акцентом, когда он и действует. -->
             <LinearLayout
                 android:id="@+id/autoRow"
                 android:layout_width="match_parent"
@@ -112,17 +113,24 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
-                android:minHeight="60dp"
                 android:orientation="horizontal"
-                android:paddingHorizontal="15dp"
-                android:paddingVertical="13dp">
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="12dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
-                    android:text="@string/servers_auto_mark"
-                    android:textSize="24sp" />
+                <FrameLayout
+                    android:id="@+id/autoIconBox"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="12dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_bolt"
+                        android:tag="icon:fg" />
+                </FrameLayout>
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -131,40 +139,27 @@
                     android:orientation="vertical">
 
                     <TextView
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
                         android:text="@string/servers_auto"
                         android:tag="fg"
-                        android:textColor="@color/veil_text"
-                        android:textSize="15.5sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/autoNote"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
+                        android:layout_marginTop="3dp"
                         android:tag="dim"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="13sp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/autoPing"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="11dp"
-                    android:textSize="13.5sp" />
 
                 <FrameLayout
                     android:id="@+id/autoMark"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_marginStart="11dp"
-                    android:background="@drawable/bg_ring">
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="10dp">
 
                     <ImageView
                         android:id="@+id/autoMarkCheck"
@@ -172,60 +167,26 @@
                         android:layout_height="13dp"
                         android:layout_gravity="center"
                         android:contentDescription="@null"
-                        android:src="@drawable/ic_check"
-                        android:visibility="gone" />
+                        android:src="@drawable/ic_check" />
                 </FrameLayout>
             </LinearLayout>
 
-            <!--
-                Подписки. Показываются, только когда их больше одной: пока
-                продавец один, заголовок и список — это шум над тем, что и так
-                очевидно.
-            -->
-            <TextView
-                android:id="@+id/subsLabel"
-                style="@style/VeilSection"
-                android:layout_marginTop="16dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/servers_subs"
-                android:visibility="gone" />
-
-            <LinearLayout
-                android:id="@+id/subList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/manualLabel"
-                style="@style/VeilSection"
-                android:layout_marginTop="16dp"
-                android:paddingHorizontal="3dp"
-                android:text="@string/servers_manual" />
-
-            <!-- Список нод собирается кодом: страны приходят от продавца. -->
-            <LinearLayout
-                android:id="@+id/nodeList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-
-            <!--
-                Пока туннель не поднят, мерить нечем: ноды известны ядру, а
-                ядро живёт внутри туннеля. Обещать список до подключения было
-                бы обманом.
-            -->
             <TextView
                 android:id="@+id/serversEmpty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="24dp"
+                android:gravity="center"
+                android:lineSpacingExtra="4dp"
                 android:tag="dim"
-                android:textColor="@color/veil_muted"
-                android:textSize="13.5sp"
+                android:textSize="14sp"
                 android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/providerList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
         </LinearLayout>
     </ScrollView>
-
 </LinearLayout>

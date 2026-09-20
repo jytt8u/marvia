@@ -15,8 +15,11 @@
 
     <!-- Нижняя панель: три экрана и ничего больше. -->
     <string name="nav_connect">Tunnel</string>
-    <string name="nav_servers">Countries</string>
-    <string name="nav_more">More</string>
+    <string name="nav_servers">Servers</string>
+    <string name="nav_more">Settings</string>
+    <string name="app_name_caps" translatable="false">MARVIA</string>
+    <string name="hero_tagline">VP1 · OWN TUNNEL · %1$s</string>
+    <string name="connect_choosing">picking the fastest node</string>
     <string name="nav_stats">Usage</string>
     <string name="nav_theme">Theme</string>
 
@@ -112,7 +115,35 @@
     <string name="key_replace_no">Keep the old one</string>
 
     <!-- Экран выбора страны. -->
-    <string name="servers_title">Countries</string>
+    <string name="servers_title">Servers</string>
+    <string name="servers_refresh_all">Refresh all subscriptions</string>
+    <string name="servers_refresh">Refresh subscription</string>
+    <string name="servers_more">More actions</string>
+    <string name="servers_use">Make active</string>
+    <string name="servers_collapsed">collapsed</string>
+    <string name="servers_stale">The panel did not answer — showing yesterday’s list</string>
+    <string name="servers_no_subs">No subscriptions yet. Tap “+” and add the marvia:// link from whoever gave you access.</string>
+    <string name="servers_unlimited">∞</string>
+    <string name="servers_quota">%1$s / %2$s</string>
+    <string name="servers_days_left">%1$s left</string>
+    <string name="servers_no_term">no expiry</string>
+    <string name="servers_age_now">just now</string>
+    <string name="servers_age_min">%1$d min</string>
+    <string name="servers_age_hours">%1$d h</string>
+    <string name="servers_age_days">%1$d d</string>
+    <string name="servers_measuring">measuring…</string>
+    <string name="servers_auto_fastest">fastest right now — %1$s</string>
+    <string name="servers_auto_idle">the fastest node of the active subscription</string>
+    <string name="node_picked">your pick</string>
+    <string name="node_traffic_now">traffic goes here now</string>
+    <plurals name="servers_providers">
+        <item quantity="one">%1$d provider</item>
+        <item quantity="other">%1$d providers</item>
+    </plurals>
+    <plurals name="servers_count">
+        <item quantity="one">%1$d server</item>
+        <item quantity="other">%1$d servers</item>
+    </plurals>
     <string name="servers_measure">Refresh</string>
     <string name="servers_auto">Automatic</string>
     <string name="servers_auto_mark">⚡</string>
@@ -138,6 +169,7 @@
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
     <string name="node_ping">Response: %1$d ms</string>
+    <string name="node_ms">%1$d ms</string>
     <string name="node_ping_none">Response not measured</string>
     <string name="node_setup">Connection: %1$d ms</string>
     <string name="node_ok">works</string>

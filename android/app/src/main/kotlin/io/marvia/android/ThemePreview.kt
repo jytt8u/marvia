@@ -110,7 +110,7 @@ class ThemePreview @JvmOverloads constructor(
         val cx = 100 * dp
         val cy = 116 * dp
         val r = 40 * dp
-        power.glowing = true
+        power.state = PowerButton.State.ON
         val size = (r * 2 + 60 * dp).toInt()
         power.layout(0, 0, size, size)
         canvas.save()

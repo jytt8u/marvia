@@ -32,7 +32,7 @@ class Store(context: Context) {
         set(value) {
             val link = value.trim()
             if (link != accountLink) {
-                dropSubscriptionCache()
+                chosenNode = 0
                 // Запоминаем день, а не саму ссылку: в настройках человек
                 // видит, когда ключ появился, и понимает, тот ли он, что
                 // прислал продавец на прошлой неделе.
@@ -46,6 +46,18 @@ class Store(context: Context) {
                 subscriptions = subscriptions + Subscription(defaultSubscriptionName(link), link)
             }
         }
+
+    /**
+     * chosenNode — нода, которую человек выбрал руками; ноль — автовыбор.
+     *
+     * Живёт здесь, а не в ядре: ядро поднимается с каждым туннелем заново и
+     * своего выбора не помнит. Номер ноды принадлежит подписке, поэтому при
+     * смене рабочей подписки выбор сбрасывается — чужой номер указал бы
+     * не туда.
+     */
+    var chosenNode: Long
+        get() = prefs.getLong(KEY_CHOSEN_NODE, 0)
+        set(value) { prefs.edit().putLong(KEY_CHOSEN_NODE, value).apply() }
 
     /** Когда ключ положили сюда. Ноль означает, что он появился до этой записи. */
     val accountSavedAt: Long
@@ -88,6 +100,7 @@ class Store(context: Context) {
 
     fun removeSubscription(link: String) {
         subscriptions = subscriptions.filter { it.link != link }
+        dropSubscriptionCache(link)
         // Убрали рабочую — остаёмся без ключа, а не с чужим втихую.
         if (accountLink == link) accountLink = ""
     }
@@ -372,9 +385,11 @@ class Store(context: Context) {
     /** Каталог, который приложение отдаёт ядру под кэш подписки. */
     fun cacheDir(): String = app.filesDir.absolutePath
 
-    private fun dropSubscriptionCache() {
-        // Не удалилось — не беда: ядро сверит отпечаток и просто не станет
-        // этот кэш использовать, а первый удачный поход в панель его перезапишет.
+    private fun dropSubscriptionCache(link: String) {
+        // Кэш у каждой подписки свой — стираем его; старый общий файл, если
+        // остался от прежних версий, — заодно. Не удалилось — не беда: ядро
+        // сверит отпечаток и чужой кэш использовать не станет.
+        runCatching { Mobile.forgetSubscription(link, cacheDir()) }
         File(app.filesDir, Mobile.CacheName).delete()
     }
 
@@ -396,6 +411,7 @@ class Store(context: Context) {
 
         private const val KEY_ACCOUNT_LINK = "account_link"
         private const val KEY_ACCOUNT_SAVED = "account_saved_at"
+        private const val KEY_CHOSEN_NODE = "chosen_node"
         private const val KEY_SUBSCRIPTIONS = "subscriptions"
 
         /**

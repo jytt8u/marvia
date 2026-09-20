@@ -13,6 +13,13 @@
         <item name="android:colorBackground">@color/veil_bg</item>
         <item name="android:textColorPrimary">@color/veil_text</item>
         <item name="android:textColorSecondary">@color/veil_muted</item>
+        <!-- Шрифт макета, свой, вшитый: системный Roboto не совпал бы ни в одной строке. -->
+        <item name="android:textViewStyle">@style/VeilText</item>
+    </style>
+
+    <!-- Стиль текста по умолчанию: шрифт макета. Вьюха со своим fontFamily его перекрывает. -->
+    <style name="VeilText" parent="Widget.MaterialComponents.TextView">
+        <item name="android:fontFamily">@font/onest</item>
     </style>
 
     <!-- Заголовок раздела в списках: «Выбрать вручную», «Ключ доступа». -->
