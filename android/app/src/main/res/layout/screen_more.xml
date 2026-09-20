@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Экран «Ещё» из макета: три раздела под одним заголовком, между ними —
-    ряд кнопок-таблеток. Соединение, приложения, логи. Заголовок и подпись
-    меняются вместе с разделом, поэтому они здесь без текста.
+    «Настройки» по макету: одна прокручиваемая страница — карточка прокси по
+    приложениям, группы «Подключение», «Маршруты и DNS», «Приложение».
+    Приложения и журнал — подэкраны с кнопкой «назад» в шапке. Здесь нет
+    ручек протокола: MTU, число соединений и прочее решает ядро, а нарисовать
+    ручку без действия — обещание, которое не выполняется.
+
+    Файл собран скриптом (scratchpad/gen_more.sh в сессии автора) — строки
+    однотипные; править можно и руками, лишь бы они остались однотипными.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -14,78 +18,49 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:minHeight="44dp"
         android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
         android:paddingTop="@dimen/header_pad"
-        android:paddingBottom="10dp">
-
-        <!-- Знак и надпись — те же, что на главной: шапка одна на все экраны. -->
-        <io.marvia.android.MarviaLogoView
-            android:layout_width="28dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="10dp"
-            android:contentDescription="@null" />
-
-        <ImageView
-            android:layout_width="0dp"
-            android:layout_height="14dp"
-            android:layout_weight="1"
-            android:adjustViewBounds="true"
-            android:scaleType="fitStart"
-            android:src="@drawable/ic_wordmark"
-            android:contentDescription="@string/app_name"
-            android:tag="icon:fg"
-            app:tint="@color/veil_text" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/moreTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:letterSpacing="-0.02"
-        android:paddingHorizontal="@dimen/screen_pad"
-        android:tag="fg"
-        android:textColor="@color/veil_text"
-        android:textSize="26sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/moreSub"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="@dimen/screen_pad"
-        android:paddingTop="2dp"
-        android:paddingBottom="12dp"
-        android:tag="dim"
-        android:textColor="@color/veil_muted"
-        android:textSize="13sp" />
-
-    <!-- Таблетки разделов. Красятся кодом: активная — акцентом. -->
-    <LinearLayout
-        android:id="@+id/morePills"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/screen_pad"
         android:paddingBottom="12dp">
 
-        <TextView
-            android:id="@+id/pillConn"
-            style="@style/VeilPill"
-            android:text="@string/more_conn" />
+        <FrameLayout
+            android:id="@+id/moreBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/more_back"
+            android:visibility="gone">
+            <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/ic_arrow_left" android:tag="icon:fg" />
+        </FrameLayout>
 
-        <TextView
-            android:id="@+id/pillApps"
-            style="@style/VeilPill"
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:layout_marginStart="6dp"
-            android:text="@string/more_apps" />
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/pillLogs"
-            style="@style/VeilPill"
-            android:layout_marginStart="6dp"
-            android:text="@string/more_logs" />
+            <TextView
+                android:id="@+id/moreTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:tag="fg"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:letterSpacing="-0.01" />
+
+            <TextView
+                android:id="@+id/moreSub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:tag="dim"
+                android:textSize="13sp" />
+        </LinearLayout>
     </LinearLayout>
 
     <FrameLayout
@@ -93,350 +68,138 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- ═══════════════════════════════════════ Соединение -->
+        <!-- ═══════════════════════════════════════ Настройки -->
         <ScrollView
             android:id="@+id/sectionConn"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:paddingHorizontal="@dimen/screen_pad">
+            android:clipToPadding="false">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingBottom="18dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="16dp">
 
-                <TextView
-                    style="@style/VeilSection"
-                    android:paddingBottom="8dp"
-                    android:text="@string/conn_group_protect" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_card"
-                    android:orientation="vertical"
-                    android:tag="card">
-
-                    <LinearLayout
-                        android:id="@+id/rowAutostart"
-                        style="@style/VeilRow">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                style="@style/VeilRowTitle"
-                                android:text="@string/settings_autostart" />
-
-                            <TextView
-                                style="@style/VeilRowSub"
-                                android:text="@string/settings_autostart_sub" />
-                        </LinearLayout>
-
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchAutostart"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:clickable="false"
-                            android:focusable="false"
-                            android:tag="switch" />
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/veil_border"
-                        android:tag="line" />
-
-                    <LinearLayout
-                        android:id="@+id/rowAlwaysOn"
-                        style="@style/VeilRow">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                style="@style/VeilRowTitle"
-                                android:text="@string/settings_always_on" />
-
-                            <TextView
-                                style="@style/VeilRowSub"
-                                android:text="@string/settings_always_on_sub" />
-                        </LinearLayout>
-
-                        <ImageView
-                            android:layout_width="19dp"
-                            android:layout_height="19dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_chevron"
-                            android:tag="icon:dim"
-                            app:tint="@color/veil_chevron" />
-                    </LinearLayout>
+        <!-- Прокси по приложениям: карточка-ссылка с итогом. -->
+        <LinearLayout
+            android:id="@+id/rowApps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:focusable="true"
+            android:orientation="vertical"
+            android:tag="card"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="12dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:layout_marginEnd="12dp" android:tag="icon.box">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/ic_grid" android:tag="icon:acc" />
+                </FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/more_apps_card" android:tag="fg" android:textSize="16sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="@string/more_apps_card_sub" android:tag="dim" android:textSize="12sp" />
                 </LinearLayout>
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:contentDescription="@null" android:src="@drawable/ic_chevron_right" android:tag="icon:dim" />
+            </LinearLayout>
+            <TextView android:id="@+id/appsSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:tag="dim" android:textSize="12.5sp" />
+        </LinearLayout>
 
-                <TextView
-                    style="@style/VeilSection"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="8dp"
-                    android:text="@string/conn_group_net" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_card"
-                    android:orientation="vertical"
-                    android:tag="card">
-
-                    <LinearLayout
-                        android:id="@+id/rowDns"
-                        style="@style/VeilRow">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                style="@style/VeilRowTitle"
-                                android:text="@string/conn_dns" />
-
-                            <TextView
-                                style="@style/VeilRowSub"
-                                android:text="@string/conn_dns_sub" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/dnsValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="monospace"
-                            android:tag="acc"
-                            android:textColor="@color/veil_accent"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-
-                    <View
-                        android:id="@+id/dividerLan"
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/veil_border"
-                        android:tag="line" />
-
-                    <!-- Домашняя сеть и российские подсети — только с Android 13. -->
-                    <LinearLayout
-                        android:id="@+id/rowLan"
-                        style="@style/VeilRow">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                style="@style/VeilRowTitle"
-                                android:text="@string/conn_lan" />
-
-                            <TextView
-                                style="@style/VeilRowSub"
-                                android:text="@string/conn_lan_sub" />
-                        </LinearLayout>
-
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchLan"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:clickable="false"
-                            android:focusable="false"
-                            android:tag="switch" />
-                    </LinearLayout>
-
-                    <View
-                        android:id="@+id/dividerRu"
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/veil_border"
-                        android:tag="line" />
-
-                    <LinearLayout
-                        android:id="@+id/rowRussian"
-                        style="@style/VeilRow">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                style="@style/VeilRowTitle"
-                                android:text="@string/settings_russian" />
-
-                            <TextView
-                                style="@style/VeilRowSub"
-                                android:text="@string/settings_russian_sub" />
-                        </LinearLayout>
-
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchRussian"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:clickable="false"
-                            android:focusable="false"
-                            android:tag="switch" />
-                    </LinearLayout>
+        <TextView style="@style/ThemeK" android:layout_marginTop="18dp" android:layout_marginStart="4dp" android:text="@string/more_group_conn" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_card" android:orientation="vertical" android:tag="card">
+            <LinearLayout android:id="@+id/rowAutostart" style="@style/VeilRow">
+                <FrameLayout android:layout_width="34dp" android:layout_height="34dp" android:layout_marginEnd="12dp" android:tag="icon.box">
+                    <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/ic_bolt" android:tag="icon:acc" />
+                </FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:text="@string/settings_autostart" android:id="@+id/switchAutostartTitle" />
+                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:text="@string/settings_autostart_sub" />
                 </LinearLayout>
-
-                <TextView
-                    style="@style/VeilSection"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="8dp"
-                    android:text="@string/conn_group_app" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_card"
-                    android:orientation="vertical"
-                    android:tag="card">
-
-                    <LinearLayout
-                        android:id="@+id/rowLanguage"
-                        style="@style/VeilRow">
-
-                        <TextView
-                            style="@style/VeilRowTitle"
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:text="@string/settings_language" />
-
-                        <TextView
-                            android:id="@+id/languageValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginEnd="9dp"
-                            android:tag="dim"
-                            android:textColor="@color/veil_muted"
-                            android:textSize="14sp" />
-
-                        <ImageView
-                            android:layout_width="19dp"
-                            android:layout_height="19dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_chevron"
-                            android:tag="icon:dim"
-                            app:tint="@color/veil_chevron" />
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/veil_border"
-                        android:tag="line" />
-
-                    <LinearLayout
-                        android:id="@+id/rowKey"
-                        style="@style/VeilRow">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                style="@style/VeilRowTitle"
-                                android:text="@string/settings_key" />
-
-                            <TextView
-                                android:id="@+id/keySummary"
-                                style="@style/VeilRowSub"
-                                android:visibility="gone" />
-                        </LinearLayout>
-
-                        <ImageView
-                            android:layout_width="19dp"
-                            android:layout_height="19dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_chevron"
-                            android:tag="icon:dim"
-                            app:tint="@color/veil_chevron" />
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/veil_border"
-                        android:tag="line" />
-
-                    <!-- Есть новая версия. Видна, только когда панель продавца
-                         выложила версию новее нашей; ссылка — на его домен. -->
-                    <LinearLayout
-                        android:id="@+id/rowUpdate"
-                        style="@style/VeilRow"
-                        android:visibility="gone">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/updateTitle"
-                                style="@style/VeilRowTitle"
-                                android:tag="acc" />
-
-                            <TextView
-                                style="@style/VeilRowSub"
-                                android:text="@string/settings_update_sub" />
-                        </LinearLayout>
-
-                        <ImageView
-                            android:layout_width="19dp"
-                            android:layout_height="19dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_chevron"
-                            android:tag="icon:dim"
-                            app:tint="@color/veil_chevron" />
-                    </LinearLayout>
-
-                    <View
-                        android:id="@+id/rowUpdateLine"
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/veil_border"
-                        android:tag="line"
-                        android:visibility="gone" />
-
-                    <LinearLayout
-                        android:id="@+id/rowAbout"
-                        style="@style/VeilRow">
-
-                        <TextView
-                            style="@style/VeilRowTitle"
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:text="@string/settings_about" />
-
-                        <ImageView
-                            android:layout_width="19dp"
-                            android:layout_height="19dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_chevron"
-                            android:tag="icon:dim"
-                            app:tint="@color/veil_chevron" />
-                    </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchAutostart" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:clickable="false" android:focusable="false" android:tag="switch" />
+            </LinearLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:tag="line" />
+            <LinearLayout android:id="@+id/rowAlwaysOn" style="@style/VeilRow">
+                <FrameLayout android:layout_width="34dp" android:layout_height="34dp" android:layout_marginEnd="12dp" android:tag="icon.box">
+                    <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/ic_nav_tunnel" android:tag="icon:acc" />
+                </FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:text="@string/settings_always_on" />
+                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:text="@string/settings_always_on_sub" />
+                </LinearLayout>
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="8dp" android:contentDescription="@null" android:src="@drawable/ic_chevron_right" android:tag="icon:dim" />
+            </LinearLayout>
+        </LinearLayout>
+        <TextView style="@style/ThemeK" android:layout_marginTop="18dp" android:layout_marginStart="4dp" android:text="@string/more_group_routes" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_card" android:orientation="vertical" android:tag="card">
+            <LinearLayout android:id="@+id/rowLan" style="@style/VeilRow">
+                <FrameLayout android:layout_width="34dp" android:layout_height="34dp" android:layout_marginEnd="12dp" android:tag="icon.box">
+                    <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/ic_home" android:tag="icon:acc" />
+                </FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:text="@string/conn_lan" android:id="@+id/switchLanTitle" />
+                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:text="@string/conn_lan_sub" />
+                </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchLan" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:clickable="false" android:focusable="false" android:tag="switch" />
+            </LinearLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:tag="line" android:id="@+id/dividerLan" />
+            <LinearLayout android:id="@+id/rowDns" style="@style/VeilRow">
+                <FrameLayout android:layout_width="34dp" android:layout_height="34dp" android:layout_marginEnd="12dp" android:tag="icon.box">
+                    <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/ic_globe" android:tag="icon:acc" />
+                </FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:text="@string/conn_dns" android:id="@+id/dnsValueTitle" />
+                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:text="@string/conn_dns_sub" />
+                </LinearLayout>
+                <TextView android:id="@+id/dnsValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:tag="dim" android:textSize="13sp" />
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="6dp" android:contentDescription="@null" android:src="@drawable/ic_chevron_right" android:tag="icon:dim" />
+            </LinearLayout>
+        </LinearLayout>
+        <TextView style="@style/ThemeK" android:layout_marginTop="18dp" android:layout_marginStart="4dp" android:text="@string/more_group_app" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_card" android:orientation="vertical" android:tag="card">
+            <LinearLayout android:id="@+id/rowUpdate" style="@style/VeilRow" android:visibility="gone">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:id="@+id/updateTitle" />
+                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:text="@string/settings_update_sub" />
+                </LinearLayout>
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="8dp" android:contentDescription="@null" android:src="@drawable/ic_chevron_right" android:tag="icon:dim" />
+            </LinearLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:tag="line" android:id="@+id/rowUpdateLine" android:visibility="gone" />
+            <LinearLayout android:id="@+id/rowLanguage" style="@style/VeilRow">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:text="@string/settings_language" android:id="@+id/languageValueTitle" />
+                </LinearLayout>
+                <TextView android:id="@+id/languageValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:tag="dim" android:textSize="13sp" />
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="6dp" android:contentDescription="@null" android:src="@drawable/ic_chevron_right" android:tag="icon:dim" />
+            </LinearLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:tag="line" />
+            <LinearLayout android:id="@+id/rowLogs" style="@style/VeilRow">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:text="@string/more_logs_row" />
+                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:text="@string/more_logs_row_sub" />
+                </LinearLayout>
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="8dp" android:contentDescription="@null" android:src="@drawable/ic_chevron_right" android:tag="icon:dim" />
+            </LinearLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:tag="line" />
+            <LinearLayout android:id="@+id/rowAbout" style="@style/VeilRow">
+                <io.marvia.android.MarviaLogoView android:layout_width="28dp" android:layout_height="24dp" android:layout_marginEnd="14dp" android:contentDescription="@null" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:text="@string/settings_about" />
+                    <TextView android:id="@+id/aboutSub" style="@style/VeilRowSub" android:layout_marginTop="2dp" />
+                </LinearLayout>
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="8dp" android:contentDescription="@null" android:src="@drawable/ic_chevron_right" android:tag="icon:dim" />
+            </LinearLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:tag="line" />
+            <LinearLayout android:id="@+id/rowReset" style="@style/VeilRow">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:tag="fail" android:text="@string/more_reset" />
+                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:text="@string/more_reset_sub" />
                 </LinearLayout>
             </LinearLayout>
+        </LinearLayout>
+        </LinearLayout>
         </ScrollView>
 
         <!-- ═══════════════════════════════════════ Приложения -->
@@ -445,12 +208,27 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:paddingHorizontal="@dimen/screen_pad"
+            android:paddingHorizontal="16dp"
             android:visibility="gone">
+
+            <!-- Российские сайты: правило про адреса, а не про приложения, но живёт здесь же — как в макете. -->
+            <LinearLayout android:id="@+id/rowRussian" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_card" android:clickable="true" android:focusable="true" android:gravity="center_vertical" android:tag="card" android:paddingHorizontal="14dp" android:paddingVertical="12dp">
+                <FrameLayout android:layout_width="34dp" android:layout_height="34dp" android:layout_marginEnd="12dp" android:tag="icon.box">
+                    <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/ic_globe" android:tag="icon:acc" />
+                </FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:text="@string/settings_russian" android:maxLines="2" />
+                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:maxLines="2" android:text="@string/settings_russian_sub" />
+                </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchRussian" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:clickable="false" android:focusable="false" android:tag="switch" />
+            </LinearLayout>
+
+            <TextView style="@style/ThemeK" android:layout_marginTop="16dp" android:layout_marginStart="4dp" android:text="@string/more_group_apps" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -478,7 +256,6 @@
                 android:paddingTop="10dp"
                 android:paddingBottom="10dp"
                 android:tag="dim"
-                android:textColor="@color/veil_muted"
                 android:textSize="12.5sp" />
 
             <LinearLayout
@@ -488,27 +265,30 @@
                 android:orientation="horizontal"
                 android:paddingBottom="10dp">
 
-                <TextView
-                    android:id="@+id/appsLoading"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:tag="dim"
-                    android:text="@string/bypass_loading"
-                    android:textColor="@color/veil_muted"
-                    android:textSize="12.5sp" />
+                <LinearLayout android:id="@+id/searchBox" android:layout_width="0dp" android:layout_height="40dp" android:layout_weight="1" android:layout_marginEnd="8dp" android:gravity="center_vertical" android:paddingHorizontal="12dp">
+                    <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginEnd="8dp" android:contentDescription="@null" android:src="@drawable/ic_search" android:tag="icon:dim" />
+                    <EditText android:id="@+id/appSearch" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@null" android:hint="@string/apps_search" android:imeOptions="actionSearch" android:importantForAutofill="no" android:inputType="text" android:singleLine="true" android:tag="fg" android:textSize="13sp" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/presetChip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="12dp"
-                    android:paddingVertical="7dp"
+                    android:paddingVertical="10dp"
                     android:tag="chip"
                     android:text="@string/bypass_preset"
-                    android:textColor="@color/veil_muted"
                     android:textSize="12sp" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/appsLoading"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="8dp"
+                android:tag="dim"
+                android:text="@string/bypass_loading"
+                android:textSize="12.5sp" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/appList"
@@ -525,7 +305,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:paddingHorizontal="@dimen/screen_pad"
+            android:paddingHorizontal="16dp"
             android:visibility="gone">
 
             <LinearLayout
@@ -571,7 +351,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:tag="dim"
-                    android:textColor="@color/veil_muted"
+                   
                     android:textSize="12.5sp" />
 
                 <TextView
@@ -582,7 +362,7 @@
                     android:paddingVertical="7dp"
                     android:tag="chip"
                     android:text="@string/logs_copy"
-                    android:textColor="@color/veil_muted"
+                   
                     android:textSize="12sp" />
 
                 <TextView
@@ -594,7 +374,7 @@
                     android:paddingVertical="7dp"
                     android:tag="chip"
                     android:text="@string/journal_send"
-                    android:textColor="@color/veil_muted"
+                   
                     android:textSize="12sp" />
             </LinearLayout>
 

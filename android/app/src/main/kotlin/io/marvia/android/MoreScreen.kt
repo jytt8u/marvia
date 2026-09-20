@@ -28,9 +28,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * MoreScreen — вкладка «Ещё»: соединение, приложения, логи.
+ * MoreScreen — «Настройки»: одна страница по макету, с подэкранами
+ * приложений и журнала.
  *
- * Три раздела под одним заголовком, как в макете. Здесь нет ручек протокола:
+ * Здесь нет ручек протокола:
  * ни размера фрагментов, ни числа соединений, ни выбора мультиплексора.
  * Такие настройки бывают у оболочек над чужим движком, которому надо
  * объяснить, к какому серверу он подключается. У нас клиент и нода — одна
@@ -42,20 +43,22 @@ import kotlinx.coroutines.withContext
  * что-то пошло не так.
  *
  * Из макета намеренно нет: kill switch (это системный «постоянный VPN», и
- * туда ведёт строка), MTU и IPv6 (решает ядро), «обфускации» (она не
- * выключается — это и есть протокол), уровня «только TCP».
+ * туда ведёт строка), «переподключаться при смене сети» (надзор делает это
+ * сам, выключать нечего), транспорта и DNS через туннель (решает ядро),
+ * IPv6, уведомлений по отдельности и переноса настроек — за такими строками
+ * пока нет действия, а нарисованная ручка — обещание.
  */
 class MoreScreen(
     private val host: AppCompatActivity,
     private val ui: ScreenMoreBinding,
     private val store: Store,
     private val theme: () -> Theme,
-    /** Открыть экран ключа: он общий с первым запуском. */
-    private val onKey: () -> Unit,
-    /** Открыть выбор языка: он тоже общий с первым запуском. */
+    /** Открыть выбор языка: он общий с первым запуском. */
     private val onLanguage: () -> Unit,
     /** Что-то из этого применяется только на следующем подключении. */
     private val onRoutesChanged: () -> Unit,
+    /** Человек сбросил всё: выключить туннель и начать с чистого листа. */
+    private val onReset: () -> Unit,
 ) {
 
     enum class Section { CONN, APPS, LOGS }
@@ -69,10 +72,19 @@ class MoreScreen(
     private val iconCache = android.util.LruCache<String, android.graphics.drawable.Drawable>(64)
     private val dp = host.resources.displayMetrics.density
 
+    private val version: String = try {
+        host.packageManager.getPackageInfo(host.packageName, 0).versionName.orEmpty()
+    } catch (_: PackageManager.NameNotFoundException) {
+        ""
+    }
+
+    /** Строка поиска по приложениям; пусто — все. */
+    private var query = ""
+
     init {
-        ui.pillConn.setOnClickListener { show(Section.CONN) }
-        ui.pillApps.setOnClickListener { show(Section.APPS) }
-        ui.pillLogs.setOnClickListener { show(Section.LOGS) }
+        ui.moreBack.setOnClickListener { show(Section.CONN) }
+        ui.rowApps.setOnClickListener { show(Section.APPS) }
+        ui.rowLogs.setOnClickListener { show(Section.LOGS) }
 
         wireConnection()
         wireApps()
@@ -86,8 +98,11 @@ class MoreScreen(
 
     /** paint перекрашивает то, что красится кодом: таблетки и строки логов. */
     fun paint() {
-        paintPills()
+        val t = theme()
         paintModes()
+        ui.searchBox.background = Paint.rounded(t.surf, minOf(t.r, 12), dp)
+        ui.presetChip.background = Paint.rounded(t.surf2, minOf(t.r, 12), dp)
+        ui.presetChip.setTextColor(t.dim)
         if (section == Section.LOGS) {
             renderLogs()
         }
@@ -96,37 +111,40 @@ class MoreScreen(
 
     fun openLogs() { section = Section.LOGS }
 
+    /** back уводит с подэкрана на страницу настроек; false — мы уже на ней. */
+    fun back(): Boolean {
+        if (section == Section.CONN) return false
+        show(Section.CONN)
+        return true
+    }
+
     private fun show(next: Section) {
         section = next
         ui.sectionConn.isVisible = next == Section.CONN
         ui.sectionApps.isVisible = next == Section.APPS
         ui.sectionLogs.isVisible = next == Section.LOGS
 
-        val (title, sub) = when (next) {
-            Section.CONN -> R.string.more_conn_title to R.string.more_conn_sub
-            Section.APPS -> R.string.more_apps_title to 0
-            Section.LOGS -> R.string.more_logs_title to 0
-        }
-        ui.moreTitle.setText(title)
+        ui.moreBack.isVisible = next != Section.CONN
+        // Подэкран — заголовок помельче: «Прокси по приложениям» в 26 не влезает.
+        ui.moreTitle.textSize = if (next == Section.CONN) 26f else 21f
+        ui.moreTitle.setText(
+            when (next) {
+                Section.CONN -> R.string.more_title
+                Section.APPS -> R.string.more_apps_card
+                Section.LOGS -> R.string.more_logs_row
+            },
+        )
         ui.moreSub.text = when (next) {
-            Section.CONN -> host.getString(sub)
+            Section.CONN -> host.getString(R.string.more_sub, version)
             Section.APPS -> appsSummary()
             Section.LOGS -> logsSub()
         }
-        paintPills()
 
         when (next) {
             Section.CONN -> renderConnection()
             Section.APPS -> openApps()
             Section.LOGS -> renderLogs()
         }
-    }
-
-    private fun paintPills() {
-        val t = theme()
-        pill(ui.pillConn, t, section == Section.CONN)
-        pill(ui.pillApps, t, section == Section.APPS)
-        pill(ui.pillLogs, t, section == Section.LOGS)
     }
 
     /** pill красит таблетку: активная — акцентом, остальные — второй поверхностью. */
@@ -168,8 +186,8 @@ class MoreScreen(
         }
 
         ui.rowLanguage.setOnClickListener { onLanguage() }
-        ui.rowKey.setOnClickListener { onKey() }
         ui.rowAbout.setOnClickListener { about() }
+        ui.rowReset.setOnClickListener { askReset() }
 
         // Исключать маршруты умеет только Android 13 и новее. На старых
         // строк нет вовсе: переключатель обещал бы то, чего система не
@@ -178,7 +196,19 @@ class MoreScreen(
         ui.rowLan.isVisible = routes
         ui.dividerLan.isVisible = routes
         ui.rowRussian.isVisible = routes
-        ui.dividerRu.isVisible = routes
+    }
+
+    /**
+     * askReset — «сбросить всё»: подписки, тема, настройки. Спрашиваем один
+     * раз и прямо: после этого ссылку доступа придётся добавлять заново, а
+     * её у человека может уже не быть под рукой.
+     */
+    private fun askReset() {
+        ThemedDialogs.builder(host, theme())
+            .setMessage(R.string.more_reset_ask)
+            .setPositiveButton(R.string.more_reset_yes) { _, _ -> onReset() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun renderConnection() {
@@ -190,11 +220,8 @@ class MoreScreen(
             if (store.language == Store.LANG_EN) R.string.language_en else R.string.language_ru,
         )
 
-        val saved = store.accountSavedAt
-        ui.keySummary.isVisible = saved > 0
-        if (saved > 0) {
-            ui.keySummary.text = host.getString(R.string.settings_key_added, Format.day(host, saved))
-        }
+        ui.appsSummary.text = appsSummary()
+        ui.aboutSub.text = host.getString(R.string.about_sub, version)
     }
 
     /**
@@ -265,12 +292,6 @@ class MoreScreen(
 
     /** about отвечает на «какая у тебя версия» — первый вопрос продавца. */
     private fun about() {
-        val version = try {
-            host.packageManager.getPackageInfo(host.packageName, 0).versionName.orEmpty()
-        } catch (_: PackageManager.NameNotFoundException) {
-            ""
-        }
-
         ThemedDialogs.builder(host, theme())
             .setTitle(R.string.settings_about)
             .setMessage(host.getString(R.string.about_body, host.getString(R.string.app_name), version))
@@ -285,6 +306,14 @@ class MoreScreen(
         ui.appList.adapter = apps
         ui.appList.itemAnimator = null
 
+        ui.appSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun afterTextChanged(s: android.text.Editable?) {
+                query = s?.toString()?.trim().orEmpty()
+                apps.refilter()
+            }
+        })
         ui.modeExclude.setOnClickListener { setMode(Store.BYPASS_EXCLUDE) }
         ui.modeInclude.setOnClickListener { setMode(Store.BYPASS_INCLUDE) }
         ui.modeOff.setOnClickListener { setMode(Store.BYPASS_OFF) }
@@ -293,7 +322,7 @@ class MoreScreen(
         // Только добавляет — снимать чужие отметки за человека нельзя.
         ui.presetChip.setOnClickListener {
             val chosen = store.bypassed.toMutableSet()
-            val installed = apps.entries.map { it.pkg }.toSet()
+            val installed = apps.all.map { it.pkg }.toSet()
             val added = Bypass.PRESET.filter { it in installed && chosen.add(it) }
             if (added.isEmpty()) {
                 Toast.makeText(host, R.string.apps_preset_none, Toast.LENGTH_SHORT).show()
@@ -316,6 +345,7 @@ class MoreScreen(
     private fun afterAppsChanged() {
         paintModes()
         ui.moreSub.text = appsSummary()
+        ui.appsSummary.text = appsSummary()
         onRoutesChanged()
     }
 
@@ -335,17 +365,24 @@ class MoreScreen(
         ui.presetChip.isVisible = mode != Store.BYPASS_OFF
     }
 
-    /** appsSummary — подпись под заголовком: сколько и в какую сторону. */
+    /**
+     * appsSummary — подпись: сколько и в какую сторону, с именами первых
+     * трёх, когда они уже известны. Имена берём из прочитанного списка, а
+     * читать его ради подписи не идём: это секунда на каждое открытие.
+     */
     private fun appsSummary(): String {
         val n = store.bypassed.size
+        val names = apps.all.filter { it.pkg in store.bypassed }.map { it.label }
         return when (store.bypassMode) {
             Store.BYPASS_OFF -> host.getString(R.string.apps_summary_off)
             Store.BYPASS_INCLUDE ->
                 if (n == 0) host.getString(R.string.apps_summary_include_none)
                 else host.resources.getQuantityString(R.plurals.apps_summary_include, n, n)
-            else ->
-                if (n == 0) host.getString(R.string.bypass_none)
-                else host.resources.getQuantityString(R.plurals.apps_summary_exclude, n, n)
+            else -> when {
+                n == 0 -> host.getString(R.string.bypass_none)
+                names.isNotEmpty() -> host.getString(R.string.apps_summary_names, n, names.take(3).joinToString(", ") + if (names.size > 3) "…" else "")
+                else -> host.resources.getQuantityString(R.plurals.apps_summary_exclude, n, n)
+            }
         }
     }
 
@@ -364,16 +401,26 @@ class MoreScreen(
         host.lifecycleScope.launch {
             val entries = withContext(Dispatchers.IO) { Bypass.installed(host) }
             val chosen = store.bypassed
-            apps.entries = entries.sortedWith(
+            apps.all = entries.sortedWith(
                 compareByDescending<Bypass.Entry> { it.pkg in chosen }.thenBy { it.label.lowercase() },
             )
+            apps.refilter()
             ui.appsLoading.isVisible = false
-            apps.notifyDataSetChanged()
+            ui.appsSummary.text = appsSummary()
+            ui.moreSub.text = appsSummary()
         }
     }
 
     private inner class AppsAdapter : RecyclerView.Adapter<AppHolder>() {
+        /** all — всё установленное; entries — то, что прошло через поиск. */
+        var all: List<Bypass.Entry> = emptyList()
         var entries: List<Bypass.Entry> = emptyList()
+
+        fun refilter() {
+            val q = query.lowercase()
+            entries = if (q.isEmpty()) all else all.filter { it.label.lowercase().contains(q) || it.pkg.lowercase().contains(q) }
+            notifyDataSetChanged()
+        }
 
         override fun getItemCount() = entries.size
 

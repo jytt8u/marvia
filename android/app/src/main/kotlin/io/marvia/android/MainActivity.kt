@@ -151,7 +151,6 @@ class MainActivity : AppCompatActivity() {
             ui = ui.moreScreen,
             theme = { theme },
             store = store,
-            onKey = { show(Screen.KEY) },
             onLanguage = {
                 languageFromSettings = true
                 show(Screen.LANGUAGE)
@@ -164,6 +163,7 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
                 }
             },
+            onReset = { resetAll() },
         )
 
         lifecycleScope.launch {
@@ -209,6 +209,8 @@ class MainActivity : AppCompatActivity() {
                 show(Screen.MORE)
                 return
             }
+            // С подэкрана настроек (приложения, журнал) — назад в настройки.
+            if (screen == Screen.MORE && more.back()) return
             if (screen == Screen.CONNECT || screen == Screen.LANGUAGE) {
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
@@ -785,6 +787,19 @@ class MainActivity : AppCompatActivity() {
      * ронять: иначе человек сменил продавца, а трафик продолжает идти через
      * прежнего — и нигде это не написано.
      */
+    /**
+     * resetAll — «сбросить всё»: туннель вниз, настройки в ноль, экран заново.
+     * Пересоздаём активность, а не чистим экраны по одному: первый запуск и
+     * так умеет начинать с пустого места, и второго пути быть не должно.
+     */
+    private fun resetAll() {
+        if (MarviaState.state.value is TunnelState.On || MarviaState.state.value is TunnelState.Connecting) {
+            startService(Intent(this, MarviaVpnService::class.java).setAction(MarviaVpnService.ACTION_STOP))
+        }
+        store.resetAll()
+        recreate()
+    }
+
     private fun restartTunnel() {
         if (MarviaState.state.value !is TunnelState.On) return
         startService(

@@ -126,7 +126,7 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textSize">12.5sp</item>
         <item name="android:textColor">@color/veil_muted</item>
-        <item name="android:maxLines">1</item>
+        <item name="android:maxLines">2</item>
         <item name="android:ellipsize">end</item>
     </style>
 </resources>

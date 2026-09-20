@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Значок из макета; красится по месту. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24" android:tint="@color/veil_text">
+    <path android:pathData="M3,10.5L12,3l9,7.5" android:strokeWidth="1.8" android:strokeColor="#FFFFFFFF" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M5,9.5V20a1,1 0,0 0,1 1h4v-6h4v6h4a1,1 0,0 0,1 -1V9.5" android:strokeWidth="1.8" android:strokeColor="#FFFFFFFF" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+</vector>

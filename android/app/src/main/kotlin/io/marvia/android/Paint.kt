@@ -42,6 +42,7 @@ object Paint {
     private const val FAIL = "fail"
     private const val BTN = "btn"
     private const val CHIP = "chip"
+    private const val ICON_BOX = "icon.box"
     private const val TRACK = "track"
     private const val FILL = "fill"
     private const val GAP = "gap"
@@ -129,6 +130,8 @@ object Paint {
                 v.background = rounded(t.acc, t.r, dp)
                 text(v, t.accFg, t.accFg)
             }
+            // Квадрат под значком строки: мягкий акцент, как в макете.
+            tag == ICON_BOX -> v.background = rounded(t.accSoft, minOf(t.r, 12), dp)
             tag == CHIP -> {
                 v.background = rounded(t.surf2, minOf(t.r, 10), dp)
                 text(v, t.dim, t.dim)

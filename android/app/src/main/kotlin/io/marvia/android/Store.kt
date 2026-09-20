@@ -429,6 +429,19 @@ class Store(context: Context) {
         return s
     }
 
+    /**
+     * resetAll стирает всё: подписки с их кэшем, тему с фоном и значком,
+     * настройки и учёт трафика. Язык тоже — после сброса приложение
+     * начинается с первого экрана, как после установки.
+     */
+    fun resetAll() {
+        for (sub in subscriptions) runCatching { Mobile.forgetSubscription(sub.link, cacheDir()) }
+        File(app.filesDir, Mobile.CacheName).delete()
+        backdropFile().delete()
+        logoFile().delete()
+        prefs.edit().clear().apply()
+    }
+
     /** Каталог, который приложение отдаёт ядру под кэш подписки. */
     fun cacheDir(): String = app.filesDir.absolutePath
 
