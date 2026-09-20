@@ -52,14 +52,31 @@
 
     <!-- Экран расхода. Считает сам телефон: панель подённых чисел не знает. -->
     <string name="stats_title">Расход</string>
-    <string name="stats_total">%1$d дней · %2$s через туннель</string>
-    <string name="stats_days">Тридцать дней трафика</string>
-    <string name="stats_places">Откуда идёт трафик</string>
+    <string name="stats_subtitle">этот телефон, через туннель</string>
+    <string name="stats_range_week">7 дн</string>
+    <string name="stats_range_month">30 дн</string>
+    <string name="stats_dial_week">ВСЕГО ЗА НЕДЕЛЮ</string>
+    <string name="stats_dial_month">ВСЕГО ЗА 30 ДНЕЙ</string>
+    <string name="stats_per_day">в среднем %1$s в день</string>
+    <string name="stats_peak">пик · %1$s</string>
+    <string name="stats_days_in_range">дней в периоде</string>
+    <string name="stats_range_title_week">Неделя</string>
+    <string name="stats_range_title_month">Тридцать дней</string>
+    <string name="stats_peak_line">больше всего — %1$s, %2$s</string>
+    <string name="stats_no_traffic">через туннель пока ничего не прошло</string>
+    <string name="stats_quota">%1$s из %2$s</string>
+    <string name="stats_quota_left">осталось</string>
+    <string name="stats_quota_left_days">осталось · %1$s</string>
+    <string name="stats_unlimited">без лимита</string>
+    <string name="stats_unlimited_until">без лимита · до %1$s</string>
+    <string name="stats_place_share">%1$d%% · %2$s</string>
+    <string name="stats_week_peak">пик — %1$s, %2$02d:00</string>
+    <string name="stats_today_low">сегодня</string>
+    <string name="stats_today_caps">СЕГОДНЯ</string>
+    <string name="stats_days_ago">%1$d дн. назад</string>
+    <string name="stats_places">Через какие страны</string>
     <string name="stats_week">Неделя по часам</string>
-    <string name="stats_dial_number">100</string>
-    <string name="stats_dial_note">РИСКА = 1%</string>
-    <string name="stats_percent">%1$d%%</string>
-    <string name="stats_note">Это расход одного телефона через туннель. Другое устройство с тем же ключом считает свой.</string>
+    <string name="stats_note">Это расход одного телефона через туннель. Другое устройство с тем же ключом считает своё.</string>
     <string-array name="weekdays_short">
         <item>ПН</item>
         <item>ВТ</item>

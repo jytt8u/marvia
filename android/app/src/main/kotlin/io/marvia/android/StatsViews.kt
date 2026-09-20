@@ -2,199 +2,218 @@ package io.marvia.android
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint as Brush
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.graphics.ColorUtils
+import kotlin.math.max
+import kotlin.math.min
 
 /**
- * Диаграммы статистики. Рисуются кодом, а не собираются из вьюх.
+ * Диаграммы расхода. Рисуются кодом, а не собираются из вьюх.
  *
- * В макете это сотня засечек циферблата, тридцать столбиков с точками и сто
- * шестьдесят восемь кружков разного размера. Каждая такая мелочь отдельной
- * вьюхой — это триста вьюх на экран, которые ещё и надо красить обходом
- * дерева. Холст рисует то же самое за один проход.
+ * В макете это кольцо из тридцати сегментов, плавная линия по дням и сто
+ * шестьдесят восемь клеток недели. Каждая такая мелочь отдельной вьюхой —
+ * это сотни вьюх на экран, которые ещё и надо красить обходом дерева. Холст
+ * рисует то же самое за один проход.
  *
  * Цвета приходят от темы через [paint]: у диаграмм нет своего представления
  * о том, какого цвета акцент.
  */
 
-/** Столбики за тридцать дней: волосинка — день, точка — его вершина. */
-class DaysChart @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-) : View(context, attrs) {
-
-    private var values: List<Long> = emptyList()
-    private var weekend: List<Boolean> = emptyList()
-    private var fg = 0
-    private var dim = 0
-    private var acc = 0
-    private var line = 0
-
-    private val brush = Brush(Brush.ANTI_ALIAS_FLAG)
-
-    fun show(values: List<Long>, weekend: List<Boolean>) {
-        this.values = values
-        this.weekend = weekend
-        invalidate()
-    }
-
-    fun paint(t: Theme) {
-        fg = t.fg
-        dim = t.dim
-        acc = t.acc
-        line = t.line
-        invalidate()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        if (values.isEmpty()) return
-
-        val dp = resources.displayMetrics.density
-        val top = 8 * dp
-        val bottom = height.toFloat()
-        val peak = values.max().coerceAtLeast(1)
-
-        val step = width.toFloat() / values.size
-        val stem = 1 * dp
-
-        for (i in values.indices) {
-            val share = values[i].toDouble() / peak
-            val x = step * i + step / 2
-
-            // Пустой день — одна точка у самого низа: столбик высотой в ноль
-            // выглядит как пропуск в данных, а это не пропуск.
-            val h = ((bottom - top) * share).toFloat()
-            val dotY = bottom - h
-            val big = share > 0.85
-            val r = (if (big) 3.5f else 2.5f) * dp
-
-            brush.color = line
-            canvas.drawRect(x - stem / 2, dotY + r, x + stem / 2, bottom, brush)
-
-            brush.color = if (big) acc else fg
-            if (!big && weekend.getOrElse(i) { false }) {
-                // Выходные полые: так в неделе видно ритм, а не только высоту.
-                brush.style = Brush.Style.STROKE
-                brush.strokeWidth = 1 * dp
-            } else {
-                brush.style = Brush.Style.FILL
-            }
-            canvas.drawCircle(x, dotY, r, brush)
-            brush.style = Brush.Style.FILL
-        }
-    }
-}
-
 /**
- * Циферблат: сто засечек по кругу, каждая — процент расхода.
+ * Кольцо периода: по сегменту на день, чем больше трафика — тем светлее.
  *
- * Не круговая диаграмма: доли вроде «41 %» на ней читаются глазом плохо, а
- * сто засечек можно пересчитать. Каждая десятая длиннее — чтобы считать
- * десятками, а не по одной.
+ * Форма кольца не меняется: ни иголок, ни клякс, читается только яркость.
+ * Сегодняшний сегмент — цветом текста, чтобы видеть, где конец периода.
+ * Раскрыто на 240°, разрыв внизу — как на референсе.
  */
-class SharesDial @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-) : View(context, attrs) {
+class RangeDial @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
+    private var values: List<Long> = emptyList()
+    private var acc = 0
+    private var fg = 0
+    private var line = 0
+    private val brush = Brush(Brush.ANTI_ALIAS_FLAG).apply { style = Brush.Style.STROKE; strokeCap = Brush.Cap.BUTT }
 
-    private var slices: List<Pair<Int, Int>> = emptyList()
-    private var idle = 0
-
-    private val brush = Brush(Brush.ANTI_ALIAS_FLAG)
-
-    /** slices — пары «сколько засечек · каким цветом», по порядку от двенадцати часов. */
-    fun show(slices: List<Pair<Int, Int>>, idle: Int) {
-        this.slices = slices
-        this.idle = idle
-        invalidate()
-    }
+    fun show(values: List<Long>) { this.values = values; invalidate() }
+    fun paint(t: Theme) { acc = t.acc; fg = t.fg; line = t.line; invalidate() }
 
     override fun onDraw(canvas: Canvas) {
         val dp = resources.displayMetrics.density
         val cx = width / 2f
         val cy = height / 2f
-        val radius = minOf(cx, cy) - 12 * dp
+        val r = min(cx, cy) - 14 * dp
+        val box = RectF(cx - r, cy - r, cx + r, cy + r)
 
-        brush.style = Brush.Style.FILL
-        var tick = 0
-        for ((count, color) in slices) {
-            for (i in 0 until count) {
-                drawTick(canvas, cx, cy, radius, tick, color, dp)
-                tick++
+        // Тонкое внутреннее кольцо — ободок шкалы, как в макете.
+        brush.strokeWidth = 1 * dp
+        brush.color = line
+        canvas.drawCircle(cx, cy, r - 12 * dp, brush)
+
+        val n = values.size
+        if (n == 0) return
+        val peak = (values.maxOrNull() ?: 0L).coerceAtLeast(1)
+        val gap = if (n > 12) 1.6f else 4f
+        val step = 240f / n
+        brush.strokeWidth = 14 * dp
+        for (i in 0 until n) {
+            val share = values[i].toFloat() / peak
+            val last = i == n - 1
+            brush.color = when {
+                last -> fg
+                values[i] == 0L -> ColorUtils.setAlphaComponent(acc, 26)
+                else -> ColorUtils.setAlphaComponent(acc, (60 + 195 * share).toInt().coerceIn(40, 255))
             }
+            // Ноль градусов у Android — три часа; −120° от двенадцати = −210°.
+            val start = -210f + step * i + gap / 2
+            canvas.drawArc(box, start, step - gap, false, brush)
         }
-        while (tick < 100) {
-            drawTick(canvas, cx, cy, radius, tick, idle, dp)
-            tick++
-        }
-    }
-
-    private fun drawTick(canvas: Canvas, cx: Float, cy: Float, radius: Float, i: Int, color: Int, dp: Float) {
-        val long = i % 10 == 0
-        val len = (if (long) 11f else 7.5f) * dp
-        val w = 1.5f * dp
-
-        canvas.save()
-        canvas.rotate(i * 3.6f, cx, cy)
-        brush.color = color
-        canvas.drawRoundRect(cx - w / 2, cy - radius, cx + w / 2, cy - radius + len, w / 2, w / 2, brush)
-        canvas.restore()
     }
 }
 
-/** Неделя по часам: площадь точки — объём за этот час. */
-class WeekHours @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-) : View(context, attrs) {
-
-    private var cells: List<Long> = emptyList()
+/**
+ * Линия по дням: плавная кривая через точки, под ней — тающая заливка,
+ * последняя точка кружком, пик — кружком с обводкой. Касательные по соседям
+ * (Catmull-Rom → Безье), как в макете; острые изломы дневного расхода
+ * глазу читаются хуже, чем волна.
+ */
+class TrendLine @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
+    private var values: List<Long> = emptyList()
     private var acc = 0
-    private var mid = 0
-    private var line = 0
+    private var fg = 0
+    private var surf = 0
+    private val brush = Brush(Brush.ANTI_ALIAS_FLAG)
+    private val path = Path()
+    private val area = Path()
 
+    fun show(values: List<Long>) { this.values = values; invalidate() }
+    fun paint(t: Theme) { acc = t.acc; fg = t.fg; surf = t.surf; invalidate() }
+
+    override fun onDraw(canvas: Canvas) {
+        val n = values.size
+        if (n < 2) return
+        val dp = resources.displayMetrics.density
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val top = 12 * dp
+        val bottom = h - 12 * dp
+        val peak = (values.maxOrNull() ?: 0L).coerceAtLeast(1)
+        // Крайние точки не у самого края: у последней кружок, ему нужно место.
+        val inset = 8 * dp
+        val xs = FloatArray(n) { inset + it * (w - 2 * inset) / (n - 1) }
+        val ys = FloatArray(n) { bottom - (bottom - top) * values[it] / peak }
+
+        path.reset()
+        path.moveTo(xs[0], ys[0])
+        for (i in 0 until n - 1) {
+            val p0 = max(i - 1, 0); val p3 = min(i + 2, n - 1)
+            val c1x = xs[i] + (xs[i + 1] - xs[p0]) / 6; val c1y = ys[i] + (ys[i + 1] - ys[p0]) / 6
+            val c2x = xs[i + 1] - (xs[p3] - xs[i]) / 6; val c2y = ys[i + 1] - (ys[p3] - ys[i]) / 6
+            path.cubicTo(c1x, c1y, c2x, c2y, xs[i + 1], ys[i + 1])
+        }
+        area.set(path)
+        area.lineTo(xs[n - 1], h); area.lineTo(xs[0], h); area.close()
+
+        brush.style = Brush.Style.FILL
+        brush.shader = LinearGradient(0f, 0f, 0f, h, ColorUtils.setAlphaComponent(acc, 115), 0, Shader.TileMode.CLAMP)
+        canvas.drawPath(area, brush)
+        brush.shader = null
+
+        brush.style = Brush.Style.STROKE
+        brush.strokeWidth = 2.5f * dp
+        brush.strokeCap = Brush.Cap.ROUND
+        brush.strokeJoin = Brush.Join.ROUND
+        brush.color = acc
+        canvas.drawPath(path, brush)
+
+        // Пик: маленький кружок с обводкой. Последняя точка: кружок побольше.
+        val peakI = values.indexOf(peak)
+        brush.style = Brush.Style.FILL
+        brush.color = surf
+        canvas.drawCircle(xs[peakI], ys[peakI], 3.5f * dp, brush)
+        brush.style = Brush.Style.STROKE
+        brush.strokeWidth = 2 * dp
+        brush.color = acc
+        canvas.drawCircle(xs[peakI], ys[peakI], 3.5f * dp, brush)
+
+        brush.style = Brush.Style.FILL
+        brush.color = surf
+        canvas.drawCircle(xs[n - 1], ys[n - 1], 6.5f * dp, brush)
+        brush.color = fg
+        canvas.drawCircle(xs[n - 1], ys[n - 1], 4.5f * dp, brush)
+    }
+}
+
+/** Полоса долей: страны по порядку, каждая своим оттенком акцента. */
+class ShareBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
+    private var shares: List<Pair<Float, Int>> = emptyList()
+    private var idle = 0
     private val brush = Brush(Brush.ANTI_ALIAS_FLAG)
 
-    /** cells — 24 значения одной строки-дня. */
-    fun show(cells: List<Long>, peak: Long) {
-        this.cells = cells
-        this.peak = peak.coerceAtLeast(1)
-        invalidate()
-    }
+    /** shares — доли от нуля до единицы с цветом; idle — цвет пустой полосы. */
+    fun show(shares: List<Pair<Float, Int>>, idle: Int) { this.shares = shares; this.idle = idle; invalidate() }
 
+    override fun onDraw(canvas: Canvas) {
+        val dp = resources.displayMetrics.density
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val gap = 3 * dp
+        brush.color = idle
+        canvas.drawRoundRect(0f, 0f, w, h, h / 2, h / 2, brush)
+        if (shares.isEmpty()) return
+        var x = 0f
+        val usable = w - gap * (shares.size - 1)
+        for ((share, color) in shares) {
+            val sw = usable * share
+            brush.color = color
+            canvas.drawRoundRect(x, 0f, x + sw, h, h / 2, h / 2, brush)
+            x += sw + gap
+        }
+    }
+}
+
+/**
+ * Неделя по часам: клетка — час, яркость — объём за него. Пик недели —
+ * цветом текста и со свечением, чтобы найти его, не разглядывая.
+ */
+class WeekHours @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
+    private var cells: List<Long> = emptyList()
+    private var peakHour = -1
     private var peak = 1L
+    private var acc = 0
+    private var fg = 0
+    private var line = 0
+    private val brush = Brush(Brush.ANTI_ALIAS_FLAG)
 
-    fun paint(t: Theme) {
-        acc = t.acc
-        mid = t.mid
-        line = t.line
-        invalidate()
+    /** cells — 24 значения одной строки-дня; peak — вершина всей недели; peakHour — если она в этой строке. */
+    fun show(cells: List<Long>, peak: Long, peakHour: Int) {
+        this.cells = cells; this.peak = peak.coerceAtLeast(1); this.peakHour = peakHour; invalidate()
     }
+    fun paint(t: Theme) { acc = t.acc; fg = t.fg; line = t.line; invalidate() }
 
     override fun onDraw(canvas: Canvas) {
         if (cells.isEmpty()) return
-
         val dp = resources.displayMetrics.density
-        val step = width.toFloat() / cells.size
-        val cy = height / 2f
-
-        brush.style = Brush.Style.FILL
+        val gap = 2 * dp
+        val cw = (width - gap * (cells.size - 1)) / cells.size
+        val h = height.toFloat()
         for (i in cells.indices) {
-            val share = cells[i].toDouble() / peak
-            val x = step * i + step / 2
-
-            if (cells[i] == 0L) {
-                brush.color = line
-                canvas.drawCircle(x, cy, 1.5f * dp, brush)
-                continue
+            val x = i * (cw + gap)
+            val share = cells[i].toFloat() / peak
+            when {
+                i == peakHour -> {
+                    brush.color = ColorUtils.setAlphaComponent(fg, 70)
+                    canvas.drawRoundRect(x - 2 * dp, -2 * dp, x + cw + 2 * dp, h + 2 * dp, 5 * dp, 5 * dp, brush)
+                    brush.color = fg
+                }
+                cells[i] == 0L -> brush.color = ColorUtils.setAlphaComponent(line, 120)
+                else -> brush.color = ColorUtils.setAlphaComponent(acc, (40 + 215 * share).toInt().coerceIn(30, 255))
             }
-
-            // Площадь, а не радиус: глаз сравнивает пятна по площади, и
-            // радиус, взятый напрямую, преувеличил бы разницу вчетверо.
-            val r = (1.5f + 4.5f * Math.sqrt(share).toFloat()) * dp
-            brush.color = if (share > 0.85) acc else Look.mix(acc, mid, 0.75 - share * 0.55)
-            canvas.drawCircle(x, cy, r, brush)
+            canvas.drawRoundRect(x, 0f, x + cw, h, 4 * dp, 4 * dp, brush)
         }
     }
 }

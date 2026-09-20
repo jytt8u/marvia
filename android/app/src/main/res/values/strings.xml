@@ -76,13 +76,30 @@
 
     <!-- Экран расхода. Считает сам телефон: панель подённых чисел не знает. -->
     <string name="stats_title">Usage</string>
-    <string name="stats_total">%1$d days · %2$s through the tunnel</string>
-    <string name="stats_days">Thirty days of traffic</string>
-    <string name="stats_places">Where the traffic goes</string>
+    <string name="stats_subtitle">this phone, through the tunnel</string>
+    <string name="stats_range_week">7 d</string>
+    <string name="stats_range_month">30 d</string>
+    <string name="stats_dial_week">TOTAL THIS WEEK</string>
+    <string name="stats_dial_month">TOTAL, 30 DAYS</string>
+    <string name="stats_per_day">%1$s a day on average</string>
+    <string name="stats_peak">peak · %1$s</string>
+    <string name="stats_days_in_range">days in range</string>
+    <string name="stats_range_title_week">Week</string>
+    <string name="stats_range_title_month">Thirty days</string>
+    <string name="stats_peak_line">most of it — %1$s, %2$s</string>
+    <string name="stats_no_traffic">nothing has gone through the tunnel yet</string>
+    <string name="stats_quota">%1$s of %2$s</string>
+    <string name="stats_quota_left">left</string>
+    <string name="stats_quota_left_days">left · %1$s</string>
+    <string name="stats_unlimited">no limit</string>
+    <string name="stats_unlimited_until">no limit · until %1$s</string>
+    <string name="stats_place_share">%1$d%% · %2$s</string>
+    <string name="stats_week_peak">peak — %1$s, %2$02d:00</string>
+    <string name="stats_today_low">today</string>
+    <string name="stats_today_caps">TODAY</string>
+    <string name="stats_days_ago">%1$d d ago</string>
+    <string name="stats_places">Which countries</string>
     <string name="stats_week">The week by hours</string>
-    <string name="stats_dial_number">100</string>
-    <string name="stats_dial_note">TICK = 1%</string>
-    <string name="stats_percent">%1$d%%</string>
     <string name="stats_note">This is what one phone passed through the tunnel. Another device on the same key counts its own.</string>
     <string-array name="weekdays_short">
         <item>MON</item>

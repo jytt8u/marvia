@@ -131,7 +131,7 @@ class MainActivity : AppCompatActivity() {
             store = store,
             onSubscriptionChanged = { restartTunnel() },
         )
-        stats = StatsScreen(host = this, ui = ui.statsScreen, theme = { theme }, traffic = Traffic(this))
+        stats = StatsScreen(host = this, ui = ui.statsScreen, theme = { theme }, traffic = Traffic(this), store = store)
         themeScreen = ThemeScreen(this, ui.themeScreen, store, { pickBackdrop.launch("image/*") }) { repaint() }
         language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
         more = MoreScreen(
