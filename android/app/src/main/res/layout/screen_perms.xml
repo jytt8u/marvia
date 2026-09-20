@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Второй шаг первого запуска: три разрешения от Android. Без первого
+    туннель не заработает; остальные два можно пропустить. Карточки
+    собирает код: у каждой своё состояние, и оно меняется, пока экран открыт.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="26dp"
+        android:paddingTop="@dimen/header_pad"
+        android:paddingBottom="26dp">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <io.marvia.android.MarviaLogoView android:layout_width="34dp" android:layout_height="30dp" android:layout_marginEnd="10dp" android:contentDescription="@null" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="@font/unbounded" android:letterSpacing="0.16" android:tag="fg" android:text="@string/app_name_caps" android:textSize="13sp" android:textStyle="bold" />
+            <View android:id="@+id/stepOne" android:layout_width="8dp" android:layout_height="8dp" android:layout_marginEnd="6dp" />
+            <View android:id="@+id/stepTwo" android:layout_width="22dp" android:layout_height="8dp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:letterSpacing="-0.02"
+            android:tag="fg"
+            android:text="@string/perms_title"
+            android:textSize="27sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:lineSpacingExtra="3dp"
+            android:tag="dim"
+            android:text="@string/perms_subtitle"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:id="@+id/permList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="vertical" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:lineSpacingExtra="3dp"
+            android:tag="dim"
+            android:text="@string/perms_note"
+            android:textSize="12.5sp" />
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/permsContinue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_accent_button"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:minHeight="54dp"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="16dp"
+            android:tag="btn"
+            android:text="@string/perms_continue"
+            android:textSize="16.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/permsWait"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:minHeight="54dp"
+            android:paddingVertical="16dp"
+            android:tag="dim"
+            android:text="@string/perms_vpn_first"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

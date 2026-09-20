@@ -15,24 +15,16 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="26dp"
-        android:paddingTop="44dp"
+        android:paddingTop="@dimen/header_pad"
         android:paddingBottom="26dp">
 
-        <FrameLayout
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:background="@drawable/bg_accent_button"
-            android:tag="btn">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_gravity="center"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_mark"
-                android:tag="icon:accFg"
-                app:tint="@color/veil_on_accent" />
-        </FrameLayout>
+        <!-- Шапка первого запуска: знак, имя и две точки шагов — язык, разрешения. -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <io.marvia.android.MarviaLogoView android:layout_width="34dp" android:layout_height="30dp" android:layout_marginEnd="10dp" android:contentDescription="@null" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="@font/unbounded" android:letterSpacing="0.16" android:tag="fg" android:text="@string/app_name_caps" android:textSize="13sp" android:textStyle="bold" />
+            <View android:id="@+id/stepOne" android:layout_width="22dp" android:layout_height="8dp" android:layout_marginEnd="6dp" />
+            <View android:id="@+id/stepTwo" android:layout_width="8dp" android:layout_height="8dp" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"

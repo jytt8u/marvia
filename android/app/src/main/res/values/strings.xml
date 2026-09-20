@@ -38,6 +38,18 @@
     <string name="language_continue_en" translatable="false">Continue</string>
     <string name="settings_language">Language</string>
 
+    <string name="perms_title">What you will need</string>
+    <string name="perms_subtitle">Three permissions from Android. Without the first one the tunnel cannot work; the other two keep it awake and let it tell you what is going on.</string>
+    <string name="perms_vpn">Create a VPN connection</string>
+    <string name="perms_vpn_why">the tunnel is impossible without it — that is how Android works</string>
+    <string name="perms_notify">Show notifications</string>
+    <string name="perms_notify_why">country and speed in the shade, a warning if the node goes silent</string>
+    <string name="perms_battery">Do not put to sleep in the background</string>
+    <string name="perms_battery_why">otherwise the system may kill the tunnel in an hour</string>
+    <string name="perms_allow">Allow</string>
+    <string name="perms_note">Android will show its own prompt. Notifications and battery can be skipped and enabled later in the phone settings.</string>
+    <string name="perms_continue">Continue</string>
+    <string name="perms_vpn_first">Allow the VPN first</string>
     <string name="status_off">Disconnected</string>
     <string name="status_connecting">Connecting…</string>
     <string name="status_on">Connected</string>

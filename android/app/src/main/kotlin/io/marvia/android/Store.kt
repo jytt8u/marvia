@@ -59,6 +59,14 @@ class Store(context: Context) {
         get() = prefs.getLong(KEY_CHOSEN_NODE, 0)
         set(value) { prefs.edit().putLong(KEY_CHOSEN_NODE, value).apply() }
 
+    /**
+     * onboarded — второй шаг первого запуска (разрешения) пройден. Язык —
+     * отдельно: его выбирают и из настроек, а разрешения спрашивают один раз.
+     */
+    var onboarded: Boolean
+        get() = prefs.getBoolean(KEY_ONBOARDED, false)
+        set(value) { prefs.edit().putBoolean(KEY_ONBOARDED, value).apply() }
+
     /** Когда ключ положили сюда. Ноль означает, что он появился до этой записи. */
     val accountSavedAt: Long
         get() = prefs.getLong(KEY_ACCOUNT_SAVED, 0)
@@ -472,6 +480,7 @@ class Store(context: Context) {
         private const val KEY_ACCOUNT_LINK = "account_link"
         private const val KEY_ACCOUNT_SAVED = "account_saved_at"
         private const val KEY_CHOSEN_NODE = "chosen_node"
+        private const val KEY_ONBOARDED = "onboarded"
         private const val KEY_SUBSCRIPTIONS = "subscriptions"
 
         /**

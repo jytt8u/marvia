@@ -12,6 +12,18 @@
     <string name="nav_theme">Тема</string>
     <string name="settings_language">Язык</string>
 
+    <string name="perms_title">Что понадобится</string>
+    <string name="perms_subtitle">Три разрешения от Android. Без первого туннель не заработает, остальные два — чтобы он не засыпал и говорил, что с ним.</string>
+    <string name="perms_vpn">Создавать VPN-подключение</string>
+    <string name="perms_vpn_why">без этого туннель невозможен — так устроен Android</string>
+    <string name="perms_notify">Показывать уведомления</string>
+    <string name="perms_notify_why">страна и скорость в шторке, предупреждение, если нода замолчала</string>
+    <string name="perms_battery">Не усыплять в фоне</string>
+    <string name="perms_battery_why">иначе система может убить туннель через час</string>
+    <string name="perms_allow">Разрешить</string>
+    <string name="perms_note">Android покажет свой запрос. Уведомления и батарею можно пропустить и включить потом в настройках телефона.</string>
+    <string name="perms_continue">Продолжить</string>
+    <string name="perms_vpn_first">Сначала разрешите VPN</string>
     <string name="status_off">Отключено</string>
     <string name="status_connecting">Подключаюсь…</string>
     <string name="status_on">Подключено</string>

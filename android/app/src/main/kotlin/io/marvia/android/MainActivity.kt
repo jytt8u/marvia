@@ -53,7 +53,7 @@ import kotlinx.coroutines.withContext
  */
 class MainActivity : AppCompatActivity() {
 
-    private enum class Screen { LANGUAGE, KEY, CONNECT, SERVERS, STATS, THEME, MORE }
+    private enum class Screen { LANGUAGE, PERMS, KEY, CONNECT, SERVERS, STATS, THEME, MORE }
 
     private lateinit var ui: ActivityMainBinding
     private lateinit var store: Store
@@ -62,6 +62,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var more: MoreScreen
     private lateinit var themeScreen: ThemeScreen
     private lateinit var language: LanguageScreen
+    private lateinit var perms: PermsScreen
 
     /** Откуда открыт выбор языка: с первого запуска возврат ведёт дальше, из настроек — назад. */
     private var languageFromSettings = false
@@ -85,11 +86,6 @@ class MainActivity : AppCompatActivity() {
             MarviaState.set(TunnelState.Failed("", getString(R.string.consent_denied)))
         }
     }
-
-    /** Разрешение на уведомления. Отказ ничего не ломает: туннель работает. */
-    private val notifications = registerForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { }
 
     /**
      * Выбор фото под фон. GetContent, а не разрешение на «все файлы»: система
@@ -146,6 +142,10 @@ class MainActivity : AppCompatActivity() {
         stats = StatsScreen(host = this, ui = ui.statsScreen, theme = { theme }, traffic = Traffic(this), store = store)
         themeScreen = ThemeScreen(this, ui.themeScreen, store, { pickBackdrop.launch("image/*") }, { pickLogo.launch("image/*") }) { repaint() }
         language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
+        perms = PermsScreen(this, ui.permsScreen, { theme }) {
+            store.onboarded = true
+            show(Screen.CONNECT)
+        }
         more = MoreScreen(
             host = this,
             ui = ui.moreScreen,
@@ -177,8 +177,13 @@ class MainActivity : AppCompatActivity() {
         repaint()
         show(firstScreen())
         refreshRoutes()
-        askForNotifications()
         acceptLinkFrom(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Вернулись из системного окна разрешений — карточки могли поменяться.
+        if (screen == Screen.PERMS) perms.open()
     }
 
     /**
@@ -187,6 +192,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun firstScreen(): Screen = when {
         store.language.isEmpty() -> Screen.LANGUAGE
+        !store.onboarded -> Screen.PERMS
         else -> Screen.CONNECT
     }
 
@@ -211,7 +217,7 @@ class MainActivity : AppCompatActivity() {
             }
             // С подэкрана настроек (приложения, журнал) — назад в настройки.
             if (screen == Screen.MORE && more.back()) return
-            if (screen == Screen.CONNECT || screen == Screen.LANGUAGE) {
+            if (screen == Screen.CONNECT || screen == Screen.LANGUAGE || screen == Screen.PERMS) {
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
                 isEnabled = true
@@ -327,11 +333,12 @@ class MainActivity : AppCompatActivity() {
         ui.moreScreen.root.isVisible = next == Screen.MORE
         ui.themeScreen.root.isVisible = next == Screen.THEME
         ui.languageScreen.root.isVisible = next == Screen.LANGUAGE
+        ui.permsScreen.root.isVisible = next == Screen.PERMS
 
         // Панель есть и без ключа: подписка добавляется на «Серверах», а тему
         // можно выбрать до подключения. На выборе языка её нет — это экран
         // одного действия.
-        ui.nav.root.isVisible = next != Screen.LANGUAGE
+        ui.nav.root.isVisible = next != Screen.LANGUAGE && next != Screen.PERMS
         paintNav()
 
         when (next) {
@@ -340,6 +347,7 @@ class MainActivity : AppCompatActivity() {
             Screen.MORE -> more.open()
             Screen.THEME -> themeScreen.paint(theme)
             Screen.LANGUAGE -> language.open()
+            Screen.PERMS -> perms.open()
             Screen.KEY -> openKey()
             Screen.CONNECT -> Unit
         }
@@ -835,15 +843,5 @@ class MainActivity : AppCompatActivity() {
         val manager = getSystemService(InputMethodManager::class.java)
         manager?.hideSoftInputFromWindow(ui.keyScreen.keyInput.windowToken, 0)
         ui.keyScreen.keyInput.clearFocus()
-    }
-
-    private fun askForNotifications() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            return
-        }
-        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-        if (granted != PackageManager.PERMISSION_GRANTED) {
-            notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
     }
 }

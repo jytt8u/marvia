@@ -54,6 +54,9 @@ class LanguageScreen(
     fun paint() {
         val t = theme()
         Paint.apply(ui.root, t)
+        // Точки шагов: первый — длинный акцентом, второй — тихий.
+        ui.stepOne.background = Paint.rounded(t.acc, 999, dp)
+        ui.stepTwo.background = Paint.rounded(t.line, 999, dp)
 
         val ru = picked == Store.LANG_RU
         ui.langRu.background = Paint.card(t, dp, stroke = if (ru) t.acc else t.line)
