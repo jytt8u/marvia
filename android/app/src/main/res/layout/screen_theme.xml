@@ -51,30 +51,41 @@
             android:paddingHorizontal="16dp"
             android:paddingBottom="16dp">
 
-            <!-- Предпросмотр: половина телефона в масштабе, настоящие экраны. -->
-            <FrameLayout
-                android:id="@+id/previewFrame"
+            <!--
+                Предпросмотр: телефон в масштабе слева, справа — какой экран
+                показать. Вкладки «Форма» и «Ещё» приближают телефон к тому, что
+                меняют: карточкам настроек и заголовку. Размеры и сдвиг ставит код.
+            -->
+            <LinearLayout
+                android:id="@+id/previewCard"
                 android:layout_width="match_parent"
-                android:layout_height="334dp"
+                android:layout_height="wrap_content"
                 android:background="@drawable/bg_card"
-                android:clipChildren="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
                 android:tag="card">
 
                 <FrameLayout
-                    android:id="@+id/previewStage"
-                    android:layout_width="360dp"
-                    android:layout_height="640dp"
-                    android:layout_gravity="center_horizontal|top"
-                    android:clipChildren="true" />
-            </FrameLayout>
+                    android:id="@+id/previewFrame"
+                    android:layout_width="133dp"
+                    android:layout_height="287dp"
+                    android:clipChildren="true">
 
-            <LinearLayout
-                android:id="@+id/previewPicker"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:gravity="center"
-                android:orientation="horizontal" />
+                    <FrameLayout
+                        android:id="@+id/previewStage"
+                        android:layout_width="390dp"
+                        android:layout_height="844dp"
+                        android:clipChildren="true" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:id="@+id/previewPicker"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:orientation="vertical" />
+            </LinearLayout>
 
             <!-- Вкладки: значок в таблетке и подпись, как нижняя панель. -->
             <LinearLayout

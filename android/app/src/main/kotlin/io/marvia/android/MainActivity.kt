@@ -324,6 +324,7 @@ class MainActivity : AppCompatActivity() {
     // -------------------------------------------------------------- экраны
 
     private fun show(next: Screen) {
+        val was = screen
         screen = next
 
         ui.keyScreen.root.isVisible = next == Screen.KEY
@@ -334,6 +335,23 @@ class MainActivity : AppCompatActivity() {
         ui.themeScreen.root.isVisible = next == Screen.THEME
         ui.languageScreen.root.isVisible = next == Screen.LANGUAGE
         ui.permsScreen.root.isVisible = next == Screen.PERMS
+        // Экран поднимается снизу и проявляется, как .rise в макете: смена
+        // вкладки без движения выглядит как сбой отрисовки, а не как переход.
+        if (was != next) {
+            val root = when (next) {
+                Screen.CONNECT -> ui.connectScreen.root
+                Screen.SERVERS -> ui.serversScreen.root
+                Screen.STATS -> ui.statsScreen.root
+                Screen.THEME -> ui.themeScreen.root
+                Screen.MORE -> ui.moreScreen.root
+                Screen.KEY -> ui.keyScreen.root
+                Screen.LANGUAGE -> ui.languageScreen.root
+                Screen.PERMS -> ui.permsScreen.root
+            }
+            root.alpha = 0f
+            root.translationY = 12 * resources.displayMetrics.density
+            root.animate().alpha(1f).translationY(0f).setDuration(420).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+        }
 
         // Панель есть и без ключа: подписка добавляется на «Серверах», а тему
         // можно выбрать до подключения. На выборе языка её нет — это экран
@@ -540,8 +558,10 @@ class MainActivity : AppCompatActivity() {
         else -> getString(R.string.connect_manual_moved, state.chosen)
     }
 
-    /** Последняя нода, через которую шёл трафик: её показываем и выключенными. */
-    private var lastNode = ""
+    /** Последняя нода, через которую шёл трафик: её показываем и выключенными — и после перезапуска. */
+    private var lastNode: String
+        get() = store.lastNode
+        set(value) { store.lastNode = value }
 
     /** Состояние — одной крупной строкой под кнопкой, цветом состояния. */
     private fun status(text: Int, color: Int) {
@@ -554,6 +574,7 @@ class MainActivity : AppCompatActivity() {
     private fun paintPower(color: Int) {
         val c = ui.connectScreen
         c.todayBars.theme = theme
+        c.halo.theme = theme
         c.powerAction.theme = theme.copy(acc = color)
     }
 

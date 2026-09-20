@@ -77,5 +77,11 @@ object Journal {
         for (line in lines().takeLast(REPORT_TAIL)) {
             append(line).append('\n')
         }
+
+        // Прошлое падение — целиком, со стеком: без него причина остаётся догадкой.
+        val crash = runCatching { MarviaApp.crashFile(context).takeIf { it.exists() }?.readText() }.getOrNull()
+        if (!crash.isNullOrBlank()) {
+            append('\n').append(context.getString(R.string.log_crash_header)).append('\n').append(crash)
+        }
     }
 }

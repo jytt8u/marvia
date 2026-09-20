@@ -448,6 +448,7 @@ class ServersScreen(
             val item = ItemProviderBinding.inflate(inflater, ui.providerList, false)
             item.root.tag = null
             item.root.background = card(t, t.line)
+            (item.root.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.topMargin = (t.gap * dp).toInt()
             fill(item, p)
             ui.providerList.addView(item.root)
         }

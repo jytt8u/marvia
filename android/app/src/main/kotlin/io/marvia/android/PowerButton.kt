@@ -119,9 +119,10 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
             }
             else -> {
                 // Блик сверху слева, тень к низу: диск объёмный, а не плоский круг.
-                val top = if (solid) ColorUtils.blendARGB(theme.acc, 0xFFFFFFFF.toInt(), 0.28f) else theme.surf2
-                val mid = if (solid) theme.acc else theme.surf
-                val low = if (solid) ColorUtils.blendARGB(theme.acc, 0xFF000000.toInt(), 0.18f) else theme.shade
+                // Как в макете: блик светлее второй поверхности, к краю — заметно темнее; диск круглый на глаз, а не плоский.
+                val top = if (solid) ColorUtils.blendARGB(theme.acc, 0xFFFFFFFF.toInt(), 0.28f) else ColorUtils.blendARGB(theme.surf2, 0xFFFFFFFF.toInt(), if (theme.dark) 0.10f else 0.3f)
+                val mid = if (solid) theme.acc else theme.surf2
+                val low = if (solid) ColorUtils.blendARGB(theme.acc, 0xFF000000.toInt(), 0.18f) else ColorUtils.blendARGB(theme.surf2, 0xFF000000.toInt(), if (theme.dark) 0.3f else 0.08f)
                 brush.shader = RadialGradient(
                     cx - radius * .24f, cy - radius * .4f, radius * 2f,
                     intArrayOf(top, mid, low), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP,

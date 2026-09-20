@@ -67,6 +67,11 @@ class Store(context: Context) {
         get() = prefs.getBoolean(KEY_ONBOARDED, false)
         set(value) { prefs.edit().putBoolean(KEY_ONBOARDED, value).apply() }
 
+    /** lastNode — через какую ноду шёл трафик в прошлый раз: главная показывает её и выключенной. */
+    var lastNode: String
+        get() = prefs.getString(KEY_LAST_NODE, "").orEmpty()
+        set(value) { prefs.edit().putString(KEY_LAST_NODE, value).apply() }
+
     /** Когда ключ положили сюда. Ноль означает, что он появился до этой записи. */
     val accountSavedAt: Long
         get() = prefs.getLong(KEY_ACCOUNT_SAVED, 0)
@@ -481,6 +486,7 @@ class Store(context: Context) {
         private const val KEY_ACCOUNT_SAVED = "account_saved_at"
         private const val KEY_CHOSEN_NODE = "chosen_node"
         private const val KEY_ONBOARDED = "onboarded"
+        private const val KEY_LAST_NODE = "last_node"
         private const val KEY_SUBSCRIPTIONS = "subscriptions"
 
         /**

@@ -508,6 +508,8 @@
     </plurals>
     <string name="apps_preset_none">Nothing to add: none of them is installed, or all are already checked</string>
 
+    <string name="log_crashed">The last run crashed: %1$s</string>
+    <string name="log_crash_header">Crash, stack:</string>
     <string name="logs_all">All</string>
     <string name="logs_info">Info</string>
     <string name="logs_warn">Warnings</string>

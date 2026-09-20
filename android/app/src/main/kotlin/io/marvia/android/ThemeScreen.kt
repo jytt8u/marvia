@@ -61,7 +61,11 @@ class ThemeScreen(
     private enum class Screen { MAIN, SETTINGS, SERVERS }
 
     private var tab = Tab.COLOR
-    private var previewScreen = Screen.MAIN
+
+    /** Экран, выбранный руками; null — по вкладке: форма и «ещё» показывают настройки. */
+    private var pickedScreen: Screen? = null
+    private val previewScreen: Screen
+        get() = pickedScreen ?: if (tab == Tab.SHAPE || tab == Tab.MORE) Screen.SETTINGS else Screen.MAIN
 
     /** Слот профиля, в который пишет «сохранить сюда». */
     private var slot = 0
@@ -118,22 +122,61 @@ class ThemeScreen(
             override fun onStartTrackingTouch(bar: SeekBar) = Unit
             override fun onStopTrackingTouch(bar: SeekBar) = Unit
         })
-        // Предпросмотр в масштабе: сцена — телефон 360×640, показана верхняя
-        // половина в 0,5. Масштаб от верхнего левого угла, чтобы сцена легла
-        // в рамку сверху.
+        // Сцена — телефон 390×844 в натуральную величину; масштаб и сдвиг от
+        // верхнего левого угла ставит zoomTo по вкладке. Рамка обрезает и
+        // скругляет углы, как корпус.
         ui.previewStage.pivotX = 0f
         ui.previewStage.pivotY = 0f
-        ui.previewStage.scaleX = PREVIEW_SCALE
-        ui.previewStage.scaleY = PREVIEW_SCALE
-        ui.previewStage.doOnLayoutOnce {
-            val frameW = ui.previewFrame.width
-            ui.previewStage.translationX = (frameW - ui.previewStage.width * PREVIEW_SCALE) / 2f
-        }
+        ui.previewFrame.outlineProvider = rounded(18 * dp)
         ui.previewFrame.clipToOutline = true
-        // Сцена — телефон: скруглённые углы и тонкая рамка. Радиус в масштабе
-        // сцены, на экране он выйдет вдвое меньше.
-        ui.previewStage.outlineProvider = rounded(40 * dp)
-        ui.previewStage.clipToOutline = true
+        zoomTo(animate = false)
+    }
+
+    /**
+     * Zoom — как показан телефон: размер рамки, масштаб и сдвиг сцены.
+     *
+     * Цвет, свет и фон видны на целом экране в 0,34 — с выбором экрана
+     * справа. Форма приближает карточки настроек в 0,82, «Ещё» — заголовок
+     * в натуральную величину: то, что меняют, должно быть видно крупно, а
+     * не угадываться по уменьшенной копии.
+     */
+    private data class Zoom(val w: Float, val h: Float, val scale: Float, val dx: Float, val dy: Float)
+
+    private fun zoomFor(t: Tab): Zoom = when (t) {
+        Tab.SHAPE -> Zoom(302f, 264f, 0.82f, -6f, -62f)
+        Tab.MORE -> Zoom(302f, 264f, 1f, 0f, 0f)
+        else -> Zoom(133f, 287f, 0.34f, 0f, 0f)
+    }
+
+    private var zoomAnim: android.animation.ValueAnimator? = null
+
+    private fun zoomTo(animate: Boolean) {
+        val z = zoomFor(tab)
+        val frame = ui.previewFrame
+        val stage = ui.previewStage
+        val lp = frame.layoutParams
+        val fromW = if (lp.width > 0) lp.width.toFloat() else z.w * dp
+        val fromH = if (lp.height > 0) lp.height.toFloat() else z.h * dp
+        val fromS = stage.scaleX
+        val fromX = stage.translationX
+        val fromY = stage.translationY
+        zoomAnim?.cancel()
+        val apply = { f: Float ->
+            lp.width = (fromW + (z.w * dp - fromW) * f).toInt()
+            lp.height = (fromH + (z.h * dp - fromH) * f).toInt()
+            frame.layoutParams = lp
+            stage.scaleX = fromS + (z.scale - fromS) * f
+            stage.scaleY = stage.scaleX
+            stage.translationX = fromX + (z.dx * dp - fromX) * f
+            stage.translationY = fromY + (z.dy * dp - fromY) * f
+        }
+        if (!animate) { apply(1f); return }
+        zoomAnim = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 550
+            interpolator = android.view.animation.DecelerateInterpolator(2f)
+            addUpdateListener { apply(it.animatedValue as Float) }
+            start()
+        }
     }
 
     private fun choose(next: Look.Choice) {
@@ -169,9 +212,13 @@ class ThemeScreen(
     }
 
     /** paint перерисовывает выбор под текущую тему. Зовётся при каждой смене. */
-    fun paint(t: Theme) {
+    fun paint(t: Theme, flip: Boolean = false) {
         val choice = store.look
-        paintPreview(t, flip = false)
+        // Ряды собираются заново, и прокрутка на миг теряет опору — возвращаем
+        // её после раскладки, иначе каждое нажатие уносит экран наверх.
+        val scrollY = ui.themeScroll.scrollY
+        ui.themeScroll.post { ui.themeScroll.scrollTo(0, scrollY) }
+        paintPreview(t, flip)
         paintTabs(t)
 
         ui.tabColor.isVisible = tab == Tab.COLOR
@@ -243,8 +290,10 @@ class ThemeScreen(
                 isFocusable = true
                 setOnClickListener {
                     if (tab != key) {
+                        val before = previewScreen
                         tab = key
-                        paint(t)
+                        paint(t, flip = previewScreen != before)
+                        zoomTo(animate = true)
                     }
                 }
             }
@@ -293,31 +342,33 @@ class ThemeScreen(
         val s = stage ?: return
         Paint.apply(s, t)
         s.background = Backdrop(t)
-        ui.previewStage.foreground = GradientDrawable().apply { cornerRadius = 40 * dp; setColor(0); setStroke((2 * dp).toInt(), t.line) }
-        ui.previewStage.translationY = 7 * dp
+        ui.previewFrame.foreground = GradientDrawable().apply { cornerRadius = 18 * dp; setColor(0); setStroke((1 * dp).toInt(), t.line) }
+        ui.previewFrame.elevation = 8 * dp
         fillStage(s, t)
         if (flip) {
             // Переворот, как в макете: карта уходит ребром и возвращается новой.
-            ui.previewStage.cameraDistance = 8000 * dp
-            ui.previewStage.rotationY = -90f
-            ui.previewStage.alpha = 0.3f
-            ui.previewStage.animate().rotationY(0f).alpha(1f).setDuration(700).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+            ui.previewFrame.cameraDistance = 8000 * dp
+            ui.previewFrame.rotationY = -90f
+            ui.previewFrame.alpha = 0.3f
+            ui.previewFrame.animate().rotationY(0f).alpha(1f).setDuration(700).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
         }
 
-        // Переключатель экрана предпросмотра: точка и имя.
+        // Переключатель экрана предпросмотра: точка и имя, столбиком справа.
+        // В приближении его нет — там показывается то, что меняет вкладка.
         val picker = ui.previewPicker
         picker.removeAllViews()
+        picker.isVisible = tab != Tab.SHAPE && tab != Tab.MORE
         for ((key, name) in listOf(Screen.MAIN to R.string.theme_pv_main, Screen.SETTINGS to R.string.theme_pv_settings, Screen.SERVERS to R.string.theme_pv_servers)) {
             val on = previewScreen == key
             val item = LinearLayout(host).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding((10 * dp).toInt(), (6 * dp).toInt(), (10 * dp).toInt(), (6 * dp).toInt())
+                setPadding((10 * dp).toInt(), (8 * dp).toInt(), (10 * dp).toInt(), (8 * dp).toInt())
                 isClickable = true
                 isFocusable = true
                 setOnClickListener {
                     if (previewScreen != key) {
-                        previewScreen = key
+                        pickedScreen = key
                         paintPreview(t, flip = true)
                     }
                 }
@@ -362,6 +413,7 @@ class ThemeScreen(
         when (previewScreen) {
             Screen.MAIN -> {
                 id<PowerButton>(R.id.powerAction)?.apply { theme = t; state = PowerButton.State.ON }
+                id<HaloView>(R.id.halo)?.theme = t
                 id<TextView>(R.id.statusText)?.apply { setText(R.string.status_on); setTextColor(if (t.dark) t.fg else t.acc) }
                 id<TextView>(R.id.nodeLine)?.text = host.getString(R.string.theme_preview_country) + " · " + host.getString(R.string.theme_preview_place)
                 id<TextView>(R.id.todayTotal)?.text = Format.size(host, 4_509_715_660L)
@@ -417,7 +469,16 @@ class ThemeScreen(
                 p.root.background = Paint.card(t, dp)
                 id<View>(R.id.serversEmpty)?.isVisible = false
             }
-            Screen.SETTINGS -> Unit
+            Screen.SETTINGS -> {
+                id<TextView>(R.id.moreTitle)?.setText(R.string.more_title)
+                id<TextView>(R.id.moreSub)?.text = host.getString(R.string.more_sub, "0.9.3")
+                id<TextView>(R.id.appsSummary)?.text = host.getString(R.string.apps_summary_names, 3, "Госуслуги, Сбербанк, Т-Банк")
+                id<TextView>(R.id.languageValue)?.setText(if (store.language == Store.LANG_EN) R.string.language_en else R.string.language_ru)
+                id<TextView>(R.id.dnsValue)?.text = "Cloudflare"
+                id<TextView>(R.id.aboutSub)?.text = host.getString(R.string.about_sub, "0.9.3")
+                id<com.google.android.material.materialswitch.MaterialSwitch>(R.id.switchAutostart)?.isChecked = true
+                id<View>(R.id.moreBack)?.isVisible = false
+            }
         }
         // Нижняя панель сцены: таблетка под активной вкладкой, как настоящая.
         val active = when (previewScreen) { Screen.MAIN -> R.id.navConnectPill to R.id.navConnectLabel; Screen.SERVERS -> R.id.navServersPill to R.id.navServersLabel; Screen.SETTINGS -> R.id.navMorePill to R.id.navMoreLabel }
@@ -852,7 +913,6 @@ class ThemeScreen(
     private companion object {
         const val MATCH = LinearLayout.LayoutParams.MATCH_PARENT
         const val WRAP = LinearLayout.LayoutParams.WRAP_CONTENT
-        const val PREVIEW_SCALE = 0.5f
         val LAMP = listOf("nw", "n", "ne", "w", "c", "e", "sw", "s", "se")
         /** Мегабайты по часам для предпросмотра — как в макете. */
         val MINI = listOf(2, 1, 0, 0, 0, 0, 3, 6, 12, 16, 11, 9, 13, 18, 17, 10, 9, 15, 22, 22, 20, 12, 5, 0)

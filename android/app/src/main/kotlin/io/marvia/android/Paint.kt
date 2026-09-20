@@ -100,6 +100,9 @@ object Paint {
     private fun paint(v: View, t: Theme) {
         if (v.isClickable && v !is android.widget.EditText && v !is MaterialSwitch && v !is PowerButton) {
             v.foreground = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(t.accSoft), null, rounded(android.graphics.Color.WHITE, t.r, v.resources.displayMetrics.density))
+            // Нажатие чуть вжимает кнопку, как в макете (scale .96): без этого
+            // экран отвечает только рябью, и кажется, что ничего не произошло.
+            if (v.stateListAnimator == null) v.stateListAnimator = pressAnimator(v)
         }
         // Знак красится сам: у него не тон, а светотень, и тегом её не передать.
         if (v is MarviaLogoView) {
@@ -107,16 +110,31 @@ object Paint {
             return
         }
         if (v is TextView) font(v)
-        val tag = v.tag as? String ?: return
+        val tags = v.tag as? String ?: return
         val dp = v.resources.displayMetrics.density
 
+        // Тегов может быть несколько через пробел: «card gap» — карточка с
+        // зазором от соседа по плотности темы.
+        for (tag in tags.split(' ')) paintTag(v, t, tag, dp)
+    }
+
+    private fun paintTag(v: View, t: Theme, tag: String, dp: Float) {
         when {
             tag == BG -> v.background = Backdrop(t)
             tag == SURF -> v.setBackgroundColor(t.surf)
             // Нижняя панель — средний тон фона, чуть прозрачный, как в макете.
             tag == NAVBAR -> v.setBackgroundColor(androidx.core.graphics.ColorUtils.setAlphaComponent(t.mid, 235))
             tag == LINE -> v.setBackgroundColor(t.line)
-            tag == CARD -> skin(v, t, dp)
+            // Карточка — и отступ внутри по плотности темы: «плотно», «обычно»,
+            // «просторно» должны быть видны, а не только числом в таблице.
+            tag == CARD -> {
+                skin(v, t, dp)
+                if (v is ViewGroup) {
+                    val side = (t.pad * dp).toInt()
+                    val tall = ((t.pad - 2) * dp).toInt()
+                    v.setPadding(side, tall, side, tall)
+                }
+            }
             tag == CARD_PAD -> {
                 skin(v, t, dp)
                 val pad = (t.pad * dp).toInt()
@@ -186,6 +204,29 @@ object Paint {
         if (t.card == "shadow") {
             v.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             v.clipToOutline = false
+        }
+    }
+
+    /** pressAnimator — вжатие на 4 % при нажатии и возврат; та же кривая, что у CSS-переходов макета. */
+    private fun pressAnimator(v: View): android.animation.StateListAnimator {
+        val pressed = android.animation.AnimatorSet().apply {
+            playTogether(
+                android.animation.ObjectAnimator.ofFloat(v, View.SCALE_X, 0.96f),
+                android.animation.ObjectAnimator.ofFloat(v, View.SCALE_Y, 0.96f),
+            )
+            duration = 120
+        }
+        val idle = android.animation.AnimatorSet().apply {
+            playTogether(
+                android.animation.ObjectAnimator.ofFloat(v, View.SCALE_X, 1f),
+                android.animation.ObjectAnimator.ofFloat(v, View.SCALE_Y, 1f),
+            )
+            duration = 260
+            interpolator = android.view.animation.DecelerateInterpolator(2f)
+        }
+        return android.animation.StateListAnimator().apply {
+            addState(intArrayOf(android.R.attr.state_pressed), pressed)
+            addState(intArrayOf(), idle)
         }
     }
 

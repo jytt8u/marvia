@@ -481,6 +481,8 @@
     </plurals>
     <string name="apps_preset_none">Добавлять нечего: ничего из набора не установлено или всё уже отмечено</string>
 
+    <string name="log_crashed">Прошлый запуск упал: %1$s</string>
+    <string name="log_crash_header">Падение, стек:</string>
     <string name="logs_all">Все</string>
     <string name="logs_info">Инфо</string>
     <string name="logs_warn">Сбои</string>

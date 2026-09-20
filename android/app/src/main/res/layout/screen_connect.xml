@@ -36,13 +36,24 @@
             android:orientation="vertical" android:gravity="center_horizontal" android:paddingHorizontal="16dp"
             android:paddingBottom="16dp" android:clipChildren="false">
 
-            <!-- Вокруг дуги запас под свечение: оно рисуется внутри вьюхи. -->
-            <io.marvia.android.PowerButton
-                android:id="@+id/powerAction"
-                android:layout_width="248dp"
-                android:layout_height="248dp"
-                android:layout_marginTop="14dp"
-                android:contentDescription="@string/action_connect" />
+            <!-- Кнопка над ореолом: пятно и кольца уходят за края диска. Вокруг дуги запас под свечение. -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="262dp"
+                android:clipChildren="false">
+
+                <io.marvia.android.HaloView
+                    android:id="@+id/halo"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <io.marvia.android.PowerButton
+                    android:id="@+id/powerAction"
+                    android:layout_width="248dp"
+                    android:layout_height="248dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/action_connect" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/statusText"
@@ -106,7 +117,7 @@
             </LinearLayout>
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="12dp" android:orientation="horizontal" android:baselineAligned="false">
+                android:layout_marginTop="12dp" android:orientation="horizontal" android:baselineAligned="false" android:tag="gap">
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                     android:layout_marginEnd="6dp" android:background="@drawable/bg_card" android:orientation="vertical"
                     android:tag="card" android:paddingHorizontal="16dp" android:paddingVertical="14dp">

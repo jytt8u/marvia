@@ -78,7 +78,7 @@
         <item name="android:layout_marginTop">12dp</item>
         <item name="android:orientation">vertical</item>
         <item name="android:background">@drawable/bg_card</item>
-        <item name="android:tag">card</item>
+        <item name="android:tag">card gap</item>
         <item name="android:paddingHorizontal">14dp</item>
         <item name="android:paddingVertical">14dp</item>
     </style>
