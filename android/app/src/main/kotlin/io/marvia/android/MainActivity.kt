@@ -106,6 +106,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Своя картинка под значок в шапке — тем же путём, что фон. */
+    private val pickLogo = registerForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null && store.saveLogo(uri)) {
+            store.logo = Store.LOGO_CUSTOM
+            repaint()
+        } else if (uri != null) {
+            Toast.makeText(this, R.string.theme_backdrop_bad, Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Режим ночи — по темноте пресета. Он нужен не нам, а Material:
         // диалоги и системные виджеты берут цвета оттуда, и светлый диалог
@@ -132,7 +144,7 @@ class MainActivity : AppCompatActivity() {
             onSubscriptionChanged = { restartTunnel() },
         )
         stats = StatsScreen(host = this, ui = ui.statsScreen, theme = { theme }, traffic = Traffic(this), store = store)
-        themeScreen = ThemeScreen(this, ui.themeScreen, store, { pickBackdrop.launch("image/*") }) { repaint() }
+        themeScreen = ThemeScreen(this, ui.themeScreen, store, { pickBackdrop.launch("image/*") }, { pickLogo.launch("image/*") }) { repaint() }
         language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
         more = MoreScreen(
             host = this,
@@ -226,8 +238,10 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        Paint.style = Paint.Style(pattern = store.pattern, font = store.font)
         Paint.apply(ui.root, theme)
         applyBackdrop()
+        paintLogo()
         paintNav()
         servers.paint()
         stats.paint(theme)
@@ -240,6 +254,25 @@ class MainActivity : AppCompatActivity() {
         val bars = WindowCompat.getInsetsController(window, ui.root)
         bars.isAppearanceLightStatusBars = !theme.dark
         bars.isAppearanceLightNavigationBars = !theme.dark
+    }
+
+    /** paintLogo — что в шапке главной: знак, своя картинка или ничего. */
+    private fun paintLogo() {
+        val c = ui.connectScreen
+        val mode = store.logo
+        val custom = if (mode == Store.LOGO_CUSTOM) store.logoBitmap() else null
+        c.heroMarkButton.isVisible = mode != Store.LOGO_NONE
+        c.heroMark.isVisible = mode == Store.LOGO_MARVIA || (mode == Store.LOGO_CUSTOM && custom == null)
+        c.heroCustom.isVisible = custom != null
+        if (custom != null) {
+            c.heroCustom.setImageBitmap(custom)
+            c.heroCustom.clipToOutline = true
+            c.heroCustom.outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, 9 * resources.displayMetrics.density)
+                }
+            }
+        }
     }
 
     private fun nightModeFor(t: Theme): Int =
@@ -358,6 +391,7 @@ class MainActivity : AppCompatActivity() {
         // выдвигает имя и строку про протокол и версию; второе — прячет.
         val version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
         c.heroTagline.text = getString(R.string.hero_tagline, version)
+        c.heroWord.setTag(R.id.keep_font, true)
         // Имя — металлом, как знак: сверху светлое, книзу в приглушённый.
         c.heroWord.doOnLayout {
             c.heroWord.paint.shader = android.graphics.LinearGradient(

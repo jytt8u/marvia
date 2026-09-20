@@ -15,6 +15,9 @@
             android:contentDescription="@string/app_name">
             <io.marvia.android.MarviaLogoView android:id="@+id/heroMark" android:layout_width="40dp" android:layout_height="34dp"
                 android:layout_gravity="center" android:contentDescription="@null" />
+            <!-- Своя картинка вместо знака — из темы, «Ещё → Значок в шапке». -->
+            <ImageView android:id="@+id/heroCustom" android:layout_width="34dp" android:layout_height="34dp"
+                android:layout_gravity="center" android:scaleType="centerCrop" android:contentDescription="@null" android:visibility="gone" />
         </FrameLayout>
         <LinearLayout android:id="@+id/heroName" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginStart="12dp" android:orientation="vertical" android:visibility="gone">

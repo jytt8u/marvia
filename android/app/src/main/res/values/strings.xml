@@ -242,6 +242,57 @@
         без названия на обоих языках.
     -->
     <string name="theme_title">Theme</string>
+    <string name="theme_tab_color">Color</string>
+    <string name="theme_tab_light">Light</string>
+    <string name="theme_tab_bg">Background</string>
+    <string name="theme_tab_shape">Shape</string>
+    <string name="theme_tab_more">More</string>
+    <string name="theme_hint_color">the color shows on the button, the mark and the tab bar</string>
+    <string name="theme_hint_light">light is the background of the whole screen</string>
+    <string name="theme_hint_bg">pattern and your own photo go under everything</string>
+    <string name="theme_hint_shape">shape is cards, the button and spacing</string>
+    <string name="theme_hint_more">mark, font and saved looks</string>
+    <string name="theme_pv_main">Home</string>
+    <string name="theme_pv_settings">Settings</string>
+    <string name="theme_pv_servers">Servers</string>
+    <string name="theme_looks_caps">READY LOOKS</string>
+    <string name="theme_accent_caps">ACCENT</string>
+    <string name="theme_accent_hint">button, marks, switches</string>
+    <string name="theme_tint_caps">TINT OF THE LIT SIDE</string>
+    <string name="theme_tint_auto">same as accent</string>
+    <string name="theme_light_caps">LIGHT</string>
+    <string name="theme_depth_caps">SHADOW DEPTH</string>
+    <string name="theme_depth_light">LIGHT</string>
+    <string name="theme_depth_dark">BLACK</string>
+    <string name="theme_pattern_caps">BACKGROUND PATTERN</string>
+    <string name="theme_pattern_hint">barely visible, so the background is not empty</string>
+    <string name="pattern_none">Plain</string>
+    <string name="pattern_dots">Dots</string>
+    <string name="pattern_grid">Grid</string>
+    <string name="pattern_rings">Rings</string>
+    <string name="pattern_lines">Lines</string>
+    <string name="theme_backdrop_caps">YOUR OWN BACKGROUND</string>
+    <string name="theme_backdrop_none">a photo from the gallery under the interface</string>
+    <string name="theme_backdrop_has">photo chosen</string>
+    <string name="theme_cards_caps">CARDS</string>
+    <string name="theme_radius_caps">CORNERS</string>
+    <string name="theme_density_caps">DENSITY</string>
+    <string name="theme_button_caps">MAIN BUTTON</string>
+    <string name="theme_glow_caps">GLOW</string>
+    <string name="theme_logo_caps">MARK IN THE HEADER</string>
+    <string name="logo_marvia">Marvia</string>
+    <string name="logo_custom">Custom</string>
+    <string name="logo_none">Hide</string>
+    <string name="theme_logo_marvia">the ribbon M in the accent color</string>
+    <string name="theme_logo_custom">your own picture from the gallery</string>
+    <string name="theme_logo_none">header without a mark</string>
+    <string name="theme_font_caps">FONT</string>
+    <string name="font_onest">Onest</string>
+    <string name="font_manrope">Manrope</string>
+    <string name="font_geologica">Geologica</string>
+    <string name="theme_profiles_caps">MY PROFILES</string>
+    <string name="theme_profiles_hint">an empty slot remembers the current look</string>
+    <string name="theme_code_caps">THEME CODE · SHARE WITH A FRIEND</string>
     <string name="theme_hint">Everything applies at once</string>
     <string name="theme_looks">Ready looks</string>
     <string name="theme_looks_hint">the whole screen in one tap</string>
@@ -457,6 +508,8 @@
     <string name="theme_preview">Preview</string>
     <!-- Образец строки страны в предпросмотре: узнаваемо, но не про продавца. -->
     <string name="theme_preview_country">Finland</string>
+    <string name="theme_preview_provider">Access from Alex</string>
+    <string name="theme_look_custom">custom</string>
     <string name="theme_preview_place">Helsinki · 33 ms</string>
     <string name="theme_advanced">More appearance settings</string>
 </resources>

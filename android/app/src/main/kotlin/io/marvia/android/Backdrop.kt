@@ -25,7 +25,7 @@ import kotlin.math.sin
  * длиной |w·sin| + |h·cos|, цвета — от начала к концу. Так работает
  * linear-gradient, и так же здесь.
  */
-class Backdrop(private val t: Theme) : Drawable() {
+class Backdrop(private val t: Theme, private val pattern: String = io.marvia.android.Paint.style.pattern, private val ink: Int = 12) : Drawable() {
 
     private val brush = Paint(Paint.ANTI_ALIAS_FLAG)
     private var w = 0f
@@ -104,21 +104,30 @@ class Backdrop(private val t: Theme) : Drawable() {
     override fun draw(canvas: Canvas) {
         val b = bounds
         canvas.drawRect(b, brush)
-        // Точечная сетка из цвета текста, едва заметная: фон перестаёт быть
-        // пустым, но не спорит с содержимым. Та же, что на телефоне в макете.
-        // Одна точка в плитке, плитка повторяется шейдером: рисовать тысячи
-        // кругов на каждый кадр — дорого, а плитка — один вызов.
-        canvas.drawRect(b, dots)
+        // Узор из цвета текста, едва заметный: фон перестаёт быть пустым, но
+        // не спорит с содержимым. Плитка, повторённая шейдером: рисовать
+        // тысячи точек на каждый кадр дорого, а плитка — один вызов. Точки,
+        // сетка, кольца или штрих — как в макете; «ровный» — без узора.
+        if (pattern != Store.PATTERN_NONE) canvas.drawRect(b, dots)
     }
 
-    /** Плотность экрана — у Drawable своей нет, берём системную. Объявлена до точек: они её читают при создании. */
+    /** Плотность экрана — у Drawable своей нет, берём системную. Объявлена до узора: он её читает при создании. */
     private val density = android.content.res.Resources.getSystem().displayMetrics.density
 
     private val dots = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        val step = (22 * density).toInt().coerceAtLeast(2)
-        val tile = android.graphics.Bitmap.createBitmap(step, step, android.graphics.Bitmap.Config.ARGB_8888)
-        val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = androidx.core.graphics.ColorUtils.setAlphaComponent(t.fg, 13) }
-        Canvas(tile).drawCircle(step / 2f, step / 2f, density, dot)
+        val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = androidx.core.graphics.ColorUtils.setAlphaComponent(t.fg, ink) }
+        val size = ((when (pattern) { "grid" -> 28; "rings" -> 82; "lines" -> 20; else -> 22 }) * density).toInt().coerceAtLeast(2)
+        val tile = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = Canvas(tile)
+        when (pattern) {
+            "grid" -> { c.drawRect(0f, 0f, size.toFloat(), density, ink); c.drawRect(0f, 0f, density, size.toFloat(), ink) }
+            "rings" -> {
+                ink.style = Paint.Style.STROKE; ink.strokeWidth = density
+                c.drawCircle(size / 2f, size / 2f, size * 0.49f, ink); c.drawCircle(size / 2f, size / 2f, size * 0.24f, ink)
+            }
+            "lines" -> { ink.strokeWidth = density; c.drawLine(0f, size.toFloat(), size.toFloat(), 0f, ink) }
+            else -> c.drawCircle(size / 2f, size / 2f, density, ink)
+        }
         shader = android.graphics.BitmapShader(tile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
     }
 

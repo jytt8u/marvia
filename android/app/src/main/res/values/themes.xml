@@ -71,6 +71,55 @@
         <item name="android:textColor">@color/veil_muted</item>
     </style>
 
+    <!-- Раздел на «Теме»: карточка с подписью капителью и рядом кнопок. -->
+    <style name="ThemeSection">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:tag">card</item>
+        <item name="android:paddingHorizontal">14dp</item>
+        <item name="android:paddingVertical">14dp</item>
+    </style>
+
+    <style name="ThemeSectionHead">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:baselineAligned">false</item>
+    </style>
+
+    <style name="ThemeK">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:tag">dim</item>
+        <item name="android:fontFamily">@font/mono</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:letterSpacing">0.16</item>
+    </style>
+
+    <!-- Подсказка справа от капители: занимает остаток строки и прижата к краю. -->
+    <style name="ThemeHint">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">10dp</item>
+        <item name="android:gravity">end</item>
+        <item name="android:tag">dim</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="ThemeRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
     <style name="VeilRowSub">
         <item name="android:tag">dim</item>
         <item name="android:layout_width">wrap_content</item>

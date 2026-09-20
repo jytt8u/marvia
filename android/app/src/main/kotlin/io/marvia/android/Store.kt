@@ -259,6 +259,53 @@ class Store(context: Context) {
                 .apply()
         }
 
+    /**
+     * Ручки темы, которых нет в общем коде: узор фона, шрифт, значок в шапке.
+     *
+     * В код темы они не входят намеренно: код общий с панелью и окном, и
+     * узор с фотографией-значком там не значат ничего. Живут на телефоне и
+     * профили их не запоминают.
+     */
+    var pattern: String
+        get() = prefs.getString(KEY_PATTERN, PATTERN_DOTS)?.takeIf { it in PATTERNS } ?: PATTERN_DOTS
+        set(value) { prefs.edit().putString(KEY_PATTERN, value.takeIf { it in PATTERNS } ?: PATTERN_DOTS).apply() }
+
+    var font: String
+        get() = prefs.getString(KEY_FONT, FONT_ONEST)?.takeIf { it in FONTS } ?: FONT_ONEST
+        set(value) { prefs.edit().putString(KEY_FONT, value.takeIf { it in FONTS } ?: FONT_ONEST).apply() }
+
+    /** logo — что в шапке главной: знак Marvia, своя картинка или ничего. */
+    var logo: String
+        get() = prefs.getString(KEY_LOGO, LOGO_MARVIA)?.takeIf { it in LOGOS } ?: LOGO_MARVIA
+        set(value) { prefs.edit().putString(KEY_LOGO, value.takeIf { it in LOGOS } ?: LOGO_MARVIA).apply() }
+
+    private fun logoFile(): File = File(app.filesDir, LOGO_FILE)
+
+    fun hasLogo(): Boolean = logoFile().exists()
+
+    /** saveLogo кладёт свою картинку под значок, уменьшив: в шапке она в 34 dp. */
+    fun saveLogo(uri: android.net.Uri): Boolean {
+        val bmp = try {
+            app.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+        } catch (_: Exception) {
+            null
+        } ?: return false
+        val scale = LOGO_MAX_SIDE.toFloat() / maxOf(bmp.width, bmp.height, 1)
+        val small = if (scale < 1f) Bitmap.createScaledBitmap(bmp, (bmp.width * scale).toInt().coerceAtLeast(1), (bmp.height * scale).toInt().coerceAtLeast(1), true) else bmp
+        return try {
+            val tmp = File(app.filesDir, "$LOGO_FILE.tmp")
+            tmp.outputStream().use { small.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            tmp.renameTo(logoFile())
+        } catch (_: Exception) {
+            false
+        } finally {
+            if (small !== bmp) small.recycle()
+            bmp.recycle()
+        }
+    }
+
+    fun logoBitmap(): Bitmap? = try { BitmapFactory.decodeFile(logoFile().absolutePath) } catch (_: Exception) { null }
+
     /** profiles — три сохранённых вида кодами; пустой слот — null. */
     var profiles: List<String?>
         get() = (0 until 3).map { i ->
@@ -458,6 +505,24 @@ class Store(context: Context) {
         /** Имя файла фона в приватном каталоге и потолок его длинной стороны. */
         private const val BACKDROP_FILE = "backdrop.jpg"
         private const val BACKDROP_MAX_SIDE = 2048
+
+        private const val KEY_PATTERN = "look_pattern"
+        private const val KEY_FONT = "look_font"
+        private const val KEY_LOGO = "look_logo"
+        private const val LOGO_FILE = "logo.png"
+        private const val LOGO_MAX_SIDE = 256
+
+        const val PATTERN_NONE = "none"
+        const val PATTERN_DOTS = "dots"
+        val PATTERNS = listOf(PATTERN_NONE, PATTERN_DOTS, "grid", "rings", "lines")
+
+        const val FONT_ONEST = "onest"
+        val FONTS = listOf(FONT_ONEST, "manrope", "geologica")
+
+        const val LOGO_MARVIA = "marvia"
+        const val LOGO_CUSTOM = "custom"
+        const val LOGO_NONE = "none"
+        val LOGOS = listOf(LOGO_MARVIA, LOGO_CUSTOM, LOGO_NONE)
 
         /** AppCompatDelegate.MODE_NIGHT_NO — так хранилась светлая тема. */
         private const val LEGACY_LIGHT = 1

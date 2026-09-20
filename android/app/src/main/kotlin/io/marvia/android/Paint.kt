@@ -48,8 +48,43 @@ object Paint {
     private const val SWITCH = "switch"
     private const val ICON = "icon:"
 
+    /**
+     * Style — ручки, которых нет в теме: узор фона и шрифт. Одна на всё
+     * приложение: её ставит MainActivity перед покраской, и экраны, что
+     * собирают строки позже, красят их тем же.
+     */
+    data class Style(val pattern: String = Store.PATTERN_DOTS, val font: String = Store.FONT_ONEST)
+
+    var style = Style()
+
     fun apply(root: View, t: Theme) {
         walk(root) { view -> paint(view, t) }
+    }
+
+    /**
+     * typeface — шрифт по ключу с нужной жирностью. Моноширинные и знак
+     * MARVIA не трогаем: у них своя роль, и «Manrope» в цифрах отклика был
+     * бы не сменой шрифта, а поломкой таблицы.
+     */
+    private val families = HashMap<String, android.graphics.Typeface?>()
+
+    private fun font(v: TextView) {
+        val old = v.typeface
+        val p = v.paint
+        // Моноширинный узнаём по ширине: у него «i» и «W» одинаковы.
+        if (p.measureText("i") == p.measureText("W")) return
+        if (v.getTag(R.id.keep_font) == true) return
+        val key = style.font
+        val family = families.getOrPut(key) {
+            val id = when (key) {
+                "manrope" -> R.font.manrope
+                "geologica" -> R.font.geologica
+                else -> R.font.onest
+            }
+            androidx.core.content.res.ResourcesCompat.getFont(v.context, id)
+        } ?: return
+        val bold = old?.isBold == true
+        v.typeface = android.graphics.Typeface.create(family, if (bold) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
     }
 
     private fun walk(view: View, each: (View) -> Unit) {
@@ -70,6 +105,7 @@ object Paint {
             v.setTheme(t)
             return
         }
+        if (v is TextView) font(v)
         val tag = v.tag as? String ?: return
         val dp = v.resources.displayMetrics.density
 
