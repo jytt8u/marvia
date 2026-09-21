@@ -110,8 +110,12 @@ func (c *Conn) Write(p []byte) (int, error) {
 	written := 0
 	for len(p) > 0 {
 		chunk := p
-		if len(chunk) > MaxPayload {
-			chunk = chunk[:MaxPayload]
+		// Крупный кусок идёт без добивки и занимает кадр целиком, как
+		// TLS-рекорд при скачивании; мелкому и среднему оставлено место под
+		// добивку. framePad для всего, что длиннее MaxPayload, даёт ноль,
+		// так что кадр всегда помещается в wbuf.
+		if len(chunk) > BulkPayload {
+			chunk = chunk[:BulkPayload]
 		}
 		if err := c.writeFramed(chunk); err != nil {
 			return written, err

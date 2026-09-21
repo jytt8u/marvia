@@ -124,3 +124,18 @@ func readFull(c net.Conn, buf []byte) (int, error) {
 	}
 	return total, nil
 }
+
+// TestBulkFramesFillTheRecordLikeTLS: скачивание идёт кадрами во весь
+// TLS-рекорд — 16 384 байта содержимого, без добивки. Иначе кадры были бы
+// на килобайт короче, чем у любого HTTPS, и их было бы на 7 % больше.
+func TestBulkFramesFillTheRecordLikeTLS(t *testing.T) {
+	if BulkPayload != MaxPlaintext-frameHeaderLen {
+		t.Fatalf("BulkPayload = %d, ожидалось %d", BulkPayload, MaxPlaintext-frameHeaderLen)
+	}
+	if framePad(BulkPayload) != 0 || framePad(MaxPayload+1) != 0 {
+		t.Fatal("крупный кадр получил добивку и не поместится в буфер")
+	}
+	if frameHeaderLen+BulkPayload+framePad(BulkPayload) > MaxPlaintext {
+		t.Fatal("крупный кадр длиннее MaxPlaintext")
+	}
+}

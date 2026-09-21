@@ -41,7 +41,9 @@ func Bidirectional(a, b net.Conn) error {
 
 	pipe := func(dst, src net.Conn) {
 		defer wg.Done()
-		_, err := io.Copy(dst, src)
+		buf := buffers.Get().(*[]byte)
+		_, err := io.CopyBuffer(writerOnly{dst}, readerOnly{src}, *buf)
+		buffers.Put(buf)
 		record(err)
 		if cw, ok := dst.(closeWriter); ok {
 			_ = cw.CloseWrite()
@@ -62,6 +64,21 @@ func Bidirectional(a, b net.Conn) error {
 	defer mu.Unlock()
 	return fail
 }
+
+// buffers — общие буферы для перекладывания байт.
+//
+// io.Copy берёт себе 32 КиБ на каждый вызов, а вызовов на ноде — по два на
+// каждый поток каждого покупателя; тысячи потоков в секунду — это
+// сборщик мусора в главной роли. Пул отдаёт те же буферы по кругу.
+var buffers = sync.Pool{New: func() any { b := make([]byte, 32<<10); return &b }}
+
+// writerOnly и readerOnly прячут ReadFrom и WriteTo: увидев их, io.CopyBuffer
+// отдаёт работу самой сети, а *net.TCPConn.ReadFrom для нашего источника
+// (поток мультиплексора, а не сокет) всё равно заводит свой буфер — и пул
+// оказывался бы ни при чём. Ускорение через splice сюда не доходит: ни одна
+// сторона у ноды не сырой TCP.
+type writerOnly struct{ io.Writer }
+type readerOnly struct{ io.Reader }
 
 // isBenign отсеивает штатные окончания: закрытое соединение и EOF — это не
 // сбой, а нормальный конец разговора.
