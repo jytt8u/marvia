@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Тема из макета: предпросмотр телефона с выбором экрана, пять разделов
-    круглыми значками — цвет, свет, фон, форма, ещё — и под ними ручки
-    раздела. Всё применяется сразу: этот же экран и есть предпросмотр.
-
-    Ряды видов, акцентов и прочего собираются кодом: их содержимое приходит
-    из таблицы тем, а не из разметки.
+    «Тема» по макету: сверху предпросмотр (настоящие экраны в масштабе, с
+    переворотом при смене), под ним вкладки Цвет · Свет · Фон · Форма · Ещё,
+    и разделы той вкладки, что открыта. Ряды кнопок собирает код.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -17,640 +13,423 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="@dimen/screen_pad"
+        android:paddingStart="22dp"
+        android:paddingEnd="16dp"
         android:paddingTop="@dimen/header_pad"
-        android:paddingBottom="12dp">
+        android:paddingBottom="10dp">
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:letterSpacing="-0.01"
-            android:tag="fg"
             android:text="@string/theme_title"
-            android:textColor="@color/veil_text"
+            android:tag="fg"
             android:textSize="26sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:letterSpacing="-0.01" />
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
-            android:tag="dim"
             android:text="@string/theme_hint"
-            android:textColor="@color/veil_muted"
+            android:tag="dim"
             android:textSize="13sp" />
     </LinearLayout>
 
     <ScrollView
+        android:id="@+id/themeScroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:paddingHorizontal="16dp">
+        android:clipToPadding="false"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="4dp"
-            android:paddingBottom="18dp">
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="16dp">
 
-            <!-- Телефон с одним из трёх экранов в выбранной теме; справа — какой. -->
+            <!--
+                Предпросмотр: телефон в масштабе слева, справа — какой экран
+                показать. Вкладки «Форма» и «Ещё» приближают телефон к тому, что
+                меняют: карточкам настроек и заголовку. Размеры и сдвиг ставит код.
+            -->
             <LinearLayout
                 android:id="@+id/previewCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="18dp"
+                android:orientation="vertical"
                 android:tag="card">
 
-                <io.marvia.android.ThemePreview
-                    android:id="@+id/previewPower"
-                    android:layout_width="0dp"
-                    android:layout_height="360dp"
-                    android:layout_weight="1.35"
-                    android:clickable="false"
-                    android:focusable="false"
-                    android:importantForAccessibility="no" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/previewFrame"
+                    android:layout_width="133dp"
+                    android:layout_height="287dp"
+                    android:clipChildren="true">
+
+                    <FrameLayout
+                        android:id="@+id/previewStage"
+                        android:layout_width="390dp"
+                        android:layout_height="844dp"
+                        android:clipChildren="true" />
+                </FrameLayout>
 
                 <LinearLayout
                     android:id="@+id/previewPicker"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="18dp"
                     android:layout_weight="1"
+                    android:layout_marginStart="12dp"
                     android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- Тот же переключатель в строку под телефоном — когда он приближен
+                     и места справа нет. Какой из двух показать, решает код. -->
+                <LinearLayout
+                    android:id="@+id/previewPickerBelow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Разделы: круглый значок и подпись, активный залит. -->
+            <!-- Вкладки: значок в таблетке и подпись, как нижняя панель. -->
             <LinearLayout
-                android:id="@+id/tabRow"
+                android:id="@+id/tabsRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal"
-                android:paddingHorizontal="6dp" />
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal" />
 
-            <!-- ЦВЕТ: готовые виды, акцент, оттенок светлой стороны. -->
+            <TextView
+                android:id="@+id/tabHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:tag="dim"
+                android:textSize="12sp" />
+
+            <!-- ==================================================== Цвет -->
             <LinearLayout
-                android:id="@+id/sectionColor"
+                android:id="@+id/tabColor"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="22dp"
-                    android:baselineAligned="true"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="4dp">
-
-                    <TextView
-                        style="@style/VeilSection"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:text="@string/theme_looks" />
-
-                    <TextView
-                        android:id="@+id/lookName"
-                        android:layout_width="wrap_content"
+                <LinearLayout style="@style/ThemeSection">
+                    <LinearLayout style="@style/ThemeSectionHead">
+                        <TextView style="@style/ThemeK" android:text="@string/theme_looks_caps" />
+                        <TextView android:id="@+id/lookName" style="@style/ThemeHint" />
+                    </LinearLayout>
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:tag="dim"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="12sp" />
+                        android:layout_marginTop="10dp"
+                        android:clipToPadding="false"
+                        android:scrollbars="none">
+                        <LinearLayout
+                            android:id="@+id/looksStrip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal" />
+                    </HorizontalScrollView>
                 </LinearLayout>
 
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="-16dp"
-                    android:clipToPadding="false"
-                    android:paddingHorizontal="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:scrollbars="none">
-
-                    <LinearLayout
-                        android:id="@+id/looksStrip"
-                        android:layout_width="wrap_content"
+                <LinearLayout style="@style/ThemeSection">
+                    <LinearLayout style="@style/ThemeSectionHead">
+                        <TextView style="@style/ThemeK" android:text="@string/theme_accent_caps" />
+                        <TextView style="@style/ThemeHint" android:text="@string/theme_accent_hint" />
+                    </LinearLayout>
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal" />
-                </HorizontalScrollView>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:baselineAligned="true"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="4dp">
-
-                    <TextView
-                        style="@style/VeilSection"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:text="@string/theme_accent" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:tag="dim"
-                        android:text="@string/theme_accent_hint"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="12sp" />
+                        android:layout_marginTop="10dp"
+                        android:scrollbars="none">
+                        <LinearLayout
+                            android:id="@+id/accentStrip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="4dp" />
+                    </HorizontalScrollView>
                 </LinearLayout>
 
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="-16dp"
-                    android:clipToPadding="false"
-                    android:paddingHorizontal="16dp"
-                    android:paddingTop="8dp"
-                    android:scrollbars="none">
-
-                    <LinearLayout
-                        android:id="@+id/accentRows"
-                        android:layout_width="wrap_content"
+                <LinearLayout style="@style/ThemeSection">
+                    <LinearLayout style="@style/ThemeSectionHead">
+                        <TextView style="@style/ThemeK" android:text="@string/theme_tint_caps" />
+                        <TextView android:id="@+id/tintName" style="@style/ThemeHint" />
+                    </LinearLayout>
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical" />
-                </HorizontalScrollView>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:baselineAligned="true"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="4dp">
-
-                    <TextView
-                        style="@style/VeilSection"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:text="@string/theme_tint" />
-
-                    <TextView
-                        android:id="@+id/tintName"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:tag="dim"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="12sp" />
+                        android:layout_marginTop="10dp"
+                        android:scrollbars="none">
+                        <LinearLayout
+                            android:id="@+id/tintStrip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="4dp" />
+                    </HorizontalScrollView>
                 </LinearLayout>
-
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="-16dp"
-                    android:clipToPadding="false"
-                    android:paddingHorizontal="16dp"
-                    android:paddingTop="8dp"
-                    android:scrollbars="none">
-
-                    <LinearLayout
-                        android:id="@+id/tintRows"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
-                </HorizontalScrollView>
             </LinearLayout>
 
-            <!-- СВЕТ: откуда светит, характер, густота тени. -->
+            <!-- ==================================================== Свет -->
             <LinearLayout
-                android:id="@+id/sectionLight"
+                android:id="@+id/tabLight"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="22dp"
-                    android:baselineAligned="true"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="4dp">
-
-                    <TextView
-                        style="@style/VeilSection"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:text="@string/theme_light" />
-
-                    <TextView
-                        android:id="@+id/lightNote"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:tag="dim"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <FrameLayout
-                    android:id="@+id/lamp"
-                    android:layout_width="match_parent"
-                    android:layout_height="150dp"
-                    android:layout_marginTop="10dp">
-
-                    <GridLayout
-                        android:id="@+id/lampZones"
+                <LinearLayout style="@style/ThemeSection">
+                    <LinearLayout style="@style/ThemeSectionHead">
+                        <TextView style="@style/ThemeK" android:text="@string/theme_light_caps" />
+                        <TextView android:id="@+id/lightNote" style="@style/ThemeHint" />
+                    </LinearLayout>
+                    <FrameLayout
+                        android:id="@+id/lamp"
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:columnCount="3"
-                        android:padding="6dp"
-                        android:rowCount="3" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="bottom"
-                        android:gravity="center"
-                        android:paddingBottom="8dp"
-                        android:tag="dim"
-                        android:text="@string/theme_lamp_hint"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="11sp" />
-                </FrameLayout>
-
-                <LinearLayout
-                    android:id="@+id/kindsRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="22dp"
-                    android:baselineAligned="true"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="4dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="@font/onest_medium"
-                        android:tag="fg"
-                        android:text="@string/theme_depth"
-                        android:textColor="@color/veil_text"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:id="@+id/depthNote"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:tag="dim"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <SeekBar
-                    android:id="@+id/depthSeek"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:max="90" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="2dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="@font/jetbrains_mono"
-                        android:letterSpacing="0.16"
-                        android:tag="dim"
-                        android:text="@string/theme_depth_light"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="9sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/jetbrains_mono"
-                        android:letterSpacing="0.16"
-                        android:tag="dim"
-                        android:text="@string/theme_depth_dark"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="9sp" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- ФОН: свой файл за интерфейсом. Остаётся в приложении и в код темы не входит. -->
-            <LinearLayout
-                android:id="@+id/sectionBg"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="22dp"
-                    android:baselineAligned="true"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="4dp">
-
-                    <TextView
-                        style="@style/VeilSection"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:text="@string/theme_backdrop" />
-
-                    <TextView
-                        android:id="@+id/bgNote"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:tag="dim"
-                        android:textColor="@color/veil_muted"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/bgPick"
-                        style="@style/VeilPill"
-                        android:layout_weight="2"
-                        android:text="@string/theme_backdrop_pick" />
-
-                    <TextView
-                        android:id="@+id/bgDrop"
-                        style="@style/VeilPill"
-                        android:layout_marginStart="6dp"
-                        android:text="@string/theme_backdrop_drop"
-                        android:visibility="gone" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/bgKnobs"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <TextView
-                        style="@style/VeilSection"
-                        android:layout_marginTop="18dp"
-                        android:paddingHorizontal="4dp"
-                        android:text="@string/theme_backdrop_fit" />
-
+                        android:layout_height="150dp"
+                        android:layout_marginTop="10dp">
+                        <GridLayout
+                            android:id="@+id/lampZones"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:columnCount="3"
+                            android:rowCount="3"
+                            android:padding="6dp" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|center_horizontal"
+                            android:layout_marginBottom="8dp"
+                            android:text="@string/theme_lamp_hint"
+                            android:tag="dim"
+                            android:textSize="11sp" />
+                    </FrameLayout>
                     <LinearLayout
-                        android:id="@+id/bgFits"
+                        android:id="@+id/kindsRow"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:orientation="horizontal" />
+                </LinearLayout>
 
+                <LinearLayout style="@style/ThemeSection">
+                    <LinearLayout style="@style/ThemeSectionHead">
+                        <TextView style="@style/ThemeK" android:text="@string/theme_depth_caps" />
+                        <TextView android:id="@+id/depthNote" style="@style/ThemeHint" />
+                    </LinearLayout>
+                    <SeekBar
+                        android:id="@+id/depthSeek"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:max="90" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingHorizontal="4dp">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="@font/mono" android:letterSpacing="0.16" android:tag="dim" android:text="@string/theme_depth_light" android:textSize="9.5sp" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/mono" android:letterSpacing="0.16" android:tag="dim" android:text="@string/theme_depth_dark" android:textSize="9.5sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===================================================== Фон -->
+            <LinearLayout
+                android:id="@+id/tabBg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout style="@style/ThemeSection">
+                    <LinearLayout style="@style/ThemeSectionHead">
+                        <TextView style="@style/ThemeK" android:text="@string/theme_pattern_caps" />
+                        <TextView style="@style/ThemeHint" android:text="@string/theme_pattern_hint" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/patternRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/ThemeSection">
+                    <LinearLayout style="@style/ThemeSectionHead">
+                        <TextView style="@style/ThemeK" android:text="@string/theme_backdrop_caps" />
+                        <TextView android:id="@+id/bgNote" style="@style/ThemeHint" />
+                    </LinearLayout>
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp"
-                        android:baselineAligned="true"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="4dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/onest_medium"
-                            android:tag="fg"
-                            android:text="@string/theme_backdrop_dim"
-                            android:textColor="@color/veil_text"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/bgDimNote"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:tag="dim"
-                            android:textColor="@color/veil_muted"
-                            android:textSize="12sp" />
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+                        <TextView android:id="@+id/bgPick" style="@style/VeilPill" android:layout_marginEnd="6dp" />
+                        <TextView android:id="@+id/bgDrop" style="@style/VeilPill" android:text="@string/theme_backdrop_drop" />
                     </LinearLayout>
-
-                    <SeekBar
-                        android:id="@+id/bgDimSeek"
+                    <LinearLayout
+                        android:id="@+id/bgKnobs"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:max="95" />
+                        android:orientation="vertical"
+                        android:visibility="gone">
+                        <TextView style="@style/ThemeK" android:layout_marginTop="14dp" android:text="@string/theme_backdrop_fit" />
+                        <LinearLayout
+                            android:id="@+id/bgFits"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="horizontal" />
+                        <LinearLayout style="@style/ThemeSectionHead" android:layout_marginTop="14dp">
+                            <TextView style="@style/ThemeK" android:text="@string/theme_backdrop_dim" />
+                            <TextView android:id="@+id/bgDimNote" style="@style/ThemeHint" />
+                        </LinearLayout>
+                        <SeekBar
+                            android:id="@+id/bgDimSeek"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:max="95" />
+                    </LinearLayout>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingExtra="3dp"
+                        android:text="@string/theme_backdrop_note"
+                        android:tag="dim"
+                        android:textSize="12sp" />
                 </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:lineSpacingMultiplier="1.3"
-                    android:paddingHorizontal="4dp"
-                    android:tag="dim"
-                    android:text="@string/theme_backdrop_note"
-                    android:textColor="@color/veil_muted"
-                    android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- ФОРМА: карточки, скругления, плотность, кнопка, свечение. -->
+            <!-- =================================================== Форма -->
             <LinearLayout
-                android:id="@+id/sectionShape"
+                android:id="@+id/tabShape"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <TextView
-                    style="@style/VeilSection"
-                    android:layout_marginTop="22dp"
-                    android:paddingHorizontal="4dp"
-                    android:text="@string/theme_cards" />
-
-                <LinearLayout
-                    android:id="@+id/cardRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal" />
-
-                <TextView
-                    style="@style/VeilSection"
-                    android:layout_marginTop="18dp"
-                    android:paddingHorizontal="4dp"
-                    android:text="@string/theme_radius" />
-
-                <LinearLayout
-                    android:id="@+id/radiusRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal" />
-
-                <TextView
-                    style="@style/VeilSection"
-                    android:layout_marginTop="18dp"
-                    android:paddingHorizontal="4dp"
-                    android:text="@string/theme_density" />
-
-                <LinearLayout
-                    android:id="@+id/densityRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal" />
-
-                <TextView
-                    style="@style/VeilSection"
-                    android:layout_marginTop="18dp"
-                    android:paddingHorizontal="4dp"
-                    android:text="@string/theme_button" />
-
-                <LinearLayout
-                    android:id="@+id/buttonRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal" />
-
-                <TextView
-                    style="@style/VeilSection"
-                    android:layout_marginTop="18dp"
-                    android:paddingHorizontal="4dp"
-                    android:text="@string/theme_glow" />
-
-                <LinearLayout
-                    android:id="@+id/glowRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal" />
+                <LinearLayout style="@style/ThemeSection">
+                    <TextView style="@style/ThemeK" android:text="@string/theme_cards_caps" />
+                    <LinearLayout android:id="@+id/cardRow" style="@style/ThemeRow" />
+                </LinearLayout>
+                <LinearLayout style="@style/ThemeSection">
+                    <TextView style="@style/ThemeK" android:text="@string/theme_radius_caps" />
+                    <LinearLayout android:id="@+id/radiusRow" style="@style/ThemeRow" />
+                </LinearLayout>
+                <LinearLayout style="@style/ThemeSection">
+                    <TextView style="@style/ThemeK" android:text="@string/theme_density_caps" />
+                    <LinearLayout android:id="@+id/densityRow" style="@style/ThemeRow" />
+                </LinearLayout>
+                <LinearLayout style="@style/ThemeSection">
+                    <TextView style="@style/ThemeK" android:text="@string/theme_button_caps" />
+                    <LinearLayout android:id="@+id/buttonRow" style="@style/ThemeRow" />
+                </LinearLayout>
+                <LinearLayout style="@style/ThemeSection">
+                    <TextView style="@style/ThemeK" android:text="@string/theme_glow_caps" />
+                    <LinearLayout android:id="@+id/glowRow" style="@style/ThemeRow" />
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- ЕЩЁ: профили, код темы, случайная, сброс. -->
+            <!-- ===================================================== Ещё -->
             <LinearLayout
-                android:id="@+id/sectionMore"
+                android:id="@+id/tabMore"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- Профили и код темы: то, что уезжает другу и в другие клиенты. -->
-                <TextView
-                    style="@style/VeilSection"
-                    android:layout_marginTop="22dp"
-                    android:paddingHorizontal="4dp"
-                    android:text="@string/theme_profiles" />
+                <LinearLayout style="@style/ThemeSection">
+                    <LinearLayout style="@style/ThemeSectionHead">
+                        <TextView style="@style/ThemeK" android:text="@string/theme_logo_caps" />
+                        <TextView android:id="@+id/logoNote" style="@style/ThemeHint" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/logoRow" style="@style/ThemeRow" />
+                </LinearLayout>
 
-                <LinearLayout
-                    android:id="@+id/profileRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal" />
+                <LinearLayout style="@style/ThemeSection">
+                    <TextView style="@style/ThemeK" android:text="@string/theme_font_caps" />
+                    <LinearLayout android:id="@+id/fontRow" style="@style/ThemeRow" />
+                </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:orientation="horizontal">
+                <LinearLayout style="@style/ThemeSection">
+                    <LinearLayout style="@style/ThemeSectionHead">
+                        <TextView style="@style/ThemeK" android:text="@string/theme_profiles_caps" />
+                        <TextView style="@style/ThemeHint" android:text="@string/theme_profiles_hint" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/profileRow" style="@style/ThemeRow" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
+                        <TextView android:id="@+id/profileSave" style="@style/VeilPill" android:layout_marginEnd="6dp" android:text="@string/theme_save_here" />
+                        <TextView android:id="@+id/themeRandom" style="@style/VeilPill" android:text="@string/theme_random" />
+                    </LinearLayout>
+                </LinearLayout>
 
+                <LinearLayout style="@style/ThemeSection">
+                    <TextView style="@style/ThemeK" android:text="@string/theme_code_caps" />
                     <TextView
-                        android:id="@+id/profileSave"
-                        style="@style/VeilPill"
-                        android:text="@string/theme_save_here" />
-
+                        android:id="@+id/themeCode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="@font/mono"
+                        android:padding="12dp"
+                        android:tag="fg"
+                        android:textIsSelectable="false"
+                        android:textSize="12sp" />
+                    <EditText
+                        android:id="@+id/codeInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="@font/mono"
+                        android:hint="@string/theme_code_placeholder"
+                        android:imeOptions="actionDone"
+                        android:importantForAutofill="no"
+                        android:inputType="textNoSuggestions"
+                        android:padding="12dp"
+                        android:singleLine="true"
+                        android:tag="fg"
+                        android:textSize="12sp" />
                     <TextView
-                        android:id="@+id/themeRandom"
-                        style="@style/VeilPill"
-                        android:layout_marginStart="6dp"
-                        android:text="@string/theme_random" />
+                        android:id="@+id/codeBad"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:tag="fail"
+                        android:text="@string/theme_code_bad"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+                    <TextView android:id="@+id/themeReset" style="@style/VeilPill" android:layout_marginTop="10dp" android:text="@string/theme_reset" />
                 </LinearLayout>
 
                 <TextView
-                    style="@style/VeilSection"
-                    android:layout_marginTop="18dp"
-                    android:paddingHorizontal="4dp"
-                    android:text="@string/theme_code" />
-
-                <TextView
-                    android:id="@+id/themeCode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:ellipsize="end"
-                    android:fontFamily="@font/jetbrains_mono"
-                    android:letterSpacing="0.04"
-                    android:maxLines="1"
-                    android:paddingHorizontal="14dp"
-                    android:paddingVertical="12dp"
-                    android:tag="fg"
-                    android:textColor="@color/veil_text"
-                    android:textSize="12sp" />
-
-                <EditText
-                    android:id="@+id/codeInput"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:fontFamily="@font/jetbrains_mono"
-                    android:hint="@string/theme_code_placeholder"
-                    android:imeOptions="actionDone"
-                    android:importantForAutofill="no"
-                    android:inputType="textNoSuggestions|textVisiblePassword"
-                    android:maxLines="1"
-                    android:paddingHorizontal="14dp"
-                    android:paddingVertical="11dp"
-                    android:tag="fg"
-                    android:textColor="@color/veil_text"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/codeBad"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:paddingHorizontal="4dp"
-                    android:tag="fail"
-                    android:text="@string/theme_code_bad"
-                    android:textSize="12sp"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:lineSpacingMultiplier="1.3"
-                    android:paddingHorizontal="4dp"
-                    android:tag="dim"
+                    android:layout_marginTop="14dp"
+                    android:gravity="center"
+                    android:lineSpacingExtra="3dp"
+                    android:paddingHorizontal="8dp"
                     android:text="@string/theme_note"
-                    android:textColor="@color/veil_muted"
+                    android:tag="dim"
                     android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/themeReset"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:background="@drawable/bg_pill"
-                    android:foreground="?attr/selectableItemBackground"
-                    android:paddingHorizontal="14dp"
-                    android:paddingVertical="8dp"
-                    android:tag="chip"
-                    android:text="@string/theme_reset"
-                    android:textColor="@color/veil_muted"
-                    android:textSize="13sp" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

@@ -45,6 +45,10 @@
         <include
             android:id="@+id/languageScreen"
             layout="@layout/screen_language" />
+
+        <include
+            android:id="@+id/permsScreen"
+            layout="@layout/screen_perms" />
     </FrameLayout>
 
     <include

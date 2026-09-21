@@ -27,9 +27,9 @@ import kotlin.math.sin
  * длиной |w·sin| + |h·cos|, цвета — от начала к концу. Так работает
  * linear-gradient, и так же здесь.
  */
-class Backdrop(private val t: Theme) : Drawable() {
+class Backdrop(private val t: Theme, private val pattern: String = io.marvia.android.Paint.style.pattern, private val ink: Int = 12) : Drawable() {
 
-    private val brush = Paint(Paint.ANTI_ALIAS_FLAG or Paint.DITHER_FLAG)
+    private val brush = Paint(Paint.ANTI_ALIAS_FLAG)
     private var w = 0f
     private var h = 0f
 
@@ -107,8 +107,34 @@ class Backdrop(private val t: Theme) : Drawable() {
         val b = bounds
         canvas.drawRect(b, brush)
         if (t.kind != "flat") canvas.drawRect(b, grain)
-        drawDots(canvas)
+        // Узор из цвета текста, едва заметный: фон перестаёт быть пустым, но
+        // не спорит с содержимым. Плитка, повторённая шейдером: рисовать
+        // тысячи точек на каждый кадр дорого, а плитка — один вызов. Точки,
+        // сетка, кольца или штрих — как в макете; «ровный» — без узора.
+        if (pattern != Store.PATTERN_NONE) canvas.drawRect(b, dots)
     }
+
+    /** Плотность экрана — у Drawable своей нет, берём системную. Объявлена до узора: он её читает при создании. */
+    private val density = android.content.res.Resources.getSystem().displayMetrics.density
+
+    // Плитка собирается лениво: у «ровного» фона и у карточек-превью узора
+    // нет, а их на «Теме» десятки — по битмапу на каждую было бы зря.
+    private val dots: Paint by lazy { Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = androidx.core.graphics.ColorUtils.setAlphaComponent(t.fg, ink) }
+        val size = ((when (pattern) { "grid" -> 28; "rings" -> 82; "lines" -> 20; else -> 22 }) * density).toInt().coerceAtLeast(2)
+        val tile = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = Canvas(tile)
+        when (pattern) {
+            "grid" -> { c.drawRect(0f, 0f, size.toFloat(), density, ink); c.drawRect(0f, 0f, density, size.toFloat(), ink) }
+            "rings" -> {
+                ink.style = Paint.Style.STROKE; ink.strokeWidth = density
+                c.drawCircle(size / 2f, size / 2f, size * 0.49f, ink); c.drawCircle(size / 2f, size / 2f, size * 0.24f, ink)
+            }
+            "lines" -> { ink.strokeWidth = density; c.drawLine(0f, size.toFloat(), size.toFloat(), 0f, ink) }
+            else -> c.drawCircle(size / 2f, size / 2f, density, ink)
+        }
+        shader = android.graphics.BitmapShader(tile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
+    } }
 
     /**
      * grain — зерно поверх градиента: плёночный шум в пару единиц яркости.
@@ -118,8 +144,8 @@ class Backdrop(private val t: Theme) : Drawable() {
      * на аппаратном холсте шейдеры не трогает, и кольца оставались — на
      * эмуляторе особенно. Шум ломает границы ступеней, и глаз перестаёт их
      * собирать в линии; сам он ниже порога заметности. Плитка 128×128
-     * повторяется, а не считается на каждый пиксель: фон рисуется на каждом
-     * кадре анимаций.
+     * общая на все фоны и повторяется, а не считается на каждый пиксель:
+     * фон рисуется на каждом кадре анимаций.
      */
     private val grain = Paint().apply {
         shader = BitmapShader(grainTile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
@@ -139,34 +165,6 @@ class Backdrop(private val t: Theme) : Drawable() {
             Bitmap.createBitmap(px, n, n, Bitmap.Config.ARGB_8888)
         }
     }
-
-    /**
-     * drawDots — точечная сетка из макета: точка в 1dp через каждые 22dp,
-     * цветом текста на 5%. Она едва видна и нужна ровно за этим: плоский
-     * градиент без неё читается как пустота, а с ней — как поверхность.
-     */
-    private fun drawDots(canvas: Canvas) {
-        val dp = density
-        if (dp <= 0f) return
-        dots.color = Look.withAlpha(t.fg, 0.05)
-        val step = 22 * dp
-        val r = 0.7f * dp
-        var y = bounds.top + step / 2
-        while (y < bounds.bottom) {
-            var x = bounds.left + step / 2
-            while (x < bounds.right) {
-                canvas.drawCircle(x, y, r, dots)
-                x += step
-            }
-            y += step
-        }
-    }
-
-    private val dots = Paint(Paint.ANTI_ALIAS_FLAG)
-
-    /** density — плотность экрана; у Drawable нет контекста, берём системную. */
-    private val density: Float
-        get() = android.content.res.Resources.getSystem().displayMetrics.density
 
     override fun setAlpha(alpha: Int) {
         brush.alpha = alpha

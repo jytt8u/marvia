@@ -11,12 +11,19 @@
     показывает не тот — поэтому фразы здесь построены без него.
 -->
 <resources>
+    <string name="hero_subtitle">Your personal connection</string>
+    <string name="power_hint_start">Tap the button to connect</string>
+    <string name="power_hint_cancel">Establishing your connection</string>
+    <string name="power_hint_stop">Tap the button to disconnect</string>
     <string name="app_name">Marvia</string>
 
     <!-- Нижняя панель: три экрана и ничего больше. -->
     <string name="nav_connect">Tunnel</string>
     <string name="nav_servers">Servers</string>
     <string name="nav_more">Settings</string>
+    <string name="app_name_caps" translatable="false">MARVIA</string>
+    <string name="hero_tagline">VP1 · OWN TUNNEL · %1$s</string>
+    <string name="connect_choosing">picking the fastest node</string>
     <string name="nav_stats">Usage</string>
     <string name="nav_theme">Theme</string>
 
@@ -35,11 +42,21 @@
     <string name="language_continue_en" translatable="false">Continue</string>
     <string name="settings_language">Language</string>
 
+    <string name="perms_title">What you will need</string>
+    <string name="perms_subtitle">Three permissions from Android. Without the first one the tunnel cannot work; the other two keep it awake and let it tell you what is going on.</string>
+    <string name="perms_vpn">Create a VPN connection</string>
+    <string name="perms_vpn_why">the tunnel is impossible without it — that is how Android works</string>
+    <string name="perms_notify">Show notifications</string>
+    <string name="perms_notify_why">country and speed in the shade, a warning if the node goes silent</string>
+    <string name="perms_battery">Do not put to sleep in the background</string>
+    <string name="perms_battery_why">otherwise the system may kill the tunnel in an hour</string>
+    <string name="perms_allow">Allow</string>
+    <string name="perms_note">Android will show its own prompt. Notifications and battery can be skipped and enabled later in the phone settings.</string>
+    <string name="perms_continue">Continue</string>
+    <string name="perms_vpn_first">Allow the VPN first</string>
     <string name="status_off">Disconnected</string>
     <string name="status_connecting">Connecting…</string>
     <string name="status_on">Connected</string>
-    <!-- Под надписью в шапке, когда её раскрыли нажатием на знак. -->
-    <string name="hero_version">VP1 · your own tunnel · %1$s</string>
     <string name="status_failed">Could not connect</string>
 
     <string name="detail_connecting">Picking the fastest node</string>
@@ -78,24 +95,27 @@
     <string name="stats_subtitle">this phone, through the tunnel</string>
     <string name="stats_range_week">7 d</string>
     <string name="stats_range_month">30 d</string>
-    <string name="stats_dial_week">Total for the week</string>
-    <string name="stats_dial_month">Total for 30 days</string>
-    <string name="stats_average">%1$s a day on average</string>
+    <string name="stats_dial_week">TOTAL THIS WEEK</string>
+    <string name="stats_dial_month">TOTAL, 30 DAYS</string>
+    <string name="stats_per_day">%1$s a day on average</string>
     <string name="stats_peak">peak · %1$s</string>
-    <string name="stats_today_word">today</string>
-    <string name="stats_days_ago">%1$d days ago</string>
-    <string name="stats_left_days">left · %1$d days</string>
-    <string name="stats_left_word">left</string>
-    <string name="stats_no_limit">no limit</string>
-    <string name="stats_no_limit_until">no limit · until %1$s</string>
-    <string name="stats_days_in_period">days in the period</string>
-    <string name="stats_line_week">The week</string>
-    <string name="stats_line_month">Thirty days</string>
-    <string name="stats_line_note">most of it — %1$s, %2$s</string>
-    <string name="stats_places">Through which countries</string>
-    <string name="stats_share">%1$d%% · %2$s</string>
+    <string name="stats_days_in_range">days in range</string>
+    <string name="stats_range_title_week">Week</string>
+    <string name="stats_range_title_month">Thirty days</string>
+    <string name="stats_peak_line">most of it — %1$s, %2$s</string>
+    <string name="stats_no_traffic">nothing has gone through the tunnel yet</string>
+    <string name="stats_quota">%1$s of %2$s</string>
+    <string name="stats_quota_left">left</string>
+    <string name="stats_quota_left_days">left · %1$s</string>
+    <string name="stats_unlimited">no limit</string>
+    <string name="stats_unlimited_until">no limit · until %1$s</string>
+    <string name="stats_place_share">%1$d%% · %2$s</string>
+    <string name="stats_week_peak">peak — %1$s, %2$02d:00</string>
+    <string name="stats_today_low">today</string>
+    <string name="stats_today_caps">TODAY</string>
+    <string name="stats_days_ago">%1$d d ago</string>
+    <string name="stats_places">Which countries</string>
     <string name="stats_week">The week by hours</string>
-    <string name="stats_week_peak">peak — %1$s, %2$d:00</string>
     <string name="stats_note">This is what one phone passed through the tunnel. Another device on the same key counts its own.</string>
     <string-array name="weekdays_short">
         <item>MON</item>
@@ -129,6 +149,34 @@
 
     <!-- Экран выбора страны. -->
     <string name="servers_title">Servers</string>
+    <string name="servers_refresh_all">Refresh all subscriptions</string>
+    <string name="servers_refresh">Refresh subscription</string>
+    <string name="servers_more">More actions</string>
+    <string name="servers_use">Make active</string>
+    <string name="servers_collapsed">collapsed</string>
+    <string name="servers_stale">The panel did not answer — showing yesterday’s list</string>
+    <string name="servers_no_subs">No subscriptions yet. Tap “+” and add the marvia:// link from whoever gave you access.</string>
+    <string name="servers_unlimited">∞</string>
+    <string name="servers_quota">%1$s / %2$s</string>
+    <string name="servers_days_left">%1$s left</string>
+    <string name="servers_no_term">no expiry</string>
+    <string name="servers_age_now">just now</string>
+    <string name="servers_age_min">%1$d min</string>
+    <string name="servers_age_hours">%1$d h</string>
+    <string name="servers_age_days">%1$d d</string>
+    <string name="servers_measuring">measuring…</string>
+    <string name="servers_auto_fastest">fastest right now — %1$s</string>
+    <string name="servers_auto_idle">the fastest node of the active subscription</string>
+    <string name="node_picked">your pick</string>
+    <string name="node_traffic_now">traffic goes here now</string>
+    <plurals name="servers_providers">
+        <item quantity="one">%1$d provider</item>
+        <item quantity="other">%1$d providers</item>
+    </plurals>
+    <plurals name="servers_count">
+        <item quantity="one">%1$d server</item>
+        <item quantity="other">%1$d servers</item>
+    </plurals>
     <string name="servers_measure">Refresh</string>
     <string name="servers_auto">Automatic</string>
     <string name="servers_auto_mark">⚡</string>
@@ -147,23 +195,14 @@
     <string name="servers_sub_bad">That is not a marvia:// link</string>
     <string name="servers_sub_remove">Remove</string>
     <string name="servers_sub_remove_ask">Remove the subscription %1$s?</string>
-    <string name="servers_sub_use">Make it the working one</string>
-    <string name="servers_sub_actions">Subscription actions</string>
-    <string name="servers_sub_collapsed">collapsed · a tap switches to it</string>
-    <string name="servers_sub_days_left">%1$d days left</string>
-    <plurals name="servers_subs_count">
-        <item quantity="one">%d subscription</item>
-        <item quantity="other">%d subscriptions</item>
-    </plurals>
-    <plurals name="servers_nodes_count">
-        <item quantity="one">%d server</item>
-        <item quantity="other">%d servers</item>
-    </plurals>
-    <string name="servers_empty">Servers are visible from inside the tunnel.</string>
+    <string name="servers_manual">Pick by hand</string>
+    <string name="servers_empty">Countries are visible from inside the tunnel.</string>
+    <string name="servers_group_other">Other</string>
     <string name="servers_failed">Could not move: %1$s</string>
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
-    <string name="node_ping">%1$d ms</string>
+    <string name="node_ping">Response: %1$d ms</string>
+    <string name="node_ms">%1$d ms</string>
     <string name="node_ping_none">Response not measured</string>
     <string name="node_setup">Connection: %1$d ms</string>
     <string name="node_ok">works</string>
@@ -183,7 +222,6 @@
     <string name="bypass_preset">Government services and banks</string>
     <string name="bypass_restart">Changes apply on the next connection</string>
     <string name="bypass_loading">Looking at what is installed…</string>
-    <string name="bypass_search">Find an app</string>
 
     <!--
         Местные сайты мимо туннеля. Предлагаем при первом удачном подключении:
@@ -205,6 +243,8 @@
     <string name="settings_autostart_off_saved">After a reboot you will have to turn it on by hand</string>
     <string name="settings_russian">Local sites outside the tunnel</string>
     <string name="settings_russian_sub">banks and government services complain otherwise</string>
+    <string name="settings_russian_none">the list is not downloaded yet — the panel was unreachable</string>
+    <string name="settings_russian_count">%1$d networks in the list · applies on the next connection</string>
     <string name="settings_always_on">Always-on VPN in the system</string>
     <string name="settings_always_on_sub">the system brings the tunnel up earlier than we can</string>
     <string name="settings_always_on_missing">This phone has no such settings screen</string>
@@ -212,7 +252,7 @@
     <string name="settings_key_added">added on %1$s</string>
     <string name="settings_update">New version %1$s available</string>
     <string name="settings_update_sub">From the server of whoever gave you access, not from a store</string>
-    <string name="settings_about">About</string>
+    <string name="settings_about">About us</string>
     <string name="about_body">%1$s, version %2$s</string>
     <!--
         Экран темы. Названия пресетов — по ключу из таблицы internal/look:
@@ -220,33 +260,61 @@
         без названия на обоих языках.
     -->
     <string name="theme_title">Theme</string>
-    <string name="theme_hint">Everything applies at once</string>
-    <string name="theme_looks">Ready looks</string>
-    <string name="theme_accent">Accent</string>
-    <string name="theme_accent_hint">button, marks, switches</string>
-    <string name="theme_look_custom">custom</string>
-    <string name="theme_tint_as_accent">same as accent</string>
-    <string name="theme_tint_own">custom</string>
-    <string name="theme_depth_light">Light</string>
-    <string name="theme_depth_dark">Black</string>
-    <!-- Разделы ручек темы. -->
-    <string name="theme_tab_color">Colour</string>
+    <string name="theme_tab_color">Color</string>
     <string name="theme_tab_light">Light</string>
-    <string name="theme_tab_bg">Backdrop</string>
+    <string name="theme_tab_bg">Background</string>
     <string name="theme_tab_shape">Shape</string>
     <string name="theme_tab_more">More</string>
-    <!-- Какой экран показывает телефон-предпросмотр. -->
+    <string name="theme_hint_color">the color shows on the button, the mark and the tab bar</string>
+    <string name="theme_hint_light">light is the background of the whole screen</string>
+    <string name="theme_hint_bg">pattern and your own photo go under everything</string>
+    <string name="theme_hint_shape">shape is cards, the button and spacing</string>
+    <string name="theme_hint_more">mark, font and saved looks</string>
     <string name="theme_pv_main">Home</string>
     <string name="theme_pv_settings">Settings</string>
     <string name="theme_pv_servers">Servers</string>
-    <!-- Образцы строк внутри предпросмотра: узнаваемо, но не про продавца. -->
-    <string name="theme_pv_apps_note">outside the tunnel: 3</string>
-    <string name="theme_pv_lan_note">printer, TV, router</string>
-    <string name="theme_pv_servers_note">1 subscription · 6 servers</string>
-    <string name="theme_pv_auto_note">fastest — Finland</string>
-    <string name="theme_pv_provider">Access from Alexey</string>
-    <string name="theme_pv_provider_note">6 servers · 24 days left</string>
-    <string name="theme_pv_node_current">Helsinki · traffic goes here now</string>
+    <string name="theme_looks_caps">READY LOOKS</string>
+    <string name="theme_accent_caps">ACCENT</string>
+    <string name="theme_accent_hint">button, marks, switches</string>
+    <string name="theme_tint_caps">TINT OF THE LIT SIDE</string>
+    <string name="theme_tint_auto">same as accent</string>
+    <string name="theme_light_caps">LIGHT</string>
+    <string name="theme_depth_caps">SHADOW DEPTH</string>
+    <string name="theme_depth_light">LIGHT</string>
+    <string name="theme_depth_dark">BLACK</string>
+    <string name="theme_pattern_caps">BACKGROUND PATTERN</string>
+    <string name="theme_pattern_hint">barely visible, so the background is not empty</string>
+    <string name="pattern_none">Plain</string>
+    <string name="pattern_dots">Dots</string>
+    <string name="pattern_grid">Grid</string>
+    <string name="pattern_rings">Rings</string>
+    <string name="pattern_lines">Lines</string>
+    <string name="theme_backdrop_caps">YOUR OWN BACKGROUND</string>
+    <string name="theme_backdrop_none">a photo from the gallery under the interface</string>
+    <string name="theme_backdrop_has">photo chosen</string>
+    <string name="theme_cards_caps">CARDS</string>
+    <string name="theme_radius_caps">CORNERS</string>
+    <string name="theme_density_caps">DENSITY</string>
+    <string name="theme_button_caps">MAIN BUTTON</string>
+    <string name="theme_glow_caps">GLOW</string>
+    <string name="theme_logo_caps">MARK IN THE HEADER</string>
+    <string name="logo_marvia">Marvia</string>
+    <string name="logo_custom">Custom</string>
+    <string name="logo_none">Hide</string>
+    <string name="theme_logo_marvia">the ribbon M in the accent color</string>
+    <string name="theme_logo_custom">your own picture from the gallery</string>
+    <string name="theme_logo_none">header without a mark</string>
+    <string name="theme_font_caps">FONT</string>
+    <string name="font_onest">Onest</string>
+    <string name="font_manrope">Manrope</string>
+    <string name="font_geologica">Geologica</string>
+    <string name="theme_profiles_caps">MY PROFILES</string>
+    <string name="theme_profiles_hint">an empty slot remembers the current look</string>
+    <string name="theme_code_caps">THEME CODE · SHARE WITH A FRIEND</string>
+    <string name="theme_hint">Everything applies at once</string>
+    <string name="theme_looks">Ready looks</string>
+    <string name="theme_looks_hint">the whole screen in one tap</string>
+    <string name="theme_accent">Accent</string>
     <string name="theme_density">Density</string>
     <string name="theme_note">The theme is kept on this phone and sent nowhere. The seller panel and the desktop app use the same colour table.</string>
     <string name="theme_reset">Back to grey</string>
@@ -388,17 +456,36 @@
     -->
     <string name="more_title">Settings</string>
     <string name="more_sub">Marvia for Android · %1$s</string>
-    <string name="more_apps_title">Proxy by app</string>
-    <string name="more_logs_title">Connection log</string>
-    <string name="more_apps_sub">apps and Russian sites outside the tunnel</string>
-    <string name="more_logs_value">no site addresses</string>
+    <string name="more_back">Back</string>
+    <string name="more_apps_card">Per-app proxy</string>
+    <string name="more_apps_card_sub">apps and Russian sites outside the tunnel</string>
+    <string name="more_group_conn">CONNECTION</string>
+    <string name="more_group_routes">ROUTES AND DNS</string>
+    <string name="more_group_app">APP</string>
+    <string name="more_group_apps">APPS</string>
+    <string name="more_logs_row">Connection log</string>
+    <string name="more_logs_row_sub">no site addresses</string>
+    <string name="more_reset">Reset everything</string>
+    <string name="more_reset_sub">subscriptions, theme, settings</string>
+    <string name="more_reset_ask">Reset everything? Subscriptions, theme and settings will be gone and the tunnel will stop. You will need to add the access link again.</string>
+    <string name="more_reset_yes">Reset</string>
+    <string name="about_sub">who makes Marvia, version %1$s · VP1</string>
+    <string name="apps_search">Find an app</string>
+    <string name="apps_summary_names">outside the tunnel: %1$d — %2$s</string>
+    <string name="more_conn">Connection</string>
+    <string name="more_apps">Apps</string>
+    <string name="more_logs">Log</string>
+    <string name="more_conn_title">Connection</string>
+    <string name="more_conn_sub">Protection, DNS, routing</string>
+    <string name="more_apps_title">Apps</string>
+    <string name="more_logs_title">Log</string>
     <plurals name="more_logs_sub">
         <item quantity="one">last %1$d line</item>
         <item quantity="other">last %1$d lines</item>
     </plurals>
     <string name="more_logs_sub_empty">the log is empty so far</string>
-    <string name="conn_group_protect">Connection</string>
-    <string name="conn_group_net">Routes and DNS</string>
+    <string name="conn_group_protect">Protection</string>
+    <string name="conn_group_net">Network</string>
     <string name="conn_group_app">App</string>
     <string name="conn_dns">DNS</string>
     <string name="conn_dns_sub">resolver inside the tunnel</string>
@@ -427,6 +514,8 @@
     </plurals>
     <string name="apps_preset_none">Nothing to add: none of them is installed, or all are already checked</string>
 
+    <string name="log_crashed">The last run crashed: %1$s</string>
+    <string name="log_crash_header">Crash, stack:</string>
     <string name="logs_all">All</string>
     <string name="logs_info">Info</string>
     <string name="logs_warn">Warnings</string>
@@ -452,8 +541,13 @@
     <string name="stats_speed">Speed</string>
     <string name="stats_mbps">%1$s Mbps</string>
     <string name="connection_warning_details">Some requests failed · View details</string>
+    <string name="theme_show_all">All themes</string>
+    <string name="theme_fewer">Show fewer</string>
     <string name="theme_preview">Preview</string>
     <!-- Образец строки страны в предпросмотре: узнаваемо, но не про продавца. -->
     <string name="theme_preview_country">Finland</string>
+    <string name="theme_preview_provider">Access from Alex</string>
+    <string name="theme_look_custom">custom</string>
     <string name="theme_preview_place">Helsinki · 33 ms</string>
+    <string name="theme_advanced">More appearance settings</string>
 </resources>

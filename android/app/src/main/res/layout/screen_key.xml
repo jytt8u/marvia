@@ -8,58 +8,38 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:paddingHorizontal="26dp"
-        android:paddingTop="44dp"
+        android:paddingHorizontal="22dp"
+        android:paddingTop="48dp"
         android:paddingBottom="24dp">
 
-        <!-- Шапка первого запуска: знак с надписью и две точки шагов. -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <io.marvia.android.MarviaLogoView
-                android:layout_width="38dp"
-                android:layout_height="30dp"
-                android:layout_marginEnd="10dp"
-                android:contentDescription="@null" />
+        <FrameLayout
+            android:layout_width="62dp"
+            android:layout_height="62dp"
+            android:background="@drawable/bg_accent_button"
+            android:tag="btn">
 
             <ImageView
-                android:layout_width="0dp"
-                android:layout_height="17dp"
-                android:layout_weight="1"
-                android:adjustViewBounds="true"
-                android:contentDescription="@string/app_name"
-                android:scaleType="fitStart"
-                android:src="@drawable/ic_wordmark"
-                android:tag="icon:fg"
-                app:tint="@color/veil_text" />
-
-            <View
-                android:layout_width="6dp"
-                android:layout_height="6dp"
-                android:background="@drawable/bg_pill"
-                android:tag="line" />
-
-            <View
-                android:layout_width="22dp"
-                android:layout_height="6dp"
-                android:layout_marginStart="6dp"
-                android:background="@drawable/bg_pill"
-                android:tag="fill" />
-        </LinearLayout>
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_mark"
+                android:tag="icon:accFg"
+                app:tint="@color/veil_on_accent" />
+        </FrameLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="56dp"
-            android:letterSpacing="-0.01"
+            android:layout_marginTop="22dp"
+            android:gravity="center"
+            android:letterSpacing="-0.02"
             android:text="@string/key_title"
             android:tag="fg"
             android:textColor="@color/veil_text"
-            android:textSize="27sp"
+            android:textSize="25sp"
             android:textStyle="bold" />
 
         <LinearLayout

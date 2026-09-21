@@ -1,20 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="hero_subtitle">Ваше личное подключение</string>
+    <string name="power_hint_start">Нажмите на кнопку, чтобы подключиться</string>
+    <string name="power_hint_cancel">Устанавливаем соединение</string>
+    <string name="power_hint_stop">Нажмите на кнопку, чтобы отключиться</string>
     <string name="app_name">Marvia</string>
 
     <!-- Нижняя панель: три экрана и ничего больше. -->
     <string name="nav_connect">Туннель</string>
     <string name="nav_servers">Серверы</string>
     <string name="nav_more">Настройки</string>
+    <string name="hero_tagline">VP1 · СВОЙ ТУННЕЛЬ · %1$s</string>
+    <string name="connect_choosing">выбираю самую быструю ноду</string>
     <string name="nav_stats">Расход</string>
     <string name="nav_theme">Тема</string>
     <string name="settings_language">Язык</string>
 
+    <string name="perms_title">Что понадобится</string>
+    <string name="perms_subtitle">Три разрешения от Android. Без первого туннель не заработает, остальные два — чтобы он не засыпал и говорил, что с ним.</string>
+    <string name="perms_vpn">Создавать VPN-подключение</string>
+    <string name="perms_vpn_why">без этого туннель невозможен — так устроен Android</string>
+    <string name="perms_notify">Показывать уведомления</string>
+    <string name="perms_notify_why">страна и скорость в шторке, предупреждение, если нода замолчала</string>
+    <string name="perms_battery">Не усыплять в фоне</string>
+    <string name="perms_battery_why">иначе система может убить туннель через час</string>
+    <string name="perms_allow">Разрешить</string>
+    <string name="perms_note">Android покажет свой запрос. Уведомления и батарею можно пропустить и включить потом в настройках телефона.</string>
+    <string name="perms_continue">Продолжить</string>
+    <string name="perms_vpn_first">Сначала разрешите VPN</string>
     <string name="status_off">Отключено</string>
     <string name="status_connecting">Подключаюсь…</string>
     <string name="status_on">Подключено</string>
-    <!-- Под надписью в шапке, когда её раскрыли нажатием на знак. -->
-    <string name="hero_version">VP1 · свой туннель · %1$s</string>
     <string name="status_failed">Не подключилось</string>
 
     <string name="detail_connecting">Выбираем доступный сервер</string>
@@ -55,25 +71,28 @@
     <string name="stats_subtitle">этот телефон, через туннель</string>
     <string name="stats_range_week">7 дн</string>
     <string name="stats_range_month">30 дн</string>
-    <string name="stats_dial_week">Всего за неделю</string>
-    <string name="stats_dial_month">Всего за 30 дней</string>
-    <string name="stats_average">в среднем %1$s в день</string>
+    <string name="stats_dial_week">ВСЕГО ЗА НЕДЕЛЮ</string>
+    <string name="stats_dial_month">ВСЕГО ЗА 30 ДНЕЙ</string>
+    <string name="stats_per_day">в среднем %1$s в день</string>
     <string name="stats_peak">пик · %1$s</string>
-    <string name="stats_today_word">сегодня</string>
+    <string name="stats_days_in_range">дней в периоде</string>
+    <string name="stats_range_title_week">Неделя</string>
+    <string name="stats_range_title_month">Тридцать дней</string>
+    <string name="stats_peak_line">больше всего — %1$s, %2$s</string>
+    <string name="stats_no_traffic">через туннель пока ничего не прошло</string>
+    <string name="stats_quota">%1$s из %2$s</string>
+    <string name="stats_quota_left">осталось</string>
+    <string name="stats_quota_left_days">осталось · %1$s</string>
+    <string name="stats_unlimited">без лимита</string>
+    <string name="stats_unlimited_until">без лимита · до %1$s</string>
+    <string name="stats_place_share">%1$d%% · %2$s</string>
+    <string name="stats_week_peak">пик — %1$s, %2$02d:00</string>
+    <string name="stats_today_low">сегодня</string>
+    <string name="stats_today_caps">СЕГОДНЯ</string>
     <string name="stats_days_ago">%1$d дн. назад</string>
-    <string name="stats_left_days">осталось · %1$d дн.</string>
-    <string name="stats_left_word">осталось</string>
-    <string name="stats_no_limit">без лимита</string>
-    <string name="stats_no_limit_until">без лимита · до %1$s</string>
-    <string name="stats_days_in_period">дней в периоде</string>
-    <string name="stats_line_week">Неделя</string>
-    <string name="stats_line_month">Тридцать дней</string>
-    <string name="stats_line_note">больше всего — %1$s, %2$s</string>
     <string name="stats_places">Через какие страны</string>
-    <string name="stats_share">%1$d%% · %2$s</string>
     <string name="stats_week">Неделя по часам</string>
-    <string name="stats_week_peak">пик — %1$s, %2$d:00</string>
-    <string name="stats_note">Это расход одного телефона через туннель. Другое устройство с тем же ключом считает свой.</string>
+    <string name="stats_note">Это расход одного телефона через туннель. Другое устройство с тем же ключом считает своё.</string>
     <string-array name="weekdays_short">
         <item>ПН</item>
         <item>ВТ</item>
@@ -106,6 +125,38 @@
 
     <!-- Экран выбора страны. -->
     <string name="servers_title">Серверы</string>
+    <string name="servers_refresh_all">Обновить все подписки</string>
+    <string name="servers_refresh">Обновить подписку</string>
+    <string name="servers_more">Ещё действия с подпиской</string>
+    <string name="servers_use">Сделать рабочей</string>
+    <string name="servers_collapsed">свернуто</string>
+    <string name="servers_stale">Панель не ответила — список вчерашний</string>
+    <string name="servers_no_subs">Подписок пока нет. Нажми «+» и добавь ссылку marvia:// от того, кто дал доступ.</string>
+    <string name="servers_unlimited">∞</string>
+    <string name="servers_quota">%1$s / %2$s</string>
+    <string name="servers_days_left">Осталось %1$s</string>
+    <string name="servers_no_term">без срока</string>
+    <string name="servers_age_now">только что</string>
+    <string name="servers_age_min">%1$d мин</string>
+    <string name="servers_age_hours">%1$d ч</string>
+    <string name="servers_age_days">%1$d дн</string>
+    <string name="servers_measuring">замер…</string>
+    <string name="servers_auto_fastest">сейчас быстрее всего — %1$s</string>
+    <string name="servers_auto_idle">самая быстрая нода рабочей подписки</string>
+    <string name="node_picked">выбрал ты</string>
+    <string name="node_traffic_now">трафик идёт сейчас</string>
+    <plurals name="servers_providers">
+        <item quantity="one">%1$d провайдер</item>
+        <item quantity="few">%1$d провайдера</item>
+        <item quantity="many">%1$d провайдеров</item>
+        <item quantity="other">%1$d провайдера</item>
+    </plurals>
+    <plurals name="servers_count">
+        <item quantity="one">%1$d сервер</item>
+        <item quantity="few">%1$d сервера</item>
+        <item quantity="many">%1$d серверов</item>
+        <item quantity="other">%1$d сервера</item>
+    </plurals>
     <string name="servers_measure">Обновить</string>
     <string name="servers_auto">Автовыбор</string>
     <string name="servers_auto_mark">⚡</string>
@@ -124,27 +175,14 @@
     <string name="servers_sub_bad">Это не ссылка marvia://</string>
     <string name="servers_sub_remove">Убрать</string>
     <string name="servers_sub_remove_ask">Убрать подписку «%1$s»?</string>
-    <string name="servers_sub_use">Сделать рабочей</string>
-    <string name="servers_sub_actions">Действия с подпиской</string>
-    <string name="servers_sub_collapsed">свёрнуто · нажатие переключит</string>
-    <string name="servers_sub_days_left">Осталось %1$d дн.</string>
-    <plurals name="servers_subs_count">
-        <item quantity="one">%d подписка</item>
-        <item quantity="few">%d подписки</item>
-        <item quantity="many">%d подписок</item>
-        <item quantity="other">%d подписки</item>
-    </plurals>
-    <plurals name="servers_nodes_count">
-        <item quantity="one">%d сервер</item>
-        <item quantity="few">%d сервера</item>
-        <item quantity="many">%d серверов</item>
-        <item quantity="other">%d сервера</item>
-    </plurals>
-    <string name="servers_empty">Серверы видны изнутри туннеля.</string>
+    <string name="servers_manual">Выбрать вручную</string>
+    <string name="servers_empty">Страны видны изнутри туннеля.</string>
+    <string name="servers_group_other">Другие</string>
     <string name="servers_failed">Не получилось перейти: %1$s</string>
 
     <!-- Строка ноды: что с ней и куда на самом деле идёт трафик. -->
-    <string name="node_ping">%1$d мс</string>
+    <string name="node_ping">Отклик: %1$d мс</string>
+    <string name="node_ms">%1$d мс</string>
     <string name="node_ping_none">Отклик не измерен</string>
     <string name="node_setup">Подключение: %1$d мс</string>
     <string name="node_ok">работает</string>
@@ -164,7 +202,6 @@
     <string name="bypass_preset">Госуслуги и банки</string>
     <string name="bypass_restart">Изменения применятся при следующем подключении</string>
     <string name="bypass_loading">Смотрю, что установлено…</string>
-    <string name="bypass_search">Найти приложение</string>
 
     <!--
         Российские сайты мимо туннеля. Предлагаем при первом удачном
@@ -186,6 +223,8 @@
     <string name="settings_autostart_off_saved">После перезагрузки придётся включить руками</string>
     <string name="settings_russian">Российские сайты — мимо туннеля</string>
     <string name="settings_russian_sub">банки и госуслуги иначе ругаются</string>
+    <string name="settings_russian_none">список ещё не скачан — панель была недоступна</string>
+    <string name="settings_russian_count">подсетей в списке: %1$d · вступает в силу при следующем подключении</string>
     <string name="settings_always_on">Постоянный VPN в системе</string>
     <string name="settings_always_on_sub">система поднимает туннель раньше, чем можем мы</string>
     <string name="settings_always_on_missing">На этом телефоне нет такого раздела настроек</string>
@@ -193,36 +232,64 @@
     <string name="settings_key_added">добавлен %1$s</string>
     <string name="settings_update">Есть новая версия %1$s</string>
     <string name="settings_update_sub">С сервера того, кто дал доступ, а не из магазина</string>
-    <string name="settings_about">О приложении</string>
+    <string name="settings_about">О нас</string>
     <string name="about_body">%1$s, версия %2$s</string>
     <string name="theme_title">Тема</string>
-    <string name="theme_hint">Всё применяется сразу</string>
-    <string name="theme_looks">Готовые виды</string>
-    <string name="theme_accent">Акцент</string>
-    <string name="theme_accent_hint">кнопка, отметки, переключатели</string>
-    <string name="theme_look_custom">свой</string>
-    <string name="theme_tint_as_accent">как акцент</string>
-    <string name="theme_tint_own">свой</string>
-    <string name="theme_depth_light">Светло</string>
-    <string name="theme_depth_dark">Чёрно</string>
-    <!-- Разделы ручек темы. -->
     <string name="theme_tab_color">Цвет</string>
     <string name="theme_tab_light">Свет</string>
     <string name="theme_tab_bg">Фон</string>
     <string name="theme_tab_shape">Форма</string>
     <string name="theme_tab_more">Ещё</string>
-    <!-- Какой экран показывает телефон-предпросмотр. -->
+    <string name="theme_hint_color">цвет видно на кнопке, значке и нижней панели</string>
+    <string name="theme_hint_light">свет — на фоне всего экрана</string>
+    <string name="theme_hint_bg">узор и свой фон — под всем</string>
+    <string name="theme_hint_shape">форма — карточки, кнопка, отступы</string>
+    <string name="theme_hint_more">значок, шрифт и сохранённые виды</string>
     <string name="theme_pv_main">Главная</string>
     <string name="theme_pv_settings">Настройки</string>
     <string name="theme_pv_servers">Серверы</string>
-    <!-- Образцы строк внутри предпросмотра: узнаваемо, но не про продавца. -->
-    <string name="theme_pv_apps_note">мимо туннеля: 3</string>
-    <string name="theme_pv_lan_note">принтер, телевизор, роутер</string>
-    <string name="theme_pv_servers_note">1 подписка · 6 серверов</string>
-    <string name="theme_pv_auto_note">быстрее всего — Финляндия</string>
-    <string name="theme_pv_provider">Доступ от Алексея</string>
-    <string name="theme_pv_provider_note">6 серверов · осталось 24 дн.</string>
-    <string name="theme_pv_node_current">Хельсинки · трафик идёт сейчас</string>
+    <string name="theme_looks_caps">ГОТОВЫЕ ВИДЫ</string>
+    <string name="theme_accent_caps">АКЦЕНТ</string>
+    <string name="theme_accent_hint">кнопка, отметки, переключатели</string>
+    <string name="theme_tint_caps">ОТТЕНОК СВЕТЛОЙ СТОРОНЫ</string>
+    <string name="theme_tint_auto">как акцент</string>
+    <string name="theme_light_caps">СВЕТ</string>
+    <string name="theme_depth_caps">ГУСТОТА ТЕНИ</string>
+    <string name="theme_depth_light">СВЕТЛО</string>
+    <string name="theme_depth_dark">ЧЁРНО</string>
+    <string name="theme_pattern_caps">УЗОР ФОНА</string>
+    <string name="theme_pattern_hint">едва заметный, чтобы фон не был пустым</string>
+    <string name="pattern_none">Ровный</string>
+    <string name="pattern_dots">Точки</string>
+    <string name="pattern_grid">Сетка</string>
+    <string name="pattern_rings">Кольца</string>
+    <string name="pattern_lines">Штрих</string>
+    <string name="theme_backdrop_caps">СВОЙ ФОН</string>
+    <string name="theme_backdrop_none">фото из галереи под интерфейс</string>
+    <string name="theme_backdrop_has">фото выбрано</string>
+    <string name="theme_cards_caps">КАРТОЧКИ</string>
+    <string name="theme_radius_caps">СКРУГЛЕНИЯ</string>
+    <string name="theme_density_caps">ПЛОТНОСТЬ</string>
+    <string name="theme_button_caps">ГЛАВНАЯ КНОПКА</string>
+    <string name="theme_glow_caps">СВЕЧЕНИЕ</string>
+    <string name="theme_logo_caps">ЗНАЧОК В ШАПКЕ</string>
+    <string name="logo_marvia">Marvia</string>
+    <string name="logo_custom">Свой</string>
+    <string name="logo_none">Скрыть</string>
+    <string name="theme_logo_marvia">лента-«M» в цвет акцента</string>
+    <string name="theme_logo_custom">своя картинка из галереи</string>
+    <string name="theme_logo_none">шапка без знака</string>
+    <string name="theme_font_caps">ШРИФТ</string>
+    <string name="font_onest">Onest</string>
+    <string name="font_manrope">Manrope</string>
+    <string name="font_geologica">Geologica</string>
+    <string name="theme_profiles_caps">МОИ ПРОФИЛИ</string>
+    <string name="theme_profiles_hint">пустой слот запоминает текущий вид</string>
+    <string name="theme_code_caps">КОД ТЕМЫ · МОЖНО ПЕРЕДАТЬ ДРУГУ</string>
+    <string name="theme_hint">Всё применяется сразу</string>
+    <string name="theme_looks">Готовые виды</string>
+    <string name="theme_looks_hint">весь экран одним нажатием</string>
+    <string name="theme_accent">Акцент</string>
     <string name="theme_density">Плотность</string>
     <string name="theme_note">Оформление сохраняется на этом устройстве.</string>
     <string name="theme_reset">Вернуть серый</string>
@@ -360,10 +427,29 @@
     <string name="log_failed">не поднялся: %1$s — %2$s</string>
     <string name="more_title">Настройки</string>
     <string name="more_sub">Marvia для Android · %1$s</string>
-    <string name="more_apps_title">Прокси по приложениям</string>
-    <string name="more_logs_title">Журнал соединений</string>
-    <string name="more_apps_sub">приложения и российские сайты мимо туннеля</string>
-    <string name="more_logs_value">без адресов сайтов</string>
+    <string name="more_back">Назад</string>
+    <string name="more_apps_card">Прокси по приложениям</string>
+    <string name="more_apps_card_sub">приложения и российские сайты мимо туннеля</string>
+    <string name="more_group_conn">ПОДКЛЮЧЕНИЕ</string>
+    <string name="more_group_routes">МАРШРУТЫ И DNS</string>
+    <string name="more_group_app">ПРИЛОЖЕНИЕ</string>
+    <string name="more_group_apps">ПРИЛОЖЕНИЯ</string>
+    <string name="more_logs_row">Журнал соединений</string>
+    <string name="more_logs_row_sub">без адресов сайтов</string>
+    <string name="more_reset">Сбросить всё</string>
+    <string name="more_reset_sub">подписки, тема, настройки</string>
+    <string name="more_reset_ask">Сбросить всё? Подписки, тема и настройки пропадут, туннель выключится. Ссылку доступа придётся добавить заново.</string>
+    <string name="more_reset_yes">Сбросить</string>
+    <string name="about_sub">кто делает Marvia, версия %1$s · VP1</string>
+    <string name="apps_search">Найти приложение</string>
+    <string name="apps_summary_names">мимо туннеля: %1$d — %2$s</string>
+    <string name="more_conn">Соединение</string>
+    <string name="more_apps">Приложения</string>
+    <string name="more_logs">Логи</string>
+    <string name="more_conn_title">Соединение</string>
+    <string name="more_conn_sub">Защита, DNS, маршруты</string>
+    <string name="more_apps_title">Приложения</string>
+    <string name="more_logs_title">Логи</string>
     <plurals name="more_logs_sub">
         <item quantity="one">последняя %1$d строка</item>
         <item quantity="few">последние %1$d строки</item>
@@ -371,8 +457,8 @@
         <item quantity="other">последние %1$d строки</item>
     </plurals>
     <string name="more_logs_sub_empty">журнал пока пуст</string>
-    <string name="conn_group_protect">Подключение</string>
-    <string name="conn_group_net">Маршруты и DNS</string>
+    <string name="conn_group_protect">Защита</string>
+    <string name="conn_group_net">Сеть</string>
     <string name="conn_group_app">Приложение</string>
     <string name="conn_dns">DNS</string>
     <string name="conn_dns_sub">резолвер внутри туннеля</string>
@@ -401,6 +487,8 @@
     </plurals>
     <string name="apps_preset_none">Добавлять нечего: ничего из набора не установлено или всё уже отмечено</string>
 
+    <string name="log_crashed">Прошлый запуск упал: %1$s</string>
+    <string name="log_crash_header">Падение, стек:</string>
     <string name="logs_all">Все</string>
     <string name="logs_info">Инфо</string>
     <string name="logs_warn">Сбои</string>
@@ -428,8 +516,13 @@
     <string name="stats_speed">Скорость</string>
     <string name="stats_mbps">%1$s Мбит/с</string>
     <string name="connection_warning_details">Некоторые запросы не прошли · Подробнее</string>
+    <string name="theme_show_all">Все темы</string>
+    <string name="theme_fewer">Свернуть</string>
     <string name="theme_preview">Предпросмотр</string>
     <!-- Образец строки страны в предпросмотре: узнаваемо, но не про продавца. -->
     <string name="theme_preview_country">Финляндия</string>
+    <string name="theme_preview_provider">Доступ от Алексея</string>
+    <string name="theme_look_custom">свой</string>
     <string name="theme_preview_place">Хельсинки · 33 мс</string>
+    <string name="theme_advanced">Точная настройка оформления</string>
 </resources>

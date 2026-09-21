@@ -123,12 +123,7 @@ object LogoAtlas {
     private var source: Bitmap? = null
 
     /** Ключ кэша: серый — оригинал, всё остальное — RGB акцента. */
-    /**
-     * Красится любой акцент, и серый из коробки тоже: оригинал ленты синеват,
-     * и рядом с нейтральной темой знак читался как чужой. Оригинал остаётся
-     * первым кадром, пока покрашенный не посчитан.
-     */
-    fun key(acc: Int): Int = LogoTint.key(acc)
+    fun key(acc: Int): Int = if (LogoTint.isStock(acc)) STOCK else (acc and 0xFFFFFF).let { if (it == 0) 1 else it }
 
     /** Оригинал, синхронно: он нужен первым кадром, до того как тема прочитана. */
     fun stock(context: Context): Bitmap = cache.get(STOCK) ?: original(context).also { cache.put(STOCK, it) }

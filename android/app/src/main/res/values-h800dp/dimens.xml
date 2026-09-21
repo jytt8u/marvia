@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="hero_stage_height">262dp</dimen>
+    <dimen name="hero_button_size">248dp</dimen>
+</resources>

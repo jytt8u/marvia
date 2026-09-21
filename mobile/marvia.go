@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -36,10 +35,9 @@ import (
 // может.
 const DefaultDNS = "1.1.1.1:53"
 
-// CacheName — имя файла с кэшем подписки внутри каталога приложения.
-//
-// Наружу вынесено не ради красоты: приложению это имя нужно, чтобы стереть
-// кэш вместе со ссылкой доступа, когда человек удаляет ключ.
+// CacheName — имя старого общего файла кэша подписки. Кэш теперь на каждую
+// подписку свой (см. accountCachePath); имя осталось, чтобы стереть старый
+// файл у тех, кто обновился.
 const CacheName = "subscription.json"
 
 // Сколько живёт сообщение о неудаче, прежде чем погаснуть.
@@ -141,10 +139,13 @@ type Tunnel struct {
 // dns — адрес для запросов имён; пусто означает значение по умолчанию.
 // cacheDir — каталог приложения под кэш подписки; пусто означает работу без
 // кэша, как было раньше.
+// prefer — нода, выбранная человеком руками; ноль — автовыбор. Выбор живёт
+// в приложении и переживает перезапуск туннеля: иначе страна, выбранная
+// вчера, молча сменилась бы на «самую быструю» после перезагрузки.
 //
 // Каталог передаёт приложение, а не выясняет ядро: на Android путь к своим
 // файлам знает только Context, и достать его из Go неоткуда.
-func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel, error) {
+func Start(accountLink string, tunFD int, dns string, cacheDir string, prefer int64) (*Tunnel, error) {
 	if tunFD <= 0 {
 		return nil, fail(FailSystem, errors.New("не передан дескриптор сетевого интерфейса"))
 	}
@@ -166,7 +167,7 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 
 	// Имя ноды переписываем при переезде: иначе окно будет показывать ту,
 	// через которую трафик давно не идёт.
-	dialer, err := connect(accountLink, cacheDir, client.Events{OnSwitch: t.switched, OnTrouble: t.trouble, OnRecovered: t.recovered})
+	dialer, err := connect(accountLink, cacheDir, prefer, client.Events{OnSwitch: t.switched, OnTrouble: t.trouble, OnRecovered: t.recovered})
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +200,7 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string) (*Tunnel,
 // Вынесено отдельно не ради красоты: так эту часть можно проверить тестом, не
 // выдумывая дескриптор интерфейса. Выдуманный дескриптор в тесте — это номер,
 // который на Linux принадлежит чему-то настоящему.
-func connect(accountLink, cacheDir string, events client.Events) (*client.Supervisor, error) {
+func connect(accountLink, cacheDir string, prefer int64, events client.Events) (*client.Supervisor, error) {
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
 		return nil, fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))
@@ -231,7 +232,8 @@ func connect(accountLink, cacheDir string, events client.Events) (*client.Superv
 	dialer, measurements, err := client.Supervise(context.Background(), client.ConnectConfig{
 		Account:   account,
 		Key:       key,
-		CachePath: cachePath(cacheDir),
+		CachePath: accountCachePath(cacheDir, account.SubscriptionURL),
+		Prefer:    prefer,
 		Log:       func(format string, args ...any) { log.Printf(format, args...) },
 	}, events)
 
@@ -264,14 +266,6 @@ func connect(accountLink, cacheDir string, events client.Events) (*client.Superv
 	return dialer, nil
 }
 
-// cachePath — где лежит кэш подписки. Пустой каталог означает работу без кэша.
-func cachePath(dir string) string {
-	dir = strings.TrimSpace(dir)
-	if dir == "" {
-		return ""
-	}
-	return filepath.Join(dir, CacheName)
-}
 
 // note запоминает последнюю ошибку, чтобы приложение могло её показать.
 //

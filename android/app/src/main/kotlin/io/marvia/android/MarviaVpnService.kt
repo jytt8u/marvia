@@ -116,7 +116,7 @@ class MarviaVpnService : VpnService() {
                 // Context — ядру его взять неоткуда, поэтому передаём руками.
                 // Резолвер — тот, что выбрал человек. Внутрь туннеля и по TCP
                 // он уходит в любом случае; выбор только в том, кто отвечает.
-                Mobile.start(link, fd.toLong(), store.dns + ":53", store.cacheDir())
+                Mobile.start(link, fd.toLong(), store.dns + ":53", store.cacheDir(), store.chosenNode)
             } catch (t: Throwable) {
                 shutdown(failureOf(t))
                 return@launch

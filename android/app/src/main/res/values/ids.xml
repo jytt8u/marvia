@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ключ тега «шрифт не менять»: знак MARVIA набран Unbounded при любом шрифте темы. -->
+    <item name="keep_font" type="id" />
+</resources>

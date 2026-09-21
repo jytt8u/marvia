@@ -1,21 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Нижняя панель из макета. Своя, а не BottomNavigationView: там пять вкладок
-    со своими правилами подсветки и отступов, и подгонять их под макет вышло бы
-    длиннее, чем нарисовать пять кнопок.
-
-    Активная вкладка — значок на пилюле и подпись жирнее; цвета ставит код.
+    Нижняя панель из макета: пять вкладок, у активной — таблетка под значком
+    и подпись цветом текста. Своя, а не BottomNavigationView: у той свои
+    правила подсветки и отступов, и подгонять их под макет вышло бы длиннее,
+    чем нарисовать пять кнопок. Таблетку и цвета ставит код по теме.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginBottom="8dp"
     android:background="@color/veil_surface"
     android:orientation="vertical"
-    android:tag="surf">
+    android:tag="navbar">
 
     <View
         android:layout_width="match_parent"
-        android:layout_height="1dp"
+        android:layout_height="0dp"
         android:tag="line"
         android:background="@color/veil_border" />
 
@@ -35,26 +36,30 @@
             android:layout_weight="1"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:gravity="center"
-            android:minHeight="52dp"
             android:orientation="vertical"
             android:paddingVertical="4dp">
 
-            <ImageView
-                android:id="@+id/navConnectIcon"
+            <FrameLayout
+                android:id="@+id/navConnectPill"
                 android:layout_width="44dp"
-                android:layout_height="28dp"
-                android:background="@drawable/bg_pill"
-                android:contentDescription="@null"
-                android:scaleType="center"
-                android:src="@drawable/ic_nav_tunnel" />
+                android:layout_height="28dp">
+
+                <ImageView
+                    android:id="@+id/navConnectIcon"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_nav_tunnel" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/navConnectLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:maxLines="1"
                 android:text="@string/nav_connect"
+                android:maxLines="1"
                 android:textSize="10.5sp" />
         </LinearLayout>
 
@@ -65,26 +70,30 @@
             android:layout_weight="1"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:gravity="center"
-            android:minHeight="52dp"
             android:orientation="vertical"
             android:paddingVertical="4dp">
 
-            <ImageView
-                android:id="@+id/navServersIcon"
+            <FrameLayout
+                android:id="@+id/navServersPill"
                 android:layout_width="44dp"
-                android:layout_height="28dp"
-                android:background="@drawable/bg_pill"
-                android:contentDescription="@null"
-                android:scaleType="center"
-                android:src="@drawable/ic_nav_servers" />
+                android:layout_height="28dp">
+
+                <ImageView
+                    android:id="@+id/navServersIcon"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_nav_servers" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/navServersLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:maxLines="1"
                 android:text="@string/nav_servers"
+                android:maxLines="1"
                 android:textSize="10.5sp" />
         </LinearLayout>
 
@@ -95,26 +104,30 @@
             android:layout_weight="1"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:gravity="center"
-            android:minHeight="52dp"
             android:orientation="vertical"
             android:paddingVertical="4dp">
 
-            <ImageView
-                android:id="@+id/navStatsIcon"
+            <FrameLayout
+                android:id="@+id/navStatsPill"
                 android:layout_width="44dp"
-                android:layout_height="28dp"
-                android:background="@drawable/bg_pill"
-                android:contentDescription="@null"
-                android:scaleType="center"
-                android:src="@drawable/ic_nav_stats" />
+                android:layout_height="28dp">
+
+                <ImageView
+                    android:id="@+id/navStatsIcon"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_nav_stats" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/navStatsLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:maxLines="1"
                 android:text="@string/nav_stats"
+                android:maxLines="1"
                 android:textSize="10.5sp" />
         </LinearLayout>
 
@@ -125,26 +138,30 @@
             android:layout_weight="1"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:gravity="center"
-            android:minHeight="52dp"
             android:orientation="vertical"
             android:paddingVertical="4dp">
 
-            <ImageView
-                android:id="@+id/navThemeIcon"
+            <FrameLayout
+                android:id="@+id/navThemePill"
                 android:layout_width="44dp"
-                android:layout_height="28dp"
-                android:background="@drawable/bg_pill"
-                android:contentDescription="@null"
-                android:scaleType="center"
-                android:src="@drawable/ic_nav_theme" />
+                android:layout_height="28dp">
+
+                <ImageView
+                    android:id="@+id/navThemeIcon"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_nav_theme" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/navThemeLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:maxLines="1"
                 android:text="@string/nav_theme"
+                android:maxLines="1"
                 android:textSize="10.5sp" />
         </LinearLayout>
 
@@ -155,26 +172,30 @@
             android:layout_weight="1"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:gravity="center"
-            android:minHeight="52dp"
             android:orientation="vertical"
             android:paddingVertical="4dp">
 
-            <ImageView
-                android:id="@+id/navMoreIcon"
+            <FrameLayout
+                android:id="@+id/navMorePill"
                 android:layout_width="44dp"
-                android:layout_height="28dp"
-                android:background="@drawable/bg_pill"
-                android:contentDescription="@null"
-                android:scaleType="center"
-                android:src="@drawable/ic_nav_settings" />
+                android:layout_height="28dp">
+
+                <ImageView
+                    android:id="@+id/navMoreIcon"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_nav_more" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/navMoreLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:maxLines="1"
                 android:text="@string/nav_more"
+                android:maxLines="1"
                 android:textSize="10.5sp" />
         </LinearLayout>
     </LinearLayout>

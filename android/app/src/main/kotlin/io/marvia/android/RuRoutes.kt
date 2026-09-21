@@ -67,6 +67,12 @@ object RuRoutes {
     /** Есть ли скачанный список. */
     fun ready(context: Context): Boolean = File(context.filesDir, FILE).exists()
 
+    /** Сколько подсетей в скачанном списке; 0 — списка нет. */
+    fun count(context: Context): Int {
+        val file = File(context.filesDir, FILE)
+        return if (file.exists()) file.readLines().count { it.isNotBlank() } else 0
+    }
+
     /**
      * refresh скачивает список с панели, если он устарел.
      *

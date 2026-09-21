@@ -24,9 +24,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.TextViewCompat
 import androidx.core.view.updatePadding
+import androidx.core.view.updateLayoutParams
 import androidx.core.widget.ImageViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -51,24 +54,16 @@ import kotlinx.coroutines.withContext
  */
 class MainActivity : AppCompatActivity() {
 
-    private enum class Screen { LANGUAGE, KEY, CONNECT, SERVERS, STATS, THEME, MORE }
+    private enum class Screen { LANGUAGE, PERMS, KEY, CONNECT, SERVERS, STATS, THEME, MORE }
 
     private lateinit var ui: ActivityMainBinding
-
-    /** Своя версия — под надписью в шапке, когда её раскрыли. */
-    private val ownVersion: String by lazy {
-        try {
-            packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
-        } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
-            ""
-        }
-    }
     private lateinit var store: Store
     private lateinit var servers: ServersScreen
     private lateinit var stats: StatsScreen
     private lateinit var more: MoreScreen
     private lateinit var themeScreen: ThemeScreen
     private lateinit var language: LanguageScreen
+    private lateinit var perms: PermsScreen
 
     /** Откуда открыт выбор языка: с первого запуска возврат ведёт дальше, из настроек — назад. */
     private var languageFromSettings = false
@@ -93,11 +88,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Разрешение на уведомления. Отказ ничего не ломает: туннель работает. */
-    private val notifications = registerForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { }
-
     /**
      * Выбор фото под фон. GetContent, а не разрешение на «все файлы»: система
      * сама показывает выбор и отдаёт нам один файл, доступа к галерее целиком
@@ -113,17 +103,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Своя картинка под значок в шапке — тем же путём, что фон. */
+    private val pickLogo = registerForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null && store.saveLogo(uri)) {
+            store.logo = Store.LOGO_CUSTOM
+            repaint()
+        } else if (uri != null) {
+            Toast.makeText(this, R.string.theme_backdrop_bad, Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Режим ночи — по темноте пресета. Он нужен не нам, а Material:
         // диалоги и системные виджеты берут цвета оттуда, и светлый диалог
         // над «Полночью» выглядел бы дырой в экране.
         store = Store(this)
-        // Язык человек выбрал у нас, а хранит его система (с Android 13 — как
-        // настройку приложения). Восстановление из копии или чистка данных
-        // приносит наш выбор без системного — тогда ставим его заново.
-        if (store.language.isNotEmpty() && AppCompatDelegate.getApplicationLocales().isEmpty) {
-            AppCompatDelegate.setApplicationLocales(androidx.core.os.LocaleListCompat.forLanguageTags(store.language))
-        }
         theme = Look.theme(store.look)
         AppCompatDelegate.setDefaultNightMode(nightModeFor(theme))
         enableEdgeToEdge()
@@ -144,15 +140,18 @@ class MainActivity : AppCompatActivity() {
             store = store,
             onSubscriptionChanged = { restartTunnel() },
         )
-        stats = StatsScreen(host = this, ui = ui.statsScreen, theme = { theme }, traffic = Traffic(this))
-        themeScreen = ThemeScreen(this, ui.themeScreen, store, { pickBackdrop.launch("image/*") }) { repaint() }
+        stats = StatsScreen(host = this, ui = ui.statsScreen, theme = { theme }, traffic = Traffic(this), store = store)
+        themeScreen = ThemeScreen(this, ui.themeScreen, store, { pickBackdrop.launch("image/*") }, { pickLogo.launch("image/*") }) { repaint() }
         language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
+        perms = PermsScreen(this, ui.permsScreen, { theme }) {
+            store.onboarded = true
+            show(Screen.CONNECT)
+        }
         more = MoreScreen(
             host = this,
             ui = ui.moreScreen,
             theme = { theme },
             store = store,
-            onKey = { show(Screen.KEY) },
             onLanguage = {
                 languageFromSettings = true
                 show(Screen.LANGUAGE)
@@ -165,12 +164,12 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
                 }
             },
+            onReset = { resetAll() },
         )
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { MarviaState.state.collect { render(it) } }
-                launch { MarviaState.traffic.collect { ui.connectScreen.trafficPanel.snapshot = it } }
             }
         }
 
@@ -179,8 +178,13 @@ class MainActivity : AppCompatActivity() {
         repaint()
         show(firstScreen())
         refreshRoutes()
-        askForNotifications()
         acceptLinkFrom(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Вернулись из системного окна разрешений — карточки могли поменяться.
+        if (screen == Screen.PERMS) perms.open()
     }
 
     /**
@@ -189,6 +193,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun firstScreen(): Screen = when {
         store.language.isEmpty() -> Screen.LANGUAGE
+        !store.onboarded -> Screen.PERMS
         else -> Screen.CONNECT
     }
 
@@ -211,9 +216,9 @@ class MainActivity : AppCompatActivity() {
                 show(Screen.MORE)
                 return
             }
-            // С подэкрана настроек — на их список, а не из приложения.
+            // С подэкрана настроек (приложения, журнал) — назад в настройки.
             if (screen == Screen.MORE && more.back()) return
-            if (screen == Screen.CONNECT || screen == Screen.LANGUAGE) {
+            if (screen == Screen.CONNECT || screen == Screen.LANGUAGE || screen == Screen.PERMS) {
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
                 isEnabled = true
@@ -230,8 +235,10 @@ class MainActivity : AppCompatActivity() {
      *
      * Дерево вьюх красится по тегам, состояние туннеля — своей отрисовкой,
      * экраны с динамикой — своими paint. Если пресет сменил тёмное на светлое
-     * или обратно, экран пересоздаётся системой ради режима ночи — тогда
-     * красить сейчас незачем, onCreate сделает это заново.
+     * или обратно, режим ночи переключаем тут же: uiMode объявлен в манифесте,
+     * и система экран не пересоздаёт, а значит, красить всё равно нам —
+     * ранний выход здесь оставлял светлую тему на тёмных карточках до
+     * следующего запуска.
      */
     private fun repaint() {
         theme = Look.theme(store.look)
@@ -239,11 +246,12 @@ class MainActivity : AppCompatActivity() {
         val night = nightModeFor(theme)
         if (AppCompatDelegate.getDefaultNightMode() != night) {
             AppCompatDelegate.setDefaultNightMode(night)
-            return
         }
 
+        Paint.style = Paint.Style(pattern = store.pattern, font = store.font)
         Paint.apply(ui.root, theme)
         applyBackdrop()
+        paintLogo()
         paintNav()
         servers.paint()
         stats.paint(theme)
@@ -256,6 +264,25 @@ class MainActivity : AppCompatActivity() {
         val bars = WindowCompat.getInsetsController(window, ui.root)
         bars.isAppearanceLightStatusBars = !theme.dark
         bars.isAppearanceLightNavigationBars = !theme.dark
+    }
+
+    /** paintLogo — что в шапке главной: знак, своя картинка или ничего. */
+    private fun paintLogo() {
+        val c = ui.connectScreen
+        val mode = store.logo
+        val custom = if (mode == Store.LOGO_CUSTOM) store.logoBitmap() else null
+        c.heroMarkButton.isVisible = mode != Store.LOGO_NONE
+        c.heroMark.isVisible = mode == Store.LOGO_MARVIA || (mode == Store.LOGO_CUSTOM && custom == null)
+        c.heroCustom.isVisible = custom != null
+        if (custom != null) {
+            c.heroCustom.setImageBitmap(custom)
+            c.heroCustom.clipToOutline = true
+            c.heroCustom.outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, 9 * resources.displayMetrics.density)
+                }
+            }
+        }
     }
 
     private fun nightModeFor(t: Theme): Int =
@@ -309,10 +336,40 @@ class MainActivity : AppCompatActivity() {
         ui.moreScreen.root.isVisible = next == Screen.MORE
         ui.themeScreen.root.isVisible = next == Screen.THEME
         ui.languageScreen.root.isVisible = next == Screen.LANGUAGE
+        ui.permsScreen.root.isVisible = next == Screen.PERMS
+        // Экран поднимается снизу и проявляется, как .rise в макете: смена
+        // вкладки без движения выглядит как сбой отрисовки, а не как переход.
+        if (was != next) {
+            val root = when (next) {
+                Screen.CONNECT -> ui.connectScreen.root
+                Screen.SERVERS -> ui.serversScreen.root
+                Screen.STATS -> ui.statsScreen.root
+                Screen.THEME -> ui.themeScreen.root
+                Screen.MORE -> ui.moreScreen.root
+                Screen.KEY -> ui.keyScreen.root
+                Screen.LANGUAGE -> ui.languageScreen.root
+                Screen.PERMS -> ui.permsScreen.root
+            }
+            root.alpha = 0f
+            root.translationY = 12 * resources.displayMetrics.density
+            root.animate().alpha(1f).translationY(0f).setDuration(420).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+            // На главной карточки внизу догоняют с шагом: экран собирается
+            // сверху вниз, а не падает целиком.
+            if (next == Screen.CONNECT) {
+                val c = ui.connectScreen
+                listOf(c.nodeLine, c.todayCard, c.tilesRow).forEachIndexed { i, v ->
+                    v.alpha = 0f
+                    v.translationY = 18 * resources.displayMetrics.density
+                    v.animate().alpha(1f).translationY(0f).setStartDelay(60L + 70L * i).setDuration(460)
+                        .setInterpolator(android.view.animation.DecelerateInterpolator(2.2f)).start()
+                }
+            }
+        }
 
-        // Пока ключа нет, ходить некуда: панель появится вместе с ним. На
-        // выборе языка её тоже нет — это экран одного действия.
-        ui.nav.root.isVisible = store.accountLink.isNotBlank() && next != Screen.LANGUAGE
+        // Панель есть и без ключа: подписка добавляется на «Серверах», а тему
+        // можно выбрать до подключения. На выборе языка её нет — это экран
+        // одного действия.
+        ui.nav.root.isVisible = next != Screen.LANGUAGE && next != Screen.PERMS
         paintNav()
 
         when (next) {
@@ -321,6 +378,7 @@ class MainActivity : AppCompatActivity() {
             Screen.MORE -> more.open()
             Screen.THEME -> themeScreen.paint(theme)
             Screen.LANGUAGE -> language.open()
+            Screen.PERMS -> perms.open()
             Screen.KEY -> openKey()
             Screen.CONNECT -> Unit
         }
@@ -328,18 +386,6 @@ class MainActivity : AppCompatActivity() {
         // Панель то появляется, то нет — а отступ под системной навигацией
         // должен остаться в обоих случаях.
         ViewCompat.requestApplyInsets(ui.root)
-
-        if (was != next) Motion.rise(screenView(next))
-    }
-
-    private fun screenView(s: Screen): View = when (s) {
-        Screen.KEY -> ui.keyScreen.root
-        Screen.CONNECT -> ui.connectScreen.root
-        Screen.SERVERS -> ui.serversScreen.root
-        Screen.STATS -> ui.statsScreen.root
-        Screen.MORE -> ui.moreScreen.root
-        Screen.THEME -> ui.themeScreen.root
-        Screen.LANGUAGE -> ui.languageScreen.root
     }
 
     private fun wireNav() {
@@ -351,31 +397,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun paintNav() {
-        paintTab(ui.nav.navConnectIcon, ui.nav.navConnectLabel, screen == Screen.CONNECT)
-        paintTab(ui.nav.navServersIcon, ui.nav.navServersLabel, screen == Screen.SERVERS)
-        paintTab(ui.nav.navStatsIcon, ui.nav.navStatsLabel, screen == Screen.STATS)
-        paintTab(ui.nav.navThemeIcon, ui.nav.navThemeLabel, screen == Screen.THEME)
-        paintTab(ui.nav.navMoreIcon, ui.nav.navMoreLabel, screen == Screen.MORE)
+        val n = ui.nav
+        paintTab(n.navConnectPill, n.navConnectIcon, n.navConnectLabel, screen == Screen.CONNECT)
+        paintTab(n.navServersPill, n.navServersIcon, n.navServersLabel, screen == Screen.SERVERS)
+        paintTab(n.navStatsPill, n.navStatsIcon, n.navStatsLabel, screen == Screen.STATS)
+        paintTab(n.navThemePill, n.navThemeIcon, n.navThemeLabel, screen == Screen.THEME)
+        paintTab(n.navMorePill, n.navMoreIcon, n.navMoreLabel, screen == Screen.MORE)
     }
 
     /**
-     * paintTab — как в макете: значок активной вкладки на пилюле мягкого
-     * акцента, подпись — цветом текста и жирнее; остальные приглушены.
+     * Активная вкладка отмечена заливкой акцента и контрастным значком.
+     * Таблетка, которая только что стала активной, чуть подпрыгивает: так
+     * видно, что нажатие принято, ещё до того, как сменился экран.
      */
-    private fun paintTab(icon: ImageView, label: TextView, active: Boolean) {
-        val color = if (active) theme.fg else theme.dim
-        // Значок выбранной вкладки чуть подпрыгивает: отклик на нажатие.
-        val was = icon.backgroundTintList?.defaultColor ?: 0
-        if (active && was == 0 && android.animation.ValueAnimator.areAnimatorsEnabled()) {
-            icon.scaleX = 0.85f; icon.scaleY = 0.85f
-            icon.animate().cancel()
-            icon.animate().scaleX(1f).scaleY(1f).setDuration(320)
-                .setInterpolator(android.view.animation.OvershootInterpolator(2.5f)).start()
+    private fun paintTab(pill: View, icon: ImageView, label: TextView, active: Boolean) {
+        val dp = resources.displayMetrics.density
+        val color = if (active) theme.acc else theme.dim
+        val wasActive = pill.background != null
+        pill.background = if (active) Paint.rounded(theme.acc, 999, dp) else null
+        if (active && !wasActive && pill.isAttachedToWindow) {
+            pill.scaleX = .6f; pill.scaleY = .6f; pill.alpha = .3f
+            pill.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(340)
+                .setInterpolator(android.view.animation.OvershootInterpolator(1.8f)).start()
         }
-        ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(color))
-        icon.backgroundTintList = ColorStateList.valueOf(if (active) theme.accSoft else 0)
+        ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(if (active) theme.accFg else color))
         label.setTextColor(color)
-        label.typeface = if (active) Fonts.textBold(this) else Fonts.text(this)
+        label.typeface = if (active) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
     }
 
     // --------------------------------------------------------- подключение
@@ -384,13 +431,41 @@ class MainActivity : AppCompatActivity() {
         if (MarviaState.state.value !is TunnelState.On) MarviaState.traffic.value = TrafficHistory(this).saved()
         val c = ui.connectScreen
         c.powerAction.setOnClickListener { toggle() }
-        // Знак без надписи, как в макете; нажатие показывает её с версией.
-        c.heroMark.setOnClickListener { c.heroName.isVisible = !c.heroName.isVisible }
-        c.heroVersion.text = getString(R.string.hero_version, ownVersion).uppercase()
         c.techText.setOnClickListener { more.openLogs(); show(Screen.MORE) }
         c.nodeLine.setOnClickListener { show(Screen.SERVERS) }
-        // Полосу остатка скругляем по фону: иначе заливка вылезает углами.
-        c.trafficTrack.clipToOutline = true
+
+        // Нажатие на знак позволяет свернуть или вернуть подпись бренда.
+        c.heroTagline.text = getString(R.string.hero_subtitle)
+        c.heroWord.setTag(R.id.keep_font, true)
+        // Имя — металлом, как знак: сверху светлое, книзу в приглушённый.
+        c.heroWord.doOnLayout {
+            c.heroWord.paint.shader = android.graphics.LinearGradient(
+                0f, 0f, 0f, c.heroWord.height.toFloat(),
+                intArrayOf(theme.fg, theme.fg, theme.dim), floatArrayOf(0f, 0.42f, 1f), android.graphics.Shader.TileMode.CLAMP,
+            )
+            c.heroWord.invalidate()
+        }
+        c.heroMarkButton.setOnClickListener {
+            val show = !c.heroName.isVisible
+            if (show) {
+                c.heroName.alpha = 0f
+                c.heroName.translationX = -10 * resources.displayMetrics.density
+                c.heroName.isVisible = true
+                c.heroName.animate().alpha(1f).translationX(0f).setDuration(450).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+            } else {
+                c.heroName.animate().alpha(0f).setDuration(200).withEndAction { c.heroName.isVisible = false }.start()
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                MarviaState.traffic.collect { t ->
+                    c.todayTotal.text = Format.size(this@MainActivity, t.today)
+                    c.todayBars.hours = t.hours
+                    c.sessionValue.text = String.format(java.util.Locale.US, "%02d:%02d:%02d", t.seconds / 3600, t.seconds / 60 % 60, t.seconds % 60)
+                    c.speedValue.text = getString(R.string.stats_mbps, String.format(java.util.Locale.getDefault(), "%.1f", t.bytesPerSecond * 8 / 1_000_000))
+                }
+            }
+        }
     }
 
     private fun render(state: TunnelState) {
@@ -398,35 +473,48 @@ class MainActivity : AppCompatActivity() {
         val hasKey = store.accountLink.isNotBlank()
 
         c.techText.isVisible = false
-        c.nodeLine.isVisible = false
-        c.powerAction.phase = when (state) {
-            is TunnelState.On -> PowerButton.Phase.ON
-            TunnelState.Connecting -> PowerButton.Phase.CONNECTING
-            else -> PowerButton.Phase.OFF
+        c.powerAction.state = when (state) {
+            TunnelState.Off -> PowerButton.State.OFF
+            TunnelState.Connecting -> PowerButton.State.CONNECTING
+            is TunnelState.On -> PowerButton.State.ON
+            is TunnelState.Failed -> PowerButton.State.FAILED
         }
+        // Строка под состоянием: нода, а пока её нет — что делаем. Нажатие
+        // ведёт к выбору сервера, поэтому строка есть и без туннеля.
+        c.nodeLine.text = when (state) {
+            TunnelState.Connecting -> getString(R.string.connect_choosing)
+            is TunnelState.On -> listOf(state.node, if (state.ms > 0) getString(R.string.node_ms, state.ms) else "")
+                .filter { it.isNotEmpty() }.joinToString(" · ")
+            else -> lastNode
+        }
+        if (state is TunnelState.On) lastNode = state.node
+        c.nodeLine.isVisible = c.nodeLine.text.isNotEmpty()
+        c.powerHint.setText(when (state) {
+            TunnelState.Off -> if (hasKey) R.string.power_hint_start else R.string.connect_add_key
+            TunnelState.Connecting -> R.string.power_hint_cancel
+            is TunnelState.On -> R.string.power_hint_stop
+            is TunnelState.Failed -> R.string.connect_retry
+        })
 
         when (state) {
             TunnelState.Off -> {
-                status(if (hasKey) R.string.status_off else R.string.connect_welcome, theme.dim)
+                status(if (hasKey) R.string.status_off else R.string.connect_welcome, theme.fg)
+                c.powerAction.contentDescription = getString(if (hasKey) R.string.action_connect else R.string.connect_add_key)
                 paintPower(theme.acc)
                 c.nodeNote.text = ""
             }
 
             TunnelState.Connecting -> {
                 status(R.string.status_connecting, theme.dim)
+                c.powerAction.contentDescription = getString(R.string.status_connecting)
                 paintPower(theme.acc)
                 c.nodeNote.text = ""
             }
 
             is TunnelState.On -> {
-                status(R.string.status_on, theme.fg)
+                status(R.string.status_on, if (theme.dark) theme.fg else theme.acc)
+                c.powerAction.contentDescription = getString(R.string.connect_disconnect)
                 paintPower(theme.acc)
-
-                // Имя ноды от ядра — «Финляндия · Хельсинки»; отклик — третьим.
-                c.nodeLine.isVisible = true
-                c.nodeLine.text = listOf(state.node, if (state.ms > 0) getString(R.string.node_ping, state.ms) else "")
-                    .filter { it.isNotEmpty() }
-                    .joinToString(" · ")
                 c.nodeNote.text = choiceText(state)
 
                 // Ошибка отдельного соединения туннель не роняет, но молчать о
@@ -443,6 +531,7 @@ class MainActivity : AppCompatActivity() {
 
             is TunnelState.Failed -> {
                 status(R.string.status_failed, theme.fail)
+                c.powerAction.contentDescription = getString(R.string.connect_retry)
                 paintPower(theme.fail)
 
                 val human = humanReasonFor(state.kind)
@@ -461,8 +550,6 @@ class MainActivity : AppCompatActivity() {
         }
         // Пустая строка — это не строка: место под неё занимать незачем.
         c.nodeNote.isVisible = c.nodeNote.text.isNotEmpty()
-        c.powerAction.isEnabled = state !is TunnelState.Connecting
-        c.powerAction.contentDescription = c.statusText.text
 
         renderSubscription(state)
 
@@ -494,94 +581,40 @@ class MainActivity : AppCompatActivity() {
         else -> getString(R.string.connect_manual_moved, state.chosen)
     }
 
-    /** status — заголовок состояния под кнопкой: слово и его цвет. */
+    /** Последняя нода, через которую шёл трафик: её показываем и выключенными — и после перезапуска. */
+    private var lastNode: String
+        get() = store.lastNode
+        set(value) { store.lastNode = value }
+
+    /** Состояние — одной крупной строкой под кнопкой, цветом состояния. */
+    /** Состояние крупно; новое слово проявляется, а не подменяет прежнее рывком. */
     private fun status(text: Int, color: Int) {
         val v = ui.connectScreen.statusText
         val changed = v.text.toString() != getString(text)
         v.setText(text)
         v.setTextColor(color)
-        // Новое слово проявляется, а не подменяется: так видно, что оно новое.
-        if (changed && android.animation.ValueAnimator.areAnimatorsEnabled()) {
-            val dp = resources.displayMetrics.density
-            for (view in listOf(v, ui.connectScreen.nodeLine)) {
-                view.alpha = 0f
-                view.translationY = 6 * dp
-                view.animate().cancel()
-                view.animate().alpha(1f).translationY(0f).setDuration(280).start()
-            }
+        if (changed && v.isAttachedToWindow && v.isShown) {
+            v.alpha = 0f
+            v.translationY = 6 * resources.displayMetrics.density
+            v.animate().alpha(1f).translationY(0f).setDuration(360).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
         }
     }
-    /** Цвет ленты — личный выбор; состояние передаём текстом и кнопкой. */
+
+    /** Цвет ленты — личный выбор; состояние передаём дугой и строкой. */
     private fun paintPower(color: Int) {
         val c = ui.connectScreen
-        val dp = resources.displayMetrics.density
+        c.todayBars.theme = theme
         c.halo.theme = theme
-        c.halo.alive = MarviaState.state.value is TunnelState.On
-        c.trafficPanel.theme = theme
+        c.halo.lit = MarviaState.state.value is TunnelState.On
         c.powerAction.theme = theme.copy(acc = color)
-
     }
 
     /**
-     * renderSubscription — срок и остаток трафика.
-     *
-     * Пустая карточка означает, что показывать нечего: продавец не поставил ни
-     * срока, ни квоты. Врать «безлимит» в этом случае нельзя — он мог просто
-     * не заполнить поля.
+     * renderSubscription — срок и остаток живут на «Серверах», у своего
+     * провайдера. Здесь от подписки остаётся одно: есть ли новая версия.
      */
     private fun renderSubscription(state: TunnelState) {
-        val c = ui.connectScreen
-        val sub = (state as? TunnelState.On)?.subscription
-        more.showUpdate(sub)
-
-        if (sub == null || !sub.known) {
-            c.subCard.isVisible = false
-            c.headerUntil.isVisible = false
-            return
-        }
-
-        c.subCard.isVisible = true
-
-        val day = if (sub.until.isEmpty()) "" else Format.day(this, sub.until)
-        c.headerUntil.isVisible = day.isNotEmpty()
-        if (day.isNotEmpty()) {
-            c.headerUntil.text = getString(R.string.header_until, day)
-        }
-
-        val quota = sub.limitBytes > 0
-        c.trafficLine.isVisible = quota
-        c.trafficTrack.isVisible = quota
-        if (quota) {
-            c.trafficValue.text = getString(
-                R.string.traffic_of,
-                Format.size(this, sub.leftBytes),
-                Format.size(this, sub.limitBytes),
-            )
-            val left = (sub.leftBytes.toFloat() / sub.limitBytes).coerceIn(0f, 1f)
-            weigh(c.trafficFill, left)
-            weigh(c.trafficRest, 1f - left)
-        }
-
-        c.untilLine.isVisible = day.isNotEmpty()
-        if (day.isNotEmpty()) {
-            val days = Format.daysLeft(sub.until)
-            c.untilLine.text = if (days == null) {
-                getString(R.string.sub_until_only, day)
-            } else {
-                getString(
-                    R.string.sub_until_days,
-                    day,
-                    resources.getQuantityString(R.plurals.days_left, days, days),
-                )
-            }
-        }
-    }
-
-    /** Полоса остатка рисуется весами: своего вида полосы под это в Android нет. */
-    private fun weigh(view: View, weight: Float) {
-        val params = view.layoutParams as android.widget.LinearLayout.LayoutParams
-        params.weight = weight
-        view.layoutParams = params
+        more.showUpdate((state as? TunnelState.On)?.subscription)
     }
 
     // --------------------------------------------------------------- ключ
@@ -759,6 +792,8 @@ class MainActivity : AppCompatActivity() {
         val subscription = RuRoutes.subscriptionURL(store.accountLink) ?: return
         lifecycleScope.launch {
             withContext(Dispatchers.IO) { RuRoutes.refresh(applicationContext, subscription) }
+            // Строка под переключателем говорит, скачан ли список, — обновить её.
+            more.paint()
         }
     }
 
@@ -775,7 +810,10 @@ class MainActivity : AppCompatActivity() {
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
 
-            ui.nav.navBar.updatePadding(bottom = pad + bars.bottom)
+            ui.nav.navBar.updatePadding(bottom = pad)
+            ui.nav.root.updateLayoutParams<android.view.ViewGroup.MarginLayoutParams> {
+                bottomMargin = bars.bottom + (8 * resources.displayMetrics.density).toInt()
+            }
             // Когда панели нет, её отступ забирает содержимое — иначе экран
             // ключа упирается в системную навигацию.
             val below = if (ui.nav.root.isVisible) 0 else bars.bottom
@@ -814,6 +852,19 @@ class MainActivity : AppCompatActivity() {
      * ронять: иначе человек сменил продавца, а трафик продолжает идти через
      * прежнего — и нигде это не написано.
      */
+    /**
+     * resetAll — «сбросить всё»: туннель вниз, настройки в ноль, экран заново.
+     * Пересоздаём активность, а не чистим экраны по одному: первый запуск и
+     * так умеет начинать с пустого места, и второго пути быть не должно.
+     */
+    private fun resetAll() {
+        if (MarviaState.state.value is TunnelState.On || MarviaState.state.value is TunnelState.Connecting) {
+            startService(Intent(this, MarviaVpnService::class.java).setAction(MarviaVpnService.ACTION_STOP))
+        }
+        store.resetAll()
+        recreate()
+    }
+
     private fun restartTunnel() {
         if (MarviaState.state.value !is TunnelState.On) return
         startService(
@@ -849,15 +900,5 @@ class MainActivity : AppCompatActivity() {
         val manager = getSystemService(InputMethodManager::class.java)
         manager?.hideSoftInputFromWindow(ui.keyScreen.keyInput.windowToken, 0)
         ui.keyScreen.keyInput.clearFocus()
-    }
-
-    private fun askForNotifications() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            return
-        }
-        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-        if (granted != PackageManager.PERMISSION_GRANTED) {
-            notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
     }
 }

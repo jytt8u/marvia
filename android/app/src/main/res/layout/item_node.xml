@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Одна нода внутри карточки подписки: флаг, страна, город с именем и
-    состоянием, полоски сигнала и отклик. Между строками — линия карточки.
+    Нода внутри провайдера: флаг, страна, город и хост, четыре палочки
+    качества, отклик. Подложка у той, через которую идёт трафик; тусклая —
+    у недоступной. Цвета ставит код.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/nodeRow"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minHeight="62dp"
+    android:minHeight="56dp"
     android:orientation="horizontal"
-    android:paddingHorizontal="14dp"
-    android:paddingVertical="11dp">
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="10dp">
 
-    <!-- Флаг. Страну не узнали — места он не занимает: выдумывать флаг нельзя. -->
     <TextView
         android:id="@+id/nodeFlag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="12dp"
-        android:textSize="24sp" />
+        android:textSize="22sp" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -31,42 +31,38 @@
 
         <TextView
             android:id="@+id/nodeTitle"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
-            android:tag="fg"
-            android:textColor="@color/veil_text"
-            android:textSize="16sp"
+            android:textSize="15sp"
             android:textStyle="bold" />
 
-        <!-- Здесь же разводятся «выбрана» и «трафик идёт сейчас»: это разное. -->
         <TextView
             android:id="@+id/nodeNote"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:ellipsize="end"
-            android:maxLines="3"
+            android:maxLines="1"
             android:tag="dim"
-            android:textColor="@color/veil_muted"
             android:textSize="12sp" />
     </LinearLayout>
 
     <io.marvia.android.SignalBars
         android:id="@+id/nodeBars"
-        android:layout_width="22dp"
+        android:layout_width="16dp"
         android:layout_height="14dp"
-        android:layout_marginStart="10dp" />
+        android:layout_marginStart="8dp" />
 
     <TextView
         android:id="@+id/nodePing"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:fontFamily="@font/jetbrains_mono"
-        android:minWidth="52dp"
+        android:fontFamily="@font/mono"
         android:gravity="end"
+        android:minWidth="46dp"
         android:textSize="13sp"
         android:textStyle="bold" />
 </LinearLayout>

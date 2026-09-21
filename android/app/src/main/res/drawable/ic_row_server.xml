@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Значок строки настроек из макета: контур, цвет ставится тонировкой по месту. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="18dp" android:height="18dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:pathData="M4,5a2,2 0 0,1 2,-2h12a2,2 0 0,1 2,2v3a2,2 0 0,1 -2,2H6a2,2 0 0,1 -2,-2z" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.9" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
-    <path android:pathData="M4,16a2,2 0 0,1 2,-2h12a2,2 0 0,1 2,2v3a2,2 0 0,1 -2,2H6a2,2 0 0,1 -2,-2z" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.9" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
-    <path android:pathData="M8,6.5h0.01M8,17.5h0.01" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.9" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
-</vector>

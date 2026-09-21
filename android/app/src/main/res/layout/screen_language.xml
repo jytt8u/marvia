@@ -15,52 +15,22 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="26dp"
-        android:paddingTop="44dp"
+        android:paddingTop="@dimen/header_pad"
         android:paddingBottom="26dp">
 
-        <!-- Шапка первого запуска: знак с надписью и две точки шагов. -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <io.marvia.android.MarviaLogoView
-                android:layout_width="38dp"
-                android:layout_height="30dp"
-                android:layout_marginEnd="10dp"
-                android:contentDescription="@null" />
-
-            <ImageView
-                android:layout_width="0dp"
-                android:layout_height="17dp"
-                android:layout_weight="1"
-                android:adjustViewBounds="true"
-                android:contentDescription="@string/app_name"
-                android:scaleType="fitStart"
-                android:src="@drawable/ic_wordmark"
-                android:tag="icon:fg"
-                app:tint="@color/veil_text" />
-
-            <View
-                android:layout_width="22dp"
-                android:layout_height="6dp"
-                android:background="@drawable/bg_pill"
-                android:tag="fill" />
-
-            <View
-                android:layout_width="6dp"
-                android:layout_height="6dp"
-                android:layout_marginStart="6dp"
-                android:background="@drawable/bg_pill"
-                android:tag="line" />
+        <!-- Шапка первого запуска: знак, имя и две точки шагов — язык, разрешения. -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <io.marvia.android.MarviaLogoView android:layout_width="34dp" android:layout_height="30dp" android:layout_marginEnd="10dp" android:contentDescription="@null" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="@font/unbounded" android:letterSpacing="0.16" android:tag="fg" android:text="@string/app_name_caps" android:textSize="13sp" android:textStyle="bold" />
+            <View android:id="@+id/stepOne" android:layout_width="22dp" android:layout_height="8dp" android:layout_marginEnd="6dp" />
+            <View android:id="@+id/stepTwo" android:layout_width="8dp" android:layout_height="8dp" />
         </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="56dp"
-            android:letterSpacing="-0.01"
+            android:layout_marginTop="24dp"
+            android:letterSpacing="-0.02"
             android:tag="fg"
             android:text="@string/language_title"
             android:textColor="@color/veil_text"

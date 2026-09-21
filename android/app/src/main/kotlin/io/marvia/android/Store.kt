@@ -32,7 +32,7 @@ class Store(context: Context) {
         set(value) {
             val link = value.trim()
             if (link != accountLink) {
-                dropSubscriptionCache()
+                chosenNode = 0
                 // Запоминаем день, а не саму ссылку: в настройках человек
                 // видит, когда ключ появился, и понимает, тот ли он, что
                 // прислал продавец на прошлой неделе.
@@ -46,6 +46,31 @@ class Store(context: Context) {
                 subscriptions = subscriptions + Subscription(defaultSubscriptionName(link), link)
             }
         }
+
+    /**
+     * chosenNode — нода, которую человек выбрал руками; ноль — автовыбор.
+     *
+     * Живёт здесь, а не в ядре: ядро поднимается с каждым туннелем заново и
+     * своего выбора не помнит. Номер ноды принадлежит подписке, поэтому при
+     * смене рабочей подписки выбор сбрасывается — чужой номер указал бы
+     * не туда.
+     */
+    var chosenNode: Long
+        get() = prefs.getLong(KEY_CHOSEN_NODE, 0)
+        set(value) { prefs.edit().putLong(KEY_CHOSEN_NODE, value).apply() }
+
+    /**
+     * onboarded — второй шаг первого запуска (разрешения) пройден. Язык —
+     * отдельно: его выбирают и из настроек, а разрешения спрашивают один раз.
+     */
+    var onboarded: Boolean
+        get() = prefs.getBoolean(KEY_ONBOARDED, false)
+        set(value) { prefs.edit().putBoolean(KEY_ONBOARDED, value).apply() }
+
+    /** lastNode — через какую ноду шёл трафик в прошлый раз: главная показывает её и выключенной. */
+    var lastNode: String
+        get() = prefs.getString(KEY_LAST_NODE, "").orEmpty()
+        set(value) { prefs.edit().putString(KEY_LAST_NODE, value).apply() }
 
     /** Когда ключ положили сюда. Ноль означает, что он появился до этой записи. */
     val accountSavedAt: Long
@@ -71,18 +96,9 @@ class Store(context: Context) {
      * перевод строки в имени и так не наберёшь.
      */
     var subscriptions: List<Subscription>
-        get() {
-            val list = prefs.getStringSet(KEY_SUBSCRIPTIONS, emptySet()).orEmpty()
-                .mapNotNull(::subscriptionOf)
-                .sortedBy { it.name.lowercase() }
-            // Установки до появления списка: ключ есть, записи о нём нет.
-            // Показываем его подпиской, а не пустым экраном.
-            val link = accountLink
-            if (list.none { it.link == link } && link.isNotEmpty()) {
-                return list + Subscription(defaultSubscriptionName(link), link)
-            }
-            return list
-        }
+        get() = prefs.getStringSet(KEY_SUBSCRIPTIONS, emptySet()).orEmpty()
+            .mapNotNull(::subscriptionOf)
+            .sortedBy { it.name.lowercase() }
         set(value) {
             prefs.edit().putStringSet(KEY_SUBSCRIPTIONS, value.map(::rowOf).toSet()).apply()
         }
@@ -97,6 +113,7 @@ class Store(context: Context) {
 
     fun removeSubscription(link: String) {
         subscriptions = subscriptions.filter { it.link != link }
+        dropSubscriptionCache(link)
         // Убрали рабочую — остаёмся без ключа, а не с чужим втихую.
         if (accountLink == link) accountLink = ""
     }
@@ -255,6 +272,53 @@ class Store(context: Context) {
                 .apply()
         }
 
+    /**
+     * Ручки темы, которых нет в общем коде: узор фона, шрифт, значок в шапке.
+     *
+     * В код темы они не входят намеренно: код общий с панелью и окном, и
+     * узор с фотографией-значком там не значат ничего. Живут на телефоне и
+     * профили их не запоминают.
+     */
+    var pattern: String
+        get() = prefs.getString(KEY_PATTERN, PATTERN_DOTS)?.takeIf { it in PATTERNS } ?: PATTERN_DOTS
+        set(value) { prefs.edit().putString(KEY_PATTERN, value.takeIf { it in PATTERNS } ?: PATTERN_DOTS).apply() }
+
+    var font: String
+        get() = prefs.getString(KEY_FONT, FONT_ONEST)?.takeIf { it in FONTS } ?: FONT_ONEST
+        set(value) { prefs.edit().putString(KEY_FONT, value.takeIf { it in FONTS } ?: FONT_ONEST).apply() }
+
+    /** logo — что в шапке главной: знак Marvia, своя картинка или ничего. */
+    var logo: String
+        get() = prefs.getString(KEY_LOGO, LOGO_MARVIA)?.takeIf { it in LOGOS } ?: LOGO_MARVIA
+        set(value) { prefs.edit().putString(KEY_LOGO, value.takeIf { it in LOGOS } ?: LOGO_MARVIA).apply() }
+
+    private fun logoFile(): File = File(app.filesDir, LOGO_FILE)
+
+    fun hasLogo(): Boolean = logoFile().exists()
+
+    /** saveLogo кладёт свою картинку под значок, уменьшив: в шапке она в 34 dp. */
+    fun saveLogo(uri: android.net.Uri): Boolean {
+        val bmp = try {
+            app.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+        } catch (_: Exception) {
+            null
+        } ?: return false
+        val scale = LOGO_MAX_SIDE.toFloat() / maxOf(bmp.width, bmp.height, 1)
+        val small = if (scale < 1f) Bitmap.createScaledBitmap(bmp, (bmp.width * scale).toInt().coerceAtLeast(1), (bmp.height * scale).toInt().coerceAtLeast(1), true) else bmp
+        return try {
+            val tmp = File(app.filesDir, "$LOGO_FILE.tmp")
+            tmp.outputStream().use { small.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            tmp.renameTo(logoFile())
+        } catch (_: Exception) {
+            false
+        } finally {
+            if (small !== bmp) small.recycle()
+            bmp.recycle()
+        }
+    }
+
+    fun logoBitmap(): Bitmap? = try { BitmapFactory.decodeFile(logoFile().absolutePath) } catch (_: Exception) { null }
+
     /** profiles — три сохранённых вида кодами; пустой слот — null. */
     var profiles: List<String?>
         get() = (0 until 3).map { i ->
@@ -378,12 +442,27 @@ class Store(context: Context) {
         return s
     }
 
+    /**
+     * resetAll стирает всё: подписки с их кэшем, тему с фоном и значком,
+     * настройки и учёт трафика. Язык тоже — после сброса приложение
+     * начинается с первого экрана, как после установки.
+     */
+    fun resetAll() {
+        for (sub in subscriptions) runCatching { Mobile.forgetSubscription(sub.link, cacheDir()) }
+        File(app.filesDir, Mobile.CacheName).delete()
+        backdropFile().delete()
+        logoFile().delete()
+        prefs.edit().clear().apply()
+    }
+
     /** Каталог, который приложение отдаёт ядру под кэш подписки. */
     fun cacheDir(): String = app.filesDir.absolutePath
 
-    private fun dropSubscriptionCache() {
-        // Не удалилось — не беда: ядро сверит отпечаток и просто не станет
-        // этот кэш использовать, а первый удачный поход в панель его перезапишет.
+    private fun dropSubscriptionCache(link: String) {
+        // Кэш у каждой подписки свой — стираем его; старый общий файл, если
+        // остался от прежних версий, — заодно. Не удалилось — не беда: ядро
+        // сверит отпечаток и чужой кэш использовать не станет.
+        runCatching { Mobile.forgetSubscription(link, cacheDir()) }
         File(app.filesDir, Mobile.CacheName).delete()
     }
 
@@ -405,6 +484,9 @@ class Store(context: Context) {
 
         private const val KEY_ACCOUNT_LINK = "account_link"
         private const val KEY_ACCOUNT_SAVED = "account_saved_at"
+        private const val KEY_CHOSEN_NODE = "chosen_node"
+        private const val KEY_ONBOARDED = "onboarded"
+        private const val KEY_LAST_NODE = "last_node"
         private const val KEY_SUBSCRIPTIONS = "subscriptions"
 
         /**
@@ -451,6 +533,24 @@ class Store(context: Context) {
         /** Имя файла фона в приватном каталоге и потолок его длинной стороны. */
         private const val BACKDROP_FILE = "backdrop.jpg"
         private const val BACKDROP_MAX_SIDE = 2048
+
+        private const val KEY_PATTERN = "look_pattern"
+        private const val KEY_FONT = "look_font"
+        private const val KEY_LOGO = "look_logo"
+        private const val LOGO_FILE = "logo.png"
+        private const val LOGO_MAX_SIDE = 256
+
+        const val PATTERN_NONE = "none"
+        const val PATTERN_DOTS = "dots"
+        val PATTERNS = listOf(PATTERN_NONE, PATTERN_DOTS, "grid", "rings", "lines")
+
+        const val FONT_ONEST = "onest"
+        val FONTS = listOf(FONT_ONEST, "manrope", "geologica")
+
+        const val LOGO_MARVIA = "marvia"
+        const val LOGO_CUSTOM = "custom"
+        const val LOGO_NONE = "none"
+        val LOGOS = listOf(LOGO_MARVIA, LOGO_CUSTOM, LOGO_NONE)
 
         /** AppCompatDelegate.MODE_NIGHT_NO — так хранилась светлая тема. */
         private const val LEGACY_LIGHT = 1

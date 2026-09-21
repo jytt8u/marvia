@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <dimen name="hero_stage_height">222dp</dimen>
+    <dimen name="hero_button_size">208dp</dimen>
     <!-- Поля экрана из макета: 18 по краям, заголовок отступает сверху на 10. -->
     <dimen name="screen_pad">18dp</dimen>
     <dimen name="header_pad">10dp</dimen>

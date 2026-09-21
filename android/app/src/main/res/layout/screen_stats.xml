@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Расход из макета: заголовок с переключателем периода, карточка с кольцом
-    и тремя числами, линия по дням, доли стран полосой, неделя по часам
-    клетками и честная подпись внизу.
+    «Расход» по макету: период справа в заголовке, циферблат с итогом и три
+    факта, линия по дням, страны, неделя по часам. Диаграммы рисуются кодом
+    (StatsViews), остальное — вьюхи, которые красит Paint по тегам.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -12,9 +12,9 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="bottom"
-        android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/screen_pad"
+        android:gravity="center_vertical"
+        android:paddingStart="22dp"
+        android:paddingEnd="16dp"
         android:paddingTop="@dimen/header_pad"
         android:paddingBottom="12dp">
 
@@ -25,57 +25,50 @@
             android:orientation="vertical">
 
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:letterSpacing="-0.01"
-                android:tag="fg"
                 android:text="@string/stats_title"
-                android:textColor="@color/veil_text"
+                android:tag="fg"
                 android:textSize="26sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:letterSpacing="-0.01" />
 
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:tag="dim"
                 android:text="@string/stats_subtitle"
-                android:textColor="@color/veil_muted"
+                android:tag="dim"
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <!-- Период: неделя или тридцать дней. Пилюля из двух, активная залита. -->
+        <!-- Период: таблетки в общей капсуле, активная залита акцентом. -->
         <LinearLayout
             android:id="@+id/rangeBox"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_pill"
             android:orientation="horizontal"
             android:padding="3dp">
 
             <TextView
                 android:id="@+id/rangeWeek"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_pill"
-                android:fontFamily="@font/onest_medium"
+                android:layout_height="32dp"
                 android:gravity="center"
-                android:minHeight="32dp"
                 android:paddingHorizontal="12dp"
                 android:text="@string/stats_range_week"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/rangeMonth"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_pill"
-                android:fontFamily="@font/onest_medium"
+                android:layout_height="32dp"
                 android:gravity="center"
-                android:minHeight="32dp"
                 android:paddingHorizontal="12dp"
                 android:text="@string/stats_range_month"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 
@@ -83,82 +76,81 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:paddingHorizontal="16dp">
+        android:clipToPadding="false"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
+            android:paddingHorizontal="16dp"
             android:paddingTop="4dp"
             android:paddingBottom="16dp">
 
-            <!-- Кольцо: сегмент на день, яркость — объём. Внутри итог и среднее. -->
+            <!-- Циферблат: кольцо из сегментов, по одному на день; ярче — больше. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card"
-                android:gravity="center_horizontal"
                 android:orientation="vertical"
+                android:tag="card"
                 android:paddingHorizontal="16dp"
-                android:paddingTop="18dp"
-                android:paddingBottom="16dp"
-                android:tag="card">
+                android:paddingTop="12dp"
+                android:paddingBottom="14dp">
 
                 <FrameLayout
                     android:layout_width="236dp"
-                    android:layout_height="236dp">
+                    android:layout_height="236dp"
+                    android:layout_gravity="center_horizontal">
 
-                    <io.marvia.android.UsageDial
-                        android:id="@+id/dial"
+                    <io.marvia.android.RangeDial
+                        android:id="@+id/rangeDial"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
 
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:gravity="center_horizontal"
                         android:orientation="vertical">
 
                         <TextView
                             android:id="@+id/dialLabel"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/jetbrains_mono"
+                            android:fontFamily="@font/mono"
                             android:letterSpacing="0.18"
                             android:tag="dim"
-                            android:textColor="@color/veil_muted"
-                            android:textSize="10sp" />
+                            android:textSize="9.5sp" />
 
                         <TextView
                             android:id="@+id/dialTotal"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
-                            android:fontFamily="@font/jetbrains_mono"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="@font/mono"
                             android:letterSpacing="-0.02"
                             android:tag="fg"
-                            android:textColor="@color/veil_text"
-                            android:textSize="36sp"
+                            android:textSize="34sp"
                             android:textStyle="bold" />
 
                         <TextView
-                            android:id="@+id/dialAverage"
+                            android:id="@+id/dialPerDay"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
+                            android:layout_marginTop="4dp"
                             android:tag="dim"
-                            android:textColor="@color/veil_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
                 </FrameLayout>
 
-                <!-- Три числа под кольцом: пик, лимит подписки, дни в периоде. -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:gravity="center"
-                    android:orientation="horizontal">
+                    android:layout_marginTop="2dp"
+                    android:baselineAligned="false"
+                    android:gravity="center_vertical">
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -168,64 +160,26 @@
                         android:orientation="vertical">
 
                         <TextView
-                            android:id="@+id/peakValue"
+                            android:id="@+id/factPeak"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/jetbrains_mono"
+                            android:fontFamily="@font/mono"
                             android:tag="fg"
-                            android:textColor="@color/veil_text"
-                            android:textSize="16sp"
+                            android:textSize="15sp"
                             android:textStyle="bold" />
 
                         <TextView
-                            android:id="@+id/peakWhen"
+                            android:id="@+id/factPeakWhen"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:gravity="center"
+                            android:layout_marginTop="2dp"
                             android:tag="dim"
-                            android:textColor="@color/veil_muted"
-                            android:textSize="11sp" />
-                    </LinearLayout>
-
-                    <View
-                        android:id="@+id/limitRule"
-                        android:layout_width="1dp"
-                        android:layout_height="34dp"
-                        android:background="@color/veil_border"
-                        android:tag="line" />
-
-                    <LinearLayout
-                        android:id="@+id/limitCell"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:gravity="center_horizontal"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/limitValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/jetbrains_mono"
-                            android:tag="fg"
-                            android:textColor="@color/veil_text"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/limitWhen"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:tag="dim"
-                            android:textColor="@color/veil_muted"
                             android:textSize="11sp" />
                     </LinearLayout>
 
                     <View
                         android:layout_width="1dp"
-                        android:layout_height="34dp"
-                        android:background="@color/veil_border"
+                        android:layout_height="30dp"
                         android:tag="line" />
 
                     <LinearLayout
@@ -236,22 +190,52 @@
                         android:orientation="vertical">
 
                         <TextView
-                            android:id="@+id/daysValue"
+                            android:id="@+id/factQuota"
+                            android:gravity="center"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/jetbrains_mono"
+                            android:fontFamily="@font/mono"
                             android:tag="fg"
-                            android:textColor="@color/veil_text"
-                            android:textSize="16sp"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/factQuotaNote"
+                            android:gravity="center"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:tag="dim"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="30dp"
+                        android:tag="line" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/factDays"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/mono"
+                            android:tag="fg"
+                            android:textSize="15sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:gravity="center"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/stats_days_in_range"
                             android:tag="dim"
-                            android:text="@string/stats_days_in_period"
-                            android:textColor="@color/veil_muted"
                             android:textSize="11sp" />
                     </LinearLayout>
                 </LinearLayout>
@@ -261,17 +245,18 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="12dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:padding="16dp"
-                android:tag="card">
+                android:tag="card gap"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="bottom"
-                    android:orientation="horizontal">
+                    android:baselineAligned="false"
+                    android:gravity="top">
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -280,116 +265,142 @@
                         android:orientation="vertical">
 
                         <TextView
-                            android:id="@+id/lineTitle"
-                            android:layout_width="match_parent"
+                            android:id="@+id/trendTitle"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/onest_medium"
                             android:tag="fg"
-                            android:textColor="@color/veil_text"
-                            android:textSize="15sp" />
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
 
                         <TextView
-                            android:id="@+id/lineNote"
-                            android:layout_width="match_parent"
+                            android:id="@+id/trendPeak"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
+                            android:layout_marginTop="2dp"
                             android:tag="dim"
-                            android:textColor="@color/veil_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/lineTotal"
+                        android:id="@+id/trendTotal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:fontFamily="@font/jetbrains_mono"
+                        android:fontFamily="@font/mono"
                         android:tag="fg"
-                        android:textColor="@color/veil_text"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <io.marvia.android.UsageLine
-                    android:id="@+id/line"
+                <io.marvia.android.TrendLine
+                    android:id="@+id/trendLine"
                     android:layout_width="match_parent"
                     android:layout_height="120dp"
                     android:layout_marginTop="10dp" />
 
                 <LinearLayout
-                    android:id="@+id/lineAxis"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:orientation="horizontal" />
+                    android:layout_marginTop="6dp">
+
+                    <TextView
+                        android:id="@+id/daysFrom"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/mono"
+                        android:letterSpacing="0.1"
+                        android:tag="dim"
+                        android:textSize="9.5sp" />
+
+                    <TextView
+                        android:id="@+id/daysMid"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/mono"
+                        android:gravity="center"
+                        android:letterSpacing="0.1"
+                        android:tag="dim"
+                        android:textSize="9.5sp" />
+
+                    <TextView
+                        android:id="@+id/daysTo"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/mono"
+                        android:gravity="end"
+                        android:letterSpacing="0.1"
+                        android:tag="dim"
+                        android:text="@string/stats_today_caps"
+                        android:textSize="9.5sp" />
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- Доли стран: полоса и по колонке на страну. -->
+            <!-- Страны: одна полоса долями и список. -->
             <LinearLayout
-                android:id="@+id/sharesCard"
+                android:id="@+id/placesCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="12dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:padding="16dp"
-                android:tag="card">
+                android:tag="card gap"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp">
 
                 <TextView
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/onest_medium"
-                    android:tag="fg"
                     android:text="@string/stats_places"
-                    android:textColor="@color/veil_text"
-                    android:textSize="15sp" />
+                    android:tag="fg"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
-                <io.marvia.android.UsageShares
-                    android:id="@+id/shares"
+                <io.marvia.android.ShareBar
+                    android:id="@+id/placesBar"
                     android:layout_width="match_parent"
-                    android:layout_height="14dp"
-                    android:layout_marginTop="14dp" />
+                    android:layout_height="8dp"
+                    android:layout_marginTop="12dp" />
 
                 <LinearLayout
                     android:id="@+id/placeList"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:orientation="horizontal" />
+                    android:layout_marginTop="10dp"
+                    android:orientation="vertical" />
             </LinearLayout>
 
-            <!-- Неделя по часам: семь строк клеток и ось часов. -->
+            <!-- Неделя по часам. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="12dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:padding="16dp"
-                android:tag="card">
+                android:tag="card gap"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="bottom"
-                    android:orientation="horizontal">
+                    android:baselineAligned="true">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:fontFamily="@font/onest_medium"
-                        android:tag="fg"
                         android:text="@string/stats_week"
-                        android:textColor="@color/veil_text"
-                        android:textSize="15sp" />
+                        android:tag="fg"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/weekPeak"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:tag="dim"
-                        android:textColor="@color/veil_muted"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -397,25 +408,34 @@
                     android:id="@+id/weekRows"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="8dp"
                     android:orientation="vertical" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:paddingStart="30dp"
+                    android:paddingEnd="0dp">
+
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="@font/mono" android:tag="dim" android:text="0" android:textSize="9.5sp" />
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="@font/mono" android:gravity="center" android:tag="dim" android:text="6" android:textSize="9.5sp" />
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="@font/mono" android:gravity="center" android:tag="dim" android:text="12" android:textSize="9.5sp" />
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="@font/mono" android:gravity="center" android:tag="dim" android:text="18" android:textSize="9.5sp" />
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="@font/mono" android:gravity="end" android:tag="dim" android:text="23" android:textSize="9.5sp" />
+                </LinearLayout>
             </LinearLayout>
 
-            <!--
-                Честная подпись: это расход одного телефона через туннель, а не
-                всей подписки. Другое устройство с тем же ключом считает своё.
-            -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:lineSpacingMultiplier="1.3"
-                android:paddingHorizontal="6dp"
-                android:tag="dim"
+                android:gravity="center"
+                android:lineSpacingExtra="3dp"
+                android:paddingHorizontal="8dp"
                 android:text="@string/stats_note"
-                android:textColor="@color/veil_muted"
+                android:tag="dim"
                 android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>
-
 </LinearLayout>
