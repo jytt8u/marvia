@@ -11,6 +11,10 @@
     показывает не тот — поэтому фразы здесь построены без него.
 -->
 <resources>
+    <string name="hero_subtitle">Your personal connection</string>
+    <string name="power_hint_start">Tap the button to connect</string>
+    <string name="power_hint_cancel">Establishing your connection</string>
+    <string name="power_hint_stop">Tap the button to disconnect</string>
     <string name="app_name">Marvia</string>
 
     <!-- Нижняя панель: три экрана и ничего больше. -->

@@ -29,6 +29,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import androidx.core.view.updatePadding
+import androidx.core.view.updateLayoutParams
 import androidx.core.widget.ImageViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -393,15 +394,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Вкладка из макета: под активным значком таблетка мягким акцентом, сам
-     * значок и подпись — цветом текста; остальные — приглушённые. Акцентом
-     * красится только таблетка: он на экране и так есть, на кнопке.
+     * Активная вкладка отмечена заливкой акцента и контрастным значком.
      */
     private fun paintTab(pill: View, icon: ImageView, label: TextView, active: Boolean) {
         val dp = resources.displayMetrics.density
-        val color = if (active) theme.fg else theme.dim
-        pill.background = if (active) Paint.rounded(theme.accSoft, 999, dp) else null
-        ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(color))
+        val color = if (active) theme.acc else theme.dim
+        pill.background = if (active) Paint.rounded(theme.acc, 999, dp) else null
+        ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(if (active) theme.accFg else color))
         label.setTextColor(color)
         label.typeface = if (active) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
     }
@@ -415,10 +414,8 @@ class MainActivity : AppCompatActivity() {
         c.techText.setOnClickListener { more.openLogs(); show(Screen.MORE) }
         c.nodeLine.setOnClickListener { show(Screen.SERVERS) }
 
-        // Имя не висит в шапке постоянно — знака достаточно. Нажатие на знак
-        // выдвигает имя и строку про протокол и версию; второе — прячет.
-        val version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
-        c.heroTagline.text = getString(R.string.hero_tagline, version)
+        // Нажатие на знак позволяет свернуть или вернуть подпись бренда.
+        c.heroTagline.text = getString(R.string.hero_subtitle)
         c.heroWord.setTag(R.id.keep_font, true)
         // Имя — металлом, как знак: сверху светлое, книзу в приглушённый.
         c.heroWord.doOnLayout {
@@ -472,10 +469,16 @@ class MainActivity : AppCompatActivity() {
         }
         if (state is TunnelState.On) lastNode = state.node
         c.nodeLine.isVisible = c.nodeLine.text.isNotEmpty()
+        c.powerHint.setText(when (state) {
+            TunnelState.Off -> if (hasKey) R.string.power_hint_start else R.string.connect_add_key
+            TunnelState.Connecting -> R.string.power_hint_cancel
+            is TunnelState.On -> R.string.power_hint_stop
+            is TunnelState.Failed -> R.string.connect_retry
+        })
 
         when (state) {
             TunnelState.Off -> {
-                status(if (hasKey) R.string.status_off else R.string.connect_welcome, theme.dim)
+                status(if (hasKey) R.string.status_off else R.string.connect_welcome, theme.fg)
                 c.powerAction.contentDescription = getString(if (hasKey) R.string.action_connect else R.string.connect_add_key)
                 paintPower(theme.acc)
                 c.nodeNote.text = ""
@@ -777,7 +780,10 @@ class MainActivity : AppCompatActivity() {
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
 
-            ui.nav.navBar.updatePadding(bottom = pad + bars.bottom)
+            ui.nav.navBar.updatePadding(bottom = pad)
+            ui.nav.root.updateLayoutParams<android.view.ViewGroup.MarginLayoutParams> {
+                bottomMargin = bars.bottom + (8 * resources.displayMetrics.density).toInt()
+            }
             // Когда панели нет, её отступ забирает содержимое — иначе экран
             // ключа упирается в системную навигацию.
             val below = if (ui.nav.root.isVisible) 0 else bars.bottom

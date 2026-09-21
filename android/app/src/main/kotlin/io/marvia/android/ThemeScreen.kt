@@ -395,7 +395,7 @@ class ThemeScreen(
         }
         column.addView(body, LinearLayout.LayoutParams(MATCH, 0, 1f))
         val nav = ViewNavBinding.inflate(inflater, column, false)
-        column.addView(nav.root, LinearLayout.LayoutParams(MATCH, WRAP))
+        column.addView(nav.root)
         // Сцена — не кнопки: нажатия по ней ничего не делают.
         setTouchless(column)
         return column
@@ -413,6 +413,7 @@ class ThemeScreen(
         when (previewScreen) {
             Screen.MAIN -> {
                 id<PowerButton>(R.id.powerAction)?.apply { theme = t; state = PowerButton.State.ON }
+                id<TextView>(R.id.powerHint)?.setText(R.string.power_hint_stop)
                 id<HaloView>(R.id.halo)?.theme = t
                 id<TextView>(R.id.statusText)?.apply { setText(R.string.status_on); setTextColor(if (t.dark) t.fg else t.acc) }
                 id<TextView>(R.id.nodeLine)?.text = host.getString(R.string.theme_preview_country) + " · " + host.getString(R.string.theme_preview_place)
@@ -482,8 +483,11 @@ class ThemeScreen(
         }
         // Нижняя панель сцены: таблетка под активной вкладкой, как настоящая.
         val active = when (previewScreen) { Screen.MAIN -> R.id.navConnectPill to R.id.navConnectLabel; Screen.SERVERS -> R.id.navServersPill to R.id.navServersLabel; Screen.SETTINGS -> R.id.navMorePill to R.id.navMoreLabel }
-        id<View>(active.first)?.background = Paint.rounded(t.accSoft, 999, dp)
-        id<TextView>(active.second)?.apply { setTextColor(t.fg); typeface = android.graphics.Typeface.create(typeface, android.graphics.Typeface.BOLD) }
+        id<View>(active.first)?.background = Paint.rounded(t.acc, 999, dp)
+        id<TextView>(active.second)?.apply { setTextColor(t.acc); typeface = android.graphics.Typeface.create(typeface, android.graphics.Typeface.BOLD) }
+        val navIcons = listOf(R.id.navConnectIcon, R.id.navServersIcon, R.id.navStatsIcon, R.id.navThemeIcon, R.id.navMoreIcon)
+        val activeIcon = when (previewScreen) { Screen.MAIN -> R.id.navConnectIcon; Screen.SERVERS -> R.id.navServersIcon; Screen.SETTINGS -> R.id.navMoreIcon }
+        for (icon in navIcons) id<ImageView>(icon)?.imageTintList = android.content.res.ColorStateList.valueOf(if (icon == activeIcon) t.accFg else t.dim)
         for (pill in listOf(R.id.navConnectPill, R.id.navServersPill, R.id.navStatsPill, R.id.navThemePill, R.id.navMorePill)) if (pill != active.first) id<View>(pill)?.background = null
         setTouchless(s)
     }

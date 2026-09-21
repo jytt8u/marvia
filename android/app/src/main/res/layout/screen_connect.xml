@@ -5,6 +5,7 @@
     плитки. Цвета ставит Paint по тегам.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -20,13 +21,13 @@
                 android:layout_gravity="center" android:scaleType="centerCrop" android:contentDescription="@null" android:visibility="gone" />
         </FrameLayout>
         <LinearLayout android:id="@+id/heroName" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginStart="12dp" android:orientation="vertical" android:visibility="gone">
+            android:layout_marginStart="12dp" android:orientation="vertical" android:visibility="visible">
             <TextView android:id="@+id/heroWord" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:fontFamily="@font/unbounded" android:textStyle="bold" android:textSize="18sp"
-                android:letterSpacing="0.16" android:includeFontPadding="false" android:text="@string/app_name_caps" android:tag="fg" />
+                android:letterSpacing="0.10" android:includeFontPadding="false" android:text="@string/app_name_caps" android:tag="fg" />
             <TextView android:id="@+id/heroTagline" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="3dp" android:fontFamily="@font/mono" android:textSize="9sp"
-                android:letterSpacing="0.16" android:tag="dim" />
+                android:layout_marginTop="4dp" android:textSize="11sp"
+                android:text="@string/hero_subtitle" android:tag="dim" />
         </LinearLayout>
         <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />    </LinearLayout>
 
@@ -39,7 +40,7 @@
             <!-- Кнопка над ореолом: пятно и кольца уходят за края диска. Вокруг дуги запас под свечение. -->
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="262dp"
+                android:layout_height="@dimen/hero_stage_height"
                 android:clipChildren="false">
 
                 <io.marvia.android.HaloView
@@ -49,8 +50,8 @@
 
                 <io.marvia.android.PowerButton
                     android:id="@+id/powerAction"
-                    android:layout_width="248dp"
-                    android:layout_height="248dp"
+                    android:layout_width="@dimen/hero_button_size"
+                    android:layout_height="@dimen/hero_button_size"
                     android:layout_gravity="center"
                     android:contentDescription="@string/action_connect" />
             </FrameLayout>
@@ -62,26 +63,30 @@
                 android:layout_marginTop="2dp"
                 android:gravity="center"
                 android:text="@string/status_off"
-                android:textSize="24sp"
+                android:textSize="28sp"
                 android:textStyle="bold"
                 android:letterSpacing="-0.01"
                 android:accessibilityLiveRegion="polite" />
+
+            <TextView android:id="@+id/powerHint" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="6dp" android:gravity="center" android:tag="dim"
+                android:text="@string/power_hint_start" android:textSize="13sp" />
 
             <!-- Нода одной строкой: страна · город · отклик. Нажатие ведёт к выбору. -->
             <TextView
                 android:id="@+id/nodeLine"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="16dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center"
-                android:minHeight="32dp"
-                android:paddingHorizontal="12dp"
+                android:minHeight="48dp"
+                android:paddingHorizontal="18dp"
                 android:fontFamily="@font/mono"
                 android:letterSpacing="0.04"
-                android:tag="dim"
+                android:tag="node"
                 android:textSize="13sp" />
 
             <TextView android:id="@+id/nodeNote" android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -98,14 +103,14 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:tag="card"
+                android:tag="card feature"
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="14dp">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:baselineAligned="true">
                     <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                         android:text="@string/stats_today" android:tag="dim" android:textSize="14sp" />
                     <TextView android:id="@+id/todayTotal" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:fontFamily="@font/mono" android:textStyle="bold" android:tag="fg" android:textSize="16sp" />
+                        android:fontFamily="@font/mono" android:textStyle="bold" android:tag="acc" android:textSize="22sp" />
                 </LinearLayout>
                 <io.marvia.android.HourBars android:id="@+id/todayBars" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="12dp" />
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp">
@@ -123,18 +128,20 @@
                     android:tag="card" android:paddingHorizontal="16dp" android:paddingVertical="14dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="@string/stats_session" android:tag="dim" android:textSize="13sp" />
-                    <TextView android:id="@+id/sessionValue" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    <TextView android:id="@+id/sessionValue" android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:fontFamily="@font/mono" android:textStyle="bold" android:tag="fg"
-                        android:textSize="20sp" android:text="00:00:00" />
+                        android:textSize="20sp" android:text="00:00:00" android:maxLines="1"
+                        app:autoSizeTextType="uniform" app:autoSizeMinTextSize="13sp" app:autoSizeMaxTextSize="20sp" app:autoSizeStepGranularity="1sp" />
                 </LinearLayout>
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                     android:layout_marginStart="6dp" android:background="@drawable/bg_card" android:orientation="vertical"
                     android:tag="card" android:paddingHorizontal="16dp" android:paddingVertical="14dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="@string/stats_speed" android:tag="dim" android:textSize="13sp" />
-                    <TextView android:id="@+id/speedValue" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    <TextView android:id="@+id/speedValue" android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:fontFamily="@font/mono" android:textStyle="bold" android:tag="fg"
-                        android:textSize="20sp" android:maxLines="1" />
+                        android:textSize="20sp" android:maxLines="1"
+                        app:autoSizeTextType="uniform" app:autoSizeMinTextSize="13sp" app:autoSizeMaxTextSize="20sp" app:autoSizeStepGranularity="1sp" />
                 </LinearLayout>
             </LinearLayout>
 

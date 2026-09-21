@@ -90,8 +90,8 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
         brush.style = Paint.Style.FILL
         brush.shader = null
-        if (on && theme.glowA > 0) {
-            val alpha = (theme.glowA * 170).toInt().coerceIn(0, 255)
+        if (theme.glowA > 0) {
+            val alpha = (theme.glowA * if (on) 210 else 95).toInt().coerceIn(0, 255)
             val reach = arcR + ROOM * dp
             brush.shader = RadialGradient(
                 cx, cy, reach,
@@ -120,18 +120,18 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
             else -> {
                 // Блик сверху слева, тень к низу: диск объёмный, а не плоский круг.
                 // Как в макете: блик светлее второй поверхности, к краю — заметно темнее; диск круглый на глаз, а не плоский.
-                val top = if (solid) ColorUtils.blendARGB(theme.acc, 0xFFFFFFFF.toInt(), 0.28f) else ColorUtils.blendARGB(theme.surf2, 0xFFFFFFFF.toInt(), if (theme.dark) 0.10f else 0.3f)
-                val mid = if (solid) theme.acc else theme.surf2
-                val low = if (solid) ColorUtils.blendARGB(theme.acc, 0xFF000000.toInt(), 0.18f) else ColorUtils.blendARGB(theme.surf2, 0xFF000000.toInt(), if (theme.dark) 0.3f else 0.08f)
+                val top = if (solid) ColorUtils.blendARGB(theme.acc, 0xFFFFFFFF.toInt(), 0.28f) else ColorUtils.blendARGB(theme.surf2, theme.fg, if (theme.dark) 0.24f else 0.6f)
+                val mid = if (solid) theme.acc else ColorUtils.blendARGB(theme.surf2, theme.acc, if (theme.dark) .19f else .08f)
+                val low = if (solid) ColorUtils.blendARGB(theme.acc, 0xFF000000.toInt(), 0.18f) else ColorUtils.blendARGB(theme.surf, theme.bg, .55f)
                 brush.shader = RadialGradient(
-                    cx - radius * .24f, cy - radius * .4f, radius * 2f,
-                    intArrayOf(top, mid, low), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP,
+                    cx - radius * .32f, cy - radius * .58f, radius * 1.85f,
+                    intArrayOf(top, mid, low), floatArrayOf(0f, 0.52f, 1f), Shader.TileMode.CLAMP,
                 )
                 canvas.drawCircle(cx, cy, radius, brush)
                 brush.shader = null
                 // Подсветка изнутри снизу, когда подключено: акцент отражается в диске.
-                if (on && !solid) {
-                    brush.shader = RadialGradient(cx, cy + radius, radius * 1.1f, intArrayOf(ColorUtils.setAlphaComponent(theme.acc, 28), 0), null, Shader.TileMode.CLAMP)
+                if (!solid) {
+                    brush.shader = RadialGradient(cx + radius * .4f, cy + radius, radius * 1.4f, intArrayOf(ColorUtils.setAlphaComponent(theme.acc, if (on) 80 else 38), ColorUtils.setAlphaComponent(theme.acc, 0)), null, Shader.TileMode.CLAMP)
                     canvas.drawCircle(cx, cy, radius, brush)
                     brush.shader = null
                 }
@@ -149,6 +149,15 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
         if (theme.btn == "bare") brush.strokeWidth = 1.5f * dp
         canvas.drawCircle(cx, cy, radius, brush)
 
+        // A specular rim gives the disc a lit upper edge without another shadow layer.
+        if (theme.btn != "bare") {
+            brush.shader = android.graphics.LinearGradient(cx - radius, cy - radius, cx + radius, cy + radius,
+                intArrayOf(ColorUtils.setAlphaComponent(theme.fg, 120), ColorUtils.setAlphaComponent(theme.fg, 0)),
+                null, Shader.TileMode.CLAMP)
+            canvas.drawArc(RectF(cx - radius + dp, cy - radius + dp, cx + radius - dp, cy + radius - dp), 190f, 150f, false, brush)
+            brush.shader = null
+        }
+
         // Дуга: начало внизу (90°), по часовой. Градиент от акцента к почти
         // прозрачному по ходу дуги — хвост растворяется, как в макете.
         brush.strokeWidth = 3 * dp
@@ -158,6 +167,12 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
             State.OFF, State.FAILED -> {
                 brush.color = if (state == State.FAILED) ColorUtils.setAlphaComponent(theme.fail, 140) else theme.line
                 canvas.drawCircle(cx, cy, arcR, brush)
+                if (state == State.OFF) {
+                    brush.strokeWidth = 2 * dp
+                    brush.shader = sweep(cx, cy, 205f, 108f, ColorUtils.setAlphaComponent(theme.acc, 145))
+                    canvas.drawArc(box, 205f, 108f, false, brush)
+                    brush.shader = null
+                }
             }
             State.CONNECTING -> {
                 val start = 90f + turn
@@ -174,10 +189,10 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
         // Знак питания: линия и разомкнутое кольцо, как в значке макета.
         brush.color = when {
-            solid && on -> theme.accFg
+            solid -> theme.accFg
             on -> if (theme.dark) ColorUtils.blendARGB(theme.fg, theme.acc, 0.35f) else theme.acc
             state == State.FAILED -> theme.fail
-            else -> theme.dim
+            else -> ColorUtils.blendARGB(theme.fg, theme.acc, .25f)
         }
         brush.strokeWidth = 2.6f * dp
         val r = radius * 0.235f

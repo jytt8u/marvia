@@ -34,6 +34,12 @@ class HourBars @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         val bw = (width - gap * (n - 1)) / n
         val max = (hours.maxOrNull() ?: 0L).coerceAtLeast(1)
         val h = height.toFloat()
+        // Quiet tracks describe the scale even before there is traffic; values remain real.
+        brush.color = ColorUtils.setAlphaComponent(theme.acc, if (theme.dark) 14 else 10)
+        repeat(n) { i ->
+            val x = i * (bw + gap)
+            canvas.drawRoundRect(x, 0f, x + bw, h, 2 * dp, 2 * dp, brush)
+        }
         hours.forEachIndexed { i, v ->
             brush.color = when {
                 v == 0L -> theme.line
@@ -42,7 +48,10 @@ class HourBars @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             }
             val bh = if (v == 0L) 3 * dp else (h * v / max).coerceAtLeast(3 * dp)
             val x = i * (bw + gap)
+            if (v > 0) brush.shader = android.graphics.LinearGradient(0f, h - bh, 0f, h,
+                intArrayOf(brush.color, ColorUtils.setAlphaComponent(theme.acc, if (i == current) 120 else 55)), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawRoundRect(x, h - bh, x + bw, h, 2 * dp, 2 * dp, brush)
+            brush.shader = null
         }
     }
 }

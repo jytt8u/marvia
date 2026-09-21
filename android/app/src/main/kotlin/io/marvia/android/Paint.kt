@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.widget.ImageViewCompat
+import androidx.core.graphics.ColorUtils
 import com.google.android.material.materialswitch.MaterialSwitch
 
 /**
@@ -123,13 +124,15 @@ object Paint {
             tag == BG -> v.background = Backdrop(t)
             tag == SURF -> v.setBackgroundColor(t.surf)
             // Нижняя панель — средний тон фона, чуть прозрачный, как в макете.
-            tag == NAVBAR -> v.setBackgroundColor(androidx.core.graphics.ColorUtils.setAlphaComponent(t.mid, 235))
+            tag == NAVBAR -> v.background = rounded(t.surf, 24, dp).apply {
+                setStroke(dp.toInt().coerceAtLeast(1), ColorUtils.setAlphaComponent(t.acc, 38))
+            }
             tag == LINE -> v.setBackgroundColor(t.line)
             // Карточка — и отступ внутри по плотности темы: «плотно», «обычно»,
             // «просторно» должны быть видны, а не только числом в таблице.
             tag == CARD -> {
                 skin(v, t, dp)
-                if (v is ViewGroup) {
+                if (v is ViewGroup && v !is android.widget.FrameLayout) {
                     val side = (t.pad * dp).toInt()
                     val tall = ((t.pad - 2) * dp).toInt()
                     v.setPadding(side, tall, side, tall)
@@ -140,6 +143,15 @@ object Paint {
                 val pad = (t.pad * dp).toInt()
                 v.setPadding(pad, pad, pad, pad)
             }
+            tag == "feature" -> v.background = card(t, dp).apply {
+                colors = intArrayOf(ColorUtils.blendARGB(t.surf, t.acc, if (t.dark) .18f else .10f), t.surf)
+                orientation = GradientDrawable.Orientation.TL_BR
+                setStroke(dp.toInt().coerceAtLeast(1), ColorUtils.setAlphaComponent(t.acc, 64))
+            }
+            tag == "node" -> {
+                v.background = rounded(ColorUtils.blendARGB(t.surf, t.acc, .09f), 999, dp)
+                text(v, t.fg, t.dim)
+            }
             tag == FG -> text(v, t.fg, t.dim)
             tag == DIM -> text(v, t.dim, t.dim)
             tag == ACC -> text(v, t.acc, t.dim)
@@ -149,7 +161,9 @@ object Paint {
                 text(v, t.accFg, t.accFg)
             }
             // Квадрат под значком строки: мягкий акцент, как в макете.
-            tag == ICON_BOX -> v.background = rounded(t.accSoft, minOf(t.r, 12), dp)
+            tag == ICON_BOX -> v.background = rounded(t.accSoft, minOf(t.r, 12), dp).apply {
+                setStroke(dp.toInt().coerceAtLeast(1), ColorUtils.setAlphaComponent(t.acc, 36))
+            }
             tag == CHIP -> {
                 v.background = rounded(t.surf2, minOf(t.r, 10), dp)
                 text(v, t.dim, t.dim)
@@ -190,7 +204,13 @@ object Paint {
      */
     fun card(t: Theme, dp: Float, stroke: Int = t.line): GradientDrawable {
         val line = if (stroke == t.line && t.card == "flat") 0 else stroke
-        return rounded(t.surf, t.r, dp).apply { setStroke((1 * dp).toInt().coerceAtLeast(1), line) }
+        return rounded(t.surf, t.r, dp).apply {
+            if (t.card != "flat") {
+                orientation = GradientDrawable.Orientation.TL_BR
+                colors = intArrayOf(ColorUtils.blendARGB(t.surf, t.acc, if (t.dark) .065f else .025f), t.surf)
+            }
+            setStroke(dp.toInt().coerceAtLeast(1), if (line == t.line) ColorUtils.blendARGB(t.surf, t.line, .65f) else line)
+        }
     }
 
     /**

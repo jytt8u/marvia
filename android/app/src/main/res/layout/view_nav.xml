@@ -8,13 +8,15 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginBottom="8dp"
     android:background="@color/veil_surface"
     android:orientation="vertical"
     android:tag="navbar">
 
     <View
         android:layout_width="match_parent"
-        android:layout_height="1dp"
+        android:layout_height="0dp"
         android:tag="line"
         android:background="@color/veil_border" />
 

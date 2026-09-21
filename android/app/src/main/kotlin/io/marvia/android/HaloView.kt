@@ -25,24 +25,29 @@ class HaloView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         val dp = resources.displayMetrics.density
         val cx = width / 2f
         val cy = height / 2f
-        val glow = 120 * dp
+        val unit = dp * (height / (262 * dp)).coerceAtMost(1f)
+        val glow = minOf(width * .68f, height * .68f)
         brush.style = Paint.Style.FILL
         brush.shader = RadialGradient(
             cx, cy, glow,
-            intArrayOf(ColorUtils.setAlphaComponent(theme.acc, 26), ColorUtils.setAlphaComponent(theme.acc, 15), 0),
-            floatArrayOf(0f, 0.97f, 1f), Shader.TileMode.CLAMP,
+            intArrayOf(ColorUtils.setAlphaComponent(theme.acc, if (theme.dark) 54 else 25), ColorUtils.setAlphaComponent(theme.acc, 17), ColorUtils.setAlphaComponent(theme.acc, 0)),
+            floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP,
         )
         canvas.drawCircle(cx, cy, glow, brush)
         brush.shader = null
 
         brush.style = Paint.Style.STROKE
-        brush.strokeWidth = 1 * dp
-        brush.color = ColorUtils.setAlphaComponent(theme.fg, 9)
-        val reach = maxOf(width, height).toFloat()
-        var r = 40 * dp
-        while (r < reach) {
+        brush.strokeWidth = .7f * dp
+        // Three quiet orbital lines; no hard edge where the hero meets the content.
+        for (i in 0..2) {
+            val r = (112 + i * 23) * unit
+            brush.color = ColorUtils.setAlphaComponent(theme.acc, 28 - i * 7)
             canvas.drawCircle(cx, cy, r, brush)
-            r += 40 * dp
         }
+        brush.style = Paint.Style.FILL
+        brush.color = ColorUtils.setAlphaComponent(theme.acc, 160)
+        canvas.drawCircle(cx - 116 * unit, cy - 66 * unit, 2 * dp, brush)
+        brush.color = ColorUtils.setAlphaComponent(theme.acc, 85)
+        canvas.drawCircle(cx + 117 * unit, cy + 66 * unit, 2 * dp, brush)
     }
 }

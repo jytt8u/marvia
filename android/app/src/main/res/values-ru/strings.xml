@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="hero_subtitle">Ваше личное подключение</string>
+    <string name="power_hint_start">Нажмите на кнопку, чтобы подключиться</string>
+    <string name="power_hint_cancel">Устанавливаем соединение</string>
+    <string name="power_hint_stop">Нажмите на кнопку, чтобы отключиться</string>
     <string name="app_name">Marvia</string>
 
     <!-- Нижняя панель: три экрана и ничего больше. -->
