@@ -25,8 +25,10 @@ class HaloView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         val dp = resources.displayMetrics.density
         val cx = width / 2f
         val cy = height / 2f
-        val unit = dp * (height / (262 * dp)).coerceAtMost(1f)
-        val glow = minOf(width * .68f, height * .68f)
+        // Орбиты — по размеру кнопки, а не вьюхи: вьюха нарочно больше сцены,
+        // чтобы кольца не резались по её краю.
+        val unit = resources.getDimension(R.dimen.hero_button_size) / 248f
+        val glow = 178 * unit
         brush.style = Paint.Style.FILL
         brush.shader = RadialGradient(
             cx, cy, glow,

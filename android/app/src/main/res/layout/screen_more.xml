@@ -218,7 +218,7 @@
                 </FrameLayout>
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
                     <TextView style="@style/VeilRowTitle" android:text="@string/settings_russian" android:maxLines="2" />
-                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:maxLines="2" android:text="@string/settings_russian_sub" />
+                    <TextView android:id="@+id/russianSub" style="@style/VeilRowSub" android:layout_marginTop="2dp" android:maxLines="2" android:text="@string/settings_russian_sub" />
                 </LinearLayout>
                 <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchRussian" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:clickable="false" android:focusable="false" android:tag="switch" />
             </LinearLayout>
@@ -281,14 +281,29 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <TextView
+            <!-- Пока список читается — крутилка и строка акцентом: серая подпись без
+                 движения читалась как «ничего не нашлось». -->
+            <LinearLayout
                 android:id="@+id/appsLoading"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingBottom="8dp"
-                android:tag="dim"
-                android:text="@string/bypass_loading"
-                android:textSize="12.5sp" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingBottom="12dp"
+                android:paddingTop="4dp">
+                <ProgressBar
+                    android:id="@+id/appsSpinner"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp" />
+                <TextView
+                    android:id="@+id/appsLoadingText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:tag="acc"
+                    android:text="@string/bypass_loading"
+                    android:textSize="13sp" />
+            </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/appList"

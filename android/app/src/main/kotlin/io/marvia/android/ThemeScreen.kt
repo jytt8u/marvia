@@ -62,10 +62,10 @@ class ThemeScreen(
 
     private var tab = Tab.COLOR
 
-    /** Экран, выбранный руками; null — по вкладке: форма и «ещё» показывают настройки. */
+    /** Экран, выбранный руками; null — по вкладке: «форма» показывает настройки, «ещё» — шапку главной со знаком и именем. */
     private var pickedScreen: Screen? = null
     private val previewScreen: Screen
-        get() = pickedScreen ?: if (tab == Tab.SHAPE || tab == Tab.MORE) Screen.SETTINGS else Screen.MAIN
+        get() = pickedScreen ?: if (tab == Tab.SHAPE) Screen.SETTINGS else Screen.MAIN
 
     /** Слот профиля, в который пишет «сохранить сюда». */
     private var slot = 0
@@ -142,9 +142,11 @@ class ThemeScreen(
      */
     private data class Zoom(val w: Float, val h: Float, val scale: Float, val dx: Float, val dy: Float)
 
-    private fun zoomFor(t: Tab): Zoom = when (t) {
-        Tab.SHAPE -> Zoom(302f, 264f, 0.82f, -6f, -62f)
-        Tab.MORE -> Zoom(302f, 264f, 1f, 0f, 0f)
+    private fun zoomFor(t: Tab): Zoom = when {
+        // Форма на главной — это кнопка: её и показываем, вместе с подписью.
+        t == Tab.SHAPE && previewScreen == Screen.MAIN -> Zoom(302f, 264f, 0.6f, 0f, 85f)
+        t == Tab.SHAPE -> Zoom(302f, 264f, 0.82f, -6f, -62f)
+        t == Tab.MORE -> Zoom(302f, 264f, 1f, 0f, 0f)
         else -> Zoom(133f, 287f, 0.34f, 0f, 0f)
     }
 
@@ -353,11 +355,13 @@ class ThemeScreen(
             ui.previewFrame.animate().rotationY(0f).alpha(1f).setDuration(700).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
         }
 
-        // Переключатель экрана предпросмотра: точка и имя, столбиком справа.
-        // В приближении его нет — там показывается то, что меняет вкладка.
-        val picker = ui.previewPicker
+        // Переключатель экрана предпросмотра: точка и имя. Столбиком справа,
+        // а в приближении, где справа места нет, — строкой под телефоном.
+        val zoomed = tab == Tab.SHAPE || tab == Tab.MORE
+        val picker = if (zoomed) ui.previewPickerBelow else ui.previewPicker
+        ui.previewPicker.isVisible = !zoomed
+        ui.previewPickerBelow.isVisible = zoomed
         picker.removeAllViews()
-        picker.isVisible = tab != Tab.SHAPE && tab != Tab.MORE
         for ((key, name) in listOf(Screen.MAIN to R.string.theme_pv_main, Screen.SETTINGS to R.string.theme_pv_settings, Screen.SERVERS to R.string.theme_pv_servers)) {
             val on = previewScreen == key
             val item = LinearLayout(host).apply {
@@ -370,6 +374,7 @@ class ThemeScreen(
                     if (previewScreen != key) {
                         pickedScreen = key
                         paintPreview(t, flip = true)
+                        zoomTo(animate = true)
                     }
                 }
             }
@@ -421,9 +426,16 @@ class ThemeScreen(
                 id<HourBars>(R.id.todayBars)?.apply { theme = t; hours = MINI.map { it.toLong() }; current = 19 }
                 id<TextView>(R.id.sessionValue)?.text = "01:12:34"
                 id<TextView>(R.id.speedValue)?.text = host.getString(R.string.stats_mbps, "48,0")
-                id<View>(R.id.heroName)?.isVisible = false
+                // Шапка — как настоящая: знак по выбору из «Ещё», имя шрифтом темы.
+                // Иначе вкладка «Ещё» меняла бы то, чего в предпросмотре не видно.
+                val custom = if (store.logo == Store.LOGO_CUSTOM) store.logoBitmap() else null
+                id<View>(R.id.heroName)?.isVisible = true
                 id<View>(R.id.heroMarkButton)?.isVisible = store.logo != Store.LOGO_NONE
-                id<View>(R.id.heroCustom)?.isVisible = false
+                id<View>(R.id.heroMark)?.isVisible = store.logo == Store.LOGO_MARVIA || (store.logo == Store.LOGO_CUSTOM && custom == null)
+                id<ImageView>(R.id.heroCustom)?.apply {
+                    isVisible = custom != null
+                    if (custom != null) { setImageBitmap(custom); clipToOutline = true; outlineProvider = rounded(9 * dp) }
+                }
             }
             Screen.SERVERS -> {
                 id<TextView>(R.id.serversSubtitle)?.text = host.resources.getQuantityString(R.plurals.servers_providers, 2, 2) + " · " + host.resources.getQuantityString(R.plurals.servers_count, 8, 8)

@@ -61,9 +61,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:tag="card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                 <FrameLayout
                     android:id="@+id/previewFrame"
@@ -85,6 +90,18 @@
                     android:layout_weight="1"
                     android:layout_marginStart="12dp"
                     android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- Тот же переключатель в строку под телефоном — когда он приближен
+                     и места справа нет. Какой из двух показать, решает код. -->
+                <LinearLayout
+                    android:id="@+id/previewPickerBelow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- Вкладки: значок в таблетке и подпись, как нижняя панель. -->

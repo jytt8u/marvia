@@ -131,14 +131,18 @@ class TrendLine @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         canvas.drawPath(path, brush)
 
         // Пик: маленький кружок с обводкой. Последняя точка: кружок побольше.
+        // Пока трафика не было, пика нет: peak подтянут к единице, и indexOf
+        // вернул бы -1 — так приложение и падало на пустой статистике.
         val peakI = values.indexOf(peak)
-        brush.style = Brush.Style.FILL
-        brush.color = surf
-        canvas.drawCircle(xs[peakI], ys[peakI], 3.5f * dp, brush)
-        brush.style = Brush.Style.STROKE
-        brush.strokeWidth = 2 * dp
-        brush.color = acc
-        canvas.drawCircle(xs[peakI], ys[peakI], 3.5f * dp, brush)
+        if (peakI >= 0) {
+            brush.style = Brush.Style.FILL
+            brush.color = surf
+            canvas.drawCircle(xs[peakI], ys[peakI], 3.5f * dp, brush)
+            brush.style = Brush.Style.STROKE
+            brush.strokeWidth = 2 * dp
+            brush.color = acc
+            canvas.drawCircle(xs[peakI], ys[peakI], 3.5f * dp, brush)
+        }
 
         brush.style = Brush.Style.FILL
         brush.color = surf

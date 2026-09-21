@@ -90,8 +90,11 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
         brush.style = Paint.Style.FILL
         brush.shader = null
-        if (theme.glowA > 0) {
-            val alpha = (theme.glowA * if (on) 210 else 95).toInt().coerceIn(0, 255)
+        // Свечение — только когда подключено и у диска есть тело: «контур» из
+        // макета — прозрачный круг с одной линией, заливка под ним превращала
+        // бы его в диск, которого человек не выбирал.
+        if (theme.glowA > 0 && on && theme.btn != "bare") {
+            val alpha = (theme.glowA * 210).toInt().coerceIn(0, 255)
             val reach = arcR + ROOM * dp
             brush.shader = RadialGradient(
                 cx, cy, reach,
@@ -103,9 +106,10 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
             brush.shader = null
         }
 
-        // Тень под диском: макет кладёт её вниз на 24px с размытием 48.
+        // Тень под диском: макет кладёт её вниз на 24px с размытием 48. На
+        // светлой теме — вполсилы: чёрная тень на светлом фоне читалась грязью.
         if (theme.btn != "bare") {
-            brush.shader = RadialGradient(cx, cy + radius * .28f, radius * 1.35f, intArrayOf(0x73000000, 0x00000000), floatArrayOf(0.55f, 1f), Shader.TileMode.CLAMP)
+            brush.shader = RadialGradient(cx, cy + radius * .28f, radius * 1.35f, intArrayOf(if (theme.dark) 0x73000000 else 0x30000000, 0x00000000), floatArrayOf(0.55f, 1f), Shader.TileMode.CLAMP)
             canvas.drawCircle(cx, cy + radius * .28f, radius * 1.35f, brush)
             brush.shader = null
         }
@@ -120,7 +124,9 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
             else -> {
                 // Блик сверху слева, тень к низу: диск объёмный, а не плоский круг.
                 // Как в макете: блик светлее второй поверхности, к краю — заметно темнее; диск круглый на глаз, а не плоский.
-                val top = if (solid) ColorUtils.blendARGB(theme.acc, 0xFFFFFFFF.toInt(), 0.28f) else ColorUtils.blendARGB(theme.surf2, theme.fg, if (theme.dark) 0.24f else 0.6f)
+                // Блик — всегда светом, не цветом текста: на светлой теме текст тёмный, и
+                // «блик» им выходил тёмным пятном.
+                val top = if (solid) ColorUtils.blendARGB(theme.acc, 0xFFFFFFFF.toInt(), 0.28f) else ColorUtils.blendARGB(theme.surf2, 0xFFFFFFFF.toInt(), if (theme.dark) 0.16f else 0.45f)
                 val mid = if (solid) theme.acc else ColorUtils.blendARGB(theme.surf2, theme.acc, if (theme.dark) .19f else .08f)
                 val low = if (solid) ColorUtils.blendARGB(theme.acc, 0xFF000000.toInt(), 0.18f) else ColorUtils.blendARGB(theme.surf, theme.bg, .55f)
                 brush.shader = RadialGradient(
@@ -152,7 +158,7 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
         // A specular rim gives the disc a lit upper edge without another shadow layer.
         if (theme.btn != "bare") {
             brush.shader = android.graphics.LinearGradient(cx - radius, cy - radius, cx + radius, cy + radius,
-                intArrayOf(ColorUtils.setAlphaComponent(theme.fg, 120), ColorUtils.setAlphaComponent(theme.fg, 0)),
+                intArrayOf(ColorUtils.setAlphaComponent(0xFFFFFFFF.toInt(), if (theme.dark) 120 else 200), ColorUtils.setAlphaComponent(0xFFFFFFFF.toInt(), 0)),
                 null, Shader.TileMode.CLAMP)
             canvas.drawArc(RectF(cx - radius + dp, cy - radius + dp, cx + radius - dp, cy + radius - dp), 190f, 150f, false, brush)
             brush.shader = null

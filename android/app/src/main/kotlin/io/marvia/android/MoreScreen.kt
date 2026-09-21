@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.net.Uri
@@ -100,9 +101,11 @@ class MoreScreen(
     fun paint() {
         val t = theme()
         paintModes()
+        renderConnection()
         ui.searchBox.background = Paint.rounded(t.surf, minOf(t.r, 12), dp)
         ui.presetChip.background = Paint.rounded(t.surf2, minOf(t.r, 12), dp)
         ui.presetChip.setTextColor(t.dim)
+        ui.appsSpinner.indeterminateTintList = ColorStateList.valueOf(t.acc)
         if (section == Section.LOGS) {
             renderLogs()
         }
@@ -215,6 +218,15 @@ class MoreScreen(
         ui.switchAutostart.isChecked = store.autoStart
         ui.switchLan.isChecked = store.lanOutside
         ui.switchRussian.isChecked = store.bypassRussian
+        // Под переключателем — правда о списке: включённый тумблер без
+        // скачанных подсетей ничего не уводит, и человек должен это видеть,
+        // а не гадать, почему Яндекс всё ещё идёт через туннель.
+        val routes = if (store.bypassRussian) RuRoutes.count(host) else -1
+        ui.russianSub.text = when {
+            routes < 0 -> host.getString(R.string.settings_russian_sub)
+            routes == 0 -> host.getString(R.string.settings_russian_none)
+            else -> host.getString(R.string.settings_russian_count, routes)
+        }
         ui.dnsValue.text = dnsName(store.dns)
         ui.languageValue.text = host.getString(
             if (store.language == Store.LANG_EN) R.string.language_en else R.string.language_ru,

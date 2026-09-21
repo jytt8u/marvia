@@ -243,6 +243,8 @@
     <string name="settings_autostart_off_saved">After a reboot you will have to turn it on by hand</string>
     <string name="settings_russian">Local sites outside the tunnel</string>
     <string name="settings_russian_sub">banks and government services complain otherwise</string>
+    <string name="settings_russian_none">the list is not downloaded yet — the panel was unreachable</string>
+    <string name="settings_russian_count">%1$d networks in the list · applies on the next connection</string>
     <string name="settings_always_on">Always-on VPN in the system</string>
     <string name="settings_always_on_sub">the system brings the tunnel up earlier than we can</string>
     <string name="settings_always_on_missing">This phone has no such settings screen</string>

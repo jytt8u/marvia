@@ -235,8 +235,10 @@ class MainActivity : AppCompatActivity() {
      *
      * Дерево вьюх красится по тегам, состояние туннеля — своей отрисовкой,
      * экраны с динамикой — своими paint. Если пресет сменил тёмное на светлое
-     * или обратно, экран пересоздаётся системой ради режима ночи — тогда
-     * красить сейчас незачем, onCreate сделает это заново.
+     * или обратно, режим ночи переключаем тут же: uiMode объявлен в манифесте,
+     * и система экран не пересоздаёт, а значит, красить всё равно нам —
+     * ранний выход здесь оставлял светлую тему на тёмных карточках до
+     * следующего запуска.
      */
     private fun repaint() {
         theme = Look.theme(store.look)
@@ -244,7 +246,6 @@ class MainActivity : AppCompatActivity() {
         val night = nightModeFor(theme)
         if (AppCompatDelegate.getDefaultNightMode() != night) {
             AppCompatDelegate.setDefaultNightMode(night)
-            return
         }
 
         Paint.style = Paint.Style(pattern = store.pattern, font = store.font)
@@ -764,6 +765,8 @@ class MainActivity : AppCompatActivity() {
         val subscription = RuRoutes.subscriptionURL(store.accountLink) ?: return
         lifecycleScope.launch {
             withContext(Dispatchers.IO) { RuRoutes.refresh(applicationContext, subscription) }
+            // Строка под переключателем говорит, скачан ли список, — обновить её.
+            more.paint()
         }
     }
 

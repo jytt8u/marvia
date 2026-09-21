@@ -6,7 +6,8 @@
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+    android:clipChildren="false">
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:gravity="center_vertical" android:paddingStart="22dp" android:paddingEnd="16dp"
@@ -37,7 +38,9 @@
             android:orientation="vertical" android:gravity="center_horizontal" android:paddingHorizontal="16dp"
             android:paddingBottom="16dp" android:clipChildren="false">
 
-            <!-- Кнопка над ореолом: пятно и кольца уходят за края диска. Вокруг дуги запас под свечение. -->
+            <!-- Кнопка над ореолом: пятно и кольца уходят за края диска и дальше — за
+                 сцену, под шапку. Ни один родитель их не режет: ровный срез
+                 кольца читался как обрезанный экран. -->
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/hero_stage_height"
@@ -46,7 +49,8 @@
                 <io.marvia.android.HaloView
                     android:id="@+id/halo"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
+                    android:layout_height="360dp"
+                    android:layout_gravity="center" />
 
                 <io.marvia.android.PowerButton
                     android:id="@+id/powerAction"
