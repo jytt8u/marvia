@@ -3,15 +3,20 @@ package io.marvia.android
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.SweepGradient
 import android.util.AttributeSet
+import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.graphics.ColorUtils
+import kotlin.math.sin
 
 /**
  * PowerButton — кнопка питания из макета: объёмный диск и дуга вокруг.
@@ -22,9 +27,17 @@ import androidx.core.graphics.ColorUtils
  * референсе. Диск при этом остаётся диском: у него свой объём и свои варианты
  * из темы (обычный, сплошной, стекло, без диска).
  *
+ * Состояния не сменяются скачком: дуга дорастает из отрезка в три четверти,
+ * свечение проявляется, — кнопка перетекает, а не переключается. Пока
+ * подключено, свечение дышит. Всё это — из макета, где кнопка живая.
+ *
  * Свечение рисуется здесь же, внутри вьюхи, а не отдельным слоем за ней:
  * тогда оно есть и на главной, и в предпросмотре темы, и выглядит одинаково.
  * Ради него у дуги запас до края вьюхи.
+ *
+ * Градиенты собираются один раз на размер и тему, а не на каждый кадр: во
+ * время вращения и дыхания кадров шестьдесят в секунду, и шесть новых
+ * шейдеров на каждый — это мусор для сборщика и рывки на слабом телефоне.
  */
 class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : AppCompatButton(context, attrs) {
     enum class State { OFF, CONNECTING, ON, FAILED }
@@ -32,30 +45,110 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val brush = Paint(Paint.ANTI_ALIAS_FLAG)
 
     var theme: Theme = Look.theme(Look.Choice())
-        set(value) { field = value; invalidate() }
+        set(value) {
+            if (field == value) return
+            field = value
+            dirty = true
+            invalidate()
+        }
 
     var state: State = State.OFF
         set(value) {
             if (field == value) return
+            from = arc(field)
             field = value
+            to = arc(value)
+            morph()
             spin(value == State.CONNECTING)
+            breathe(value == State.ON)
             invalidate()
         }
+
+    /**
+     * Arc — как выглядит дуга в состоянии: откуда и сколько градусов, есть ли
+     * ровное кольцо, сколько свечения, каким цветом. Между двумя такими
+     * кнопка и перетекает.
+     */
+    private data class Arc(val start: Float, val sweep: Float, val ring: Float, val glow: Float, val color: Int)
+
+    private fun arc(s: State): Arc = when (s) {
+        State.OFF -> Arc(205f, 108f, 1f, 0f, theme.acc)
+        State.FAILED -> Arc(205f, 0f, 1f, 0f, theme.fail)
+        State.CONNECTING -> Arc(90f + turn, 88f, 0f, 0f, theme.dim)
+        State.ON -> Arc(90f, 270f, 0f, 1f, theme.acc)
+    }
+
+    private var from = arc(State.OFF)
+    private var to = arc(State.OFF)
+
+    /** Доля пути от from к to; 1 — перетекание закончилось. */
+    private var mix = 1f
+    private var morpher: ValueAnimator? = null
 
     /** Куда сейчас смотрит начало дуги, градусы; крутится только на подключении. */
     private var turn = 0f
     private var spinner: ValueAnimator? = null
 
+    /** Дыхание свечения: 0..1 по синусу, живёт только пока подключено. */
+    private var breath = 1f
+    private var breather: ValueAnimator? = null
+
+    /** Волна от нажатия: 0 — не идёт, иначе доля пути от диска к краю. */
+    private var pulse = 0f
+    private var pulser: ValueAnimator? = null
+
+    // ------------------------------------------------------ кэш геометрии
+
+    private var dirty = true
+    private var cx = 0f
+    private var cy = 0f
+    private var arcR = 0f
+    private var radius = 0f
+    private var reach = 0f
+    private val box = RectF()
+    private val iconBox = RectF()
+    private var glowShader: Shader? = null
+    private var shadowShader: Shader? = null
+    private var discShader: Shader? = null
+    private var innerShader: Shader? = null
+    private var rimShader: Shader? = null
+    private val spinMatrix = Matrix()
+
+    /** Шейдер дуги кэшируется по цвету и длине: меняются только на переходе. */
+    private var sweepKey = 0L
+    private var sweepShader: Shader? = null
+
     init { background = null; setAllCaps(false); isHapticFeedbackEnabled = true; text = "" }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        dirty = true
+    }
+
+    private fun animationsAllowed(): Boolean {
+        // Уважаем системный запрет на анимации — тогда всё просто стоит.
+        val scale = android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+        return scale != 0f
+    }
+
+    private fun morph() {
+        morpher?.cancel()
+        if (!animationsAllowed() || !isAttachedToWindow) { mix = 1f; return }
+        mix = 0f
+        morpher = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 520
+            interpolator = DecelerateInterpolator(1.8f)
+            addUpdateListener { mix = it.animatedValue as Float; invalidate() }
+            start()
+        }
+    }
 
     private fun spin(on: Boolean) {
         spinner?.cancel()
         spinner = null
         if (!on) { turn = 0f; return }
-        // Скорость как в CSS: оборот за 1,4 с. Уважаем системный запрет на
-        // анимации — тогда отрезок просто стоит.
-        val scale = android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
-        if (scale == 0f) return
+        if (!animationsAllowed()) return
+        // Скорость как в CSS: оборот за 1,4 с.
         spinner = ValueAnimator.ofFloat(0f, 360f).apply {
             duration = 1400
             repeatCount = ValueAnimator.INFINITE
@@ -65,51 +158,156 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
         }
     }
 
+    private fun breathe(on: Boolean) {
+        breather?.cancel()
+        breather = null
+        breath = 1f
+        if (!on || !animationsAllowed() || theme.glowA <= 0) return
+        // Вдох-выдох за 3,6 с, как у ореола в макете; амплитуда небольшая,
+        // чтобы это читалось как жизнь, а не как мигание.
+        breather = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 3600
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            addUpdateListener {
+                breath = 0.82f + 0.18f * ((sin((it.animatedValue as Float) * Math.PI * 2).toFloat() + 1f) / 2f)
+                invalidate()
+            }
+            start()
+        }
+    }
+
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        spinner?.cancel()
-        spinner = null
+        spinner?.cancel(); spinner = null
+        breather?.cancel(); breather = null
+        morpher?.cancel(); morpher = null
+        pulser?.cancel(); pulser = null
+        mix = 1f
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         if (state == State.CONNECTING) spin(true)
+        if (state == State.ON) breathe(true)
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        // Экран не виден — не жжём кадры дыханием и вращением.
+        if (isShown) {
+            if (state == State.CONNECTING && spinner == null) spin(true)
+            if (state == State.ON && breather == null) breathe(true)
+        } else {
+            spinner?.cancel(); spinner = null
+            breather?.cancel(); breather = null
+        }
+    }
+
+    private fun rebuild() {
+        val dp = resources.displayMetrics.density
+        cx = width / 2f
+        cy = height / 2f
+        // Геометрия макета: дуга радиусом 104 при диске 86 — всё от центра.
+        arcR = minOf(width, height) / 2f - ROOM * dp
+        radius = arcR * (86f / 104f)
+        reach = arcR + ROOM * dp
+        box.set(cx - arcR, cy - arcR, cx + arcR, cy + arcR)
+        val r = radius * 0.235f
+        iconBox.set(cx - r, cy - r, cx + r, cy + r)
+
+        val solid = theme.btn == "solid"
+        val white = 0xFFFFFFFF.toInt()
+
+        // Свечение — акцент от края диска наружу в ничто; сила — через alpha кисти.
+        val glowAlpha = (theme.glowA * 210).toInt().coerceIn(0, 255)
+        glowShader = if (glowAlpha > 0 && theme.btn != "bare") RadialGradient(
+            cx, cy, reach,
+            intArrayOf((glowAlpha shl 24) or (theme.acc and 0xFFFFFF), theme.acc and 0xFFFFFF),
+            floatArrayOf(radius / reach * 0.9f, 1f),
+            Shader.TileMode.CLAMP,
+        ) else null
+
+        // Тень под диском: макет кладёт её вниз на 24px с размытием 48. На
+        // светлой теме — вполсилы: чёрная тень на светлом фоне читалась грязью.
+        shadowShader = RadialGradient(
+            cx, cy + radius * .28f, radius * 1.35f,
+            intArrayOf(if (theme.dark) 0x73000000 else 0x30000000, 0x00000000), floatArrayOf(0.55f, 1f), Shader.TileMode.CLAMP,
+        )
+
+        // Блик сверху слева, тень к низу: диск объёмный, а не плоский круг.
+        // Блик — всегда светом, не цветом текста: на светлой теме текст тёмный,
+        // и «блик» им выходил тёмным пятном.
+        val top = if (solid) ColorUtils.blendARGB(theme.acc, white, 0.28f) else ColorUtils.blendARGB(theme.surf2, white, if (theme.dark) 0.16f else 0.45f)
+        val mid = if (solid) theme.acc else ColorUtils.blendARGB(theme.surf2, theme.acc, if (theme.dark) .19f else .08f)
+        val low = if (solid) ColorUtils.blendARGB(theme.acc, 0xFF000000.toInt(), 0.18f) else ColorUtils.blendARGB(theme.surf, theme.bg, .55f)
+        discShader = RadialGradient(
+            cx - radius * .32f, cy - radius * .58f, radius * 1.85f,
+            intArrayOf(top, mid, low), floatArrayOf(0f, 0.52f, 1f), Shader.TileMode.CLAMP,
+        )
+
+        // Подсветка изнутри снизу: акцент отражается в диске; сила — alpha кисти.
+        innerShader = RadialGradient(
+            cx + radius * .4f, cy + radius, radius * 1.4f,
+            intArrayOf(ColorUtils.setAlphaComponent(theme.acc, 80), ColorUtils.setAlphaComponent(theme.acc, 0)), null, Shader.TileMode.CLAMP,
+        )
+
+        // Световой кант по верхнему краю: диск освещён, а не вырезан.
+        rimShader = LinearGradient(
+            cx - radius, cy - radius, cx + radius, cy + radius,
+            intArrayOf(ColorUtils.setAlphaComponent(white, if (theme.dark) 120 else 200), ColorUtils.setAlphaComponent(white, 0)),
+            null, Shader.TileMode.CLAMP,
+        )
+        sweepShader = null
+        dirty = false
+    }
+
+    private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
+
+    /** Угол — по короткой дуге: с 350° на 10° ехать через 0, а не назад через 180. */
+    private fun lerpDeg(a: Float, b: Float, t: Float): Float {
+        var d = (b - a) % 360f
+        if (d > 180f) d -= 360f
+        if (d < -180f) d += 360f
+        return a + d * t
     }
 
     override fun onDraw(canvas: Canvas) {
+        if (dirty || width == 0) rebuild()
         val dp = resources.displayMetrics.density
-        val cx = width / 2f
-        val cy = height / 2f
-        // Геометрия макета: дуга радиусом 104 при диске 86 — всё от центра.
-        val arcR = minOf(width, height) / 2f - ROOM * dp
-        val radius = arcR * (86f / 104f)
         val on = state == State.ON
+        val bare = theme.btn == "bare"
         val scale = if (isPressed) .965f else 1f
         canvas.save()
         canvas.scale(scale, scale, cx, cy)
 
+        // Текущий вид — между прежним и целевым; на подключении начало живёт.
+        val target = if (state == State.CONNECTING) to.copy(start = 90f + turn) else to
+        val t = mix
+        val start = lerpDeg(from.start, target.start, t)
+        val sweepDeg = lerp(from.sweep, target.sweep, t)
+        val ring = lerp(from.ring, target.ring, t)
+        val lit = lerp(from.glow, target.glow, t)
+        val glow = lit * breath
+        val color = ColorUtils.blendARGB(from.color, target.color, t)
+
         brush.style = Paint.Style.FILL
         brush.shader = null
-        // Свечение — только когда подключено и у диска есть тело: «контур» из
-        // макета — прозрачный круг с одной линией, заливка под ним превращала
-        // бы его в диск, которого человек не выбирал.
-        if (theme.glowA > 0 && on && theme.btn != "bare") {
-            val alpha = (theme.glowA * 210).toInt().coerceIn(0, 255)
-            val reach = arcR + ROOM * dp
-            brush.shader = RadialGradient(
-                cx, cy, reach,
-                intArrayOf((alpha shl 24) or (theme.acc and 0xFFFFFF), theme.acc and 0xFFFFFF),
-                floatArrayOf(radius / reach * 0.9f, 1f),
-                Shader.TileMode.CLAMP,
-            )
+        brush.alpha = 255
+        // Свечение — только когда есть чему светиться: «контур» из макета —
+        // прозрачный круг с одной линией, заливка под ним превращала бы его
+        // в диск, которого человек не выбирал.
+        val gs = glowShader
+        if (gs != null && glow > 0.01f) {
+            brush.shader = gs
+            brush.alpha = (glow * 255).toInt().coerceIn(0, 255)
             canvas.drawCircle(cx, cy, reach, brush)
             brush.shader = null
+            brush.alpha = 255
         }
 
-        // Тень под диском: макет кладёт её вниз на 24px с размытием 48. На
-        // светлой теме — вполсилы: чёрная тень на светлом фоне читалась грязью.
-        if (theme.btn != "bare") {
-            brush.shader = RadialGradient(cx, cy + radius * .28f, radius * 1.35f, intArrayOf(if (theme.dark) 0x73000000 else 0x30000000, 0x00000000), floatArrayOf(0.55f, 1f), Shader.TileMode.CLAMP)
+        if (!bare) {
+            brush.shader = shadowShader
             canvas.drawCircle(cx, cy + radius * .28f, radius * 1.35f, brush)
             brush.shader = null
         }
@@ -122,75 +320,63 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
                 canvas.drawCircle(cx, cy, radius, brush)
             }
             else -> {
-                // Блик сверху слева, тень к низу: диск объёмный, а не плоский круг.
-                // Как в макете: блик светлее второй поверхности, к краю — заметно темнее; диск круглый на глаз, а не плоский.
-                // Блик — всегда светом, не цветом текста: на светлой теме текст тёмный, и
-                // «блик» им выходил тёмным пятном.
-                val top = if (solid) ColorUtils.blendARGB(theme.acc, 0xFFFFFFFF.toInt(), 0.28f) else ColorUtils.blendARGB(theme.surf2, 0xFFFFFFFF.toInt(), if (theme.dark) 0.16f else 0.45f)
-                val mid = if (solid) theme.acc else ColorUtils.blendARGB(theme.surf2, theme.acc, if (theme.dark) .19f else .08f)
-                val low = if (solid) ColorUtils.blendARGB(theme.acc, 0xFF000000.toInt(), 0.18f) else ColorUtils.blendARGB(theme.surf, theme.bg, .55f)
-                brush.shader = RadialGradient(
-                    cx - radius * .32f, cy - radius * .58f, radius * 1.85f,
-                    intArrayOf(top, mid, low), floatArrayOf(0f, 0.52f, 1f), Shader.TileMode.CLAMP,
-                )
+                brush.shader = discShader
                 canvas.drawCircle(cx, cy, radius, brush)
-                brush.shader = null
-                // Подсветка изнутри снизу, когда подключено: акцент отражается в диске.
                 if (!solid) {
-                    brush.shader = RadialGradient(cx + radius * .4f, cy + radius, radius * 1.4f, intArrayOf(ColorUtils.setAlphaComponent(theme.acc, if (on) 80 else 38), ColorUtils.setAlphaComponent(theme.acc, 0)), null, Shader.TileMode.CLAMP)
+                    // Подключено — отражение ярче; между состояниями — плавно.
+                    brush.shader = innerShader
+                    brush.alpha = (120 + 135 * lit).toInt().coerceIn(0, 255)
                     canvas.drawCircle(cx, cy, radius, brush)
-                    brush.shader = null
+                    brush.alpha = 255
                 }
+                brush.shader = null
             }
         }
 
         // Тонкий обод по краю диска: линия, а подключено — акцент вполсилы.
         brush.style = Paint.Style.STROKE
-        brush.strokeWidth = 1 * dp
+        brush.strokeWidth = if (bare) 1.5f * dp else 1 * dp
         brush.color = when {
-            theme.btn == "bare" -> theme.acc
-            on -> ColorUtils.setAlphaComponent(theme.acc, if (theme.btn == "glass") 115 else 56)
-            else -> ColorUtils.setAlphaComponent(theme.fg, 20)
+            bare -> theme.acc
+            else -> ColorUtils.blendARGB(
+                ColorUtils.setAlphaComponent(theme.fg, 20),
+                ColorUtils.setAlphaComponent(theme.acc, if (theme.btn == "glass") 115 else 56),
+                lit,
+            )
         }
-        if (theme.btn == "bare") brush.strokeWidth = 1.5f * dp
         canvas.drawCircle(cx, cy, radius, brush)
 
-        // A specular rim gives the disc a lit upper edge without another shadow layer.
-        if (theme.btn != "bare") {
-            brush.shader = android.graphics.LinearGradient(cx - radius, cy - radius, cx + radius, cy + radius,
-                intArrayOf(ColorUtils.setAlphaComponent(0xFFFFFFFF.toInt(), if (theme.dark) 120 else 200), ColorUtils.setAlphaComponent(0xFFFFFFFF.toInt(), 0)),
-                null, Shader.TileMode.CLAMP)
-            canvas.drawArc(RectF(cx - radius + dp, cy - radius + dp, cx + radius - dp, cy + radius - dp), 190f, 150f, false, brush)
+        if (!bare) {
+            brush.shader = rimShader
+            canvas.drawArc(cx - radius + dp, cy - radius + dp, cx + radius - dp, cy + radius - dp, 190f, 150f, false, brush)
             brush.shader = null
         }
 
-        // Дуга: начало внизу (90°), по часовой. Градиент от акцента к почти
-        // прозрачному по ходу дуги — хвост растворяется, как в макете.
+        // Волна от нажатия: кольцо расходится от диска к краю и тает.
+        if (pulse > 0f) {
+            brush.strokeWidth = 2 * dp
+            brush.color = ColorUtils.setAlphaComponent(theme.acc, ((1f - pulse) * 150).toInt())
+            canvas.drawCircle(cx, cy, lerp(radius, reach, pulse), brush)
+        }
+
+        // Ровное кольцо — выключено и ошибка; проявляется и гаснет с переходом.
         brush.strokeWidth = 3 * dp
         brush.strokeCap = Paint.Cap.ROUND
-        val box = RectF(cx - arcR, cy - arcR, cx + arcR, cy + arcR)
-        when (state) {
-            State.OFF, State.FAILED -> {
-                brush.color = if (state == State.FAILED) ColorUtils.setAlphaComponent(theme.fail, 140) else theme.line
-                canvas.drawCircle(cx, cy, arcR, brush)
-                if (state == State.OFF) {
-                    brush.strokeWidth = 2 * dp
-                    brush.shader = sweep(cx, cy, 205f, 108f, ColorUtils.setAlphaComponent(theme.acc, 145))
-                    canvas.drawArc(box, 205f, 108f, false, brush)
-                    brush.shader = null
-                }
-            }
-            State.CONNECTING -> {
-                val start = 90f + turn
-                brush.shader = sweep(cx, cy, start, 88f, theme.dim)
-                canvas.drawArc(box, start, 88f, false, brush)
-                brush.shader = null
-            }
-            State.ON -> {
-                brush.shader = sweep(cx, cy, 90f, 270f, theme.acc)
-                canvas.drawArc(box, 90f, 270f, false, brush)
-                brush.shader = null
-            }
+        if (ring > 0.01f) {
+            val ringColor = if (state == State.FAILED) ColorUtils.setAlphaComponent(theme.fail, 140) else theme.line
+            brush.color = ColorUtils.setAlphaComponent(ringColor, (android.graphics.Color.alpha(ringColor) * ring).toInt())
+            canvas.drawCircle(cx, cy, arcR, brush)
+        }
+
+        // Дуга: градиент от цвета к почти прозрачному по ходу — хвост
+        // растворяется, как в макете. Выключено — короткий тихий отрезок.
+        if (sweepDeg > 0.5f) {
+            val quiet = state == State.OFF && t >= 1f
+            val arcColor = if (quiet) ColorUtils.setAlphaComponent(color, 145) else color
+            brush.strokeWidth = if (quiet) 2 * dp else lerp(if (from.sweep == 108f) 2f else 3f, if (target.sweep == 108f) 2f else 3f, t) * dp
+            brush.shader = sweep(start, sweepDeg, arcColor)
+            canvas.drawArc(box, start, sweepDeg, false, brush)
+            brush.shader = null
         }
 
         // Знак питания: линия и разомкнутое кольцо, как в значке макета.
@@ -202,21 +388,29 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
         }
         brush.strokeWidth = 2.6f * dp
         val r = radius * 0.235f
-        canvas.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), -55f, 290f, false, brush)
+        canvas.drawArc(iconBox, -55f, 290f, false, brush)
         canvas.drawLine(cx, cy - r - 3 * dp, cx, cy - r * 0.15f, brush)
         canvas.restore()
     }
 
-    /** Градиент вдоль дуги: полный цвет в начале, 12 % в конце. */
-    private fun sweep(cx: Float, cy: Float, start: Float, sweepDeg: Float, color: Int): Shader {
-        val shader = SweepGradient(
-            cx, cy,
-            intArrayOf(color, ColorUtils.setAlphaComponent(color, 30), ColorUtils.setAlphaComponent(color, 30)),
-            floatArrayOf(0f, sweepDeg / 360f, 1f),
-        )
-        val m = android.graphics.Matrix()
-        m.setRotate(start, cx, cy)
-        shader.setLocalMatrix(m)
+    /**
+     * Градиент вдоль дуги: полный цвет в начале, 12 % в конце. Шейдер один на
+     * цвет и длину, поворот — матрицей: во время вращения меняется только он.
+     */
+    private fun sweep(start: Float, sweepDeg: Float, color: Int): Shader {
+        val key = (color.toLong() shl 16) or (sweepDeg * 10).toLong().coerceIn(0, 0xFFFF)
+        var shader = sweepShader
+        if (shader == null || key != sweepKey) {
+            shader = SweepGradient(
+                cx, cy,
+                intArrayOf(color, ColorUtils.setAlphaComponent(color, 30), ColorUtils.setAlphaComponent(color, 30)),
+                floatArrayOf(0f, sweepDeg / 360f, 1f),
+            )
+            sweepShader = shader
+            sweepKey = key
+        }
+        spinMatrix.setRotate(start, cx, cy)
+        shader.setLocalMatrix(spinMatrix)
         return shader
     }
 
@@ -224,7 +418,23 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     override fun performClick(): Boolean {
         performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+        if (animationsAllowed() && theme.btn != "bare") {
+            pulser?.cancel()
+            pulser = ValueAnimator.ofFloat(0.05f, 1f).apply {
+                duration = 480
+                interpolator = DecelerateInterpolator(1.5f)
+                addUpdateListener { pulse = it.animatedValue as Float; invalidate() }
+                doOnEnd { pulse = 0f; invalidate() }
+                start()
+            }
+        }
         return super.performClick()
+    }
+
+    private fun ValueAnimator.doOnEnd(block: () -> Unit) {
+        addListener(object : android.animation.AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: android.animation.Animator) = block()
+        })
     }
 
     private companion object {

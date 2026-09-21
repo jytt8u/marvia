@@ -114,7 +114,9 @@ class Backdrop(private val t: Theme, private val pattern: String = io.marvia.and
     /** Плотность экрана — у Drawable своей нет, берём системную. Объявлена до узора: он её читает при создании. */
     private val density = android.content.res.Resources.getSystem().displayMetrics.density
 
-    private val dots = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    // Плитка собирается лениво: у «ровного» фона и у карточек-превью узора
+    // нет, а их на «Теме» десятки — по битмапу на каждую было бы зря.
+    private val dots: Paint by lazy { Paint(Paint.ANTI_ALIAS_FLAG).apply {
         val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = androidx.core.graphics.ColorUtils.setAlphaComponent(t.fg, ink) }
         val size = ((when (pattern) { "grid" -> 28; "rings" -> 82; "lines" -> 20; else -> 22 }) * density).toInt().coerceAtLeast(2)
         val tile = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
@@ -129,7 +131,7 @@ class Backdrop(private val t: Theme, private val pattern: String = io.marvia.and
             else -> c.drawCircle(size / 2f, size / 2f, density, ink)
         }
         shader = android.graphics.BitmapShader(tile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
-    }
+    } }
 
     override fun setAlpha(alpha: Int) {
         brush.alpha = alpha

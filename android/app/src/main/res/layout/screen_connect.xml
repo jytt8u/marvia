@@ -125,7 +125,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            <LinearLayout android:id="@+id/tilesRow" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="12dp" android:orientation="horizontal" android:baselineAligned="false" android:tag="gap">
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                     android:layout_marginEnd="6dp" android:background="@drawable/bg_card" android:orientation="vertical"

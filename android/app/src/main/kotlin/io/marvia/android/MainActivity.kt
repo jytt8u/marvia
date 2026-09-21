@@ -353,6 +353,17 @@ class MainActivity : AppCompatActivity() {
             root.alpha = 0f
             root.translationY = 12 * resources.displayMetrics.density
             root.animate().alpha(1f).translationY(0f).setDuration(420).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+            // На главной карточки внизу догоняют с шагом: экран собирается
+            // сверху вниз, а не падает целиком.
+            if (next == Screen.CONNECT) {
+                val c = ui.connectScreen
+                listOf(c.nodeLine, c.todayCard, c.tilesRow).forEachIndexed { i, v ->
+                    v.alpha = 0f
+                    v.translationY = 18 * resources.displayMetrics.density
+                    v.animate().alpha(1f).translationY(0f).setStartDelay(60L + 70L * i).setDuration(460)
+                        .setInterpolator(android.view.animation.DecelerateInterpolator(2.2f)).start()
+                }
+            }
         }
 
         // Панель есть и без ключа: подписка добавляется на «Серверах», а тему
@@ -396,11 +407,19 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Активная вкладка отмечена заливкой акцента и контрастным значком.
+     * Таблетка, которая только что стала активной, чуть подпрыгивает: так
+     * видно, что нажатие принято, ещё до того, как сменился экран.
      */
     private fun paintTab(pill: View, icon: ImageView, label: TextView, active: Boolean) {
         val dp = resources.displayMetrics.density
         val color = if (active) theme.acc else theme.dim
+        val wasActive = pill.background != null
         pill.background = if (active) Paint.rounded(theme.acc, 999, dp) else null
+        if (active && !wasActive && pill.isAttachedToWindow) {
+            pill.scaleX = .6f; pill.scaleY = .6f; pill.alpha = .3f
+            pill.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(340)
+                .setInterpolator(android.view.animation.OvershootInterpolator(1.8f)).start()
+        }
         ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(if (active) theme.accFg else color))
         label.setTextColor(color)
         label.typeface = if (active) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
@@ -568,10 +587,17 @@ class MainActivity : AppCompatActivity() {
         set(value) { store.lastNode = value }
 
     /** Состояние — одной крупной строкой под кнопкой, цветом состояния. */
+    /** Состояние крупно; новое слово проявляется, а не подменяет прежнее рывком. */
     private fun status(text: Int, color: Int) {
         val v = ui.connectScreen.statusText
+        val changed = v.text.toString() != getString(text)
         v.setText(text)
         v.setTextColor(color)
+        if (changed && v.isAttachedToWindow && v.isShown) {
+            v.alpha = 0f
+            v.translationY = 6 * resources.displayMetrics.density
+            v.animate().alpha(1f).translationY(0f).setDuration(360).setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+        }
     }
 
     /** Цвет ленты — личный выбор; состояние передаём дугой и строкой. */
@@ -579,6 +605,7 @@ class MainActivity : AppCompatActivity() {
         val c = ui.connectScreen
         c.todayBars.theme = theme
         c.halo.theme = theme
+        c.halo.lit = MarviaState.state.value is TunnelState.On
         c.powerAction.theme = theme.copy(acc = color)
     }
 

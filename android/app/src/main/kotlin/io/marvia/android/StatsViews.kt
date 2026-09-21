@@ -1,5 +1,6 @@
 package io.marvia.android
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.LinearGradient
@@ -9,6 +10,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import androidx.core.graphics.ColorUtils
 import kotlin.math.max
 import kotlin.math.min
@@ -38,8 +40,9 @@ class RangeDial @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     private var fg = 0
     private var line = 0
     private val brush = Brush(Brush.ANTI_ALIAS_FLAG).apply { style = Brush.Style.STROKE; strokeCap = Brush.Cap.BUTT }
+    private val reveal = Reveal(this)
 
-    fun show(values: List<Long>) { this.values = values; invalidate() }
+    fun show(values: List<Long>) { val changed = values != this.values; this.values = values; if (changed) reveal.start() else invalidate() }
     fun paint(t: Theme) { acc = t.acc; fg = t.fg; line = t.line; invalidate() }
 
     override fun onDraw(canvas: Canvas) {
@@ -60,14 +63,19 @@ class RangeDial @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         val gap = if (n > 12) 1.6f else 4f
         val step = 240f / n
         brush.strokeWidth = 14 * dp
+        // Сегменты зажигаются по кругу, от первого дня к сегодняшнему.
+        val lit = reveal.value * n
         for (i in 0 until n) {
+            if (i > lit) break
+            val fade = (lit - i).coerceIn(0f, 1f)
             val share = values[i].toFloat() / peak
             val last = i == n - 1
-            brush.color = when {
+            val color = when {
                 last -> fg
                 values[i] == 0L -> ColorUtils.setAlphaComponent(acc, 26)
                 else -> ColorUtils.setAlphaComponent(acc, (60 + 195 * share).toInt().coerceIn(40, 255))
             }
+            brush.color = ColorUtils.setAlphaComponent(color, (android.graphics.Color.alpha(color) * fade).toInt())
             // Ноль градусов у Android — три часа; −120° от двенадцати = −210°.
             val start = -210f + step * i + gap / 2
             canvas.drawArc(box, start, step - gap, false, brush)
@@ -89,8 +97,9 @@ class TrendLine @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     private val brush = Brush(Brush.ANTI_ALIAS_FLAG)
     private val path = Path()
     private val area = Path()
+    private val reveal = Reveal(this)
 
-    fun show(values: List<Long>) { this.values = values; invalidate() }
+    fun show(values: List<Long>) { val changed = values != this.values; this.values = values; if (changed) reveal.start() else invalidate() }
     fun paint(t: Theme) { acc = t.acc; fg = t.fg; surf = t.surf; invalidate() }
 
     override fun onDraw(canvas: Canvas) {
@@ -117,6 +126,10 @@ class TrendLine @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         }
         area.set(path)
         area.lineTo(xs[n - 1], h); area.lineTo(xs[0], h); area.close()
+
+        // Линия прочерчивается слева направо: срез холста едет по ширине.
+        canvas.save()
+        canvas.clipRect(0f, 0f, inset + (w - inset) * reveal.value, h)
 
         brush.style = Brush.Style.FILL
         brush.shader = LinearGradient(0f, 0f, 0f, h, ColorUtils.setAlphaComponent(acc, 115), 0, Shader.TileMode.CLAMP)
@@ -149,6 +162,30 @@ class TrendLine @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         canvas.drawCircle(xs[n - 1], ys[n - 1], 6.5f * dp, brush)
         brush.color = fg
         canvas.drawCircle(xs[n - 1], ys[n - 1], 4.5f * dp, brush)
+        canvas.restore()
+    }
+}
+
+/**
+ * Reveal — проявление диаграммы за 0,9 с при новых данных: кольцо зажигается
+ * по кругу, линия прочерчивается. Один аниматор на вьюху; пока экран не
+ * виден, ничего не крутится — данные просто встают на место.
+ */
+private class Reveal(private val view: View) {
+    var value = 1f
+        private set
+    private var animator: ValueAnimator? = null
+
+    fun start() {
+        animator?.cancel()
+        if (!view.isShown) { value = 1f; view.invalidate(); return }
+        value = 0f
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 900
+            interpolator = DecelerateInterpolator(2f)
+            addUpdateListener { value = it.animatedValue as Float; view.invalidate() }
+            start()
+        }
     }
 }
 

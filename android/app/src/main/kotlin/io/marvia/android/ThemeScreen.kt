@@ -419,7 +419,7 @@ class ThemeScreen(
             Screen.MAIN -> {
                 id<PowerButton>(R.id.powerAction)?.apply { theme = t; state = PowerButton.State.ON }
                 id<TextView>(R.id.powerHint)?.setText(R.string.power_hint_stop)
-                id<HaloView>(R.id.halo)?.theme = t
+                id<HaloView>(R.id.halo)?.apply { theme = t; lit = true }
                 id<TextView>(R.id.statusText)?.apply { setText(R.string.status_on); setTextColor(if (t.dark) t.fg else t.acc) }
                 id<TextView>(R.id.nodeLine)?.text = host.getString(R.string.theme_preview_country) + " · " + host.getString(R.string.theme_preview_place)
                 id<TextView>(R.id.todayTotal)?.text = Format.size(host, 4_509_715_660L)
@@ -507,9 +507,34 @@ class ThemeScreen(
     // ---------------------------------------------------------------- виды
 
     /** paintLooks — лента готовых видов: квадрат фона вида с шариком акцента и имя. */
+    /** Карточки готовых видов, собранные один раз: обводка и подпись перекрашиваются на месте. */
+    private var lookCards: List<Pair<FrameLayout, TextView>> = emptyList()
+
+    /**
+     * paintLooks — ряд готовых видов. Карточек три десятка, и раньше каждое
+     * нажатие пересобирало их все с нуля вместе с фонами: заметная пауза на
+     * слабом телефоне и сброс прокрутки ряда. Теперь собираются раз, а при
+     * выборе меняются только обводка и подпись.
+     */
     private fun paintLooks(t: Theme, choice: Look.Choice) {
         val strip = ui.looksStrip
+        if (lookCards.size == LookTable.looks.size) {
+            for ((i, lk) in LookTable.looks.withIndex()) {
+                val (canvas, label) = lookCards[i]
+                val on = Look.same(choice, lk)
+                val preview = Look.theme(Look.ofLook(lk))
+                (canvas.foreground as? GradientDrawable)?.apply {
+                    cornerRadius = minOf(t.r + 6, 24) * dp
+                    setStroke(((if (on) 2.5f else 1f) * dp).toInt(), if (on) t.acc else preview.line)
+                }
+                canvas.outlineProvider = rounded(minOf(t.r + 6, 24) * dp)
+                label.setTextColor(if (on) t.fg else t.dim)
+                label.typeface = android.graphics.Typeface.create(label.typeface, if (on) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+            }
+            return
+        }
         strip.removeAllViews()
+        val cards = ArrayList<Pair<FrameLayout, TextView>>(LookTable.looks.size)
         for ((i, lk) in LookTable.looks.withIndex()) {
             val preview = Look.theme(Look.ofLook(lk))
             val on = Look.same(choice, lk)
@@ -541,7 +566,7 @@ class ThemeScreen(
                 }, FrameLayout.LayoutParams((30 * dp).toInt(), (30 * dp).toInt(), Gravity.CENTER))
             }
             col.addView(canvas, LinearLayout.LayoutParams((84 * dp).toInt(), (84 * dp).toInt()))
-            col.addView(TextView(host).apply {
+            val label = TextView(host).apply {
                 text = lookName(lk)
                 textSize = 11f
                 maxLines = 1
@@ -549,9 +574,12 @@ class ThemeScreen(
                 setTextColor(if (on) t.fg else t.dim)
                 typeface = android.graphics.Typeface.create(typeface, if (on) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
                 setPadding(0, (6 * dp).toInt(), 0, 0)
-            }, LinearLayout.LayoutParams((84 * dp).toInt(), WRAP))
+            }
+            col.addView(label, LinearLayout.LayoutParams((84 * dp).toInt(), WRAP))
             strip.addView(col, LinearLayout.LayoutParams(WRAP, WRAP).apply { if (i > 0) marginStart = (10 * dp).toInt() })
+            cards.add(canvas to label)
         }
+        lookCards = cards
     }
 
     /**
