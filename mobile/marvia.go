@@ -266,7 +266,6 @@ func connect(accountLink, cacheDir string, prefer int64, events client.Events) (
 	return dialer, nil
 }
 
-
 // note запоминает последнюю ошибку, чтобы приложение могло её показать.
 //
 // Ошибки отдельных соединений не должны ронять туннель: одна недоступная цель
