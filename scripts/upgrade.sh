@@ -332,7 +332,7 @@ refresh_dist() {
 	other_archive="marvia_linux_$other.tar.gz"
 	if curl -fsSL -o "$tmp/$other_archive" "$base/$other_archive" 2>/dev/null &&
 		( cd "$tmp" && grep "[ *]$other_archive\$" SHA256SUMS | sha256sum -c - >/dev/null 2>&1 ) &&
-		mkdir -p "$tmp/$other" && tar -xzf "$tmp/$other_archive" -C "$tmp/$other" marvia-node marvia-keygen 2>/dev/null; then
+		mkdir -p "$tmp/$other" && tar -xzf "$tmp/$other_archive" -C "$tmp/$other" 2>/dev/null && [ -x "$tmp/$other/marvia-node" ]; then
 		for name in marvia-node marvia-keygen; do
 			install -m 755 "$tmp/$other/$name" "$dist/$name-$other"
 		done

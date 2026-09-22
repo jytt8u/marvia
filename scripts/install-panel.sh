@@ -241,7 +241,7 @@ if [ -n "$HOST_ARCH" ]; then
 		fi
 		if [ "$OTHER_OK" = 1 ]; then
 			mkdir -p "$WORK/other"
-			tar -xzf "$WORK/other.tar.gz" -C "$WORK/other" marvia-node marvia-keygen 2>/dev/null &&
+			tar -xzf "$WORK/other.tar.gz" -C "$WORK/other" 2>/dev/null && [ -f "$WORK/other/marvia-node" ] &&
 				cp "$WORK/other/marvia-node" "$DIR/dist/marvia-node-$OTHER_ARCH" &&
 				cp "$WORK/other/marvia-keygen" "$DIR/dist/marvia-keygen-$OTHER_ARCH" &&
 				chmod 755 "$DIR/dist/marvia-node-$OTHER_ARCH" "$DIR/dist/marvia-keygen-$OTHER_ARCH" ||
