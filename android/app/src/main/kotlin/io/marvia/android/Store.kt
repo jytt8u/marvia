@@ -369,6 +369,13 @@ class Store(context: Context) {
             prefs.edit().putInt(KEY_BG_DIM, value.coerceIn(0, 95)).apply()
         }
 
+    /** backdropFrame — как лежит снимок: приближение, середина, поворот. */
+    var backdropFrame: BackdropFrame
+        get() = BackdropFrame.decode(prefs.getString(KEY_BG_FRAME, null))
+        set(value) {
+            prefs.edit().putString(KEY_BG_FRAME, value.encode()).apply()
+        }
+
     fun hasBackdrop(): Boolean = backdropFile().exists()
 
     /** backdropStamp — «версия» файла фона: ноль, если его нет. По ней кэшируют декодированный снимок. */
@@ -402,11 +409,20 @@ class Store(context: Context) {
         val opts = BitmapFactory.Options().apply {
             inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight, BACKDROP_MAX_SIDE)
         }
-        val bmp = try {
+        val decoded = try {
             app.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
         } catch (_: Exception) {
             null
         } ?: return false
+
+        // Камера пишет снимок как держала матрицу, а как держали телефон —
+        // отдельной пометкой EXIF. BitmapFactory её не читает, и портретное
+        // фото ложилось под интерфейс боком. Поворачиваем здесь, один раз,
+        // чтобы на диске лежал уже ровный снимок.
+        val bmp = upright(decoded, uri)
+        // Новый снимок — новый кадр: приближение и сдвиг от прошлого фото к
+        // этому отношения не имеют.
+        prefs.edit().remove(KEY_BG_FRAME).apply()
 
         return try {
             // Во временный файл, потом переименование: прерванная запись не
@@ -418,6 +434,36 @@ class Store(context: Context) {
             false
         } finally {
             bmp.recycle()
+        }
+    }
+
+    /** upright поворачивает снимок так, как его держали, по пометке EXIF. */
+    private fun upright(bmp: Bitmap, uri: android.net.Uri): Bitmap {
+        val orientation = try {
+            app.contentResolver.openInputStream(uri)?.use {
+                android.media.ExifInterface(it).getAttributeInt(
+                    android.media.ExifInterface.TAG_ORIENTATION,
+                    android.media.ExifInterface.ORIENTATION_NORMAL,
+                )
+            } ?: android.media.ExifInterface.ORIENTATION_NORMAL
+        } catch (_: Exception) {
+            android.media.ExifInterface.ORIENTATION_NORMAL
+        }
+        val m = android.graphics.Matrix()
+        when (orientation) {
+            android.media.ExifInterface.ORIENTATION_ROTATE_90 -> m.postRotate(90f)
+            android.media.ExifInterface.ORIENTATION_ROTATE_180 -> m.postRotate(180f)
+            android.media.ExifInterface.ORIENTATION_ROTATE_270 -> m.postRotate(270f)
+            android.media.ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> m.postScale(-1f, 1f)
+            android.media.ExifInterface.ORIENTATION_FLIP_VERTICAL -> m.postScale(1f, -1f)
+            android.media.ExifInterface.ORIENTATION_TRANSPOSE -> { m.postRotate(90f); m.postScale(-1f, 1f) }
+            android.media.ExifInterface.ORIENTATION_TRANSVERSE -> { m.postRotate(270f); m.postScale(-1f, 1f) }
+            else -> return bmp
+        }
+        return try {
+            Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true).also { if (it !== bmp) bmp.recycle() }
+        } catch (_: OutOfMemoryError) {
+            bmp
         }
     }
 
@@ -529,6 +575,7 @@ class Store(context: Context) {
         private const val KEY_PROFILE = "look_profile_"
         private const val KEY_BG_FIT = "backdrop_fit"
         private const val KEY_BG_DIM = "backdrop_dim"
+        private const val KEY_BG_FRAME = "backdrop_frame"
 
         /** Имя файла фона в приватном каталоге и потолок его длинной стороны. */
         private const val BACKDROP_FILE = "backdrop.jpg"

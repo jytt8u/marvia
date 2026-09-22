@@ -281,28 +281,31 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Пока список читается — крутилка и строка акцентом: серая подпись без
-                 движения читалась как «ничего не нашлось». -->
+            <!-- Пока список читается — крупное кольцо по центру и подпись под ним.
+                 Маленькая крутилка сбоку сливалась с фоном, и человек решал, что
+                 список пуст или экран завис: на слабом телефоне чтение идёт
+                 секунды. -->
             <LinearLayout
                 android:id="@+id/appsLoading"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingBottom="12dp"
-                android:paddingTop="4dp">
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingBottom="28dp"
+                android:paddingTop="28dp">
                 <ProgressBar
                     android:id="@+id/appsSpinner"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp" />
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:indeterminate="true" />
                 <TextView
                     android:id="@+id/appsLoadingText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="14dp"
                     android:tag="acc"
                     android:text="@string/bypass_loading"
-                    android:textSize="13sp" />
+                    android:textSize="14sp" />
             </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView

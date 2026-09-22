@@ -2,4 +2,6 @@
 <resources>
     <!-- Ключ тега «шрифт не менять»: знак MARVIA набран Unbounded при любом шрифте темы. -->
     <item name="keep_font" type="id" />
+    <!-- Ключ тега «тень поставлена под своё фото»: снимаем только свою, чужую не трогаем. -->
+    <item name="photo_shadow" type="id" />
 </resources>

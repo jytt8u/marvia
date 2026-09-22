@@ -55,7 +55,7 @@ object Paint {
      * приложение: её ставит MainActivity перед покраской, и экраны, что
      * собирают строки позже, красят их тем же.
      */
-    data class Style(val pattern: String = Store.PATTERN_DOTS, val font: String = Store.FONT_ONEST)
+    data class Style(val pattern: String = Store.PATTERN_DOTS, val font: String = Store.FONT_ONEST, val photo: Boolean = false)
 
     var style = Style()
 
@@ -110,13 +110,48 @@ object Paint {
             v.setTheme(t)
             return
         }
-        if (v is TextView) font(v)
+        if (v is TextView) {
+            font(v)
+            legible(v, t)
+        }
         val tags = v.tag as? String ?: return
         val dp = v.resources.displayMetrics.density
 
         // Тегов может быть несколько через пробел: «card gap» — карточка с
         // зазором от соседа по плотности темы.
         for (tag in tags.split(' ')) paintTag(v, t, tag, dp)
+    }
+
+    /**
+     * legible — строка прямо на своём фото, а не в карточке, получает тень.
+     *
+     * Пелена над фото выравнивает общий тон, но пёстрый снимок всё равно
+     * съедал приглушённые подписи — «Всё применяется сразу» и подсказки под
+     * вкладками на живом телефоне было не прочесть. Тень цветом фона темы
+     * отделяет буквы от любого снимка и не видна на ровном фоне; в
+     * карточках её нет — там свой непрозрачный фон.
+     */
+    private fun legible(v: TextView, t: Theme) {
+        val ours = v.getTag(R.id.photo_shadow) == true
+        val want = style.photo && !insideCard(v)
+        if (want) {
+            val dp = v.resources.displayMetrics.density
+            v.setShadowLayer(5 * dp, 0f, 1 * dp, ColorUtils.setAlphaComponent(t.bg, 235))
+            v.setTag(R.id.photo_shadow, true)
+        } else if (ours) {
+            v.setShadowLayer(0f, 0f, 0f, 0)
+            v.setTag(R.id.photo_shadow, false)
+        }
+    }
+
+    private fun insideCard(v: View): Boolean {
+        var p = v.parent
+        while (p is View) {
+            val tag = p.tag as? String
+            if (tag != null && tag.split(' ').any { it == CARD || it == CARD_PAD || it == NAVBAR || it == CHIP || it == BTN }) return true
+            p = p.parent
+        }
+        return false
     }
 
     private fun paintTag(v: View, t: Theme, tag: String, dp: Float) {

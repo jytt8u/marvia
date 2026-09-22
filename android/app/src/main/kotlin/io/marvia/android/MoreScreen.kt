@@ -413,6 +413,7 @@ class MoreScreen(
             return
         }
         ui.appsLoading.isVisible = true
+        ui.appsSpinner.indeterminateTintList = android.content.res.ColorStateList.valueOf(theme().acc)
         host.lifecycleScope.launch {
             val entries = withContext(Dispatchers.IO) { Bypass.installed(host) }
             val chosen = store.bypassed

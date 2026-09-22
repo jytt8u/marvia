@@ -98,13 +98,16 @@ class ThemeScreen(
         }
         ui.depthSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser) choose(store.look.copy(depth = (progress + 8) / 100.0))
+                if (fromUser) throttled { choose(store.look.copy(depth = (bar.progress + 8) / 100.0)) }
             }
             override fun onStartTrackingTouch(bar: SeekBar) = Unit
-            override fun onStopTrackingTouch(bar: SeekBar) = Unit
+            override fun onStopTrackingTouch(bar: SeekBar) {
+                choose(store.look.copy(depth = (bar.progress + 8) / 100.0))
+            }
         })
 
         ui.bgPick.setOnClickListener { onPickBackdrop() }
+        ui.bgFrame.setOnClickListener { editFrame() }
         ui.bgDrop.setOnClickListener {
             store.clearBackdrop()
             onChanged()
@@ -115,12 +118,17 @@ class ThemeScreen(
         ui.bgDimSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
-                store.backdropDim = progress
                 ui.bgDimNote.text = "$progress%"
-                onChanged()
+                throttled {
+                    store.backdropDim = bar.progress
+                    onChanged()
+                }
             }
             override fun onStartTrackingTouch(bar: SeekBar) = Unit
-            override fun onStopTrackingTouch(bar: SeekBar) = Unit
+            override fun onStopTrackingTouch(bar: SeekBar) {
+                store.backdropDim = bar.progress
+                onChanged()
+            }
         })
         // Сцена — телефон 390×844 в натуральную величину; масштаб и сдвиг от
         // верхнего левого угла ставит zoomTo по вкладке. Рамка обрезает и
@@ -133,24 +141,104 @@ class ThemeScreen(
     }
 
     /**
-     * Zoom — как показан телефон: размер рамки, масштаб и сдвиг сцены.
+     * Zoom — как показан телефон: размер рамки (dp), масштаб и сдвиг сцены (px).
      *
      * Цвет, свет и фон видны на целом экране в 0,34 — с выбором экрана
-     * справа. Форма приближает карточки настроек в 0,82, «Ещё» — заголовок
-     * в натуральную величину: то, что меняют, должно быть видно крупно, а
-     * не угадываться по уменьшенной копии.
+     * справа. Форма и «Ещё» приближают то, что меняют: карточки и шапку со
+     * знаком. Раньше приближение задавалось числами на глаз, и стоило
+     * поменять плотность или выбрать другой экран — в рамке оказывался
+     * пустой угол или край кнопки. Теперь рамка наводится на настоящий
+     * элемент сцены после раскладки: что бы ни поменялось, он в кадре.
      */
     private data class Zoom(val w: Float, val h: Float, val scale: Float, val dx: Float, val dy: Float)
 
-    private fun zoomFor(t: Tab): Zoom = when {
-        // Форма на главной — это кнопка: её и показываем, вместе с подписью.
-        t == Tab.SHAPE && previewScreen == Screen.MAIN -> Zoom(302f, 264f, 0.6f, 0f, 85f)
-        t == Tab.SHAPE -> Zoom(302f, 264f, 0.82f, -6f, -62f)
-        t == Tab.MORE -> Zoom(302f, 264f, 1f, 0f, 0f)
-        else -> Zoom(133f, 287f, 0.34f, 0f, 0f)
+    /** focusOf — что показывать крупно на этом экране; null — телефон целиком. */
+    private fun focusOf(s: View): List<View>? {
+        fun v(id: Int): View? = s.findViewById<View>(id)?.takeIf { it.isShown || it.visibility == View.VISIBLE }
+        return when {
+            tab == Tab.MORE -> listOfNotNull(v(R.id.heroMarkButton), v(R.id.heroName))
+            tab != Tab.SHAPE -> null
+            previewScreen == Screen.MAIN -> listOfNotNull(v(R.id.todayCard), s.findViewById<View>(R.id.sessionValue)?.parent as? View)
+            previewScreen == Screen.SETTINGS -> listOfNotNull(v(R.id.rowApps), v(R.id.rowLan))
+            else -> listOfNotNull(v(R.id.providerList))
+        }?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun zoomFor(t: Tab): Zoom {
+        val whole = Zoom(133f, 287f, 0.34f, 0f, 0f)
+        if (t != Tab.SHAPE && t != Tab.MORE) return whole
+        val s = stage as? ViewGroup ?: return whole
+        val targets = focusOf(s) ?: return whole
+        if (s.width == 0) return whole
+        // Прямоугольник целей в координатах сцены — без её масштаба.
+        val box = android.graphics.Rect()
+        val r = android.graphics.Rect()
+        for (v in targets) {
+            r.set(0, 0, v.width, v.height)
+            s.offsetDescendantRectToMyCoords(v, r)
+            if (box.isEmpty) box.set(r) else box.union(r)
+        }
+        if (box.isEmpty) return whole
+        // Во всю ширину карточки предпросмотра: рамка уже неё оставляла
+        // справа пустую полосу, а место под крупный кадр и так дорого.
+        val row = ui.previewFrame.parent as? View
+        val w = row?.let { (it.width - it.paddingLeft - it.paddingRight) / dp }?.takeIf { it > 200f } ?: 302f
+        val h = 264f
+        val pad = 12 * dp
+        // По ширине, а не целиком: вписанный по высоте столбик карточек
+        // выходил узким, с пустыми полями по бокам, и формы было не
+        // разглядеть. Низ цели может уйти за край — важен её верх и то, как
+        // выглядят карточки, а не сколько их. Шапке хватает натуральной
+        // величины: крупнее знак зернится.
+        val scale = ((w * dp - 2 * pad) / box.width()).coerceIn(0.34f, 1f)
+        val dx = (w * dp - box.width() * scale) / 2 - box.left * scale
+        val dy = if (box.height() * scale <= h * dp - 2 * pad) {
+            (h * dp - box.height() * scale) / 2 - box.top * scale
+        } else {
+            pad - box.top * scale
+        }
+        // Край сцены в рамке не показываем никогда: из-под него видна
+        // подложка, и на живом телефоне это выглядело серым прямоугольником
+        // поверх экрана. Шапка у верхнего края так и встаёт к верху.
+        val sw = s.width * scale
+        val sh = s.height * scale
+        val cx = dx.coerceIn(minOf(0f, w * dp - sw), 0f)
+        val cy = dy.coerceIn(minOf(0f, h * dp - sh), 0f)
+        return Zoom(w, h, scale, cx / dp, cy / dp)
     }
 
     private var zoomAnim: android.animation.ValueAnimator? = null
+
+    /**
+     * throttled — не чаще раза в 80 мс, последнее значение — обязательно.
+     *
+     * Каждый шаг ползунка перекрашивал всё приложение — обходил дерево,
+     * пересобирал фоны и предпросмотр. Палец даёт шаг на каждый кадр, и
+     * при быстром движении экран не успевал: ползунок заметно тормозил.
+     * Восемьдесят миллисекунд глаз не замечает, а работы вдесятеро меньше.
+     */
+    private var pending: (() -> Unit)? = null
+    private var lastRun = 0L
+
+    private fun throttled(block: () -> Unit) {
+        val now = android.os.SystemClock.uptimeMillis()
+        val wait = 80 - (now - lastRun)
+        if (wait <= 0 && pending == null) {
+            lastRun = now
+            block()
+            return
+        }
+        val first = pending == null
+        pending = block
+        if (first) {
+            ui.root.postDelayed({
+                val run = pending ?: return@postDelayed
+                pending = null
+                lastRun = android.os.SystemClock.uptimeMillis()
+                run()
+            }, wait.coerceAtLeast(16))
+        }
+    }
 
     private fun zoomTo(animate: Boolean) {
         val z = zoomFor(tab)
@@ -162,6 +250,10 @@ class ThemeScreen(
         val fromS = stage.scaleX
         val fromX = stage.translationX
         val fromY = stage.translationY
+        val same = kotlin.math.abs(fromS - z.scale) < 0.001f &&
+            kotlin.math.abs(fromX - z.dx * dp) < 0.5f && kotlin.math.abs(fromY - z.dy * dp) < 0.5f &&
+            kotlin.math.abs(fromW - z.w * dp) < 0.5f && kotlin.math.abs(fromH - z.h * dp) < 0.5f
+        if (same) return
         zoomAnim?.cancel()
         val apply = { f: Float ->
             lp.width = (fromW + (z.w * dp - fromW) * f).toInt()
@@ -175,7 +267,9 @@ class ThemeScreen(
         if (!animate) { apply(1f); return }
         zoomAnim = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 550
-            interpolator = android.view.animation.DecelerateInterpolator(2f)
+            // Кривая макета, cubic-bezier(.2,.8,.2,1): быстрый разгон и
+            // долгое мягкое торможение.
+            interpolator = android.view.animation.PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
             addUpdateListener { apply(it.animatedValue as Float) }
             start()
         }
@@ -222,6 +316,9 @@ class ThemeScreen(
         ui.themeScroll.post { ui.themeScroll.scrollTo(0, scrollY) }
         paintPreview(t, flip)
         paintTabs(t)
+        // Кадр — после раскладки: плотность и скругления двигают карточки, и
+        // рамка должна ехать за ними, а не смотреть в прежнее место.
+        ui.previewStage.post { zoomTo(animate = true) }
 
         ui.tabColor.isVisible = tab == Tab.COLOR
         ui.tabLight.isVisible = tab == Tab.LIGHT
@@ -294,8 +391,11 @@ class ThemeScreen(
                     if (tab != key) {
                         val before = previewScreen
                         tab = key
+                        // Экран, выбранный руками, — для этой вкладки. На
+                        // «Ещё» он оставался «Настройками», и смена знака
+                        // шла мимо кадра: шапки со знаком там нет.
+                        pickedScreen = null
                         paint(t, flip = previewScreen != before)
-                        zoomTo(animate = true)
                     }
                 }
             }
@@ -309,6 +409,10 @@ class ThemeScreen(
             col.addView(pill, LinearLayout.LayoutParams((44 * dp).toInt(), (28 * dp).toInt()))
             col.addView(TextView(host).apply {
                 text = host.getString(name)
+                // По центру: без этого строка брала всю ширину колонки и
+                // прижималась влево, уезжая из-под значка.
+                gravity = Gravity.CENTER
+                maxLines = 1
                 textSize = 10.5f
                 setTextColor(if (on) t.fg else t.dim)
                 typeface = android.graphics.Typeface.create(typeface, if (on) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
@@ -343,7 +447,7 @@ class ThemeScreen(
         }
         val s = stage ?: return
         Paint.apply(s, t)
-        s.background = Backdrop(t)
+        s.background = photoBackdrop(t) ?: Backdrop(t)
         ui.previewFrame.foreground = GradientDrawable().apply { cornerRadius = 18 * dp; setColor(0); setStroke((1 * dp).toInt(), t.line) }
         ui.previewFrame.elevation = 8 * dp
         fillStage(s, t)
@@ -374,7 +478,7 @@ class ThemeScreen(
                     if (previewScreen != key) {
                         pickedScreen = key
                         paintPreview(t, flip = true)
-                        zoomTo(animate = true)
+                        ui.previewStage.post { zoomTo(animate = true) }
                     }
                 }
             }
@@ -807,6 +911,9 @@ class ThemeScreen(
         ui.bgDrop.isVisible = has
         ui.bgDrop.setTextColor(t.fail)
         ui.bgDrop.background = Paint.rounded(t.surf2, minOf(t.r, 12), dp)
+        ui.bgFrame.isVisible = has
+        ui.bgFrame.setTextColor(t.fg)
+        ui.bgFrame.background = Paint.rounded(t.surf2, minOf(t.r, 12), dp)
         ui.bgKnobs.isVisible = has
         if (!has) return
 
@@ -817,6 +924,43 @@ class ThemeScreen(
         ui.bgDimSeek.progress = store.backdropDim
         tintSeek(ui.bgDimSeek, t)
         ui.bgDimNote.text = "${store.backdropDim}%"
+    }
+
+    /**
+     * photoBackdrop — своё фото под сценой предпросмотра, тем же кадром и той
+     * же пеленой, что под приложением. Без него предпросмотр показывал фон
+     * темы, а приложение вокруг — фото, и выбирать тему «под фото» было не
+     * по чему. Снимок декодируется раз на файл.
+     */
+    private var photo: android.graphics.Bitmap? = null
+    private var photoStamp = 0L
+
+    private fun photoBackdrop(t: Theme): android.graphics.drawable.Drawable? {
+        val stamp = store.backdropStamp()
+        if (stamp == 0L) {
+            photo = null
+            photoStamp = 0L
+            return null
+        }
+        if (photo == null || photoStamp != stamp) {
+            photo = store.backdropBitmap()
+            photoStamp = stamp
+        }
+        val bmp = photo ?: return null
+        val a = store.backdropDim.coerceIn(0, 95) * 255 / 100
+        return BackdropImage(bmp, store.backdropFit, t.bg, (a shl 24) or (t.bg and 0x00FFFFFF), store.backdropFrame)
+    }
+
+    /** editFrame открывает выбор кадра для своего фона. */
+    fun editFrame() {
+        val bmp = store.backdropBitmap() ?: return
+        val t = Look.theme(store.look)
+        val a = store.backdropDim.coerceIn(0, 95) * 255 / 100
+        val veil = (a shl 24) or (t.bg and 0x00FFFFFF)
+        BackdropEditor(host, bmp, store.backdropFit, t, veil, store.backdropFrame) {
+            store.backdropFrame = it
+            onChanged()
+        }.show()
     }
 
     private fun fitName(key: String): String =

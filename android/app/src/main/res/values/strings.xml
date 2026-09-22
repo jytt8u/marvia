@@ -375,6 +375,11 @@
     <string name="theme_backdrop_pick">Choose a photo</string>
     <string name="theme_backdrop_change">Another photo</string>
     <string name="theme_backdrop_drop">Remove</string>
+    <string name="backdrop_frame">Frame</string>
+    <string name="backdrop_edit_hint">Pinch to zoom, drag to move</string>
+    <string name="backdrop_rotate">Rotate</string>
+    <string name="backdrop_reset">Reset</string>
+    <string name="backdrop_done">Done</string>
     <string name="theme_backdrop_fit">How it fits</string>
     <string name="backdrop_fill">Fill</string>
     <string name="backdrop_whole">Whole</string>

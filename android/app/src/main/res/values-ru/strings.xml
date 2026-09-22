@@ -350,6 +350,11 @@
     <string name="theme_backdrop_pick">Выбрать фото</string>
     <string name="theme_backdrop_change">Другое фото</string>
     <string name="theme_backdrop_drop">Убрать</string>
+    <string name="backdrop_frame">Кадр</string>
+    <string name="backdrop_edit_hint">Двумя пальцами — ближе и дальше, одним — сдвинуть</string>
+    <string name="backdrop_rotate">Повернуть</string>
+    <string name="backdrop_reset">Сбросить</string>
+    <string name="backdrop_done">Готово</string>
     <string name="theme_backdrop_fit">Как вписать</string>
     <string name="backdrop_fill">Заполнить</string>
     <string name="backdrop_whole">Целиком</string>

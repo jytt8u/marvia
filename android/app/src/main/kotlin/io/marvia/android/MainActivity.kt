@@ -98,6 +98,9 @@ class MainActivity : AppCompatActivity() {
     ) { uri ->
         if (uri != null && store.saveBackdrop(uri)) {
             repaint()
+            // Сразу — выбрать кадр: фото редко ложится как надо само, и искать
+            // потом, где это настраивается, никто не станет.
+            themeScreen.editFrame()
         } else if (uri != null) {
             Toast.makeText(this, R.string.theme_backdrop_bad, Toast.LENGTH_LONG).show()
         }
@@ -252,7 +255,7 @@ class MainActivity : AppCompatActivity() {
             AppCompatDelegate.setDefaultNightMode(night)
         }
 
-        Paint.style = Paint.Style(pattern = store.pattern, font = store.font)
+        Paint.style = Paint.Style(pattern = store.pattern, font = store.font, photo = store.hasBackdrop())
         Paint.apply(ui.root, theme)
         applyBackdrop()
         paintLogo()
@@ -315,7 +318,7 @@ class MainActivity : AppCompatActivity() {
         }
         val bmp = backdropBitmap ?: return
         val veil = colorWithAlpha(theme.bg, store.backdropDim)
-        ui.root.background = BackdropImage(bmp, store.backdropFit, theme.bg, veil)
+        ui.root.background = BackdropImage(bmp, store.backdropFit, theme.bg, veil, store.backdropFrame)
     }
 
     private var backdropBitmap: android.graphics.Bitmap? = null
