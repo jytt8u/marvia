@@ -120,7 +120,9 @@ func Datagrams(a, b net.Conn, idle time.Duration) {
 		defer wg.Done()
 		defer stop()
 
-		buf := make([]byte, vp1.MaxDatagram)
+		b := vp1.DatagramBuffer()
+		defer vp1.PutDatagramBuffer(b)
+		buf := (*b)[:vp1.MaxDatagram]
 		for {
 			_ = src.SetReadDeadline(time.Now().Add(idle))
 			n, err := src.Read(buf)

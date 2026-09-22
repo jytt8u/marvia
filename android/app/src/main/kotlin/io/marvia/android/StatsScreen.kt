@@ -206,7 +206,9 @@ class StatsScreen(
      */
     private fun compactQuota(left: Long, limit: Long): String {
         val gb = 1L shl 30
-        return if (limit >= gb) host.getString(R.string.stats_quota, (left / gb).toString(), Format.size(host, limit))
+        // Предел — тоже целыми: Format.size даёт «100,0 ГБ», и строка
+        // «41 из 100,0 ГБ» переносилась в узкой колонке на две.
+        return if (limit >= gb) host.getString(R.string.stats_quota, (left / gb).toString(), host.getString(R.string.size_gb, (limit / gb).toString()))
         else host.getString(R.string.stats_quota, Format.size(host, left), Format.size(host, limit))
     }
 

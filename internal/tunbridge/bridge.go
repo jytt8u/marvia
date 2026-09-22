@@ -320,7 +320,9 @@ func (h *handler) serveUDP(conn adapter.UDPConn) {
 
 	// Первую датаграмму читаем здесь, а не внутри: если придётся откатываться
 	// на запасной путь, перечитать её будет уже неоткуда — она одна.
-	first := make([]byte, vp1.MaxDatagram)
+	firstBuf := vp1.DatagramBuffer()
+	defer vp1.PutDatagramBuffer(firstBuf)
+	first := (*firstBuf)[:vp1.MaxDatagram]
 	_ = conn.SetReadDeadline(time.Now().Add(udpIdleTimeout))
 	n, from, err := conn.ReadFrom(first)
 	if err != nil {
@@ -388,7 +390,9 @@ func (h *handler) pipeUDP(conn adapter.UDPConn, target vp1.Address, first []byte
 	// Ответы — обратно приложению.
 	go func() {
 		defer close(done)
-		buf := make([]byte, vp1.MaxDatagram)
+		b := vp1.DatagramBuffer()
+		defer vp1.PutDatagramBuffer(b)
+		buf := (*b)[:vp1.MaxDatagram]
 		for {
 			_ = stream.SetReadDeadline(time.Now().Add(udpIdleTimeout))
 			n, err := stream.Read(buf)
@@ -406,7 +410,9 @@ func (h *handler) pipeUDP(conn adapter.UDPConn, target vp1.Address, first []byte
 		}
 	}()
 
-	buf := make([]byte, vp1.MaxDatagram)
+	out := vp1.DatagramBuffer()
+	defer vp1.PutDatagramBuffer(out)
+	buf := (*out)[:vp1.MaxDatagram]
 	isDNS := target.Port == dnsPort
 	for {
 		_ = conn.SetReadDeadline(time.Now().Add(udpIdleTimeout))

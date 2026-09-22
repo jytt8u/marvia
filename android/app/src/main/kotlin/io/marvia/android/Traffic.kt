@@ -21,6 +21,37 @@ class Traffic(context: Context) {
         .getSharedPreferences("veil", Context.MODE_PRIVATE)
 
     /**
+     * Книга одна на процесс и живёт в памяти. Раньше каждый опрос ядра — раз
+     * в две секунды — разбирал тридцать дней истории из строки, собирал её
+     * заново и переписывал файл настроек на диск: полсотни записей в минуту
+     * на флеш телефона ради чисел, которые меняются на килобайты. Теперь
+     * запись — раз в минуту, при смене часа и при остановке туннеля; экран
+     * «Расход» читает ту же книгу, что пишет служба, и отставания не видит.
+     */
+    private val book: Ledger
+        get() = synchronized(Companion) {
+            ledger ?: Ledger(
+                decodeDays(prefs.getString(KEY_DAYS, "").orEmpty()).toMutableMap(),
+                decodePlaces(prefs.getString(KEY_PLACES, "").orEmpty()).toMutableMap(),
+                prefs.getLong(KEY_SEEN, 0),
+            ).also { ledger = it }
+        }
+
+    /** flush пишет книгу на диск, если в ней есть незаписанное. */
+    fun flush(force: Boolean = true, now: Long = android.os.SystemClock.elapsedRealtime()) {
+        synchronized(Companion) {
+            val b = book
+            if (!b.due(now, force)) return
+            prefs.edit()
+                .putLong(KEY_SEEN, b.seen)
+                .putString(KEY_DAYS, encodeDays(b.days))
+                .putString(KEY_PLACES, encodePlaces(b.places))
+                .apply()
+            b.written(now)
+        }
+    }
+
+    /**
      * note принимает накопительный счётчик ядра и кладёт разницу в текущий час.
      *
      * Именно накопительный, а не приращение: приложение опрашивает ядро раз в
@@ -28,29 +59,13 @@ class Traffic(context: Context) {
      * догонит. Счётчик меньше прошлого означает, что туннель подняли заново.
      */
     fun note(total: Long, place: String, at: Long = System.currentTimeMillis()) {
-        val seen = prefs.getLong(KEY_SEEN, 0)
-        val delta = if (total < seen) total else total - seen
-        prefs.edit().putLong(KEY_SEEN, total).apply()
-        if (delta <= 0) return
-
-        val day = dayOf(at)
-        val hour = hourOf(at)
-
-        val days = decodeDays(prefs.getString(KEY_DAYS, "").orEmpty()).toMutableMap()
-        val hours = days.getOrPut(day) { LongArray(24) }
-        hours[hour] += delta
-
-        val places = decodePlaces(prefs.getString(KEY_PLACES, "").orEmpty()).toMutableMap()
-        val title = place.trim().ifEmpty { "" }
-        if (title.isNotEmpty()) places[title] = (places[title] ?: 0) + delta
-
-        prefs.edit()
-            .putString(KEY_DAYS, encodeDays(days))
-            .putString(KEY_PLACES, encodePlaces(places))
-            .apply()
+        synchronized(Companion) { book.note(total, place, dayOf(at), hourOf(at)) }
+        flush(force = false)
     }
 
-    private fun days(): Map<Long, LongArray> = decodeDays(prefs.getString(KEY_DAYS, "").orEmpty())
+    private fun days(): Map<Long, LongArray> = synchronized(Companion) {
+        book.days.mapValues { it.value.copyOf() }
+    }
 
     /** today — сегодняшние сутки по часам; без записей — нули. */
     fun today(at: Long = System.currentTimeMillis()): List<Long> =
@@ -92,15 +107,64 @@ class Traffic(context: Context) {
 
     /** places — сколько прошло через каждую страну, от большего к меньшему. */
     fun places(): List<PlaceShare> =
-        decodePlaces(prefs.getString(KEY_PLACES, "").orEmpty())
+        synchronized(Companion) { book.places.toMap() }
             .map { (name, bytes) -> PlaceShare(name, bytes) }
             .sortedByDescending { it.bytes }
+
+    /**
+     * Ledger — сама книга, без Android: сколько по часам и странам и когда
+     * пора на диск. Отдельно, чтобы правило записи проверялось тестом.
+     */
+    class Ledger(
+        val days: MutableMap<Long, LongArray>,
+        val places: MutableMap<String, Long>,
+        var seen: Long,
+    ) {
+        private var dirty = false
+        private var ever = false
+        private var lastWrite = 0L
+        private var hourKey = -1L
+
+        fun note(total: Long, place: String, day: Long, hour: Int) {
+            val delta = if (total < seen) total else total - seen
+            if (total != seen) dirty = true
+            seen = total
+            // Смена часа — повод записать сразу: иначе при выгрузке процесса
+            // пропал бы не хвост минуты, а весь прошлый час.
+            val key = day * 24 + hour
+            if (hourKey != -1L && key != hourKey) boundary = true
+            hourKey = key
+            if (delta <= 0) return
+            days.getOrPut(day) { LongArray(24) }[hour] += delta
+            val title = place.trim()
+            if (title.isNotEmpty()) places[title] = (places[title] ?: 0) + delta
+        }
+
+        private var boundary = false
+
+        /** due — пора ли писать: есть что и (просят, прошла минута или сменился час). */
+        fun due(now: Long, force: Boolean): Boolean =
+            dirty && (force || boundary || !ever || now - lastWrite >= WRITE_EVERY_MS)
+
+        fun written(now: Long) {
+            dirty = false
+            boundary = false
+            ever = true
+            lastWrite = now
+        }
+    }
 
     data class DayTotal(val day: Long, val bytes: Long)
 
     data class PlaceShare(val name: String, val bytes: Long)
 
     companion object {
+        /** Книга процесса; null — ещё не читали с диска. */
+        private var ledger: Ledger? = null
+
+        /** Как часто писать на диск без повода. Потерять при выгрузке — минуту, не больше. */
+        const val WRITE_EVERY_MS = 60_000L
+
         private const val KEY_DAYS = "traffic_days"
         private const val KEY_PLACES = "traffic_places"
         private const val KEY_SEEN = "traffic_seen"

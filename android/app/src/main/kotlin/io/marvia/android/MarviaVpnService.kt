@@ -258,8 +258,11 @@ class MarviaVpnService : VpnService() {
         var shownNode = node
         var previousWarning = ""
         var tick = 0
+        val power = getSystemService(android.os.PowerManager::class.java)
         while (scope.isActive && started.running()) {
-            delay(POLL_INTERVAL_MS)
+            // Экран погашен — смотреть на скорость некому: опрос реже в пять
+            // раз. Туннель от этого не зависит, только счётчики и уведомление.
+            delay(if (power?.isInteractive != false) POLL_INTERVAL_MS else POLL_IDLE_MS)
             tick++
 
             // Отклик — сам, раз в несколько кругов: один запрос-ответ по уже
@@ -375,6 +378,9 @@ class MarviaVpnService : VpnService() {
 
         worker?.cancel()
         worker = null
+        // Хвост учёта — на диск сейчас: книга пишется раз в минуту, и
+        // выключение туннеля не должно терять последние секунды.
+        Traffic(this).flush()
 
         val started = core
         core = null
@@ -389,6 +395,7 @@ class MarviaVpnService : VpnService() {
         }
 
         MarviaState.set(state)
+        shown = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -511,7 +518,14 @@ class MarviaVpnService : VpnService() {
         return out
     }
 
+    /** Что уведомление показывает сейчас: одинаковое второй раз не отправляем. */
+    private var shown: Live.Text? = null
+
     private fun goForeground(content: Live.Text) {
+        // Простаивающий туннель даёт «0 Кбит/с» каждые две секунды, и каждое
+        // такое обновление — будить системный процесс уведомлений впустую.
+        if (content == shown) return
+        shown = content
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -582,6 +596,9 @@ class MarviaVpnService : VpnService() {
         // Два круга в секунду были бы дороги для батареи, пять секунд —
         // слишком редко для скорости в уведомлении: она прыгала бы ступенями.
         private const val POLL_INTERVAL_MS = 2_000L
+
+        /** Опрос с погашенным экраном. */
+        private const val POLL_IDLE_MS = 10_000L
 
         /** Отклик — каждый пятый круг, то есть раз в десять секунд. */
         private const val PING_EVERY = 5

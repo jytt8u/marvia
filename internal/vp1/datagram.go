@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 )
 
 // Датаграммы внутри потока.
@@ -33,6 +34,19 @@ import (
 // по TCP.
 const MaxDatagram = 65535
 
+// datagramBufs — буферы во всю длину датаграммы, общие на процесс.
+//
+// Поток датаграмм на телефоне заводится на каждый запрос имени и на каждое
+// QUIC-соединение, и раньше каждый брал себе три буфера по 64 КиБ — почти
+// двести килобайт мусора на один DNS-запрос. Пул отдаёт те же буферы по кругу.
+var datagramBufs = sync.Pool{New: func() any { b := make([]byte, 2+MaxDatagram); return &b }}
+
+// DatagramBuffer берёт из пула буфер на датаграмму; вернуть — PutDatagramBuffer.
+func DatagramBuffer() *[]byte { return datagramBufs.Get().(*[]byte) }
+
+// PutDatagramBuffer возвращает буфер в пул.
+func PutDatagramBuffer(b *[]byte) { datagramBufs.Put(b) }
+
 // WriteDatagram отправляет одну датаграмму с сохранением границы.
 func WriteDatagram(w io.Writer, payload []byte) error {
 	if len(payload) > MaxDatagram {
@@ -42,7 +56,11 @@ func WriteDatagram(w io.Writer, payload []byte) error {
 	// Одним Write вместе с длиной: раздельная запись разложила бы заголовок и
 	// тело по разным кадрам, и размер датаграмм стал бы виден по таймингам —
 	// ровно то, от чего кадры и добиваются.
-	frame := make([]byte, 2+len(payload))
+	// Кадр собирается в буфере из пула: датаграммы QUIC идут тысячами в
+	// секунду, и выделять память на каждую — работа сборщику на ровном месте.
+	buf := DatagramBuffer()
+	defer PutDatagramBuffer(buf)
+	frame := (*buf)[:2+len(payload)]
 	binary.BigEndian.PutUint16(frame, uint16(len(payload)))
 	copy(frame[2:], payload)
 
