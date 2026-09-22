@@ -348,7 +348,7 @@ func (d *Dialer) open(ctx context.Context, target vp1.Address, kind vp1.Kind, ta
 	}
 	if status != vp1.StatusOK {
 		_ = stream.Close()
-		return nil, fmt.Errorf("нода отказала по %s: %s", target, vp1.StatusText(status))
+		return nil, &vp1.RefusedError{Target: target.String(), Status: status}
 	}
 	return stream, nil
 }

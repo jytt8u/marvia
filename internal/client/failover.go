@@ -323,6 +323,33 @@ func (s *Supervisor) Measure(ctx context.Context) []Measurement {
 	return results
 }
 
+// Ping меряет отклик текущей ноды внутри готового туннеля и запоминает его.
+//
+// Это один запрос-ответ мультиплексора по уже открытой сессии: ни нового
+// хендшейка, ни нового соединения. Поэтому его можно звать раз в несколько
+// секунд, пока человек смотрит на число, — в отличие от Measure, которая
+// открывает соединение к каждой ноде.
+func (s *Supervisor) Ping(ctx context.Context) (time.Duration, error) {
+	s.mu.Lock()
+	d := s.dialer
+	s.mu.Unlock()
+	if d == nil {
+		return 0, errors.New("туннель не поднят")
+	}
+	rtt, err := d.pool.Ping(ctx)
+	if err != nil {
+		return 0, err
+	}
+	m := Measurement{Node: d.Node()}
+	if prev := d.measurement.Load(); prev != nil {
+		m = *prev
+	}
+	m.RTT = rtt
+	m.dialer = nil
+	d.measurement.Store(&m)
+	return rtt, nil
+}
+
 // Measurement возвращает замер подключения текущей ноды. После переезда
 // нельзя продолжать показывать отклик предыдущего сервера.
 func (s *Supervisor) Measurement() Measurement {

@@ -11,7 +11,29 @@ const (
 	StatusUnreachable byte = 0x01 // не смогли подключиться к цели
 	StatusForbidden   byte = 0x02 // цель запрещена политикой сервера
 	StatusInternal    byte = 0x03 // внутренняя ошибка сервера
+
+	// StatusNoRoute — у сервера нет маршрута в сеть этой цели. На деле это
+	// IPv6 у ноды, которой хостер его не дал. Отдельный код, а не
+	// «недоступна»: цель тут ни при чём, и клиент, узнав его, перестаёт
+	// слать IPv6 в эту сессию вовсе. Старый клиент видит незнакомый код и
+	// поступает с ним как с любым отказом — совместимость не страдает.
+	StatusNoRoute byte = 0x04
 )
+
+// RefusedError — нода дошла до разговора и отказалась открыть цель.
+//
+// Это отказ по цели, а не беда туннеля: сайт не отвечает, запрещён или у
+// ноды нет пути в его сеть. Отдельный тип нужен тем, кто решает, что из этого
+// показывать человеку: «туннель сломан» и «один сайт не открылся» — разные
+// сообщения, а смешанные они пугают зря.
+type RefusedError struct {
+	Target string
+	Status byte
+}
+
+func (e *RefusedError) Error() string {
+	return fmt.Sprintf("нода отказала по %s: %s", e.Target, StatusText(e.Status))
+}
 
 // StatusText переводит код ответа в текст для логов.
 func StatusText(code byte) string {
@@ -24,6 +46,8 @@ func StatusText(code byte) string {
 		return "цель запрещена"
 	case StatusInternal:
 		return "внутренняя ошибка сервера"
+	case StatusNoRoute:
+		return "у ноды нет пути в эту сеть"
 	default:
 		return fmt.Sprintf("неизвестный код 0x%02x", code)
 	}

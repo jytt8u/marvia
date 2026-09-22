@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Исходный серый знак. Цвет появляется внутри приложения по выбору человека. -->
+<!--
+    Слой знака для адаптивной иконки — ровно 108×108 dp, как требует Android.
+
+    Раньше слой был 48×34 dp, и Samsung растягивал по его пропорциям всю
+    иконку: на рабочем столе выходил приплюснутый овал вместо формы, как у
+    соседних приложений. Прозрачная подложка задаёт слою правильный размер,
+    знак стоит в середине безопасной зоны (66 dp) и занимает её почти всю.
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:width="48dp" android:height="34dp" android:gravity="center">
+    <item>
+        <shape android:shape="rectangle">
+            <size android:width="108dp" android:height="108dp" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+    <item android:width="60dp" android:height="43dp" android:gravity="center">
         <bitmap android:src="@drawable/marvia_mark" android:gravity="fill" android:filter="true" />
     </item>
 </layer-list>

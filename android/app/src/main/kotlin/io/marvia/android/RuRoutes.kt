@@ -5,11 +5,9 @@ import android.net.IpPrefix
 import android.net.InetAddresses
 import android.os.Build
 import androidx.annotation.RequiresApi
+import io.marvia.mobile.Mobile
 import java.io.File
-import java.net.HttpURLConnection
 import java.net.InetAddress
-import java.net.URL
-import org.json.JSONObject
 
 /**
  * RuRoutes — российские подсети, которые идут мимо туннеля.
@@ -79,39 +77,42 @@ object RuRoutes {
      * Вызывается с выключенным туннелем: качать его через свой же туннель
      * незачем, а до включения панель обычно доступна напрямую.
      */
-    fun refresh(context: Context, subscriptionURL: String): Result<Int> {
+    fun refresh(context: Context, accountLink: String, force: Boolean = false): Result<Int> {
         val file = File(context.filesDir, FILE)
-        if (file.exists() && System.currentTimeMillis() - file.lastModified() < MAX_AGE_MS) {
+        if (!force && file.exists() && System.currentTimeMillis() - file.lastModified() < MAX_AGE_MS) {
             return Result.success(file.readLines().size)
         }
 
         return try {
-            val url = URL(subscriptionURL.trimEnd('/') + "/bypass")
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 15_000
-                readTimeout = 30_000
-            }
-
-            val body = connection.inputStream.use { it.readBytes().decodeToString() }
-            val prefixes = JSONObject(body).getJSONArray("prefixes")
-
-            val text = buildString(prefixes.length() * 16) {
-                for (i in 0 until prefixes.length()) {
-                    append(prefixes.getString(i))
-                    append('\n')
-                }
-            }
+            // Качает ядро, а не мы: у него адреса панели из ссылки и тот же
+            // путь, что у подписки. Своим HTTP мы ходили по имени панели, и
+            // там, где оно не разрешалось, список не приходил никогда —
+            // российские сайты шли через ноду за границей и не открывались.
+            val text = Mobile.bypassRoutes(accountLink)
+            val count = text.lineSequence().count { it.isNotBlank() }
 
             // Пишем целиком и разом: оборванная запись оставила бы половину
             // списка, и часть российских сайтов молча пошла бы через туннель.
             val tmp = File(context.filesDir, "$FILE.tmp")
-            tmp.writeText(text)
+            tmp.writeText(text + "\n")
             tmp.renameTo(file)
-
-            Result.success(prefixes.length())
+            lastError = ""
+            Result.success(count)
         } catch (t: Throwable) {
+            lastError = MarviaVpnService.failureOf(t).detail
+            Journal.add(context.getString(R.string.log_bypass_failed, lastError), Journal.Level.WARN)
             Result.failure(t)
         }
+    }
+
+    /** Почему список не скачался в последний раз; пусто — скачался или не пробовали. */
+    @Volatile
+    var lastError: String = ""
+        private set
+
+    /** refreshInBackground — то же, не задерживая того, кто зовёт. */
+    fun refreshInBackground(context: Context, accountLink: String) {
+        Thread { refresh(context, accountLink) }.apply { isDaemon = true }.start()
     }
 
     /**

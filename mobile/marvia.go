@@ -457,6 +457,30 @@ func (t *Tunnel) Measure() string {
 	return viewsJSON(dialer, dialer.Nodes(), dialer.Measure(ctx))
 }
 
+// Ping меряет отклик текущей ноды внутри туннеля, в миллисекундах; ноль —
+// не вышло. Дёшево: один запрос-ответ по открытой сессии, поэтому приложение
+// зовёт его само раз в несколько секунд, и число на экране и в уведомлении
+// живое, а не снятое при подключении.
+func (t *Tunnel) Ping() int64 {
+	t.mu.Lock()
+	dialer := t.dialer
+	t.mu.Unlock()
+	if dialer == nil {
+		return 0
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), pingTimeout)
+	defer cancel()
+	rtt, err := dialer.Ping(ctx)
+	if err != nil || rtt <= 0 {
+		return 0
+	}
+	return max(1, rtt.Milliseconds())
+}
+
+// pingTimeout — дольше не ждём: отклик в три секунды человеку уже всё равно
+// что «нет ответа», а зовут замер каждые несколько секунд.
+const pingTimeout = 3 * time.Second
+
 // SelectNode переводит туннель на выбранную ноду. Ноль — обратно к автовыбору.
 func (t *Tunnel) SelectNode(id int64) error {
 	t.mu.Lock()

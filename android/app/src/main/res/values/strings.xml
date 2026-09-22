@@ -243,7 +243,9 @@
     <string name="settings_autostart_off_saved">After a reboot you will have to turn it on by hand</string>
     <string name="settings_russian">Local sites outside the tunnel</string>
     <string name="settings_russian_sub">banks and government services complain otherwise</string>
-    <string name="settings_russian_none">the list is not downloaded yet — the panel was unreachable</string>
+    <string name="settings_russian_none">downloading the list…</string>
+    <string name="settings_russian_failed">the list is not downloaded: %1$s</string>
+    <string name="log_bypass_failed">local networks list not downloaded: %1$s</string>
     <string name="settings_russian_count">%1$d networks in the list · applies on the next connection</string>
     <string name="settings_always_on">Always-on VPN in the system</string>
     <string name="settings_always_on_sub">the system brings the tunnel up earlier than we can</string>
@@ -435,6 +437,11 @@
     <string name="notification_channel">Tunnel</string>
     <string name="notification_channel_desc">Shows whether the tunnel is running</string>
     <string name="notification_stop">Disconnect</string>
+    <string name="notification_on">Connected · %1$s</string>
+    <string name="notification_speed">↓ %1$s   ↑ %2$s</string>
+    <string name="notification_today">Today %1$s</string>
+    <string name="tile_add">Quick settings button</string>
+    <string name="tile_add_sub">turn the tunnel on without opening the app</string>
 
     <!--
         Строки журнала. Журнал человек отправляет продавцу, то есть читает его
@@ -540,6 +547,7 @@
     <string name="stats_session">Session</string>
     <string name="stats_speed">Speed</string>
     <string name="stats_mbps">%1$s Mbps</string>
+    <string name="stats_kbps">%1$s kbps</string>
     <string name="connection_warning_details">Some requests failed · View details</string>
     <string name="theme_show_all">All themes</string>
     <string name="theme_fewer">Show fewer</string>

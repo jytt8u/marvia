@@ -69,7 +69,7 @@ class MarviaVpnService : VpnService() {
         // Постоянное уведомление надо показать в первые секунды после запуска,
         // иначе система убьёт службу за нарушение правил. Подключение занимает
         // куда больше — поэтому уведомление сначала, работа потом.
-        goForeground(getString(R.string.status_connecting), getString(R.string.detail_connecting))
+        goForeground(Live.connecting(this))
         connect()
 
         // Не START_STICKY: система перезапускала бы службу с пустым намерением
@@ -128,8 +128,16 @@ class MarviaVpnService : VpnService() {
 
             val node = started.nodeName()
             Journal.add(getString(R.string.log_connected, node))
+            connectedAt = System.currentTimeMillis()
+            live.reset(started)
             MarviaState.set(snapshot(started, node))
-            goForeground(getString(R.string.status_on), getString(R.string.detail_node, node))
+            goForeground(live.on(this@MarviaVpnService, node, 0))
+
+            // Российский список — сейчас, когда сеть точно есть. Приложение
+            // исключено из туннеля, так что панель спрашивается напрямую, как
+            // и до включения. Сработает со следующего подключения: маршруты
+            // уже отданы системе.
+            if (store.bypassRussian) RuRoutes.refreshInBackground(applicationContext, link)
 
             watch(started, node)
         }
@@ -249,8 +257,15 @@ class MarviaVpnService : VpnService() {
     private suspend fun watch(started: Core, node: String) {
         var shownNode = node
         var previousWarning = ""
+        var tick = 0
         while (scope.isActive && started.running()) {
             delay(POLL_INTERVAL_MS)
+            tick++
+
+            // Отклик — сам, раз в несколько кругов: один запрос-ответ по уже
+            // открытой сессии, без нового соединения. Число на главной и в
+            // уведомлении живое, а не снятое в момент подключения.
+            if (tick % PING_EVERY == 1) started.ping()
 
             // Держащаяся беда важнее разовой ошибки и показывается вместо неё.
             //
@@ -266,7 +281,6 @@ class MarviaVpnService : VpnService() {
             if (now != shownNode) {
                 shownNode = now
                 Journal.add(getString(R.string.log_moved, now), Journal.Level.WARN)
-                goForeground(getString(R.string.status_on), getString(R.string.detail_node, now))
             }
 
             // Пересобираем целиком, а не только имя ноды: остаток трафика
@@ -276,6 +290,7 @@ class MarviaVpnService : VpnService() {
             if (next != MarviaState.state.value) {
                 MarviaState.set(next)
             }
+            goForeground(live.on(this, shownNode, next.ms))
         }
     }
 
@@ -389,7 +404,114 @@ class MarviaVpnService : VpnService() {
         super.onDestroy()
     }
 
-    private fun goForeground(title: String, text: String?) {
+    /** Когда туннель поднялся: от этой отметки уведомление ведёт часы сессии. */
+    private var connectedAt = 0L
+
+    /** Скорость для уведомления — по двум направлениям, из счётчиков ядра. */
+    private val live = Live()
+
+    /**
+     * Live — что уведомление говорит про работающий туннель.
+     *
+     * Раньше там было «Подключено. Нода: …» и больше ничего: чтобы узнать,
+     * идёт ли трафик и какой отклик, приходилось открывать приложение.
+     * Теперь — страна, скорость вниз и вверх, отклик и часы сессии, и всё
+     * это обновляется, пока туннель жив. Часы ведёт сама система
+     * (setUsesChronometer): перерисовывать уведомление каждую секунду ради
+     * них незачем и накладно.
+     */
+    class Live {
+        private var rx = 0L
+        private var tx = 0L
+        private var at = 0L
+
+        data class Text(val title: String, val text: String, val big: String, val on: Boolean)
+
+        fun reset(core: Core) {
+            rx = core.receivedBytes()
+            tx = core.sentBytes()
+            at = android.os.SystemClock.elapsedRealtime()
+            this.core = core
+        }
+
+        private var core: Core? = null
+
+        fun on(context: android.content.Context, node: String, ms: Long): Text {
+            val c = core
+            val now = android.os.SystemClock.elapsedRealtime()
+            var down = 0.0
+            var up = 0.0
+            if (c != null) {
+                val r = c.receivedBytes()
+                val t = c.sentBytes()
+                val dt = (now - at).coerceAtLeast(1) / 1000.0
+                if (at != 0L && now > at) {
+                    down = (r - rx).coerceAtLeast(0) / dt
+                    up = (t - tx).coerceAtLeast(0) / dt
+                }
+                rx = r; tx = t; at = now
+            }
+            val place = node.split('·').map { it.trim() }.filter { it.isNotEmpty() }.take(2).joinToString(" · ")
+            val title = context.getString(R.string.notification_on, place.ifEmpty { node })
+            val speed = context.getString(R.string.notification_speed, rate(context, down), rate(context, up))
+            val ping = if (ms > 0) context.getString(R.string.node_ms, ms) else ""
+            val text = listOf(speed, ping).filter { it.isNotEmpty() }.joinToString("  ·  ")
+            val today = context.getString(R.string.notification_today, Format.size(context, MarviaState.traffic.value.today))
+            return Text(title, text, text + "\n" + today + "\n" + node, on = true)
+        }
+
+        companion object {
+            fun connecting(context: android.content.Context) = Text(
+                context.getString(R.string.status_connecting),
+                context.getString(R.string.detail_connecting),
+                context.getString(R.string.detail_connecting),
+                on = false,
+            )
+
+            /** rate — байты в секунду человеческим числом: 850 Кбит/с, 12,4 Мбит/с. */
+            fun rate(context: android.content.Context, bytesPerSecond: Double): String {
+                val bits = bytesPerSecond * 8
+                val locale = context.resources.configuration.locales[0]
+                return if (bits >= 1_000_000) {
+                    context.getString(R.string.stats_mbps, String.format(locale, "%.1f", bits / 1_000_000))
+                } else {
+                    context.getString(R.string.stats_kbps, String.format(locale, "%.0f", bits / 1_000))
+                }
+            }
+        }
+    }
+
+    /**
+     * mark — знак для уведомления: в цвет темы, на её фоне, кругом.
+     *
+     * Без крупного значка система рисует белый кружок со смазанным силуэтом —
+     * так и было, и уведомление выглядело чужим. Картинка та же, что в шапке
+     * приложения: если своей нет в кэше, берём исходный серый знак.
+     */
+    private var markCache: Pair<Int, android.graphics.Bitmap>? = null
+
+    private fun mark(): android.graphics.Bitmap {
+        val t = Look.theme(Store(this).look)
+        // Уведомление обновляется каждые две секунды, а знак меняется только
+        // со сменой темы: собирать картинку заново каждый раз незачем. Серый
+        // запасной не кэшируем — через миг в кэше будет покрашенный.
+        markCache?.let { (acc, bmp) -> if (acc == t.acc) return bmp }
+        val size = (64 * resources.displayMetrics.density).toInt()
+        val out = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(out)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG)
+        paint.color = if (t.dark) t.surf else 0xFF15181E.toInt()
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+        val tinted = LogoAtlas.peek(this, t.acc) {}
+        val logo = tinted ?: LogoAtlas.stock(this)
+        val w = size * 0.6f
+        val h = w * logo.height / logo.width
+        canvas.drawBitmap(logo, null, android.graphics.RectF((size - w) / 2, (size - h) / 2, (size + w) / 2, (size + h) / 2), paint)
+        if (tinted != null) markCache = t.acc to out
+        return out
+    }
+
+    private fun goForeground(content: Live.Text) {
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -398,6 +520,7 @@ class MarviaVpnService : VpnService() {
                 NotificationManager.IMPORTANCE_LOW,
             )
             channel.description = getString(R.string.notification_channel_desc)
+            channel.setShowBadge(false)
             manager.createNotificationChannel(channel)
         }
 
@@ -415,17 +538,29 @@ class MarviaVpnService : VpnService() {
             flags,
         )
 
-        val notification = NotificationCompat.Builder(this, CHANNEL)
+        val t = Look.theme(Store(this).look)
+        val builder = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_marvia)
-            .setContentTitle(title)
-            .setContentText(text)
+            .setLargeIcon(mark())
+            .setColor(t.acc)
+            .setContentTitle(content.title)
+            .setContentText(content.text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(content.big))
             .setContentIntent(open)
             .setOngoing(true)
-            .setShowWhen(false)
+            // Обновляется каждые пару секунд — звука и вибрации на каждом
+            // обновлении быть не должно.
+            .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .addAction(0, getString(R.string.notification_stop), stop)
-            .build()
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .addAction(R.drawable.ic_stat_marvia, getString(R.string.notification_stop), stop)
+        if (content.on && connectedAt > 0) {
+            builder.setShowWhen(true).setWhen(connectedAt).setUsesChronometer(true)
+        } else {
+            builder.setShowWhen(false)
+        }
+        val notification = builder.build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
@@ -444,7 +579,12 @@ class MarviaVpnService : VpnService() {
         private const val TAG = "Veil"
         private const val CHANNEL = "veil.tunnel"
         private const val NOTIFICATION_ID = 1
-        private const val POLL_INTERVAL_MS = 5_000L
+        // Два круга в секунду были бы дороги для батареи, пять секунд —
+        // слишком редко для скорости в уведомлении: она прыгала бы ступенями.
+        private const val POLL_INTERVAL_MS = 2_000L
+
+        /** Отклик — каждый пятый круг, то есть раз в десять секунд. */
+        private const val PING_EVERY = 5
 
         // Адреса внутри туннеля. Наружу они не выходят и ни с чем не спорят:
         // это частные диапазоны, видимые только сетевому стеку телефона.

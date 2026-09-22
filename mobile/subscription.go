@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jytt8u/marvia/internal/client"
@@ -179,3 +180,20 @@ func ForgetSubscription(accountLink, cacheDir string) {
 }
 
 const subscriptionTimeout = 20 * time.Second
+
+// BypassRoutes забирает у панели российские подсети — по строке на подсеть.
+//
+// Идёт тем же путём, что подписка: по адресам панели из ссылки, если они там
+// есть. Ошибка — с понятной причиной, её приложение покажет под
+// переключателем, а не «панель была недоступна» на всё подряд.
+func BypassRoutes(accountLink string) (string, error) {
+	account, err := client.ParseAccountLink(accountLink)
+	if err != nil {
+		return "", fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))
+	}
+	prefixes, err := client.FetchBypass(context.Background(), account.SubscriptionURL, account.PanelIPs)
+	if err != nil {
+		return "", fail(FailPanel, err)
+	}
+	return strings.Join(prefixes, "\n"), nil
+}

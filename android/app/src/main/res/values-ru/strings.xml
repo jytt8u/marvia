@@ -223,7 +223,9 @@
     <string name="settings_autostart_off_saved">После перезагрузки придётся включить руками</string>
     <string name="settings_russian">Российские сайты — мимо туннеля</string>
     <string name="settings_russian_sub">банки и госуслуги иначе ругаются</string>
-    <string name="settings_russian_none">список ещё не скачан — панель была недоступна</string>
+    <string name="settings_russian_none">скачиваю список…</string>
+    <string name="settings_russian_failed">список не скачан: %1$s</string>
+    <string name="log_bypass_failed">российский список не скачан: %1$s</string>
     <string name="settings_russian_count">подсетей в списке: %1$d · вступает в силу при следующем подключении</string>
     <string name="settings_always_on">Постоянный VPN в системе</string>
     <string name="settings_always_on_sub">система поднимает туннель раньше, чем можем мы</string>
@@ -410,6 +412,11 @@
     <string name="notification_channel">Туннель</string>
     <string name="notification_channel_desc">Показывает, работает ли туннель</string>
     <string name="notification_stop">Отключить</string>
+    <string name="notification_on">Подключено · %1$s</string>
+    <string name="notification_speed">↓ %1$s   ↑ %2$s</string>
+    <string name="notification_today">Сегодня %1$s</string>
+    <string name="tile_add">Кнопка в шторке</string>
+    <string name="tile_add_sub">включать туннель, не открывая приложение</string>
 
     <!--
         Строки журнала. Журнал человек отправляет продавцу, то есть читает его
@@ -515,6 +522,7 @@
     <string name="stats_session">Сессия</string>
     <string name="stats_speed">Скорость</string>
     <string name="stats_mbps">%1$s Мбит/с</string>
+    <string name="stats_kbps">%1$s Кбит/с</string>
     <string name="connection_warning_details">Некоторые запросы не прошли · Подробнее</string>
     <string name="theme_show_all">Все темы</string>
     <string name="theme_fewer">Свернуть</string>

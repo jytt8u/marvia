@@ -167,6 +167,7 @@ func Start(cfg Config) (*Bridge, error) {
 func (b *Bridge) NodeChanged() {
 	if b != nil && b.handler != nil {
 		b.handler.noUDP.Store(false)
+		b.handler.v6.reset()
 	}
 }
 
@@ -217,6 +218,9 @@ type handler struct {
 	// noUDP — нода отказалась от датаграмм. Ставится один раз за сессию,
 	// чтобы не платить лишний круг на каждом новом потоке.
 	noUDP atomic.Bool
+
+	// v6 — есть ли у ноды IPv6; см. ipv6.go.
+	v6 v6State
 }
 
 func (h *handler) fail(err error) {
@@ -225,17 +229,41 @@ func (h *handler) fail(err error) {
 	}
 }
 
+// failDial сообщает о несостоявшемся дозвоне — кроме отказов по цели.
+//
+// Отказ по цели — «сайт не отвечает», «у ноды нет пути в его сеть» — это не
+// беда туннеля, и показывать его человеку значит пугать зря: на живом
+// телефоне журнал состоял из таких строк целиком, и человек решил, что
+// ничего не работает, хотя работало всё, кроме одного сайта. Беда туннеля —
+// нода не отвечает, — по-прежнему сообщается.
+func (h *handler) failDial(err error) {
+	var refused *vp1.RefusedError
+	if errors.As(err, &refused) {
+		return
+	}
+	h.fail(err)
+}
+
 // HandleTCP обслуживает соединение приложения.
 func (h *handler) HandleTCP(conn adapter.TCPConn) {
 	defer conn.Close()
 
 	target := targetOf(conn.ID().LocalAddress.String(), conn.ID().LocalPort)
+	v6 := target.Type == vp1.AtypIPv6
+	if v6 && h.v6.off.Load() {
+		// Нода IPv6 не умеет: закрываем сразу, приложение уйдёт на IPv4, не
+		// дожидаясь круга до ноды.
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 	stream, err := h.dialer.DialTarget(ctx, target)
 	cancel()
+	if v6 {
+		h.v6.observe(err)
+	}
 	if err != nil {
-		h.fail(fmt.Errorf("поток до %s: %w", target, err))
+		h.failDial(fmt.Errorf("поток до %s: %w", target, err))
 		return
 	}
 	defer stream.Close()
@@ -299,6 +327,15 @@ func (h *handler) serveUDP(conn adapter.UDPConn) {
 		h.fail(fmt.Errorf("чтение датаграммы до %s: %w", target, err))
 		return
 	}
+	if target.Type == vp1.AtypIPv6 && h.v6.off.Load() {
+		return
+	}
+	if isDNS {
+		if answer, ok := h.v6.localAnswer(first[:n]); ok {
+			_, _ = conn.WriteTo(answer, from)
+			return
+		}
+	}
 
 	// Ноды обновляются не разом с клиентами: продавец ставит их сам, и часть
 	// стоит со старой версией, которая про датаграммы не знает. Такая нода
@@ -309,10 +346,13 @@ func (h *handler) serveUDP(conn adapter.UDPConn) {
 		if err == nil {
 			return
 		}
+		if target.Type == vp1.AtypIPv6 {
+			h.v6.observe(err)
+		}
 		if errors.Is(err, vp1.ErrDatagramsUnsupported) {
 			h.noUDP.Store(true)
 		} else {
-			h.fail(fmt.Errorf("датаграммы до %s: %w", target, err))
+			h.failDial(fmt.Errorf("датаграммы до %s: %w", target, err))
 		}
 	}
 
@@ -322,7 +362,7 @@ func (h *handler) serveUDP(conn adapter.UDPConn) {
 		return
 	}
 	if err := h.serveDNS(conn, first[:n], from); err != nil {
-		h.fail(fmt.Errorf("запрос имени: %w", err))
+		h.failDial(fmt.Errorf("запрос имени: %w", err))
 	}
 }
 
@@ -367,10 +407,19 @@ func (h *handler) pipeUDP(conn adapter.UDPConn, target vp1.Address, first []byte
 	}()
 
 	buf := make([]byte, vp1.MaxDatagram)
+	isDNS := target.Port == dnsPort
 	for {
 		_ = conn.SetReadDeadline(time.Now().Add(udpIdleTimeout))
 		n, _, err := conn.ReadFrom(buf)
 		if err == nil || n > 0 {
+			// Резолвер шлёт A и AAAA из одного гнезда: вторая датаграмма
+			// приходит уже сюда, и фильтр должен видеть и её.
+			if isDNS {
+				if answer, ok := h.v6.localAnswer(buf[:n]); ok {
+					_, _ = conn.WriteTo(answer, from)
+					continue
+				}
+			}
 			if _, err := stream.Write(buf[:n]); err != nil {
 				break
 			}

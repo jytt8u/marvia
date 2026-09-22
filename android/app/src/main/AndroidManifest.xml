@@ -94,6 +94,25 @@
         </receiver>
 
         <!--
+            Кнопка в шторке. TOGGLEABLE_TILE говорит системе, что это
+            переключатель: она нарисует его включённым и выключенным, а
+            TalkBack прочтёт состояние.
+        -->
+        <service
+            android:name=".TunnelTile"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_marvia"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <!--
             specialUse — единственный подходящий вид постоянной службы: своего
             вида для VPN в Android не завели, а без постоянной службы система
             выгрузит нас из памяти вместе с туннелем.

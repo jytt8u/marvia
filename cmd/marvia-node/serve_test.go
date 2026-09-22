@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+
+	"github.com/jytt8u/marvia/internal/vp1"
 )
 
 // Нода не пишет в журнал, куда ходил человек. Это обещание README и правило
@@ -96,5 +98,18 @@ func TestWhyKeepsOurOwnErrors(t *testing.T) {
 	}
 	if got := why(nil); got == "" {
 		t.Error("why(nil) промолчал — в формате останется пустое место")
+	}
+}
+
+// TestNodeWithoutIPv6SaysSo: хостер не дал ноде IPv6 — нода отвечает кодом
+// «нет пути», а не «цель недоступна». По нему клиент перестаёт слать IPv6 в
+// сессию, и приложения сразу идут по IPv4.
+func TestNodeWithoutIPv6SaysSo(t *testing.T) {
+	err := &net.OpError{Op: "dial", Net: "tcp", Err: os.NewSyscallError("connect", syscall.ENETUNREACH)}
+	if got := statusOf(err); got != vp1.StatusNoRoute {
+		t.Fatalf("нет маршрута отвечено кодом %d, ожидался %d", got, vp1.StatusNoRoute)
+	}
+	if got := statusOf(errors.New("i/o timeout")); got != vp1.StatusUnreachable {
+		t.Fatalf("молчащая цель отвечена кодом %d", got)
 	}
 }

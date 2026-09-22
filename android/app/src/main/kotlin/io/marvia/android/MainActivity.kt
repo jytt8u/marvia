@@ -185,6 +185,10 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // Вернулись из системного окна разрешений — карточки могли поменяться.
         if (screen == Screen.PERMS) perms.open()
+        // Включён «мимо туннеля», а списка нет — пробуем скачать, не дожидаясь,
+        // пока человек переключит тумблер ещё раз: раньше единственная попытка
+        // была в момент включения, и неудачная оставалась навсегда.
+        if (store.bypassRussian && !RuRoutes.ready(this)) refreshRoutes(force = false)
     }
 
     /**
@@ -788,10 +792,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** refreshRoutes подтягивает список подсетей с панели продавца. */
-    private fun refreshRoutes() {
-        val subscription = RuRoutes.subscriptionURL(store.accountLink) ?: return
+    private fun refreshRoutes(force: Boolean = true) {
+        val link = store.accountLink.takeIf { it.isNotBlank() } ?: return
         lifecycleScope.launch {
-            withContext(Dispatchers.IO) { RuRoutes.refresh(applicationContext, subscription) }
+            withContext(Dispatchers.IO) { RuRoutes.refresh(applicationContext, link, force) }
             // Строка под переключателем говорит, скачан ли список, — обновить её.
             more.paint()
         }

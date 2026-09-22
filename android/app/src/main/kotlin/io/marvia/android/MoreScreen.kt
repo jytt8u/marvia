@@ -224,6 +224,9 @@ class MoreScreen(
         val routes = if (store.bypassRussian) RuRoutes.count(host) else -1
         ui.russianSub.text = when {
             routes < 0 -> host.getString(R.string.settings_russian_sub)
+            // Причина — та, что сказало ядро: «панель недоступна» на всё
+            // подряд прятало и неверную ссылку, и отказ панели.
+            routes == 0 && RuRoutes.lastError.isNotEmpty() -> host.getString(R.string.settings_russian_failed, RuRoutes.lastError)
             routes == 0 -> host.getString(R.string.settings_russian_none)
             else -> host.getString(R.string.settings_russian_count, routes)
         }

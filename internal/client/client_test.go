@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -512,5 +513,29 @@ func TestNodeWithoutExtraNamesKeepsTheOldBehaviour(t *testing.T) {
 		if got := client.PickServerName(node); got != "only.example" {
 			t.Fatalf("выпало %q вместо единственного имени", got)
 		}
+	}
+}
+
+// TestBypassListArrivesByPinnedAddress: российский список приходит по адресам
+// панели из ссылки, даже когда её имя не разрешается, — ровно там, где он
+// нужнее всего. Кривые строки отброшены, а не роняют весь список.
+func TestBypassListArrivesByPinnedAddress(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/sub/token/bypass" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"prefixes":["5.8.0.0/19","мусор","2a02:6b8::/29"]}`))
+	}))
+	defer srv.Close()
+
+	_, port, _ := net.SplitHostPort(srv.Listener.Addr().String())
+	unresolvable := "http://panel.invalid:" + port + "/sub/token"
+	got, err := client.FetchBypass(context.Background(), unresolvable, []netip.Addr{netip.MustParseAddr("127.0.0.1")})
+	if err != nil {
+		t.Fatalf("список: %v", err)
+	}
+	if len(got) != 2 || got[0] != "5.8.0.0/19" || got[1] != "2a02:6b8::/29" {
+		t.Fatalf("список разобран неверно: %q", got)
 	}
 }

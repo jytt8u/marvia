@@ -249,6 +249,51 @@ func FetchSubscription(ctx context.Context, subURL string, pinned []netip.Addr) 
 	return sub, nil
 }
 
+// FetchBypass забирает у панели российские подсети, которые идут мимо туннеля.
+//
+// Тем же клиентом, что подписку: с адресами панели из ссылки. Раньше список
+// качало приложение своим HTTP, мимо этих адресов, и там, где имя панели не
+// разрешалось, список не скачивался никогда — российские сайты шли через
+// ноду за границей и не открывались.
+func FetchBypass(ctx context.Context, subURL string, pinned []netip.Addr) ([]string, error) {
+	ctx, cancel := context.WithTimeout(ctx, subscriptionTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(subURL, "/")+"/bypass", nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := subscriptionClient(pinned).Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("запрос списка: %w", withoutSecret(err))
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("панель ответила %s", resp.Status)
+	}
+	var body struct {
+		Prefixes []string `json:"prefixes"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxBypass)).Decode(&body); err != nil {
+		return nil, fmt.Errorf("разбор списка: %w", err)
+	}
+	out := body.Prefixes[:0]
+	for _, p := range body.Prefixes {
+		// Кривая строка не должна ронять весь список: берём то, что разбирается.
+		if _, err := netip.ParsePrefix(strings.TrimSpace(p)); err == nil {
+			out = append(out, strings.TrimSpace(p))
+		}
+	}
+	if len(out) == 0 {
+		return nil, errors.New("панель отдала пустой список")
+	}
+	return out, nil
+}
+
+// maxBypass — предел ответа со списком: десятки тысяч подсетей — это
+// мегабайт с небольшим, дальше уже не список, а чья-то ошибка.
+const maxBypass = 8 << 20
+
 // subscriptionClient собирает клиента, который ходит по заданным адресам.
 //
 // Подменяется только адрес соединения. Имя из ссылки остаётся в запросе, и

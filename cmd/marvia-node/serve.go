@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"syscall"
 	"time"
 
 	"github.com/jytt8u/marvia/internal/egress"
@@ -266,6 +267,12 @@ func serveStream(stream net.Conn) {
 func statusOf(err error) byte {
 	if errors.Is(err, egress.ErrForbidden) || errors.Is(err, egress.ErrPort) {
 		return vp1.StatusForbidden
+	}
+	// Нет маршрута — это про ноду, а не про цель: хостер не дал IPv6. Клиент,
+	// узнав это, перестаёт слать IPv6 в сессию, и приложения сразу идут по
+	// IPv4, а не ждут отказа на каждом соединении.
+	if errors.Is(err, syscall.ENETUNREACH) {
+		return vp1.StatusNoRoute
 	}
 	return vp1.StatusUnreachable
 }

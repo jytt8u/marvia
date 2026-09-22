@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Уведомление использует белый силуэт той же ленты вместо старого щита. -->
+<!--
+    Белый силуэт знака для строки состояния, уведомления и кнопки в шторке.
+    Слой квадратный, 24×24 dp: система вписывает значок в квадрат, и
+    прямоугольный 24×18 растягивался по высоте.
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:width="24dp" android:height="18dp" android:gravity="center">
+    <item>
+        <shape android:shape="rectangle">
+            <size android:width="24dp" android:height="24dp" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+    <item android:width="22dp" android:height="16dp" android:gravity="center">
         <bitmap android:src="@drawable/marvia_mark" android:gravity="fill"
             android:filter="true" android:tint="#FFFFFFFF" />
     </item>
