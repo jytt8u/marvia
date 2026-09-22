@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/jytt8u/marvia/internal/client"
+	"github.com/jytt8u/marvia/internal/foreign"
 	"github.com/jytt8u/marvia/internal/tunbridge"
 	"github.com/jytt8u/marvia/internal/vp1"
 )
@@ -106,7 +107,7 @@ type Tunnel struct {
 
 	// Не просто дозвон, а надзор над ним: он сам меняет ноду, когда текущая
 	// замолчала, и подменяет её под мостом. Мост об этом не знает.
-	dialer *client.Supervisor
+	dialer client.Backend
 	bridge *tunbridge.Bridge
 
 	nodeName string
@@ -200,7 +201,10 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string, prefer in
 // Вынесено отдельно не ради красоты: так эту часть можно проверить тестом, не
 // выдумывая дескриптор интерфейса. Выдуманный дескриптор в тесте — это номер,
 // который на Linux принадлежит чему-то настоящему.
-func connect(accountLink, cacheDir string, prefer int64, events client.Events) (*client.Supervisor, error) {
+func connect(accountLink, cacheDir string, prefer int64, events client.Events) (client.Backend, error) {
+	if isForeign(accountLink) {
+		return connectForeign(accountLink, cacheDir, prefer, events)
+	}
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
 		return nil, fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))
@@ -515,7 +519,7 @@ func (t *Tunnel) SelectedNode() int64 {
 }
 
 // viewsJSON собирает список для приложения.
-func viewsJSON(dialer *client.Supervisor, nodes []client.Node, measured []client.Measurement) string {
+func viewsJSON(dialer client.Backend, nodes []client.Node, measured []client.Measurement) string {
 	byID := make(map[int64]client.Measurement, len(measured))
 	for _, m := range measured {
 		byID[m.Node.ID] = m
@@ -569,6 +573,17 @@ func (t *Tunnel) ReceivedBytes() int64 { return t.down.Load() }
 // Нужно интерфейсу: сказать «ссылка не та» сразу при вставке гораздо лучше,
 // чем после неудачной попытки соединения.
 func CheckAccountLink(accountLink string) error {
+	if isForeign(accountLink) {
+		// Ссылку ноды проверяем сразу — ошибка в ней видна без сети. Адрес
+		// чужой подписки проверится при первом походе: что по нему лежит,
+		// не узнать, не сходив.
+		if foreign.IsLink(firstLine(accountLink)) {
+			if _, err := foreign.Parse(firstLine(accountLink)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	_, err := client.ParseAccountLink(accountLink)
 	return err
 }

@@ -549,9 +549,29 @@ class Store(context: Context) {
         }
 
         /** nameFromLink — домен панели из ссылки; порт в имя не тащим. */
-        fun nameFromLink(link: String, fallback: String): String =
-            Regex("@([^/?#]+)").find(link)?.groupValues?.get(1)?.substringBefore(':')
+        /**
+         * nameFromLink — имя подписки, если человек своё не дал.
+         *
+         * У ссылки чужой ноды имя уже есть — то, что после #, его и берём:
+         * «🇳🇱 Amsterdam» говорит больше, чем адрес. У адреса подписки и у
+         * ключа Marvia — домен панели: он и отличает продавцов друг от друга.
+         */
+        fun nameFromLink(link: String, fallback: String): String {
+            val clean = link.trim().lineSequence().firstOrNull()?.trim().orEmpty()
+            val tag = clean.substringAfter('#', "").let {
+                try {
+                    java.net.URLDecoder.decode(it.replace("+", "%2B"), "UTF-8").trim()
+                } catch (_: Exception) {
+                    it.trim()
+                }
+            }
+            if (tag.isNotEmpty() && !clean.startsWith("marvia://")) return tag
+            if (clean.startsWith("http://") || clean.startsWith("https://")) {
+                return clean.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore(':').ifEmpty { fallback }
+            }
+            return Regex("@([^/?#]+)").find(clean)?.groupValues?.get(1)?.substringBefore(':')?.removePrefix("[")
                 ?: fallback
+        }
         private const val KEY_BYPASSED = "bypassed_apps"
         private const val KEY_BYPASS_MODE = "bypass_mode"
         private const val KEY_DNS = "dns"

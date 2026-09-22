@@ -53,4 +53,18 @@ class SubscriptionTest {
     fun withoutAHostTheFallbackIsUsed() {
         assertEquals("Подписка", Store.nameFromLink("ерунда", "Подписка"))
     }
+
+    @Test
+    fun aForeignNodeIsCalledByItsOwnName() {
+        assertEquals(
+            "🇳🇱 Amsterdam",
+            Store.nameFromLink("vless://id@nl.example.com:443?security=reality#%F0%9F%87%B3%F0%9F%87%B1%20Amsterdam", "Подписка"),
+        )
+        assertEquals("nl.example.com", Store.nameFromLink("trojan://p@nl.example.com:443", "Подписка"))
+    }
+
+    @Test
+    fun aForeignSubscriptionIsCalledByItsPanel() {
+        assertEquals("sub.example.org", Store.nameFromLink("https://sub.example.org:2096/sub/abc?format=v2ray", "Подписка"))
+    }
 }

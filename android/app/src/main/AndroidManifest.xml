@@ -67,6 +67,23 @@
                 <!-- Старая схема: ключи, выданные до переименования, живут в переписке покупателей и должны открываться по-прежнему. -->
                 <data android:scheme="veil-account" />
             </intent-filter>
+
+            <!--
+                Чужие ссылки нод: нажатая в чате vless:// и прочие открывают
+                Marvia наравне с Happ и Hiddify — система предложит выбрать.
+                Замена стоящего ключа всё равно спрашивается (acceptLinkFrom).
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="vless" />
+                <data android:scheme="vmess" />
+                <data android:scheme="trojan" />
+                <data android:scheme="ss" />
+                <data android:scheme="hysteria2" />
+                <data android:scheme="hy2" />
+            </intent-filter>
         </activity>
 
         <!--

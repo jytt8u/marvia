@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jytt8u/marvia/internal/client"
+	"github.com/jytt8u/marvia/internal/foreign"
 	"github.com/jytt8u/marvia/internal/tunbridge"
 	"github.com/jytt8u/marvia/internal/vp1"
 	"github.com/jytt8u/marvia/internal/wintun"
@@ -102,7 +103,7 @@ type Controller struct {
 	update     client.AppOffer
 	account    string
 
-	dialer  *client.Supervisor
+	dialer  client.Backend
 	adapter *wintun.Adapter
 	bridge  *tunbridge.Bridge
 	cancel  context.CancelFunc
@@ -229,7 +230,15 @@ func (c *Controller) Account() string {
 // не та» сразу при вставке гораздо лучше, чем после неудачной попытки.
 func (c *Controller) SetAccount(link string) error {
 	link = strings.TrimSpace(link)
-	if _, err := client.ParseAccountLink(link); err != nil {
+	// Чужая ссылка ноды проверяется сразу, адрес чужой подписки — при первом
+	// походе: что по нему лежит, не узнать, не сходив.
+	if foreign.IsForeign(link) {
+		if foreign.IsLink(foreign.FirstLine(link)) {
+			if _, err := foreign.Parse(foreign.FirstLine(link)); err != nil {
+				return err
+			}
+		}
+	} else if _, err := client.ParseAccountLink(link); err != nil {
 		return err
 	}
 
@@ -286,14 +295,64 @@ func (c *Controller) connect(ctx context.Context, link string) {
 }
 
 // raise делает всю работу подключения по шагам.
+//
+// Путь до подключения у ключа Marvia и у чужой подписки разный, а дальше —
+// адаптер, маршруты, мост — общий: обоим нужно одно и то же, поток до цели.
 func (c *Controller) raise(ctx context.Context, link string) error {
+	var (
+		dialer       client.Backend
+		measurements []client.Measurement
+		bypass       []netip.Addr
+		err          error
+	)
+	if foreign.IsForeign(link) {
+		dialer, measurements, bypass, err = c.raiseForeign(ctx, link)
+	} else {
+		dialer, measurements, bypass, err = c.raiseMarvia(ctx, link)
+	}
+	if err != nil {
+		return err
+	}
+	return c.raiseTunnel(dialer, measurements, bypass)
+}
+
+// raiseForeign — чужая подписка: VLESS, VMess, Trojan и прочее через Xray.
+//
+// Имена нод разрешаются здесь, до адаптера, и адреса закрепляются в
+// настройках: иначе Xray разрешал бы имя ноды при каждом соединении, и
+// запрос ушёл бы в туннель, который он же и держит. Подробнее — foreign.Pin.
+func (c *Controller) raiseForeign(ctx context.Context, link string) (client.Backend, []client.Measurement, []netip.Addr, error) {
+	dir, _ := settingsDir()
+	sub, _, _, err := foreign.Load(link, foreign.CachePath(dir, link), false)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if !sub.Expire.IsZero() && time.Now().After(sub.Expire) {
+		return nil, nil, nil, client.ErrExpired
+	}
+	if sub.Total > 0 && sub.Remaining() == 0 {
+		return nil, nil, nil, client.ErrQuota
+	}
+	pinned, bypass, err := foreign.Resolve(ctx, sub)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	dialer, measurements, err := foreign.Supervise(ctx, pinned, 0, client.Events{OnSwitch: c.moved, OnTrouble: c.stall, OnRecovered: c.recovered})
+	if err != nil {
+		return nil, measurements, nil, err
+	}
+	return dialer, measurements, bypass, nil
+}
+
+// raiseMarvia — свой ключ: VP1 и панель Marvia.
+func (c *Controller) raiseMarvia(ctx context.Context, link string) (client.Backend, []client.Measurement, []netip.Addr, error) {
 	account, err := client.ParseAccountLink(link)
 	if err != nil {
-		return fmt.Errorf("%s: %w", say("accountLink"), err)
+		return nil, nil, nil, fmt.Errorf("%s: %w", say("accountLink"), err)
 	}
 	key, err := vp1.KeyPairFromPrivate(account.PrivateKey)
 	if err != nil {
-		return fmt.Errorf("%s: %w", say("privateKey"), err)
+		return nil, nil, nil, fmt.Errorf("%s: %w", say("privateKey"), err)
 	}
 
 	// Список нод по возможности берём из кэша: каждый поход в панель — это
@@ -314,20 +373,35 @@ func (c *Controller) raise(ctx context.Context, link string) error {
 	}()
 
 	if err != nil {
-		return err
+		return nil, measurements, nil, err
 	}
 
+	// Адреса нод выясняем до того, как заберём себе трафик: после этого
+	// запросы имён пойдут в туннель, которого ещё нет. Всех нод, а не только
+	// текущей: раньше выводилась одна, и после переезда соединения новой ноды
+	// шли бы в тот же туннель. Текущая обязана разрешиться; из остальных
+	// берём то, что разрешилось.
+	bypass, err := nodeAddresses(dialer.Node().Address)
+	if err != nil {
+		_ = dialer.Close()
+		return nil, nil, nil, err
+	}
+	for _, n := range dialer.Nodes() {
+		if n.ID == dialer.Node().ID {
+			continue
+		}
+		if more, err := nodeAddresses(n.Address); err == nil {
+			bypass = append(bypass, more...)
+		}
+	}
+	return dialer, measurements, bypass, nil
+}
+
+// raiseTunnel поднимает адаптер, маршруты и мост поверх готового подключения.
+func (c *Controller) raiseTunnel(dialer client.Backend, measurements []client.Measurement, bypass []netip.Addr) error {
 	node := dialer.Node()
 	ping := latencyOf(measurements, node)
 	c.log.add("%s", sayf("logNodePicked", node.Name, ping.Milliseconds()))
-
-	// Адреса ноды выясняем до того, как заберём себе трафик: после этого
-	// запросы имён пойдут в туннель, которого ещё нет.
-	bypass, err := nodeAddresses(node.Address)
-	if err != nil {
-		_ = dialer.Close()
-		return err
-	}
 
 	address, err := netip.ParsePrefix(tunnelAddress)
 	if err != nil {
@@ -526,7 +600,7 @@ func (c *Controller) SelectNode(ctx context.Context, id int64) error {
 	return nil
 }
 
-func nodeViews(dialer *client.Supervisor, nodes []client.Node, measured []client.Measurement) []NodeView {
+func nodeViews(dialer client.Backend, nodes []client.Node, measured []client.Measurement) []NodeView {
 	byID := make(map[int64]client.Measurement, len(measured))
 	for _, m := range measured {
 		byID[m.Node.ID] = m
@@ -684,7 +758,7 @@ func writeAccount(link string) error {
 //
 // Человек заплатил и вправе это видеть, не спрашивая продавца. А продавец
 // вправе не отвечать на такое вручную каждому.
-func subscriptionOf(dialer *client.Supervisor) (until string, limit, left int64) {
+func subscriptionOf(dialer client.Backend) (until string, limit, left int64) {
 	if dialer == nil {
 		return "", 0, 0
 	}

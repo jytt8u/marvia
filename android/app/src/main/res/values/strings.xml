@@ -129,7 +129,7 @@
 
     <!-- Экран ключа. -->
     <string name="key_title">Access key</string>
-    <string name="key_hint_short">marvia://…</string>
+    <string name="key_hint_short">marvia://, vless://, subscription URL…</string>
     <string name="key_paste">Paste</string>
     <string name="key_footer">The key lives on this phone only: we do not see it and cannot bring it back.</string>
     <string name="key_clipboard_empty">There is no link in the clipboard</string>
@@ -155,7 +155,7 @@
     <string name="servers_use">Make active</string>
     <string name="servers_collapsed">collapsed</string>
     <string name="servers_stale">The panel did not answer — showing yesterday’s list</string>
-    <string name="servers_no_subs">No subscriptions yet. Tap “+” and add the marvia:// link from whoever gave you access.</string>
+    <string name="servers_no_subs">No subscriptions yet. Tap “+” and add the link from whoever gave you access: a Marvia key, a VLESS, VMess, Trojan, Shadowsocks, Hysteria2 or WireGuard link, or a subscription URL.</string>
     <string name="servers_unlimited">∞</string>
     <string name="servers_quota">%1$s / %2$s</string>
     <string name="servers_days_left">%1$s left</string>
@@ -187,12 +187,12 @@
     <string name="servers_add_clipboard">Clipboard</string>
     <string name="servers_add_manual">By hand</string>
     <string name="servers_sub_name">Name</string>
-    <string name="servers_sub_link">A marvia://… link</string>
+    <string name="servers_sub_link">marvia://, vless://, trojan://, ss://… or https://</string>
     <string name="servers_sub_untitled">Subscription</string>
     <string name="servers_subs">Subscriptions</string>
     <string name="servers_sub_active">in use</string>
     <string name="servers_sub_added">Subscription added</string>
-    <string name="servers_sub_bad">That is not a marvia:// link</string>
+    <string name="servers_sub_bad">The client does not understand this link</string>
     <string name="servers_sub_remove">Remove</string>
     <string name="servers_sub_remove_ask">Remove the subscription %1$s?</string>
     <string name="servers_manual">Pick by hand</string>

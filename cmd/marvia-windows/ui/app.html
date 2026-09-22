@@ -531,7 +531,7 @@
               уже сохранён, поле здесь не нужно — оно остаётся в настройках.
             -->
             <div class="first-key" id="first-key" hidden>
-              <textarea id="first-account" rows="2" spellcheck="false" placeholder="marvia://…"></textarea>
+              <textarea id="first-account" rows="2" spellcheck="false" placeholder="marvia://…  vless://…  https://…"></textarea>
               <div class="row">
                 <button class="primary" id="first-save" data-t="keySaveFirst"></button>
                 <span id="first-msg" class="hint"></span>
@@ -698,7 +698,7 @@
                 <div class="track"><i id="f-fill" style="width:0"></i></div>
                 <span class="hint" id="key-note"></span>
                 <p class="lead" data-t="keyLead"></p>
-                <textarea id="account" rows="3" spellcheck="false" placeholder="marvia://…"></textarea>
+                <textarea id="account" rows="3" spellcheck="false" placeholder="marvia://…  vless://…  https://…"></textarea>
                 <div class="row">
                   <button class="primary" id="save" data-t="keySave"></button>
                   <span id="save-msg" class="hint"></span>
@@ -910,7 +910,7 @@ const T = {
     noNodeSub: "подключись — она выберется сама, по замерам",
 
     keyTitle: "Ключ доступа",
-    keyLead: "Ссылка вида marvia://… — её присылает бот после оплаты.",
+    keyLead: "Ключ Marvia (marvia://), ссылка VLESS, VMess, Trojan, Shadowsocks, Hysteria2, WireGuard или адрес подписки — всё, что дал продавец.",
     keyHint: "В ссылке личный ключ. Она лежит в профиле пользователя и никуда не отправляется — кроме адреса подписки, который в ней же и записан.",
     keySave: "Сохранить", keySaveFirst: "Сохранить ключ", keySaved: "Сохранено",
     keyOn: "СОХРАНЁН", keyOff: "НЕТ КЛЮЧА", keyNoHost: "ссылки пока нет",
@@ -1028,7 +1028,7 @@ const T = {
     noNodeSub: "connect — it picks itself, by measurement",
 
     keyTitle: "Access key",
-    keyLead: "A marvia://… link — the bot sends it after payment.",
+    keyLead: "A Marvia key (marvia://), a VLESS, VMess, Trojan, Shadowsocks, Hysteria2 or WireGuard link, or a subscription URL — whatever your provider gave you.",
     keyHint: "The link carries a private key. It stays in the user profile and is sent nowhere — except to the subscription address written in the link itself.",
     keySave: "Save", keySaveFirst: "Save the key", keySaved: "Saved",
     keyOn: "SAVED", keyOff: "NO KEY", keyNoHost: "no link yet",

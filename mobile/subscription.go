@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jytt8u/marvia/internal/client"
+	"github.com/jytt8u/marvia/internal/foreign"
 	"github.com/jytt8u/marvia/internal/vp1"
 )
 
@@ -44,6 +45,9 @@ type SubscriptionView struct {
 // кэш есть, отдаётся кэш с пометкой Stale. Ошибка — только когда показать
 // нечего совсем.
 func Subscription(accountLink, cacheDir string, refresh bool) (string, error) {
+	if isForeign(accountLink) {
+		return foreignView(accountLink, cacheDir, refresh)
+	}
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
 		return "", fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))
@@ -83,6 +87,9 @@ func Subscription(accountLink, cacheDir string, refresh bool) (string, error) {
 // Когда туннель поднят, пользоваться этим не надо: замер уйдёт через сам
 // туннель и покажет не то. Для поднятого есть Tunnel.Measure.
 func MeasureNodes(accountLink, cacheDir string) (string, error) {
+	if isForeign(accountLink) {
+		return foreignMeasure(accountLink, cacheDir)
+	}
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
 		return "", fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))
@@ -170,6 +177,12 @@ func accountCachePath(dir, subURL string) string {
 // ForgetSubscription стирает кэш подписки: человек удалил ключ, и список
 // его нод на телефоне оставаться не должен.
 func ForgetSubscription(accountLink, cacheDir string) {
+	if isForeign(accountLink) {
+		if path := foreign.CachePath(cacheDir, accountLink); path != "" {
+			_ = os.Remove(path)
+		}
+		return
+	}
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
 		return
@@ -187,6 +200,11 @@ const subscriptionTimeout = 20 * time.Second
 // есть. Ошибка — с понятной причиной, её приложение покажет под
 // переключателем, а не «панель была недоступна» на всё подряд.
 func BypassRoutes(accountLink string) (string, error) {
+	if isForeign(accountLink) {
+		// Список отдаёт панель Marvia; у чужой подписки его взять неоткуда.
+		// Приложения мимо туннеля по-прежнему работают — там список не нужен.
+		return "", fail(FailPanel, errors.New("этот список даёт только панель Marvia, а подписка чужая"))
+	}
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
 		return "", fail(FailAccount, fmt.Errorf("ссылка доступа: %w", err))

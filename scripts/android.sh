@@ -26,6 +26,7 @@ if [ "${1:-}" != "--skip-core" ]; then
     echo "== ядро -> android/app/libs/marvia.aar"
     gomobile bind \
         -target=android/arm64,android/arm \
+        -trimpath -ldflags="-s -w" \
         -androidapi 24 \
         -javapkg=io.marvia \
         -o android/app/libs/marvia.aar \

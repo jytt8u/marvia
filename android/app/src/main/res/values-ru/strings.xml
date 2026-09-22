@@ -105,7 +105,7 @@
 
     <!-- Экран ключа. -->
     <string name="key_title">Ключ доступа</string>
-    <string name="key_hint_short">marvia://…</string>
+    <string name="key_hint_short">marvia://, vless://, адрес подписки…</string>
     <string name="key_paste">Вставить</string>
     <string name="key_footer">Ключ хранится только на этом телефоне: мы его не видим и восстановить не сможем.</string>
     <string name="key_clipboard_empty">В буфере обмена нет ссылки</string>
@@ -131,7 +131,7 @@
     <string name="servers_use">Сделать рабочей</string>
     <string name="servers_collapsed">свернуто</string>
     <string name="servers_stale">Панель не ответила — список вчерашний</string>
-    <string name="servers_no_subs">Подписок пока нет. Нажми «+» и добавь ссылку marvia:// от того, кто дал доступ.</string>
+    <string name="servers_no_subs">Подписок пока нет. Нажми «+» и добавь ссылку от того, кто дал доступ: ключ Marvia, ссылку VLESS, VMess, Trojan, Shadowsocks, Hysteria2, WireGuard или адрес подписки.</string>
     <string name="servers_unlimited">∞</string>
     <string name="servers_quota">%1$s / %2$s</string>
     <string name="servers_days_left">Осталось %1$s</string>
@@ -167,12 +167,12 @@
     <string name="servers_add_clipboard">Буфер обмена</string>
     <string name="servers_add_manual">Вручную</string>
     <string name="servers_sub_name">Имя</string>
-    <string name="servers_sub_link">Ссылка marvia://…</string>
+    <string name="servers_sub_link">marvia://, vless://, trojan://, ss://… или https://</string>
     <string name="servers_sub_untitled">Подписка</string>
     <string name="servers_subs">Подписки</string>
     <string name="servers_sub_active">рабочая</string>
     <string name="servers_sub_added">Подписка добавлена</string>
-    <string name="servers_sub_bad">Это не ссылка marvia://</string>
+    <string name="servers_sub_bad">Такую ссылку клиент не понимает</string>
     <string name="servers_sub_remove">Убрать</string>
     <string name="servers_sub_remove_ask">Убрать подписку «%1$s»?</string>
     <string name="servers_manual">Выбрать вручную</string>

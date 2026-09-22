@@ -438,7 +438,9 @@ class ServersScreen(
         ImageViewCompat.setImageTintList(ui.autoMarkCheck, ColorStateList.valueOf(t.accFg))
         val fastest = active?.rows?.filter { it.alive && it.ms > 0 }?.minByOrNull { it.ms }
         ui.autoNote.text = if (fastest == null) host.getString(R.string.servers_auto_idle)
-        else host.getString(R.string.servers_auto_fastest, fastest.group.ifEmpty { fastest.name } + " · " + fastest.name)
+        // У одиночной чужой ссылки имя подписки и ноды одно и то же — дважды
+        // его не пишем.
+        else host.getString(R.string.servers_auto_fastest, listOf(fastest.group, fastest.name).filter { it.isNotEmpty() }.distinct().joinToString(" · "))
 
         // Карточки провайдеров собираются заново: их единицы, а состояние у
         // каждой своё, и точечно обновлять дешевле не выйдет.

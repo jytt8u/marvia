@@ -106,7 +106,7 @@ jobs:
           go install golang.org/x/mobile/cmd/gobind
           mkdir -p android/app/libs
           "$(go env GOPATH)/bin/gomobile" bind \
-            -target=android/arm64,android/arm -androidapi 24 \
+            -target=android/arm64,android/arm -androidapi 24 -trimpath -ldflags="-s -w" \
             -javapkg=io.marvia -o android/app/libs/marvia.aar ./mobile
 
       - name: Kotlin-тесты и отладочное приложение

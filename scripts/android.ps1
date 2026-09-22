@@ -98,8 +98,12 @@ if (-not $SkipCore) {
     # ещё до запуска gomobile: «Отсутствует аргумент в списке параметров».
     $targets = 'android/arm64,android/arm'
     if ($Emulator) { $targets += ',android/amd64' }
+    # Без отладочных символов и путей сборки: ядро с Xray внутри — десятки
+    # мегабайт на архитектуру, и символы, нужные только отладчику, занимали
+    # в них заметную долю. Ровно так же собираются бинарники релиза.
     gomobile bind `
         "-target=$targets" `
+        '-trimpath' '-ldflags=-s -w' `
         '-androidapi' '24' `
         '-javapkg=io.marvia' `
         '-o' 'android/app/libs/marvia.aar' `
