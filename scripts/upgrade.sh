@@ -29,6 +29,28 @@ die()  { printf '\033[31m%s\033[0m\n' "$1" >&2; exit 1; }
 
 [ "$(id -u)" = 0 ] || die 'нужен root'
 
+# installed_version — версия установленного бинарника, спрошенная не от root,
+# а от имени хозяина его файла или каталога.
+#
+# Каталоги панели и ноды принадлежат marvia: службы пишут туда базу и расход.
+# Значит, и бинарник там может переписать всякий, кто получил права marvia, —
+# например, взломав панель. Запусти такой файл root, и взлом панели стал бы
+# взломом сервера при первом же обновлении, а с кнопкой обновления в панели —
+# по требованию. Поэтому от root здесь запускаются только свежие бинарники из
+# сверенного архива во временном каталоге, а установленные — от имени хозяина.
+installed_version() {
+	file=$1
+	owner=$(stat -c %U "$file" 2>/dev/null || echo root)
+	[ "$owner" = root ] && owner=$(stat -c %U "$(dirname "$file")" 2>/dev/null || echo root)
+	if [ "$owner" = root ]; then
+		"$file" -version 2>/dev/null || echo '?'
+	elif command -v runuser >/dev/null 2>&1; then
+		runuser -u "$owner" -- "$file" -version 2>/dev/null || echo '?'
+	else
+		echo '?'
+	fi
+}
+
 # ─────────────────────────────────────────────── что здесь вообще стоит
 
 HAVE_PANEL=0
@@ -41,8 +63,8 @@ if [ "$HAVE_PANEL" = 0 ] && [ "$HAVE_NODE" = 0 ]; then
 fi
 
 say 'Что стоит на этой машине:'
-[ "$HAVE_PANEL" = 1 ] && ok "панель: $("$PANEL_DIR/marvia-panel" -version 2>/dev/null || echo '?')"
-[ "$HAVE_NODE" = 1 ] && ok "нода: $("$NODE_DIR/marvia-node" -version 2>/dev/null || echo '?')"
+[ "$HAVE_PANEL" = 1 ] && ok "панель: $(installed_version "$PANEL_DIR/marvia-panel")"
+[ "$HAVE_NODE" = 1 ] && ok "нода: $(installed_version "$NODE_DIR/marvia-node")"
 
 # ─────────────────────────────────────────────── копия базы панели
 #
@@ -164,7 +186,7 @@ swap() {
 	fresh="$tmp/$name"
 	[ -x "$fresh" ] || die "в архиве нет $name"
 
-	was=$("$dir/$name" -version 2>/dev/null || echo '?')
+	was=$(installed_version "$dir/$name")
 	now=$("$fresh" -version 2>/dev/null || echo '?')
 
 	# Неизвестная версия не равна ничему, в том числе другой неизвестной.
@@ -341,7 +363,9 @@ refresh_dist() {
 		bad "ядро ноды для $other не скачалось — ноды на $other будут ставиться со старым"
 	fi
 
-	now=$("$PANEL_DIR/marvia-panel" -version 2>/dev/null | awk '{print $2}' | sed 's/^v//')
+	# Версию спрашиваем у свежего бинарника из архива: после подмены она та же,
+	# а запускать от root файл из каталога marvia нельзя (installed_version).
+	now=$("$tmp/marvia-panel" -version 2>/dev/null | awk '{print $2}' | sed 's/^v//')
 	for app in marvia-android.apk marvia-windows.exe; do
 		# Не скачалось — оставляем прежнее: старое приложение лучше никакого.
 		if curl -fsSL --max-time 300 -o "$tmp/$app" "$base/$app" 2>/dev/null; then
@@ -361,6 +385,16 @@ refresh_dist() {
 
 if [ "$HAVE_PANEL" = 1 ]; then
 	refresh_dist
+fi
+
+# Служба обновления по кнопке в панели (internal/updater) приезжает с каждым
+# релизом. Ставит её свежий бинарник из архива — сверенный и лежащий в
+# каталоге root, — а не установленный (см. installed_version).
+say ''
+if "$tmp/marvia-node" -install-updater 2>"$tmp/updater.err"; then
+	ok 'служба обновления: панель обновляет себя и ноды кнопкой'
+else
+	bad "служба обновления не поставилась: $(head -1 "$tmp/updater.err")"
 fi
 
 say ''

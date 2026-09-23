@@ -1,7 +1,9 @@
 // Package nodesync — сторона ноды в разговоре с панелью.
 //
-// Нода забирает свой список пользователей и отдаёт статистику. Ничего больше
-// панель ей не сообщает и ничем не управляет: если связь пропала, нода
+// Нода забирает свой список пользователей и отдаёт статистику, а заодно
+// сообщает свою версию. Сверх этого панель может только попросить её
+// обновиться — и то не сама: просьбу исполняет служба обновления на машине,
+// ставя официальный релиз (internal/updater). Если связь пропала, нода
 // продолжает работать по последнему полученному списку. Потерять панель на
 // час — неприятно; отключить из-за этого всех клиентов — недопустимо.
 package nodesync
@@ -38,7 +40,27 @@ type Client struct {
 	// панели полем. Расходятся такие списки молча — клиент постучится именем,
 	// которого нода уже не принимает, и соединение просто не соберётся.
 	cover []string
+
+	// version и arch — сборка ноды. Панель показывает их продавцу и по ним
+	// видит, какие ноды отстали от релиза и дошла ли до них просьба
+	// обновиться.
+	version string
+	arch    string
+
+	// upgradeTo — версия, на которую панель просит обновиться; пусто — не
+	// просит. Пишется только циклом Run.
+	upgradeTo string
+
+	// quietUntil — до какого времени не сообщать сборку: панель старше
+	// версии 0.12 разбирает отчёт строго и на незнакомое поле отвечает 400.
+	// Отчёт тогда уходит в прежнем виде, а через полчаса пробуем снова —
+	// панель могли за это время обновить.
+	quietUntil time.Time
 }
+
+// buildRetry — через сколько снова сообщать сборку панели, которая её не
+// приняла.
+const buildRetry = 30 * time.Minute
 
 // New создаёт клиента панели.
 func New(baseURL, token string) *Client {
@@ -52,6 +74,13 @@ func New(baseURL, token string) *Client {
 // WithCoverNames задаёт имена прикрытия, о которых нода сообщает панели.
 func (c *Client) WithCoverNames(names []string) *Client {
 	c.cover = names
+	return c
+}
+
+// WithBuild задаёт версию и разрядность, о которых нода сообщает панели.
+func (c *Client) WithBuild(version, arch string) *Client {
+	c.version = version
+	c.arch = arch
 	return c
 }
 
@@ -101,11 +130,13 @@ func (c *Client) FetchUsers(ctx context.Context) ([]users.User, error) {
 	}
 
 	var body struct {
-		Users []users.User `json:"users"`
+		Users     []users.User `json:"users"`
+		UpgradeTo string       `json:"upgrade_to"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponse)).Decode(&body); err != nil {
 		return nil, fmt.Errorf("разбор списка: %w", err)
 	}
+	c.upgradeTo = body.UpgradeTo
 	return body.Users, nil
 }
 
@@ -133,7 +164,31 @@ func (c *Client) ReportUsage(ctx context.Context, report map[string]users.Usage,
 	// молчания не вывести: имена прикрытия ноды и то, что на связи никого —
 	// последний покупатель отключился, и его «на связи» пора обнулить.
 
-	payload, err := json.Marshal(map[string]any{"usage": report, "presence": presence, "sni_extra": c.cover})
+	body := map[string]any{"usage": report, "presence": presence, "sni_extra": c.cover}
+	withBuild := c.version != "" && time.Now().After(c.quietUntil)
+	if withBuild {
+		body["version"], body["arch"] = c.version, c.arch
+	}
+	err := c.postUsage(ctx, body)
+	var old *oldPanelError
+	if withBuild && errors.As(err, &old) {
+		// Старая панель: отчёт о расходе важнее версии, повторяем без неё.
+		c.quietUntil = time.Now().Add(buildRetry)
+		delete(body, "version")
+		delete(body, "arch")
+		err = c.postUsage(ctx, body)
+	}
+	return err
+}
+
+// oldPanelError — панель не приняла отчёт как запрос (400). Так отвечает
+// панель старше 0.12 на незнакомые поля.
+type oldPanelError struct{ status string }
+
+func (e *oldPanelError) Error() string { return "панель ответила " + e.status }
+
+func (c *Client) postUsage(ctx context.Context, body map[string]any) error {
+	payload, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
@@ -163,6 +218,9 @@ func (c *Client) ReportUsage(ctx context.Context, report map[string]users.Usage,
 		}
 		return fmt.Errorf("панель ответила %s", resp.Status)
 	}
+	if resp.StatusCode == http.StatusBadRequest {
+		return &oldPanelError{resp.Status}
+	}
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("панель ответила %s", resp.Status)
 	}
@@ -179,7 +237,17 @@ type Events struct {
 	// на каждом тике, но журналировать его каждые 15 секунд незачем.
 	OnDisabled func()
 	OnEnabled  func()
+
+	// OnUpgrade — панель просит обновиться до этой версии. Зовётся не на
+	// каждом тике, а не чаще раза в upgradeRetry на одну и ту же версию:
+	// служба обновления могла не достучаться до GitHub, и через полчаса
+	// стоит попросить снова, но не каждые 15 секунд.
+	OnUpgrade func(version string)
 }
+
+// upgradeRetry — через сколько повторить просьбу обновиться, если нода всё
+// ещё на старой версии.
+const upgradeRetry = 30 * time.Minute
 
 func (e Events) users(count int) {
 	if e.OnUsers != nil {
@@ -203,6 +271,25 @@ func (e Events) enabled() {
 	if e.OnEnabled != nil {
 		e.OnEnabled()
 	}
+}
+
+// upgrader решает, пора ли передать просьбу панели об обновлении дальше.
+type upgrader struct {
+	asked   string
+	askedAt time.Time
+}
+
+// due говорит, надо ли просить обновиться до target сейчас. Своя же версия,
+// пустая просьба и повтор раньше upgradeRetry — не надо.
+func (u *upgrader) due(target, own string, now time.Time) bool {
+	if target == "" || target == own {
+		return false
+	}
+	if target == u.asked && now.Sub(u.askedAt) < upgradeRetry {
+		return false
+	}
+	u.asked, u.askedAt = target, now
+	return true
 }
 
 // gather снимает с реестра то, что уезжает панели: расход у тех, у кого он
@@ -233,6 +320,7 @@ func (c *Client) Run(ctx context.Context, registry *users.Registry, interval tim
 	// обратно» по одному разу, а не на каждом тике: иначе выключенная нода
 	// каждые 15 секунд писала бы одну и ту же строку вместе с 403 от панели.
 	disabled := false
+	var upgrade upgrader
 
 	sync := func() {
 		report, presence := gather(registry)
@@ -277,6 +365,10 @@ func (c *Client) Run(ctx context.Context, registry *users.Registry, interval tim
 			return
 		}
 		events.users(len(list))
+
+		if events.OnUpgrade != nil && upgrade.due(c.upgradeTo, c.version, time.Now()) {
+			events.OnUpgrade(c.upgradeTo)
+		}
 	}
 
 	ticker := time.NewTicker(interval)

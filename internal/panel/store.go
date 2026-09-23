@@ -131,6 +131,15 @@ type Node struct {
 	Enabled   bool       `json:"enabled"`
 	LastSeen  *time.Time `json:"last_seen,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
+
+	// Version и Arch — сборка ноды, как она сама сообщила в последнем
+	// отчёте. Пусто у нод старше этой возможности: они версию не шлют.
+	Version string `json:"version,omitempty"`
+	Arch    string `json:"arch,omitempty"`
+
+	// UpgradeTo — версия, до которой продавец попросил ноду обновиться;
+	// пусто, когда не просил или нода уже дошла.
+	UpgradeTo string `json:"upgrade_to,omitempty"`
 }
 
 // Store — хранилище панели поверх SQLite.
@@ -309,6 +318,9 @@ func migrate(db *sql.DB) error {
 		`ALTER TABLE nodes ADD COLUMN country TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE nodes ADD COLUMN quic INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE nodes ADD COLUMN sni_extra TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE nodes ADD COLUMN version TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE nodes ADD COLUMN arch TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE nodes ADD COLUMN upgrade_to TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE users ADD COLUMN speed_limit INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE users ADD COLUMN external_id TEXT`,
 		`CREATE TABLE IF NOT EXISTS api_keys (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, scopes TEXT NOT NULL, created_at TEXT NOT NULL, last_used_at TEXT, revoked_at TEXT)`,
@@ -788,7 +800,7 @@ func (s *Store) GetNode(ctx context.Context, id int64) (Node, error) {
 
 func (s *Store) queryNodes(ctx context.Context, where string, args ...any) ([]Node, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, country, address, sni, sni_extra, public_key, reality_public_key, reality_short_id, ws_path, quic, enabled, last_seen, created_at
+		`SELECT id, name, country, address, sni, sni_extra, public_key, reality_public_key, reality_short_id, ws_path, quic, enabled, last_seen, created_at, version, arch, upgrade_to
 		 FROM nodes `+where+` ORDER BY id`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("чтение нод: %w", err)
@@ -806,7 +818,8 @@ func (s *Store) queryNodes(ctx context.Context, where string, args ...any) ([]No
 			createdAt string
 		)
 		if err := rows.Scan(&n.ID, &n.Name, &n.Country, &n.Address, &n.SNI, &sniExtra, &n.PublicKey,
-			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &quicOn, &enabled, &lastSeen, &createdAt); err != nil {
+			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &quicOn, &enabled, &lastSeen, &createdAt,
+			&n.Version, &n.Arch, &n.UpgradeTo); err != nil {
 			return nil, err
 		}
 		n.SNIExtra = splitNames(sniExtra)
@@ -964,10 +977,11 @@ func (s *Store) AuthenticateNode(ctx context.Context, token string) (Node, error
 		createdAt string
 	)
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, quic, enabled, last_seen, created_at
+		`SELECT id, name, country, address, sni, public_key, reality_public_key, reality_short_id, ws_path, quic, enabled, last_seen, created_at, version, arch, upgrade_to
 		 FROM nodes WHERE token_hash = ?`, HashToken(token)).
 		Scan(&n.ID, &n.Name, &n.Country, &n.Address, &n.SNI, &n.PublicKey,
-			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &quicOn, &enabled, &lastSeen, &createdAt)
+			&n.RealityPublicKey, &n.RealityShortID, &n.WSPath, &quicOn, &enabled, &lastSeen, &createdAt,
+			&n.Version, &n.Arch, &n.UpgradeTo)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Node{}, ErrNotFound
 	}
@@ -985,6 +999,98 @@ func (s *Store) AuthenticateNode(ctx context.Context, token string) (Node, error
 		return Node{}, err
 	}
 	return n, nil
+}
+
+// ReportNodeBuild запоминает версию и разрядность, о которых сообщила нода.
+//
+// Дошедшая до просьбы нода эту просьбу снимает сама: продавцу не надо
+// помнить, кого он просил, — в списке остаются только те, кто ещё в пути.
+// Дошедшей считается и нода, ушедшая дальше просьбы: пока она обновлялась,
+// мог выйти следующий релиз. Пустую версию не пишем: так отвечают ноды старше
+// этой возможности, и затирать ею известное значение незачем.
+//
+// Отчёт приходит каждые четверть минуты, поэтому пишем, только если что-то
+// изменилось.
+func (s *Store) ReportNodeBuild(ctx context.Context, id int64, version, arch string) error {
+	if version == "" {
+		return nil
+	}
+	var was, wasArch, target string
+	if err := s.db.QueryRowContext(ctx, `SELECT version, arch, upgrade_to FROM nodes WHERE id = ?`, id).
+		Scan(&was, &wasArch, &target); err != nil {
+		return err
+	}
+	reached := target != "" && !OlderVersion(version, target)
+	if was == version && wasArch == arch && !reached {
+		return nil
+	}
+	if reached {
+		target = ""
+	}
+	_, err := s.db.ExecContext(ctx, `UPDATE nodes SET version = ?, arch = ?, upgrade_to = ? WHERE id = ?`,
+		version, arch, target, id)
+	return err
+}
+
+// RequestNodeUpgrade просит обновиться до target все включённые ноды, чья
+// версия старше. Отдаёт, скольких попросили.
+//
+// Старше, а не «другая»: нода, поставленная из свежей сборки, бывает новее
+// релиза, и просьба «обновись до релиза» откатила бы её назад. Выключенные не
+// трогаем: продавец убрал их из работы, и тихо менять им бинарник, пока он не
+// видит, — не наше дело. Ноды без версии старше этой возможности и просьбу не
+// услышат: их обновляют один раз руками, и панель это показывает.
+func (s *Store) RequestNodeUpgrade(ctx context.Context, target string) (int, error) {
+	nodes, err := s.ListNodes(ctx)
+	if err != nil {
+		return 0, err
+	}
+	asked := 0
+	for _, n := range nodes {
+		if !n.Enabled || n.UpgradeTo == target || !OlderVersion(n.Version, target) {
+			continue
+		}
+		if _, err := s.db.ExecContext(ctx, `UPDATE nodes SET upgrade_to = ? WHERE id = ?`, target, n.ID); err != nil {
+			return asked, err
+		}
+		asked++
+	}
+	return asked, nil
+}
+
+// OlderVersion говорит, старше ли версия a версии b. Сравниваются числа
+// vX.Y.Z по порядку; то, что не разбирается (dev-сборка), старше ничего не
+// считается — откатывать то, чего не понимаешь, хуже, чем не обновить.
+func OlderVersion(a, b string) bool {
+	pa, okA := versionParts(a)
+	pb, okB := versionParts(b)
+	if !okA || !okB {
+		return false
+	}
+	for i := range pa {
+		if pa[i] != pb[i] {
+			return pa[i] < pb[i]
+		}
+	}
+	return false
+}
+
+func versionParts(v string) ([3]int, bool) {
+	var out [3]int
+	fields := strings.SplitN(strings.TrimPrefix(v, "v"), ".", 3)
+	if len(fields) != 3 {
+		return out, false
+	}
+	for i, f := range fields {
+		// Хвост вида -rc1 отбрасываем: сравниваем только числа.
+		f, _, _ = strings.Cut(f, "-")
+		n, err := strconv.Atoi(f)
+		if err != nil || n < 0 {
+			return out, false
+		}
+		out[i] = n
+	}
+	return out, true
 }
 
 // NodeUsers собирает список пользователей для конкретной ноды в том же виде,

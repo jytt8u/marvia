@@ -591,6 +591,75 @@
           </div>
         </sc-if>
 
+        <!--
+          Обновления. Кнопки здесь ничего не ставят сами: панель кладёт
+          просьбу службе обновления на своём сервере, а ноды получают её при
+          сверке и передают своим. Что ставить, решает служба — официальный
+          релиз, сверенный с SHA256SUMS (internal/updater).
+        -->
+        <sc-if value="{{ isUpdates }}">
+          <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--gap, 12px); max-width: 760px;">
+            <div style="font-size: 12px; line-height: 1.5; color: var(--dim);">{{ d18.updates.what }}</div>
+            <sc-if value="{{ updLatestErr }}">
+              <div style="{{ errStyle }}">{{ updLatestErrText }}</div>
+            </sc-if>
+
+            <div style="{{ updCard }}">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <div style="font-size: 14px; font-weight: 600; color: var(--fg);">{{ d18.updates.panel }}</div>
+                <sc-if value="{{ updCanPanel }}">
+                  <div style="{{ ctaStyle }}" data-focus="upd-panel" onClick="{{ doUpgradePanel }}">{{ d18.updates.upPanel }}</div>
+                </sc-if>
+              </div>
+              <div style="display: flex; gap: 28px;">
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">{{ d18.updates.current }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--fg);">{{ updPanelVersion }}</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--dim);">{{ d18.updates.latest }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--acc);">{{ updLatest }}</div>
+                </div>
+              </div>
+              <sc-if value="{{ updPanelLine }}">
+                <div style="{{ updLineStyle }}">{{ updPanelLine }}</div>
+              </sc-if>
+              <sc-if value="{{ updNoService }}">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="font-size: 12px; line-height: 1.5; color: var(--warn);">{{ d18.updates.noService }}</div>
+                  <div style="{{ updCmd }}">{{ d18.updates.command }}</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ updHasLog }}">
+                <details>
+                  <summary style="font-size: 12px; color: var(--dim); cursor: pointer;">{{ d18.updates.log }}</summary>
+                  <pre style="{{ updLogStyle }}">{{ updLog }}</pre>
+                </details>
+              </sc-if>
+            </div>
+
+            <div style="{{ updCard }}">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <div style="font-size: 14px; font-weight: 600; color: var(--fg);">{{ d18.updates.nodes }}</div>
+                <sc-if value="{{ updCanNodes }}">
+                  <div style="{{ ctaStyle }}" data-focus="upd-nodes" onClick="{{ doUpgradeNodes }}">{{ updNodesCta }}</div>
+                </sc-if>
+              </div>
+              <sc-for list="{{ updNodes }}" as="un">
+                <div style="{{ un.row }}">
+                  <div style="font-size: 13px; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ un.name }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim);">{{ un.version }}</div>
+                  <div style="{{ un.badge }}">{{ un.state }}</div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ updNoNodes }}">
+                <div style="{{ emptyStyle }}">{{ d18.nodesPage.empty }}</div>
+              </sc-if>
+              <div style="font-size: 12px; line-height: 1.5; color: var(--dim);">{{ d18.updates.nodesNote }}</div>
+            </div>
+          </div>
+        </sc-if>
+
         <sc-if value="{{ isAlerts }}">
           <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--gap, 12px); max-width: 640px;">
             <div style="padding: var(--pad, 16px); border-radius: var(--r, 16px); background: var(--surf); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px;">
@@ -1016,6 +1085,27 @@ function journalWhen(iso) {
   const mm = String(at.getMinutes()).padStart(2, "0");
   if (today) return hh + ":" + mm;
   return shortDate(iso) + " " + hh + ":" + mm;
+}
+
+// loadUpdates забирает страницу «Обновления» и, пока что-то в пути, спрашивает
+// снова. Пока панель перезапускается на новой версии, запросы не проходят —
+// это не ошибка, а ожидаемые секунды; страница ждёт и говорит об этом.
+async function loadUpdates() {
+  clearTimeout(state.updTimer);
+  try {
+    state.updates = await api("/api/v1/updates");
+    state.updRestarting = false;
+  } catch (_) {
+    state.updRestarting = !!state.updWaiting;
+  }
+  const u = state.updates;
+  const busy = state.updRestarting || (u && (u.panel.updater.pending || u.panel.updater.state === "running"
+    || (u.nodes || []).some((n) => n.upgrade_to)));
+  if (!busy) state.updWaiting = false;
+  if (state.page === "updates" && (busy || state.updWaiting)) {
+    state.updTimer = setTimeout(loadUpdates, 4000);
+  }
+  render();
 }
 
 async function loadAlerts() {
@@ -1717,13 +1807,14 @@ const TEXTS = {
 
     nav: {
       dash: "Панель", clients: "Клиенты", keys: "Ключи ботов",
-      nodes: "Ноды", stats: "Статистика", alerts: "Оповещения", journal: "Журнал", look: "Вид",
+      nodes: "Ноды", stats: "Статистика", alerts: "Оповещения", journal: "Журнал", updates: "Обновления", look: "Вид",
     },
     sub: {
       dash: "Обзор за 30 дней",
       keys: "Токены для ботов и интеграций",
       alerts: "Телеграм-бот · молчащие ноды, сроки, копии базы",
       journal: "Что делали с панелью · последние 90 дней",
+      updates: (latest) => latest ? "Панель и ноды · последний релиз " + latest : "Панель и ноды",
       look: "Тема панели · 28 готовых видов",
       clients: (shown, total, active, filtered) => filtered
         ? "найдено " + shown + " из " + total
@@ -1802,7 +1893,34 @@ const TEXTS = {
         "key.create": "выпущен ключ бота",
         "key.revoke": "отозван ключ бота",
         "alerts.update": "оповещения",
+        "panel.upgrade": "обновление панели",
+        "nodes.upgrade": "обновление нод",
       },
+    },
+    updates: {
+      what: "Кнопки ничего не ставят сами: служба обновления на сервере берёт официальный релиз с GitHub и сверяет его контрольные суммы. Прежняя версия возвращается сама, если новая не поднялась.",
+      panel: "Панель", nodes: "Ноды",
+      current: "СЕЙЧАС", latest: "ПОСЛЕДНИЙ РЕЛИЗ", unknown: "неизвестна",
+      upPanel: "Обновить панель",
+      upNodes: (n) => "Обновить " + n + " " + pluralRU(n, "ноду", "ноды", "нод"),
+      confirmPanel: (v) => "Сервер панели обновится до " + v + " — панель, нода на нём же, если есть, и приложения для раздачи. Панель перезапустится, страница подождёт.",
+      confirmNodes: (v) => "Отставшие ноды обновятся до " + v + ". Каждая перезапускается на секунды: подключённые переподключатся сами.",
+      fresh: "актуальна", stale: "устарела", going: (v) => "обновляется до " + v,
+      old: "старая, обнови руками",
+      noService: "Службы обновления на этом сервере пока нет. Один раз обнови его этой командой от root — дальше кнопкой:",
+      command: "curl -fsSL https://raw.githubusercontent.com/jytt8u/marvia/main/scripts/upgrade.sh | sh",
+      state: {
+        pending: "просьба передана, служба вот-вот начнёт",
+        running: "идёт обновление…",
+        ok: "последнее обновление прошло",
+        failed: "последнее обновление не удалось",
+      },
+      restarting: "панель перезапускается на новой версии…",
+      asked: (n, v) => n + " " + pluralRU(n, "нода получит", "ноды получат", "нод получат") + " просьбу обновиться до " + v + " в течение минуты",
+      noneToAsk: "Все включённые ноды уже на последней версии",
+      log: "Журнал последнего обновления",
+      latestErr: (e) => "Не удалось узнать последний релиз: " + e,
+      nodesNote: "Нода, поставленная до версии 0.12, версию не сообщает и просьбу не услышит: такую обнови один раз той же командой на её сервере.",
     },
     alerts: {
       title: "Оповещения в телеграм",
@@ -1993,13 +2111,14 @@ const TEXTS = {
 
     nav: {
       dash: "Overview", clients: "Clients", keys: "Bot keys",
-      nodes: "Nodes", stats: "Statistics", alerts: "Alerts", journal: "Journal", look: "Look",
+      nodes: "Nodes", stats: "Statistics", alerts: "Alerts", journal: "Journal", updates: "Updates", look: "Look",
     },
     sub: {
       dash: "Last 30 days",
       keys: "Tokens for bots and integrations",
       alerts: "Telegram bot · silent nodes, expiries, backups",
       journal: "What was done to the panel · last 90 days",
+      updates: (latest) => latest ? "Panel and nodes · latest release " + latest : "Panel and nodes",
       look: "Panel theme · 28 ready looks",
       clients: (shown, total, active, filtered) => filtered
         ? "found " + shown + " of " + total
@@ -2078,7 +2197,34 @@ const TEXTS = {
         "key.create": "bot key issued",
         "key.revoke": "bot key revoked",
         "alerts.update": "alerts",
+        "panel.upgrade": "panel upgrade",
+        "nodes.upgrade": "nodes upgrade",
       },
+    },
+    updates: {
+      what: "The buttons install nothing themselves: the upgrade service on the server takes the official release from GitHub and checks its checksums. The previous version comes back on its own if the new one fails to start.",
+      panel: "Panel", nodes: "Nodes",
+      current: "NOW", latest: "LATEST RELEASE", unknown: "unknown",
+      upPanel: "Upgrade the panel",
+      upNodes: (n) => "Upgrade " + n + " " + (n === 1 ? "node" : "nodes"),
+      confirmPanel: (v) => "The panel server will be upgraded to " + v + " — the panel, a node on the same server if any, and the apps it serves. The panel restarts; this page will wait.",
+      confirmNodes: (v) => "Outdated nodes will be upgraded to " + v + ". Each restarts for a few seconds; connected clients reconnect by themselves.",
+      fresh: "up to date", stale: "outdated", going: (v) => "upgrading to " + v,
+      old: "old, upgrade by hand",
+      noService: "This server has no upgrade service yet. Upgrade it once with this command as root — the button works after that:",
+      command: "curl -fsSL https://raw.githubusercontent.com/jytt8u/marvia/main/scripts/upgrade.sh | sh",
+      state: {
+        pending: "request passed on, the service is about to start",
+        running: "upgrading…",
+        ok: "the last upgrade went fine",
+        failed: "the last upgrade failed",
+      },
+      restarting: "the panel is restarting on the new version…",
+      asked: (n, v) => n + " " + (n === 1 ? "node gets" : "nodes get") + " the request to upgrade to " + v + " within a minute",
+      noneToAsk: "All enabled nodes are already on the latest version",
+      log: "Log of the last upgrade",
+      latestErr: (e) => "Could not learn the latest release: " + e,
+      nodesNote: "A node installed before 0.12 does not report its version and will not hear the request: upgrade it once with the same command on its server.",
     },
     alerts: {
       title: "Telegram alerts",
@@ -2374,7 +2520,7 @@ function daysLeft(iso) {
 // знает — пункта меню, который ведёт в выдуманное, здесь нет.
 // Порядок разделов в меню. Названия берутся из словаря по этому же ключу:
 // держать их здесь значило бы иметь два места, где они разъезжаются.
-const PAGES = ["dash", "clients", "keys", "nodes", "stats", "alerts", "journal", "look"];
+const PAGES = ["dash", "clients", "keys", "nodes", "stats", "alerts", "journal", "updates", "look"];
 
 // Сколько строк на странице. Полсотни — столько влезает в экран прокруткой и
 // столько человек ещё готов просмотреть глазами, не листая.
@@ -2396,6 +2542,7 @@ function setState(patch) {
     else loadAlerts();
   }
   if (patch.page === "journal") loadJournal();
+  if (patch.page === "updates") loadUpdates();
 }
 
 // CTA — какая кнопка стоит в углу раздела. Разделы без действия остаются без
@@ -2405,6 +2552,96 @@ const CTA = {
   nodes: () => newNodeSheet(),
   keys: () => newKeySheet(),
 };
+
+// older — старше ли версия a версии b, по числам vX.Y.Z. Неразборчивое (dev)
+// старше ничего не считается: нода или панель из свежей сборки бывает новее
+// релиза, и кнопка «обновить» откатила бы её назад. Тот же смысл, что у
+// OlderVersion в store.go.
+function older(a, b) {
+  const parts = (v) => {
+    const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(v || "");
+    return m ? [+m[1], +m[2], +m[3]] : null;
+  };
+  const pa = parts(a), pb = parts(b);
+  if (!pa || !pb) return false;
+  for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pa[i] < pb[i];
+  return false;
+}
+
+// updatesView — страница «Обновления». Кнопка появляется только там, где ей
+// есть что делать: панель уже на последней версии или службы обновления нет —
+// кнопки нет, а вместо неё сказано, почему.
+function updatesView(t, d, dict) {
+  const u = state.updates;
+  const up = dict.updates;
+  const latest = (u && u.latest) || "";
+  const svc = (u && u.panel && u.panel.updater) || {};
+  const panelVersion = (u && u.panel && u.panel.version) || "";
+  const nodes = (u && u.nodes) || [];
+  // Нода без версии — старше этой возможности: просьбу она не услышит, и
+  // кнопка, которая её считает, обещала бы то, чего не будет.
+  const stale = nodes.filter((n) => n.enabled && n.version && latest && older(n.version, latest));
+
+  let panelLine = "";
+  if (state.updRestarting) panelLine = up.restarting;
+  else if (svc.pending) panelLine = up.state.pending;
+  else if (svc.state) panelLine = up.state[svc.state] + (svc.at ? " · " + journalWhen(svc.at) : "") + (svc.reason ? " · " + svc.reason : "");
+
+  const rows = nodes.map((n) => {
+    let label = up.fresh, warn = false;
+    if (!n.enabled) label = dict.nodesPage.offShort;
+    else if (n.upgrade_to && n.version !== n.upgrade_to) label = up.going(n.upgrade_to);
+    else if (!n.version) { label = up.old; warn = true; }
+    else if (latest && older(n.version, latest)) { label = up.stale; warn = true; }
+    return {
+      name: n.name,
+      version: n.version ? n.version + (n.arch ? " · " + n.arch : "") : "—",
+      state: label,
+      row: "display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 12px;border-radius:"
+        + t.r + "px;background:" + t.surf2,
+      badge: "padding:4px 9px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:10px;color:"
+        + (warn ? t.warn : t.acc) + ";background:" + (warn ? "rgba(242,160,61,.13)" : t.accSoft),
+    };
+  });
+
+  return {
+    updCard: "padding:" + d.pad + "px;border-radius:" + t.r + "px;background:" + t.surf
+      + ";border:1px solid " + t.line + ";display:flex;flex-direction:column;gap:12px",
+    updLatestErr: !!(u && u.latest_error),
+    updLatestErrText: u && u.latest_error ? up.latestErr(u.latest_error) : "",
+    updPanelVersion: panelVersion || up.unknown,
+    updLatest: latest || up.unknown,
+    updPanelLine: panelLine,
+    updLineStyle: "font-size:12px;line-height:1.5;color:" + (svc.state === "failed" && !svc.pending ? t.warn : t.dim),
+    updNoService: !!u && !svc.installed,
+    updCmd: "padding:10px 12px;border-radius:" + t.r + "px;background:" + t.surf2
+      + ";font-family:JetBrains Mono,monospace;font-size:11.5px;color:" + t.fg + ";user-select:all;word-break:break-all",
+    updCanPanel: !!u && svc.installed && !svc.pending && svc.state !== "running" && !state.updRestarting
+      && !!latest && older(panelVersion, latest),
+    updHasLog: !!svc.log,
+    updLog: svc.log || "",
+    updLogStyle: "margin:8px 0 0;max-height:260px;overflow:auto;padding:10px 12px;border-radius:" + t.r
+      + "px;background:" + t.surf2 + ";font-family:JetBrains Mono,monospace;font-size:11px;line-height:1.5;color:" + t.dim + ";white-space:pre-wrap",
+    updNodes: rows,
+    updNoNodes: !!u && !nodes.length,
+    updCanNodes: stale.some((n) => !n.upgrade_to || n.upgrade_to !== latest),
+    updNodesCta: up.upNodes(stale.length),
+
+    doUpgradePanel: () => act(async () => {
+      if (!(await ask(up.upPanel, up.confirmPanel(latest)))) return;
+      await api("/api/v1/updates/panel", "POST");
+      state.updWaiting = true;
+      toast(up.state.pending);
+      await loadUpdates();
+    }),
+    doUpgradeNodes: () => act(async () => {
+      if (!(await ask(up.upNodes(stale.length), up.confirmNodes(latest)))) return;
+      const res = await api("/api/v1/updates/nodes", "POST");
+      toast(res && res.asked ? up.asked(res.asked, res.target) : up.noneToAsk);
+      await loadUpdates();
+    }),
+  };
+}
 
 function renderVals() {
   const t = theme();
@@ -2453,6 +2690,7 @@ function renderVals() {
 
     alerts: d18.sub.alerts,
     journal: d18.sub.journal,
+    updates: d18.sub.updates(state.updates && state.updates.latest),
     look: d18.sub.look,
   };
 
@@ -2644,7 +2882,7 @@ function renderVals() {
     return {
       onClick: () => nodeSheet(n),
       name: n.name || n.address,
-      host: n.address + (n.country ? " · " + n.country : ""),
+      host: n.address + (n.country ? " · " + n.country : "") + (n.version ? " · " + n.version : ""),
       load: bytes(traffic),
       share: total ? Math.round((traffic / total) * 100) + "%" : "0%",
       seen: alive ? sinceLabel(n.last_seen) : n.enabled ? d18.nodesPage.silentShort : d18.nodesPage.offShort,
@@ -2963,6 +3201,7 @@ function renderVals() {
     isLook: page === "look",
     isAlerts: page === "alerts",
     isJournal: page === "journal",
+    isUpdates: page === "updates",
 
     // Журнал приезжает отдельным запросом и только админским токеном: это
     // летопись действий над панелью, и в общий loadAll ей незачем.
@@ -2977,6 +3216,9 @@ function renderVals() {
       whatStyle: "font-size:13px;color:" + t.fg,
     })),
     journalEmpty: !(state.journal || []).length,
+
+    // ── обновления ──
+    ...updatesView(t, d, d18),
 
     // Подписи полей плоскими значениями: разметка не умеет индексы массива,
     // и {{ d18.alerts.token[0] }} уехало бы на страницу как есть.

@@ -2,6 +2,7 @@ package nodesync
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -216,4 +217,99 @@ func waitFor(t *testing.T, what string, cond func() bool) {
 		time.Sleep(time.Millisecond)
 	}
 	t.Fatalf("не дождались: %s", what)
+}
+
+// TestNodeTellsItsVersionAndPassesOnTheUpgradeRequest: нода сообщает панели
+// версию и разрядность, а просьбу панели обновиться передаёт дальше один раз,
+// а не на каждом тике.
+func TestNodeTellsItsVersionAndPassesOnTheUpgradeRequest(t *testing.T) {
+	var reported atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/node/users":
+			_, _ = w.Write([]byte(`{"users":[],"upgrade_to":"v0.12.0"}`))
+		case "/api/v1/node/usage":
+			var body struct{ Version, Arch string }
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			reported.Store(body.Version + "/" + body.Arch)
+			w.WriteHeader(http.StatusNoContent)
+		}
+	}))
+	defer srv.Close()
+
+	registry, _ := users.NewRegistry(nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var asked atomic.Int32
+	var target atomic.Value
+	go New(srv.URL, "t").WithBuild("v0.11.0", "arm64").Run(ctx, registry, time.Millisecond, Events{
+		OnUpgrade: func(v string) { asked.Add(1); target.Store(v) },
+	})
+
+	waitFor(t, "нода попросила обновиться", func() bool { return asked.Load() > 0 })
+	time.Sleep(50 * time.Millisecond)
+	if n := asked.Load(); n != 1 {
+		t.Fatalf("просьба передана %d раз за полсотни тиков", n)
+	}
+	if target.Load() != "v0.12.0" {
+		t.Fatalf("просьба до %v", target.Load())
+	}
+	if reported.Load() != "v0.11.0/arm64" {
+		t.Fatalf("панели сообщено %v", reported.Load())
+	}
+}
+
+// TestUpgradeIsNotAskedForTheSameVersion: нода на той версии, до которой
+// просят, ничего не просит; через полчаса просьба повторяется — служба могла
+// не достучаться до релиза.
+func TestUpgradeIsNotAskedForTheSameVersion(t *testing.T) {
+	var u upgrader
+	now := time.Now()
+	if u.due("v1.0.0", "v1.0.0", now) || u.due("", "v1.0.0", now) {
+		t.Fatal("просьба без нужды")
+	}
+	if !u.due("v1.1.0", "v1.0.0", now) {
+		t.Fatal("первая просьба не передана")
+	}
+	if u.due("v1.1.0", "v1.0.0", now.Add(time.Minute)) {
+		t.Fatal("повтор через минуту")
+	}
+	if !u.due("v1.1.0", "v1.0.0", now.Add(upgradeRetry+time.Second)) {
+		t.Fatal("повтора нет и через полчаса")
+	}
+}
+
+// TestOldPanelStillGetsTheUsage: панель старше 0.12 отвечает 400 на
+// незнакомое поле version. Расход при этом обязан дойти — отчёт повторяется
+// в прежнем виде, — а следующие полчаса нода версию не шлёт вовсе.
+func TestOldPanelStillGetsTheUsage(t *testing.T) {
+	var strictHits, accepted atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		var body struct {
+			Usage    map[string]users.Usage    `json:"usage"`
+			Presence map[string]users.Presence `json:"presence"`
+			SNIExtra []string                  `json:"sni_extra"`
+		}
+		if err := dec.Decode(&body); err != nil {
+			strictHits.Add(1)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		accepted.Add(1)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "t").WithBuild("v0.12.0", "amd64")
+	for range 3 {
+		if err := c.ReportUsage(context.Background(), map[string]users.Usage{"a": {Up: 1}}, nil); err != nil {
+			t.Fatalf("отчёт старой панели не дошёл: %v", err)
+		}
+	}
+	if accepted.Load() != 3 || strictHits.Load() != 1 {
+		t.Fatalf("принято %d, отказов %d: ждали три отчёта и один отказ", accepted.Load(), strictHits.Load())
+	}
 }

@@ -45,3 +45,12 @@ test('вшитые скрипты панели и Windows разбираются
     assert.doesNotThrow(() => new Script(script, { filename: file }));
   }
 });
+
+test('кнопка обновления не откатывает версию новее релиза', () => {
+  const older = runInNewContext(page.match(/function older\(a, b\) \{[\s\S]*?\n\}/)[0] + '\nolder;');
+  assert.equal(older('v0.11.0', 'v0.12.0'), true);
+  assert.equal(older('v0.9.9', 'v0.10.0'), true);
+  assert.equal(older('v0.12.0', 'v0.12.0'), false);
+  assert.equal(older('v0.13.0', 'v0.12.0'), false);
+  assert.equal(older('dev', 'v0.12.0'), false);
+});

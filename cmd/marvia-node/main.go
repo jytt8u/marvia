@@ -20,6 +20,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -28,6 +30,7 @@ import (
 	"github.com/jytt8u/marvia/internal/fallback"
 	"github.com/jytt8u/marvia/internal/nodesync"
 	"github.com/jytt8u/marvia/internal/transport"
+	"github.com/jytt8u/marvia/internal/updater"
 	"github.com/jytt8u/marvia/internal/users"
 	"github.com/jytt8u/marvia/internal/vp1"
 )
@@ -126,11 +129,19 @@ func main() {
 	flag.StringVar(&opts.coverTitle, "cover-title", "", "если сайт-прикрытие не задан, отдавать заглушку с таким заголовком")
 
 	showVersion := flag.Bool("version", false, "показать версию и выйти")
+	installUpdater := flag.Bool("install-updater", false, "поставить службу обновления по кнопке в панели и выйти (нужен root)")
 
 	flag.Parse()
 
 	if *showVersion {
 		fmt.Println("marvia-node", version)
+		return
+	}
+	if *installUpdater {
+		if err := updater.Install(); err != nil {
+			fmt.Fprintf(os.Stderr, "служба обновления: %v\n", err)
+			os.Exit(1)
+		}
 		return
 	}
 
@@ -329,7 +340,9 @@ func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, 
 	// пришлось бы держать руками и здесь флагом, и там полем, а разойдясь,
 	// они молча ломают подключение — клиент стучится именем, которого нода
 	// уже не принимает.
-	client := nodesync.New(opts.panelURL, token).WithCoverNames(splitList(opts.realitySNI))
+	client := nodesync.New(opts.panelURL, token).
+		WithCoverNames(splitList(opts.realitySNI)).
+		WithBuild(version, runtime.GOARCH)
 
 	// Первый список забираем синхронно: стартовать, не зная пользователей,
 	// значит на несколько секунд открыть ноду для всех подряд.
@@ -387,6 +400,16 @@ func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, 
 		OnEnabled: func() {
 			log.Printf("нода снова включена в панели: возобновляю обслуживание")
 		},
+		OnUpgrade: func(target string) {
+			// Просьба кладётся рядом с бинарником: это каталог ноды, куда у
+			// неё есть право писать, и его же сторожит служба обновления.
+			home := nodeHome()
+			if err := updater.Request(home); err != nil {
+				log.Printf("панель просит обновиться до %s, но просьба не легла в %s: %v", target, home, err)
+				return
+			}
+			log.Printf("панель просит обновиться до %s: просьба передана службе обновления", target)
+		},
 	})
 
 	go registry.PersistUsage(ctx, usagePath, usageFlushInterval, func(err error) {
@@ -394,6 +417,16 @@ func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, 
 	})
 
 	return registry, usagePath, nil
+}
+
+// nodeHome — каталог ноды: там, где лежит её бинарник. Туда у ноды есть
+// право писать, и его же сторожит служба обновления.
+func nodeHome() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "."
+	}
+	return filepath.Dir(exe)
 }
 
 // listenWS поднимает транспорт WebSocket — режим для работы за CDN.

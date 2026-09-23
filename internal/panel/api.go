@@ -40,6 +40,12 @@ type API struct {
 	// который открыт всему интернету, точная версия говорит сканеру, какие
 	// дыры пробовать, и заодно опознаёт панель как нашу.
 	version string
+
+	// home — каталог панели: туда кладётся просьба к службе обновления.
+	home string
+
+	// releases — что известно о последнем релизе; см. updates.go.
+	releases releaseCache
 }
 
 // NewAPI собирает обработчики панели.
@@ -87,6 +93,12 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/events", a.admin(a.listEvents))
 
 	mux.HandleFunc("GET /api/v1/alerts", a.admin(a.getAlerts))
+
+	// Обновления: только админ. Ключ бота обновлять серверы не должен —
+	// ему хватает подписчиков.
+	mux.HandleFunc("GET /api/v1/updates", a.admin(a.getUpdates))
+	mux.HandleFunc("POST /api/v1/updates/panel", a.admin(a.upgradePanel))
+	mux.HandleFunc("POST /api/v1/updates/nodes", a.admin(a.upgradeNodes))
 	mux.HandleFunc("PUT /api/v1/alerts", a.admin(a.setAlerts))
 
 	// Установка ноды одной командой. Приглашение стоит в адресе, потому что
@@ -738,7 +750,9 @@ func (a *API) nodeUsers(w http.ResponseWriter, r *http.Request, n Node) {
 		fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	ok(w, map[string]any{"users": list})
+	// upgrade_to — просьба обновиться, если продавец её дал. Нода передаёт
+	// её службе обновления; что ставить, та решает сама (internal/updater).
+	ok(w, map[string]any{"users": list, "upgrade_to": n.UpgradeTo})
 }
 
 func (a *API) nodeUsage(w http.ResponseWriter, r *http.Request, n Node) {
@@ -754,9 +768,17 @@ func (a *API) nodeUsage(w http.ResponseWriter, r *http.Request, n Node) {
 		// держать руками и на ноде, и в панели: разойдясь, они молча ломают
 		// подключение — клиент стучится именем, которого нода не знает.
 		SNIExtra []string `json:"sni_extra"`
+
+		// Version и Arch — сборка ноды: по ним панель видит, какие ноды
+		// отстали от релиза.
+		Version string `json:"version"`
+		Arch    string `json:"arch"`
 	}
-	if !decode(w, r, &body) {
+	if !decodeFromNode(w, r, &body) {
 		return
+	}
+	if err := a.store.ReportNodeBuild(r.Context(), n.ID, clip(body.Version, 40), clip(body.Arch, 16)); err != nil {
+		log.Printf("версия ноды %d не сохранилась: %v", n.ID, err)
 	}
 
 	// Пишем, только когда список и правда изменился: отчёт приходит каждые
@@ -923,9 +945,28 @@ func pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 }
 
 func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
+	return decodeBody(w, r, dst, true)
+}
+
+// decodeFromNode разбирает отчёт ноды, не споткнувшись о незнакомые поля.
+//
+// Строгость decode хороша для людей и ботов: опечатка в имени поля должна
+// стать ошибкой, а не молча пропасть. Ноде она вредит. Ноды обновляются не
+// разом с панелью, и нода новее панели шлёт поля, которых панель ещё не
+// знает; строгий разбор отвечал бы ей 400 на каждый отчёт, и расход, «на
+// связи» и имена прикрытия переставали бы доходить — ровно так было с полем
+// version. Поэтому в /node/* поля только добавляются, а панель лишнее
+// пропускает.
+func decodeFromNode(w http.ResponseWriter, r *http.Request, dst any) bool {
+	return decodeBody(w, r, dst, false)
+}
+
+func decodeBody(w http.ResponseWriter, r *http.Request, dst any, strict bool) bool {
 	defer r.Body.Close()
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
-	dec.DisallowUnknownFields()
+	if strict {
+		dec.DisallowUnknownFields()
+	}
 	if err := dec.Decode(dst); err != nil {
 		fail(w, http.StatusBadRequest, "не разобрал тело запроса: "+err.Error())
 		return false

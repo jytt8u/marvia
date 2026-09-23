@@ -26,6 +26,7 @@ import (
 
 	"github.com/jytt8u/marvia/internal/envvar"
 	"github.com/jytt8u/marvia/internal/panel"
+	"github.com/jytt8u/marvia/internal/updater"
 	"github.com/jytt8u/marvia/internal/vp1"
 )
 
@@ -88,11 +89,19 @@ func main() {
 
 	newToken := flag.Bool("new-token", false, "выпустить админский токен и выйти")
 	showVersion := flag.Bool("version", false, "показать версию и выйти")
+	installUpdater := flag.Bool("install-updater", false, "поставить службу обновления по кнопке в панели и выйти (нужен root)")
 
 	flag.Parse()
 
 	if *showVersion {
 		fmt.Println("marvia-panel", version)
+		return
+	}
+	if *installUpdater {
+		if err := updater.Install(); err != nil {
+			fmt.Fprintf(os.Stderr, "служба обновления: %v\n", err)
+			os.Exit(1)
+		}
 		return
 	}
 
@@ -183,7 +192,8 @@ func run(opts options) error {
 
 	api := panel.NewAPI(store, opts.adminToken, opts.subBase, opts.distDir).
 		WithPanelIPs(addresses).
-		WithVersion(version)
+		WithVersion(version).
+		WithHome(filepath.Dir(opts.dbPath))
 	server := &http.Server{
 		Addr:              opts.listen,
 		Handler:           api.Handler(),

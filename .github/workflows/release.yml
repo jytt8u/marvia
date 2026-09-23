@@ -67,7 +67,8 @@ jobs:
             # Установщик кладём в тот же архив: распаковал — и всё на месте,
             # ничего больше качать не надо.
             cp scripts/install-panel.sh "$out/install-panel.sh"
-            chmod +x "$out/install-panel.sh"
+            cp scripts/upgrade.sh "$out/upgrade.sh"
+            chmod +x "$out/install-panel.sh" "$out/upgrade.sh"
 
             tar -czf "dist/marvia_${os}_${arch}.tar.gz" -C "$out" .
           done
@@ -85,8 +86,11 @@ jobs:
           # Установщик выкладываем и отдельным файлом: с него всё начинается,
           # а качать ради него архив — лишний шаг на самом первом шаге.
           cp scripts/install-panel.sh dist/install-panel.sh
+          # Служба обновления на серверах берёт сценарий отсюда, из релиза, и
+          # сверяет с SHA256SUMS — а не из ветки, которая меняется в любой миг.
+          cp scripts/upgrade.sh dist/upgrade.sh
 
-          cd dist && sha256sum *.tar.gz install-panel.sh marvia-windows.exe > SHA256SUMS && cat SHA256SUMS
+          cd dist && sha256sum *.tar.gz install-panel.sh upgrade.sh marvia-windows.exe > SHA256SUMS && cat SHA256SUMS
 
       # Релиз выкладывается сюда же.
       #
@@ -103,6 +107,7 @@ jobs:
             dist/marvia_linux_amd64.tar.gz
             dist/marvia_linux_arm64.tar.gz
             dist/install-panel.sh
+            dist/upgrade.sh
             dist/marvia-windows.exe
             dist/SHA256SUMS
           body: |
