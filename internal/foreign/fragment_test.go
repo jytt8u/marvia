@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	xnet "github.com/xtls/xray-core/common/net"
+	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/transport/internet"
 )
 
@@ -29,26 +30,54 @@ func TestFragmentTouchesOnlyTCPAndOnlyWhenAsked(t *testing.T) {
 	d := fragmentDialer{plainDialer{a}}
 	tcp := xnet.TCPDestination(xnet.LocalHostIP, 443)
 	udp := xnet.UDPDestination(xnet.LocalHostIP, 443)
-	t.Cleanup(func() { SetFragment(false) })
 
-	SetFragment(false)
-	if c, _ := d.Dial(context.Background(), nil, tcp, nil); c != a {
-		t.Fatal("выключенное дробление обернуло соединение")
+	cut, err := StartWith(mustParse(t, "trojan://p@127.0.0.1:1?sni=x.test"), Options{Fragment: true})
+	if err != nil {
+		t.Fatal(err)
 	}
-	SetFragment(true)
-	if c, _ := d.Dial(context.Background(), nil, udp, nil); c != a {
+	defer cut.Close()
+	whole, err := Start(mustParse(t, "trojan://p@127.0.0.1:2?sni=x.test"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer whole.Close()
+	of := func(e *Engine) context.Context {
+		return context.WithValue(context.Background(), core.XrayKey(1), e.inst)
+	}
+
+	if c, _ := d.Dial(of(whole), nil, tcp, nil); c != a {
+		t.Fatal("движок без дробления обернул соединение")
+	}
+	if c, _ := d.Dial(of(cut), nil, udp, nil); c != a {
 		t.Fatal("дробление обернуло датаграммы")
 	}
-	if c, _ := d.Dial(context.Background(), nil, tcp, nil); c == a {
-		t.Fatal("включённое дробление не тронуло TCP")
+	if c, _ := d.Dial(of(cut), nil, tcp, nil); c == a {
+		t.Fatal("движок с дроблением не тронул TCP")
+	}
+	cut.Close()
+	if c, _ := d.Dial(of(cut), nil, tcp, nil); c != a {
+		t.Fatal("закрытый движок остался в списке режущих")
 	}
 }
 
-// TestXrayDialsThroughOurDialer: подмена стоит, пока пакет подключён, —
-// иначе выключатель в настройках был бы нарисованным.
+func mustParse(t *testing.T, link string) Link {
+	t.Helper()
+	l, err := Parse(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return l
+}
+
+// TestXrayDialsThroughOurDialer: подмена стоит, пока пакет подключён, и
+// контекст дозвона несёт экземпляр движка — иначе выключатель в настройках
+// был бы нарисованным.
 func TestXrayDialsThroughOurDialer(t *testing.T) {
-	SetFragment(true)
-	defer SetFragment(false)
+	e, err := StartWith(mustParse(t, "trojan://p@127.0.0.1:3?sni=x.test"), Options{Fragment: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -60,7 +89,8 @@ func TestXrayDialsThroughOurDialer(t *testing.T) {
 		}
 	}()
 	port := ln.Addr().(*net.TCPAddr).Port
-	c, err := internet.DialSystem(context.Background(), xnet.TCPDestination(xnet.LocalHostIP, xnet.Port(port)), nil)
+	ctx := context.WithValue(context.Background(), core.XrayKey(1), e.inst)
+	c, err := internet.DialSystem(ctx, xnet.TCPDestination(xnet.LocalHostIP, xnet.Port(port)), nil)
 	if err != nil {
 		t.Fatalf("дозвон: %v", err)
 	}

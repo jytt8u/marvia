@@ -190,3 +190,14 @@ func TestFragmentedHelloIsRecognisedByREALITY(t *testing.T) {
 		_ = conn.Close()
 	}
 }
+
+// TestOnlyARealClientHelloIsCut: первый пакет Shadowsocks случаен и бывает
+// начат байтом 0x16 — резать его нельзя, это не приветствие.
+func TestOnlyARealClientHelloIsCut(t *testing.T) {
+	rec := &pieces{}
+	fake := append([]byte{0x16, 0x7a, 0x01, 0x00, 0x40, 0x02}, make([]byte, 400)...)
+	_, _ = transport.FragmentHello(rec).Write(fake)
+	if len(rec.got) != 1 {
+		t.Fatalf("случайный пакет с 0x16 порезан на %d кусков", len(rec.got))
+	}
+}

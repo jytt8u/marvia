@@ -105,6 +105,12 @@ func Load(link, cachePath string, refresh bool) (sub Subscription, fetched time.
 	sub = ParseList(body)
 	sub.ParseUserinfo(userinfo)
 	if err := sub.Usable(); err != nil {
+		// Панель ответила 200, но не подпиской: заглушка провайдера, страница
+		// входа, формат, которого клиент не знает. Прежний список лучше
+		// ошибки — как и при недоступной панели.
+		if cached.Body != "" {
+			return fromCache(), time.Unix(cached.FetchedAt, 0), true, nil
+		}
 		return sub, time.Time{}, false, err
 	}
 	if cachePath != "" {

@@ -53,9 +53,39 @@ type Supervisor struct {
 	stop chan struct{}
 	once sync.Once
 
+	// life отменяется при закрытии: замеры и переезд, начатые до него,
+	// бросают работу, а не доживают свои сорок секунд. closed не даёт
+	// поставить движок, поднятый уже после закрытия, — иначе он жил бы
+	// дальше, и закрыть его было бы некому. done закрывает watch на выходе.
+	life   context.Context
+	cancel context.CancelFunc
+	closed bool
+	done   chan struct{}
+
+	// opts — с какими настройками поднимаются движки.
+	opts Options
+
 	// Ритм надзора — свой у каждого, снятый при запуске.
 	every time.Duration
 	dead  int
+}
+
+// Options — настройки движков надзора.
+type Options struct {
+	// Fragment — резать TLS-приветствие к нодам; см. fragment.go.
+	Fragment bool
+}
+
+// newSupervisor собирает надзор без запущенного движка.
+func newSupervisor(sub Subscription, prefer int64, events client.Events, opts Options) *Supervisor {
+	life, cancel := context.WithCancel(context.Background())
+	return &Supervisor{
+		sub: sub, selected: prefer, events: events, opts: opts,
+		measured: map[int64]client.Measurement{},
+		stop:     make(chan struct{}),
+		life:     life, cancel: cancel,
+		every: watchEvery, dead: deadAfter,
+	}
 }
 
 var _ client.Backend = (*Supervisor)(nil)
@@ -75,11 +105,11 @@ func nodeOf(l Link) client.Node {
 
 // Supervise меряет ноды подписки, поднимает самую быструю (или выбранную
 // руками, если она жива) и начинает следить за ней.
-func Supervise(ctx context.Context, sub Subscription, prefer int64, events client.Events) (*Supervisor, []client.Measurement, error) {
+func Supervise(ctx context.Context, sub Subscription, prefer int64, events client.Events, opts Options) (*Supervisor, []client.Measurement, error) {
 	if len(sub.Links) == 0 {
 		return nil, nil, errors.New("в подписке нет ни одной ноды")
 	}
-	s := &Supervisor{sub: sub, selected: prefer, events: events, measured: map[int64]client.Measurement{}, stop: make(chan struct{}), every: watchEvery, dead: deadAfter}
+	s := newSupervisor(sub, prefer, events, opts)
 	for _, l := range sub.Links {
 		s.nodes = append(s.nodes, nodeOf(l))
 	}
@@ -89,13 +119,16 @@ func Supervise(ctx context.Context, sub Subscription, prefer int64, events clien
 		// человеку, ни продавцу, куда смотреть — сеть, ключ или сама нода.
 		for _, m := range results {
 			if m.Err != nil {
+				s.cancel()
 				return nil, results, fmt.Errorf("ни одна нода подписки не отвечает: %w", m.Err)
 			}
 		}
+		s.cancel()
 		return nil, results, errors.New("ни одна нода подписки не отвечает")
 	}
 	s.engine = winner
 	s.current = nodeOf(winner.Link())
+	s.done = make(chan struct{})
 	go s.watch()
 	return s, results, nil
 }
@@ -117,7 +150,7 @@ func (s *Supervisor) pick(ctx context.Context, links []Link, prefer int64) ([]cl
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			n := nodeOf(l)
-			e, err := Start(l)
+			e, err := StartWith(l, s.opts)
 			if err != nil {
 				out[i] = result{m: client.Measurement{Node: n, Err: err}}
 				return
@@ -166,6 +199,7 @@ func (s *Supervisor) pick(ctx context.Context, links []Link, prefer int64) ([]cl
 
 // watch проверяет текущую ноду и переезжает, когда она умерла.
 func (s *Supervisor) watch() {
+	defer close(s.done)
 	fails := 0
 	t := time.NewTicker(s.every)
 	defer t.Stop()
@@ -175,9 +209,14 @@ func (s *Supervisor) watch() {
 			return
 		case <-t.C:
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+		ctx, cancel := context.WithTimeout(s.life, probeTimeout)
 		_, err := s.Ping(ctx)
 		cancel()
+		if s.stopped() {
+			// Закрыли, пока шла проверка: её неудача — это отключение, а не
+			// смерть ноды, и ни переезжать, ни сообщать о беде не надо.
+			return
+		}
 		if err == nil {
 			if fails >= s.dead && s.events.OnRecovered != nil {
 				s.events.OnRecovered()
@@ -189,9 +228,30 @@ func (s *Supervisor) watch() {
 		if fails < s.dead {
 			continue
 		}
-		if !s.move() && s.events.OnTrouble != nil {
+		moved := s.move()
+		if s.stopped() {
+			return
+		}
+		if moved {
+			// Счёт неудач — про умершую ноду. Новая начинает с чистого
+			// листа: иначе одна её неудача сразу гнала бы дальше, а удачная
+			// проверка давала бы ложное «нода снова отвечает».
+			fails = 0
+			continue
+		}
+		if s.events.OnTrouble != nil {
 			s.events.OnTrouble("no-node")
 		}
+	}
+}
+
+// stopped говорит, закрыт ли надзор.
+func (s *Supervisor) stopped() bool {
+	select {
+	case <-s.stop:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -209,20 +269,34 @@ func (s *Supervisor) move() bool {
 	if len(others) == 0 {
 		return false
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), switchBudget)
+	ctx, cancel := context.WithTimeout(s.life, switchBudget)
 	defer cancel()
 	_, winner := s.pick(ctx, others, 0)
 	if winner == nil {
 		return false
 	}
-	s.swap(winner)
-	return true
+	return s.swap(winner)
 }
 
 // swap ставит новый движок. Старый закрывается — его потоки рвутся, и
 // приложения переподключаются уже через новую ноду.
-func (s *Supervisor) swap(e *Engine) {
+//
+// Два случая, когда новый движок не ставится, а закрывается. Надзор уже
+// закрыт: движок, поставленный после отключения, жил бы дальше, держа сокеты
+// к ноде, и закрыть его было бы некому. Нода та же, что сейчас: выбор уже
+// текущей ноды не должен рвать ей соединения ради того же самого.
+func (s *Supervisor) swap(e *Engine) bool {
 	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		_ = e.Close()
+		return false
+	}
+	if s.engine != nil && NodeID(e.Link()) == s.current.ID {
+		s.mu.Unlock()
+		_ = e.Close()
+		return true
+	}
 	old := s.engine
 	s.engine = e
 	s.current = nodeOf(e.Link())
@@ -234,6 +308,7 @@ func (s *Supervisor) swap(e *Engine) {
 	if s.events.OnSwitch != nil {
 		s.events.OnSwitch(n)
 	}
+	return true
 }
 
 func (s *Supervisor) now() (*Engine, error) {
@@ -346,7 +421,9 @@ func (s *Supervisor) Select(ctx context.Context, id int64) error {
 	if winner == nil {
 		return errors.New("нода не отвечает")
 	}
-	s.swap(winner)
+	if !s.swap(winner) {
+		return errors.New("подключение закрыто")
+	}
 	return nil
 }
 
@@ -379,23 +456,33 @@ func View(sub Subscription) client.Subscription {
 	return out
 }
 
-// Close останавливает надзор и движок.
+// Close останавливает надзор и движок и ждёт, пока надзор выйдет.
+//
+// Ждать — не перестраховка. Начатый переезд иначе доживал бы своё после
+// отключения: мерил бы ноды ещё до сорока секунд и оставлял бы поднятым
+// движок победителя.
 func (s *Supervisor) Close() error {
-	s.once.Do(func() { close(s.stop) })
 	s.mu.Lock()
+	s.closed = true
 	e := s.engine
 	s.engine = nil
 	s.mu.Unlock()
+	s.once.Do(func() { close(s.stop) })
+	s.cancel()
 	if e != nil {
-		return e.Close()
+		_ = e.Close()
+	}
+	if s.done != nil {
+		<-s.done
 	}
 	return nil
 }
 
 // MeasureAll меряет ноды без подключения — для списка серверов, когда туннель
 // не поднят. Все движки после замера закрываются.
-func MeasureAll(ctx context.Context, links []Link) []client.Measurement {
-	s := &Supervisor{measured: map[int64]client.Measurement{}}
+func MeasureAll(ctx context.Context, links []Link, opts Options) []client.Measurement {
+	s := newSupervisor(Subscription{}, 0, client.Events{}, opts)
+	defer s.cancel()
 	results, winner := s.pick(ctx, links, 0)
 	if winner != nil {
 		_ = winner.Close()

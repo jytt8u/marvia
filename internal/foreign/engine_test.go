@@ -18,6 +18,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -165,7 +166,6 @@ func TestEveryProtocolReachesTheTargetThroughItsLink(t *testing.T) {
 	}
 
 	target := echo(t)
-	t.Cleanup(func() { SetFragment(false) })
 	for _, split := range []bool{false, true} {
 		for _, c := range cases {
 			name := c.name
@@ -173,15 +173,25 @@ func TestEveryProtocolReachesTheTargetThroughItsLink(t *testing.T) {
 				name += " с дроблением"
 			}
 			t.Run(name, func(t *testing.T) {
-				SetFragment(split)
-				reach(t, c.inbound, c.link, target)
+				var cuts atomic.Int32
+				fragmentedDial = func() { cuts.Add(1) }
+				defer func() { fragmentedDial = func() {} }()
+				reach(t, c.inbound, c.link, target, Options{Fragment: split})
+				// Резать должен настоящий дозвон движка: экземпляр Xray обязан
+				// дойти до него в контексте, иначе настройка — пустое обещание.
+				if split && cuts.Load() == 0 {
+					t.Fatal("движок с дроблением ни разу не резал")
+				}
+				if !split && cuts.Load() != 0 {
+					t.Fatal("движок без дробления резал")
+				}
 			})
 		}
 	}
 }
 
 // reach поднимает сервер, разбирает ссылку и гоняет через неё эхо.
-func reach(t *testing.T, inbound func(int) map[string]any, link func(int) string, target vp1.Address) {
+func reach(t *testing.T, inbound func(int) map[string]any, link func(int) string, target vp1.Address, opts Options) {
 	t.Helper()
 	port := freePort(t)
 	server(t, inbound(port))
@@ -189,7 +199,7 @@ func reach(t *testing.T, inbound func(int) map[string]any, link func(int) string
 	if err != nil {
 		t.Fatalf("разбор: %v", err)
 	}
-	e, err := Start(l)
+	e, err := StartWith(l, opts)
 	if err != nil {
 		t.Fatalf("движок: %v", err)
 	}

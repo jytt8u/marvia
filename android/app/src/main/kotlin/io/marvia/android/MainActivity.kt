@@ -167,6 +167,14 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
                 }
             },
+            // IPv6 и дробление тоже читаются при подключении, но к маршрутам
+            // отношения не имеют: звать ради них российский список у панели —
+            // лишний запрос на каждое касание переключателя.
+            onNextConnect = {
+                if (MarviaState.state.value is TunnelState.On) {
+                    Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
+                }
+            },
             onReset = { resetAll() },
         )
 

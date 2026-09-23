@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/jytt8u/marvia/internal/client"
+	"github.com/jytt8u/marvia/internal/foreign"
 )
 
 // tunnelSettings — то, что человек выбрал в настройках туннеля.
@@ -42,4 +43,11 @@ func parseSettings(raw string) tunnelSettings {
 // dial — настройки дозвона до нод VP1.
 func (s tunnelSettings) dial() client.Options {
 	return client.Options{Fragment: s.Fragment}
+}
+
+// foreign — настройки движков чужих протоколов. Свои у каждого движка, а не
+// общие на процесс: замер другой подписки не должен переключать работающий
+// туннель.
+func (s tunnelSettings) foreign() foreign.Options {
+	return foreign.Options{Fragment: s.Fragment}
 }

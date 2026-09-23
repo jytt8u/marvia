@@ -337,7 +337,7 @@ func (c *Controller) raiseForeign(ctx context.Context, link string) (client.Back
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	dialer, measurements, err := foreign.Supervise(ctx, pinned, 0, client.Events{OnSwitch: c.moved, OnTrouble: c.stall, OnRecovered: c.recovered})
+	dialer, measurements, err := foreign.Supervise(ctx, pinned, 0, client.Events{OnSwitch: c.moved, OnTrouble: c.stall, OnRecovered: c.recovered}, foreign.Options{})
 	if err != nil {
 		return nil, measurements, nil, err
 	}

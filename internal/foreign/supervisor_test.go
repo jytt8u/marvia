@@ -42,7 +42,7 @@ func TestDeadNodeIsSkippedAndChosenOneIsKept(t *testing.T) {
 	dead := "vless://b831381d-6324-4d53-ad4f-8cda48b30811@127.0.0.1:" + strconv.Itoa(freePort(t)) + "?security=none#Мертва"
 	sub := ParseList([]byte(dead + "\n" + alive + "\n" + second))
 
-	s, results, err := Supervise(context.Background(), sub, 0, client.Events{})
+	s, results, err := Supervise(context.Background(), sub, 0, client.Events{}, Options{})
 	if err != nil {
 		t.Fatalf("надзор: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestDeadNodeIsSkippedAndChosenOneIsKept(t *testing.T) {
 	}
 
 	secondID := NodeID(sub.Links[2])
-	s2, _, err := Supervise(context.Background(), sub, secondID, client.Events{})
+	s2, _, err := Supervise(context.Background(), sub, secondID, client.Events{}, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestSilentNodeIsLeftForALiveOne(t *testing.T) {
 	moved := make(chan client.Node, 1)
 	s, _, err := Supervise(context.Background(), sub, NodeID(sub.Links[0]), client.Events{
 		OnSwitch: func(n client.Node) { moved <- n },
-	})
+	}, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,5 +105,29 @@ func TestSilentNodeIsLeftForALiveOne(t *testing.T) {
 	defer cancel()
 	if _, err := s.Ping(ctx); err != nil {
 		t.Fatalf("после переезда нода не отвечает: %v", err)
+	}
+}
+
+// TestNothingSurvivesTheDisconnect: движок, поднятый переездом уже после
+// отключения, не ставится, а закрывается — иначе он жил бы дальше, держа
+// сокеты к ноде, и закрыть его было бы некому.
+func TestNothingSurvivesTheDisconnect(t *testing.T) {
+	s := newSupervisor(Subscription{}, 0, client.Events{
+		OnSwitch: func(client.Node) { t.Error("переезд объявлен после отключения") },
+	}, Options{})
+	_ = s.Close()
+	l, err := Parse("trojan://p@127.0.0.1:4?sni=x.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e, err := Start(l)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.swap(e) {
+		t.Fatal("движок поставлен после отключения")
+	}
+	if _, err := s.now(); err == nil {
+		t.Fatal("после отключения у надзора есть движок")
 	}
 }

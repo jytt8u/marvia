@@ -60,6 +60,8 @@ class MoreScreen(
     private val onLanguage: () -> Unit,
     /** Что-то из этого применяется только на следующем подключении. */
     private val onRoutesChanged: () -> Unit,
+    /** Настройка ядра, не маршрутов, — тоже со следующего подключения. */
+    private val onNextConnect: () -> Unit,
     /** Человек сбросил всё: выключить туннель и начать с чистого листа. */
     private val onReset: () -> Unit,
 ) {
@@ -191,16 +193,16 @@ class MoreScreen(
         }
 
         // Обе настройки ядро читает при подключении: работающему туннелю
-        // они не передаются, и onRoutesChanged говорит об этом человеку.
+        // они не передаются, и onNextConnect говорит об этом человеку.
         ui.rowIpv6.setOnClickListener {
             store.ipv6 = !store.ipv6
             renderConnection()
-            onRoutesChanged()
+            onNextConnect()
         }
         ui.rowFragment.setOnClickListener {
             store.fragment = !store.fragment
             renderConnection()
-            onRoutesChanged()
+            onNextConnect()
         }
 
         ui.rowLanguage.setOnClickListener { onLanguage() }

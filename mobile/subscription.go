@@ -92,8 +92,7 @@ func Subscription(accountLink, cacheDir string, refresh bool) (string, error) {
 func MeasureNodes(accountLink, cacheDir, settings string) (string, error) {
 	set := parseSettings(settings)
 	if isForeign(accountLink) {
-		foreign.SetFragment(set.Fragment)
-		return foreignMeasure(accountLink, cacheDir)
+		return foreignMeasure(accountLink, cacheDir, set)
 	}
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {

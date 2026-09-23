@@ -2,9 +2,10 @@ package foreign
 
 import (
 	"context"
-	"sync/atomic"
+	"sync"
 
 	xnet "github.com/xtls/xray-core/common/net"
+	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/transport/internet"
 
 	"github.com/jytt8u/marvia/internal/transport"
@@ -21,14 +22,13 @@ import (
 // чужой ссылки.
 //
 // Способ подменить дозвон у Xray один — общий на процесс системный дозвон.
-// Поэтому и выключатель общий: SetFragment действует на все движки сразу.
-// Для приложения это не ограничение: настройка у человека одна на всё.
+// А решение «резать или нет» — своё у каждого движка (Options.Fragment):
+// Xray кладёт свой экземпляр в контекст дозвона, по нему и узнаём. Общий на
+// процесс выключатель ломал бы работающий туннель: замер другой подписки с
+// другими настройками переключал бы и его.
 
-var fragmentOn atomic.Bool
-
-// SetFragment включает или выключает дробление для всех движков процесса.
-// Действует на соединения, открытые после вызова.
-func SetFragment(on bool) { fragmentOn.Store(on) }
+// fragmented — экземпляры Xray, которым велено резать приветствие.
+var fragmented sync.Map // *core.Instance → true
 
 // fragmentDialer — системный дозвон Xray, который при включённом дроблении
 // оборачивает TCP-соединения. Датаграммы и выключенное дробление проходят
@@ -39,10 +39,26 @@ type fragmentDialer struct {
 
 func (d fragmentDialer) Dial(ctx context.Context, src xnet.Address, dest xnet.Destination, sockopt *internet.SocketConfig) (xnet.Conn, error) {
 	c, err := d.SystemDialer.Dial(ctx, src, dest, sockopt)
-	if err != nil || dest.Network != xnet.Network_TCP || !fragmentOn.Load() {
+	if err != nil || dest.Network != xnet.Network_TCP || !fragmentFor(ctx) {
 		return c, err
 	}
+	fragmentedDial()
 	return transport.FragmentHello(c), nil
+}
+
+// fragmentedDial отмечает каждое разрезанное соединение. Пустая в работе,
+// проверкам она говорит, что дробление дошло до настоящего дозвона Xray, а
+// не только до подставного.
+var fragmentedDial = func() {}
+
+// fragmentFor — велено ли резать приветствие движку, который дозванивается.
+func fragmentFor(ctx context.Context) bool {
+	inst := core.FromContext(ctx)
+	if inst == nil {
+		return false
+	}
+	_, on := fragmented.Load(inst)
+	return on
 }
 
 func init() {

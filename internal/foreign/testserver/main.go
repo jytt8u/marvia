@@ -29,7 +29,7 @@ func main() {
 	const uuid = "b831381d-6324-4d53-ad4f-8cda48b30811"
 	raw, _ := json.Marshal(map[string]any{
 		"log": map[string]any{"loglevel": "warning"},
-		"inbounds": []any{map[string]any{"port": 18443, "listen": "0.0.0.0", "protocol": "vless",
+		"inbounds": []any{map[string]any{"port": 18443, "listen": "127.0.0.1", "protocol": "vless",
 			"settings":       map[string]any{"clients": []any{map[string]any{"id": uuid}}, "decryption": "none"},
 			"streamSettings": map[string]any{"network": "ws", "wsSettings": map[string]any{"path": "/v"}}}},
 		"outbounds": []any{map[string]any{"protocol": "freedom"}},

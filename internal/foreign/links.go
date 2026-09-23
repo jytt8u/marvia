@@ -260,10 +260,16 @@ func parseShadowsocks(raw string) (Link, error) {
 	var userinfo, hostport string
 	if at := strings.LastIndexByte(rest, '@'); at >= 0 {
 		userinfo, hostport = rest[:at], rest[at+1:]
-		if dec, err := decodeBase64(userinfo); err == nil && strings.Contains(string(dec), ":") {
+		// Сначала снимаем %-кодирование: часть панелей кодирует «=» в хвосте
+		// base64 как %3D, и такой userinfo как base64 не разбирался вовсе.
+		plain, perr := url.PathUnescape(userinfo)
+		if perr != nil {
+			plain = userinfo
+		}
+		if dec, err := decodeBase64(plain); err == nil && strings.Contains(string(dec), ":") {
 			userinfo = string(dec)
 		} else {
-			userinfo, _ = url.PathUnescape(userinfo)
+			userinfo = plain
 		}
 	} else {
 		dec, err := decodeBase64(rest)
@@ -348,7 +354,11 @@ func parseWireGuard(raw string) (Link, error) {
 	}
 	secret, _ := url.PathUnescape(u.User.Username())
 	q := u.Query()
-	peer := first(q.Get("publickey"), q.Get("peer_public_key"), q.Get("pbk"))
+	// Ключи WireGuard — base64, и «+» в них пишут как есть, не кодируя. Разбор
+	// строки запроса превращает его в пробел, и нода молча не проходила
+	// замер. Пробела в base64 не бывает, так что вернуть «+» безопасно.
+	key := func(s string) string { return strings.ReplaceAll(s, " ", "+") }
+	peer := key(first(q.Get("publickey"), q.Get("peer_public_key"), q.Get("pbk")))
 	if secret == "" || peer == "" {
 		return Link{}, errors.New("в ссылке wireguard нет ключей")
 	}
@@ -357,7 +367,7 @@ func parseWireGuard(raw string) (Link, error) {
 		return Link{}, errors.New("в ссылке wireguard нет адреса внутри туннеля")
 	}
 	p := map[string]any{"publicKey": peer, "endpoint": net.JoinHostPort(host, strconv.Itoa(port))}
-	if psk := q.Get("presharedkey"); psk != "" {
+	if psk := key(q.Get("presharedkey")); psk != "" {
 		p["preSharedKey"] = psk
 	}
 	settings := map[string]any{"secretKey": secret, "address": addresses, "peers": []any{p}}

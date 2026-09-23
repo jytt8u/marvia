@@ -54,6 +54,11 @@ type Engine struct {
 // Start поднимает Xray для одной ноды. Входящих нет: соединения берутся
 // вызовом Dial, а не через порт, который кто-то ещё на машине мог бы найти.
 func Start(l Link) (*Engine, error) {
+	return StartWith(l, Options{})
+}
+
+// StartWith — Start с настройками движка.
+func StartWith(l Link, opts Options) (*Engine, error) {
 	out := map[string]any{"tag": "proxy"}
 	for k, v := range l.Outbound {
 		out[k] = v
@@ -81,7 +86,13 @@ func Start(l Link) (*Engine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("запуск %s: %w", l.Protocol, err)
 	}
+	if opts.Fragment {
+		fragmented.Store(inst, true)
+	}
 	if err := inst.Start(); err != nil {
+		// Созданный, но не запустившийся экземпляр тоже держит ресурсы.
+		fragmented.Delete(inst)
+		_ = inst.Close()
 		return nil, fmt.Errorf("запуск %s: %w", l.Protocol, err)
 	}
 	return &Engine{link: l, inst: inst}, nil
@@ -121,7 +132,10 @@ func (e *Engine) DialDatagrams(ctx context.Context, target vp1.Address) (net.Con
 }
 
 // Close останавливает движок и рвёт все его соединения.
-func (e *Engine) Close() error { return e.inst.Close() }
+func (e *Engine) Close() error {
+	fragmented.Delete(e.inst)
+	return e.inst.Close()
+}
 
 // probeURL — что запрашиваем, чтобы померить ноду. Так же меряют Hiddify и
 // v2rayNG: ответ пустой, сервер быстрый и есть везде. Переменная — ради

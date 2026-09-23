@@ -28,7 +28,7 @@ func foreignSubscription(link, cacheDir string, refresh bool) (foreign.Subscript
 // Адреса нод здесь не закрепляются, в отличие от окна на компьютере:
 // приложение исключено из собственного туннеля, и его запросы имён идут
 // обычной сетью телефона — петли нет.
-func connectForeign(link, cacheDir string, prefer int64, events client.Events) (client.Backend, error) {
+func connectForeign(link, cacheDir string, prefer int64, events client.Events, set tunnelSettings) (client.Backend, error) {
 	sub, _, _, err := foreignSubscription(link, cacheDir, false)
 	if err != nil {
 		// Ссылка ноды не разобралась — это ключ, а не панель: идти с этим
@@ -44,7 +44,7 @@ func connectForeign(link, cacheDir string, prefer int64, events client.Events) (
 	if sub.Total > 0 && sub.Remaining() == 0 {
 		return nil, fail(FailQuota, errors.New("трафик подписки исчерпан"))
 	}
-	s, _, err := foreign.Supervise(context.Background(), sub, prefer, events)
+	s, _, err := foreign.Supervise(context.Background(), sub, prefer, events, set.foreign())
 	if err != nil {
 		return nil, fail(FailNodes, err)
 	}
@@ -61,7 +61,7 @@ func foreignView(link, cacheDir string, refresh bool) (string, error) {
 }
 
 // foreignMeasure меряет чужие ноды без туннеля.
-func foreignMeasure(link, cacheDir string) (string, error) {
+func foreignMeasure(link, cacheDir string, set tunnelSettings) (string, error) {
 	sub, fetched, stale, err := foreignSubscription(link, cacheDir, false)
 	if err != nil {
 		return "", fail(FailPanel, err)
@@ -77,7 +77,7 @@ func foreignMeasure(link, cacheDir string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), measureTimeout)
 	defer cancel()
 	byID := map[int64]client.Measurement{}
-	for _, m := range foreign.MeasureAll(ctx, sub.Links) {
+	for _, m := range foreign.MeasureAll(ctx, sub.Links, set.foreign()) {
 		byID[m.Node.ID] = m
 	}
 	for i := range view.Nodes {

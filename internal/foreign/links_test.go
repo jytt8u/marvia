@@ -188,3 +188,29 @@ func TestEngineStartsWithoutTestImports(t *testing.T) {
 		t.Fatalf("движок не запустился без тестовых импортов: %v\n%s", err, out)
 	}
 }
+
+// TestKeysSurviveTheirUsualSpelling: панели пишут ссылки по-разному, и
+// разбор обязан понять обычные варианты — иначе нода молча не проходит
+// замер, а человек не понимает, что не так со ссылкой.
+func TestKeysSurviveTheirUsualSpelling(t *testing.T) {
+	// base64 в userinfo с «=» в хвосте, закодированным как %3D.
+	userinfo := base64.StdEncoding.EncodeToString([]byte("chacha20-ietf-poly1305:пароль1"))
+	ss, err := Parse("ss://" + strings.ReplaceAll(userinfo, "=", "%3D") + "@s.example.com:8388#SS")
+	if err != nil {
+		t.Fatalf("ss с %%3D: %v", err)
+	}
+	server := ss.Outbound["settings"].(map[string]any)["servers"].([]any)[0].(map[string]any)
+	if server["password"] != "пароль1" || server["method"] != "chacha20-ietf-poly1305" {
+		t.Fatalf("ss разобран как %v", server)
+	}
+
+	// Ключ WireGuard с «+», записанным как есть.
+	wg, err := Parse("wireguard://cHJpdmF0ZWtleQ%3D%3D@wg.example.com:51820?publickey=ab+cd/ef==&address=172.16.0.2/32")
+	if err != nil {
+		t.Fatalf("wireguard с «+»: %v", err)
+	}
+	peer := wg.Outbound["settings"].(map[string]any)["peers"].([]any)[0].(map[string]any)
+	if peer["publicKey"] != "ab+cd/ef==" {
+		t.Fatalf("ключ пира %q", peer["publicKey"])
+	}
+}

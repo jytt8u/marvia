@@ -206,8 +206,7 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string, prefer in
 // который на Linux принадлежит чему-то настоящему.
 func connect(accountLink, cacheDir string, prefer int64, events client.Events, set tunnelSettings) (client.Backend, error) {
 	if isForeign(accountLink) {
-		foreign.SetFragment(set.Fragment)
-		return connectForeign(accountLink, cacheDir, prefer, events)
+		return connectForeign(accountLink, cacheDir, prefer, events, set)
 	}
 	account, err := client.ParseAccountLink(accountLink)
 	if err != nil {
