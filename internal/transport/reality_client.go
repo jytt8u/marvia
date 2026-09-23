@@ -96,6 +96,9 @@ type RealityDialConfig struct {
 	// лишнее TCP-соединение, которое открылось и закрылось без TLS, — а
 	// такого браузеры не делают, и это примета.
 	OnConnect func(time.Duration)
+
+	// Fragment режет приветствие по TCP-сегментам; см. fragment.go.
+	Fragment bool
 }
 
 func (c RealityDialConfig) fingerprint() utls.ClientHelloID {
@@ -127,6 +130,9 @@ func DialReality(ctx context.Context, addr string, cfg RealityDialConfig) (net.C
 	}
 	if cfg.OnConnect != nil {
 		cfg.OnConnect(time.Since(began))
+	}
+	if cfg.Fragment {
+		raw = FragmentHello(raw)
 	}
 
 	conn, err := realityHandshake(ctx, raw, cfg, shortID)

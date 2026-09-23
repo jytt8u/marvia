@@ -167,15 +167,52 @@ class Store(context: Context) {
     /**
      * dns — кто отвечает на запросы имён. Только адрес, без порта.
      *
-     * Запрос в любом случае уходит внутрь туннеля и по TCP — это решает
-     * ядро, а не человек. Выбор здесь только в том, чей резолвер стоит на
-     * другом конце: у кого-то из них есть фильтр рекламы, у кого-то — нет.
+     * Запрос в любом случае уходит внутрь туннеля — это решает ядро, а не
+     * человек. Выбор здесь только в том, чей резолвер стоит на другом конце:
+     * у кого-то из них есть фильтр рекламы, у кого-то — нет. Свой адрес
+     * принимается, только если прошёл checkDns: сохранённый раньше мусор
+     * откатывается на резолвер по умолчанию, а не ломает имена.
      */
     var dns: String
-        get() = prefs.getString(KEY_DNS, null)?.takeIf { it in DNS_CHOICES } ?: DNS_CHOICES.first()
+        get() = prefs.getString(KEY_DNS, null)?.takeIf { it in DNS_CHOICES || checkDns(it) == DnsCheck.OK }
+            ?: DNS_CHOICES.first()
         set(value) {
             prefs.edit().putString(KEY_DNS, value).apply()
         }
+
+    /**
+     * fragment — резать ли TLS-приветствие к нодам, чтобы имя из SNI не
+     * лежало целиком ни в одном пакете. Выключено по умолчанию: без фильтра
+     * по имени у провайдера это лишние пакеты и своя примета.
+     */
+    var fragment: Boolean
+        get() = prefs.getBoolean(KEY_FRAGMENT, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_FRAGMENT, value).apply()
+        }
+
+    /**
+     * ipv6 — пускать ли IPv6 через туннель. Выключенный не уходит и мимо:
+     * маршрут остаётся в туннеле, ядро отвечает «адресов IPv6 нет», и
+     * приложения идут по IPv4.
+     */
+    var ipv6: Boolean
+        get() = prefs.getBoolean(KEY_IPV6, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_IPV6, value).apply()
+        }
+
+    /**
+     * tunnelSettings — настройки туннеля для ядра (Mobile.start и
+     * Mobile.measureNodes), одной строкой JSON. Замер нод получает те же:
+     * нода, до которой доходит только разрезанное приветствие, без
+     * дробления показалась бы мёртвой.
+     */
+    fun tunnelSettings(): String =
+        org.json.JSONObject()
+            .put("fragment", fragment)
+            .put("no_ipv6", !ipv6)
+            .toString()
 
     /**
      * lanOutside — оставлять ли домашнюю сеть мимо туннеля.
@@ -512,6 +549,9 @@ class Store(context: Context) {
         File(app.filesDir, Mobile.CacheName).delete()
     }
 
+    /** DnsCheck — что сказал checkDns про свой резолвер. */
+    enum class DnsCheck { OK, BAD, LOCAL }
+
     companion object {
         const val LANG_RU = "ru"
         const val LANG_EN = "en"
@@ -522,11 +562,40 @@ class Store(context: Context) {
 
         /**
          * Резолверы, из которых выбирают. Первый — по умолчанию, он же
-         * Mobile.DefaultDNS без порта. Список короткий и публичный: свой
-         * адрес вписать нельзя, потому что опечатка в нём — это «интернет
-         * не работает» без единой подсказки, почему.
+         * Mobile.DefaultDNS без порта. Свой адрес тоже можно, но через
+         * checkDns.
          */
         val DNS_CHOICES = listOf("1.1.1.1", "8.8.8.8", "9.9.9.9", "94.140.14.14")
+
+        /**
+         * checkDns — годится ли адрес в свои резолверы.
+         *
+         * Только IPv4 и только публичный. Опечатка в адресе резолвера — это
+         * «интернет не работает» без единой подсказки, почему, поэтому
+         * проверяем строго: четыре числа, без ведущих нулей (010 в разных
+         * местах читают то восьмеричным, то десятичным). Адрес локальной
+         * сети отвергается отдельно и с причиной: запрос имени уходит в
+         * туннель, и роутер 192.168.1.1 оттуда не виден, а нода к частным
+         * адресам не ходит вовсе. IPv6 не берём: при выключенном IPv6 такой
+         * резолвер молча перестал бы отвечать.
+         */
+        fun checkDns(address: String): DnsCheck {
+            val parts = address.trim().split('.')
+            if (parts.size != 4) return DnsCheck.BAD
+            val n = parts.map { p ->
+                if (p.isEmpty() || p.length > 3 || !p.all { it in '0'..'9' } || (p.length > 1 && p[0] == '0')) {
+                    return DnsCheck.BAD
+                }
+                p.toInt().takeIf { it <= 255 } ?: return DnsCheck.BAD
+            }
+            val (a, b) = n[0] to n[1]
+            val local = a == 0 || a == 10 || a == 127 || a >= 224 ||
+                (a == 100 && b in 64..127) ||
+                (a == 169 && b == 254) ||
+                (a == 172 && b in 16..31) ||
+                (a == 192 && b == 168)
+            return if (local) DnsCheck.LOCAL else DnsCheck.OK
+        }
 
         private const val KEY_ACCOUNT_LINK = "account_link"
         private const val KEY_ACCOUNT_SAVED = "account_saved_at"
@@ -575,6 +644,8 @@ class Store(context: Context) {
         private const val KEY_BYPASSED = "bypassed_apps"
         private const val KEY_BYPASS_MODE = "bypass_mode"
         private const val KEY_DNS = "dns"
+        private const val KEY_FRAGMENT = "fragment"
+        private const val KEY_IPV6 = "ipv6"
         private const val KEY_LAN_OUTSIDE = "lan_outside"
         private const val KEY_BYPASS_RU = "bypass_russian"
         private const val KEY_BYPASS_ASKED = "bypass_asked"

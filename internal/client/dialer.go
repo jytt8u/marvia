@@ -58,8 +58,9 @@ const clockGrain = time.Millisecond
 
 // Options — необязательные настройки дозвона.
 //
-// В бою оба поля пустые: доверяем системному хранилищу, как браузер. Нужны
-// они для отладки — когда нода поднята с самоподписанным сертификатом.
+// В бою RootCAs и InsecureSkipVerify пустые: доверяем системному хранилищу,
+// как браузер. Нужны они для отладки — когда нода поднята с самоподписанным
+// сертификатом.
 type Options struct {
 	// RootCAs — своё хранилище доверия вместо системного.
 	RootCAs *x509.CertPool
@@ -67,6 +68,12 @@ type Options struct {
 	// InsecureSkipVerify отключает проверку сертификата. Только для отладки:
 	// с ним любой, кто вклинится в соединение, становится нашей нодой.
 	InsecureSkipVerify bool
+
+	// Fragment режет TLS-приветствие так, чтобы имя из SNI не лежало целиком
+	// ни в одном TCP-сегменте (transport.FragmentHello). Это решение человека,
+	// а не ядра: есть ли у его провайдера фильтр по имени, клиент узнать не
+	// может, а без фильтра дробление — лишняя примета.
+	Fragment bool
 }
 
 // NewDialer готовит дозвон до ноды. Соединение поднимается лениво, при первом
@@ -177,6 +184,7 @@ func tcpDialer(node Node, serverName string, opts Options, onConnect func(time.D
 		RootCAs:            opts.RootCAs,
 		InsecureSkipVerify: opts.InsecureSkipVerify,
 		OnConnect:          onConnect,
+		Fragment:           opts.Fragment,
 	}
 
 	switch node.Transport() {
@@ -210,6 +218,7 @@ func tcpDialer(node Node, serverName string, opts Options, onConnect func(time.D
 				PublicKey:  pub,
 				ShortID:    node.RealityShortID,
 				OnConnect:  onConnect,
+				Fragment:   opts.Fragment,
 			})
 		}, nil
 

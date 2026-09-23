@@ -474,6 +474,7 @@
     <string name="more_group_conn">CONNECTION</string>
     <string name="more_group_routes">ROUTES AND DNS</string>
     <string name="more_group_app">APP</string>
+    <string name="more_group_mask">CAMOUFLAGE</string>
     <string name="more_group_apps">APPS</string>
     <string name="more_logs_row">Connection log</string>
     <string name="more_logs_row_sub">no site addresses</string>
@@ -503,6 +504,17 @@
     <string name="conn_dns_sub">resolver inside the tunnel</string>
     <string name="conn_lan">Home network outside the tunnel</string>
     <string name="conn_lan_sub">printer, TV, router</string>
+    <string name="conn_ipv6">IPv6 through the tunnel</string>
+    <string name="conn_ipv6_sub">turn off if sites mix up your country</string>
+    <string name="conn_fragment">Split the TLS hello</string>
+    <string name="conn_fragment_sub">if your provider blocks by site name; leave off otherwise</string>
+    <string name="dns_custom">Custom address…</string>
+    <string name="dns_custom_current">Custom · %1$s</string>
+    <string name="dns_custom_title">Custom DNS</string>
+    <string name="dns_custom_hint">an IPv4 address, e.g. 76.76.2.0</string>
+    <string name="dns_custom_save">Save</string>
+    <string name="dns_custom_bad">An IPv4 address is needed: four numbers from 0 to 255 separated by dots</string>
+    <string name="dns_custom_local">A local network address: the tunnel cannot reach it</string>
 
     <!--
         Режимы списка приложений. «Только эти» — для тех, кому туннель нужен

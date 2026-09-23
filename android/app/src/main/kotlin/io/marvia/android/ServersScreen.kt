@@ -278,7 +278,7 @@ class ServersScreen(
             val active = p.sub.link == store.accountLink
             val json = withContext(Dispatchers.IO) {
                 try {
-                    if (active && core != null) core.measure() else Mobile.measureNodes(p.sub.link, store.cacheDir())
+                    if (active && core != null) core.measure() else Mobile.measureNodes(p.sub.link, store.cacheDir(), store.tunnelSettings())
                 } catch (t: Throwable) {
                     p.error = human(t)
                     ""

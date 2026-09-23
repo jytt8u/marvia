@@ -86,8 +86,13 @@ func Subscription(accountLink, cacheDir string, refresh bool) (string, error) {
 //
 // Когда туннель поднят, пользоваться этим не надо: замер уйдёт через сам
 // туннель и покажет не то. Для поднятого есть Tunnel.Measure.
-func MeasureNodes(accountLink, cacheDir string) (string, error) {
+//
+// settings — те же настройки, что уходят в Start: нода, до которой доходит
+// только разрезанное приветствие, без дробления показалась бы мёртвой.
+func MeasureNodes(accountLink, cacheDir, settings string) (string, error) {
+	set := parseSettings(settings)
 	if isForeign(accountLink) {
+		foreign.SetFragment(set.Fragment)
 		return foreignMeasure(accountLink, cacheDir)
 	}
 	account, err := client.ParseAccountLink(accountLink)
@@ -118,7 +123,7 @@ func MeasureNodes(accountLink, cacheDir string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), measureTimeout)
 	defer cancel()
 	byID := make(map[int64]client.Measurement)
-	for _, m := range client.MeasureAll(ctx, cached.Nodes(), key, client.Options{}) {
+	for _, m := range client.MeasureAll(ctx, cached.Nodes(), key, set.dial()) {
 		byID[m.Node.ID] = m
 	}
 	for i := range view.Nodes {

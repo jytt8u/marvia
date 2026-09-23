@@ -103,6 +103,10 @@ type Config struct {
 	// в открытую выдаёт цензору весь список посещённых сайтов.
 	DNS string
 
+	// NoIPv6 — не пускать IPv6 вовсе, какой бы ни была нода; см. ipv6.go.
+	// Маршрут IPv6 при этом остаётся в туннеле: иначе IPv6 ушёл бы мимо.
+	NoIPv6 bool
+
 	// OnError вызывается на ошибках отдельных соединений. Может быть nil.
 	OnError func(error)
 }
@@ -141,6 +145,8 @@ func Start(cfg Config) (*Bridge, error) {
 		dns:     cfg.DNS,
 		onError: cfg.OnError,
 	}
+	handler.v6.never = cfg.NoIPv6
+	handler.v6.reset()
 
 	st, err := core.CreateStack(&core.Config{
 		LinkEndpoint:     dev,

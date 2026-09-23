@@ -49,6 +49,10 @@ type ClientConfig struct {
 	// круг по сети до ноды, без рукопожатий поверх. Подробности — в
 	// RealityDialConfig.
 	OnConnect func(time.Duration)
+
+	// Fragment режет приветствие по TCP-сегментам так, чтобы имя из SNI не
+	// лежало целиком ни в одном; см. fragment.go.
+	Fragment bool
 }
 
 func (c ClientConfig) fingerprint() utls.ClientHelloID {
@@ -78,6 +82,9 @@ func Dial(ctx context.Context, addr string, cfg ClientConfig) (net.Conn, error) 
 	}
 	if cfg.OnConnect != nil {
 		cfg.OnConnect(time.Since(began))
+	}
+	if cfg.Fragment {
+		raw = FragmentHello(raw)
 	}
 
 	uconn := utls.UClient(raw, &utls.Config{

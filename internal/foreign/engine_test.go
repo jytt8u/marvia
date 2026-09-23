@@ -105,7 +105,9 @@ func echo(t *testing.T) vp1.Address {
 
 // TestEveryProtocolReachesTheTargetThroughItsLink: ссылка каждого вида,
 // разобранная клиентом, доводит поток до цели через настоящий сервер Xray —
-// ровно так, как это делает телефон. Проверяется не разбор, а путь целиком.
+// ровно так, как это делает телефон. Проверяется не разбор, а путь целиком,
+// и дважды: второй раз с дроблением приветствия — сервер обязан принять
+// разрезанное так же, как целое.
 func TestEveryProtocolReachesTheTargetThroughItsLink(t *testing.T) {
 	cert, key := selfSigned(t)
 	tlsServer := map[string]any{"security": "tls", "tlsSettings": map[string]any{
@@ -163,40 +165,54 @@ func TestEveryProtocolReachesTheTargetThroughItsLink(t *testing.T) {
 	}
 
 	target := echo(t)
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			port := freePort(t)
-			server(t, c.inbound(port))
-			l, err := Parse(c.link(port))
-			if err != nil {
-				t.Fatalf("разбор: %v", err)
+	t.Cleanup(func() { SetFragment(false) })
+	for _, split := range []bool{false, true} {
+		for _, c := range cases {
+			name := c.name
+			if split {
+				name += " с дроблением"
 			}
-			e, err := Start(l)
-			if err != nil {
-				t.Fatalf("движок: %v", err)
-			}
-			defer e.Close()
+			t.Run(name, func(t *testing.T) {
+				SetFragment(split)
+				reach(t, c.inbound, c.link, target)
+			})
+		}
+	}
+}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			conn, err := e.DialTarget(ctx, target)
-			if err != nil {
-				t.Fatalf("дозвон: %v", err)
-			}
-			defer conn.Close()
-			msg := []byte("привет через " + c.name)
-			_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
-			if _, err := conn.Write(msg); err != nil {
-				t.Fatalf("запись: %v", err)
-			}
-			got := make([]byte, len(msg))
-			if _, err := io.ReadFull(conn, got); err != nil {
-				t.Fatalf("ответ не дошёл: %v", err)
-			}
-			if !bytes.Equal(got, msg) {
-				t.Fatalf("ответ %q, ожидался %q", got, msg)
-			}
-		})
+// reach поднимает сервер, разбирает ссылку и гоняет через неё эхо.
+func reach(t *testing.T, inbound func(int) map[string]any, link func(int) string, target vp1.Address) {
+	t.Helper()
+	port := freePort(t)
+	server(t, inbound(port))
+	l, err := Parse(link(port))
+	if err != nil {
+		t.Fatalf("разбор: %v", err)
+	}
+	e, err := Start(l)
+	if err != nil {
+		t.Fatalf("движок: %v", err)
+	}
+	defer e.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	conn, err := e.DialTarget(ctx, target)
+	if err != nil {
+		t.Fatalf("дозвон: %v", err)
+	}
+	defer conn.Close()
+	msg := []byte("привет через " + l.Protocol)
+	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
+	if _, err := conn.Write(msg); err != nil {
+		t.Fatalf("запись: %v", err)
+	}
+	got := make([]byte, len(msg))
+	if _, err := io.ReadFull(conn, got); err != nil {
+		t.Fatalf("ответ не дошёл: %v", err)
+	}
+	if !bytes.Equal(got, msg) {
+		t.Fatalf("ответ %q, ожидался %q", got, msg)
 	}
 }
 

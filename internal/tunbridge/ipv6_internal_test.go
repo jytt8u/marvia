@@ -120,3 +120,26 @@ func TestSiteRefusalIsNotATunnelFailure(t *testing.T) {
 		t.Fatal("смерть ноды не показана")
 	}
 }
+
+// TestIPv6TurnedOffStaysOffAfterMoving: выключенный человеком IPv6 не
+// возвращается ни после удачного IPv6-соединения, ни после переезда на
+// другую ноду — в отличие от вывода «у этой ноды IPv6 нет».
+func TestIPv6TurnedOffStaysOffAfterMoving(t *testing.T) {
+	s := v6State{never: true}
+	s.reset()
+	if _, ok := s.localAnswer(query("example.com", dnsTypeAAAA)); !ok {
+		t.Fatal("AAAA ушёл ноде при выключенном IPv6")
+	}
+	s.observe(nil)
+	s.reset()
+	if !s.off.Load() {
+		t.Fatal("переезд вернул выключенный IPv6")
+	}
+
+	var auto v6State
+	auto.observe(&vp1.RefusedError{Status: vp1.StatusNoRoute})
+	auto.reset()
+	if auto.off.Load() {
+		t.Fatal("вывод про прежнюю ноду пережил переезд")
+	}
+}

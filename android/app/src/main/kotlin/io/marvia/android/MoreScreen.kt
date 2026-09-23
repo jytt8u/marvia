@@ -33,21 +33,23 @@ import kotlinx.coroutines.withContext
  * приложений и журнала.
  *
  * Здесь нет ручек протокола:
- * ни размера фрагментов, ни числа соединений, ни выбора мультиплексора.
- * Такие настройки бывают у оболочек над чужим движком, которому надо
- * объяснить, к какому серверу он подключается. У нас клиент и нода — одна
- * система, и все эти решения приняты внутри; вынести их на экран значило бы
- * дать человеку сломать себе связь, не понимая чем.
+ * ни числа соединений, ни выбора мультиплексора, ни отпечатка TLS. Такие
+ * настройки бывают у оболочек над чужим движком, которому надо объяснить, к
+ * какому серверу он подключается. У нас клиент и нода — одна система, и все
+ * эти решения приняты внутри; вынести их на экран значило бы дать человеку
+ * сломать себе связь, не понимая чем.
  *
- * Остаётся то, что зависит от него, а не от сети: когда включаться, кто
- * отвечает на запросы имён, что пускать мимо, что показать продавцу, когда
- * что-то пошло не так.
+ * Остаётся то, что зависит от него и от его сети, а ядру не видно: когда
+ * включаться, кто отвечает на запросы имён, что пускать мимо, нужен ли
+ * IPv6, что показать продавцу, когда что-то пошло не так. И одна ручка из
+ * маскировки — дробление приветствия: режет ли провайдер соединения по имени
+ * сайта, клиент узнать не может, а без такого фильтра дробление вредно.
  *
  * Из макета намеренно нет: kill switch (это системный «постоянный VPN», и
  * туда ведёт строка), «переподключаться при смене сети» (надзор делает это
  * сам, выключать нечего), транспорта и DNS через туннель (решает ядро),
- * IPv6, уведомлений по отдельности и переноса настроек — за такими строками
- * пока нет действия, а нарисованная ручка — обещание.
+ * уведомлений по отдельности и переноса настроек — за такими строками пока
+ * нет действия, а нарисованная ручка — обещание.
  */
 class MoreScreen(
     private val host: AppCompatActivity,
@@ -188,6 +190,19 @@ class MoreScreen(
             onRoutesChanged()
         }
 
+        // Обе настройки ядро читает при подключении: работающему туннелю
+        // они не передаются, и onRoutesChanged говорит об этом человеку.
+        ui.rowIpv6.setOnClickListener {
+            store.ipv6 = !store.ipv6
+            renderConnection()
+            onRoutesChanged()
+        }
+        ui.rowFragment.setOnClickListener {
+            store.fragment = !store.fragment
+            renderConnection()
+            onRoutesChanged()
+        }
+
         ui.rowLanguage.setOnClickListener { onLanguage() }
         ui.rowAbout.setOnClickListener { about() }
         ui.rowReset.setOnClickListener { askReset() }
@@ -218,6 +233,8 @@ class MoreScreen(
         ui.switchAutostart.isChecked = store.autoStart
         ui.switchLan.isChecked = store.lanOutside
         ui.switchRussian.isChecked = store.bypassRussian
+        ui.switchIpv6.isChecked = store.ipv6
+        ui.switchFragment.isChecked = store.fragment
         // Под переключателем — правда о списке: включённый тумблер без
         // скачанных подсетей ничего не уводит, и человек должен это видеть,
         // а не гадать, почему Яндекс всё ещё идёт через туннель.
@@ -240,19 +257,71 @@ class MoreScreen(
     }
 
     /**
-     * chooseDns — кто отвечает на запросы имён. Список короткий и известный:
-     * своё вписать нельзя, опечатка в адресе резолвера — это «интернет не
-     * работает» без единой подсказки, почему.
+     * chooseDns — кто отвечает на запросы имён: известные резолверы и свой
+     * адрес последней строкой. Свой, если он уже стоит, показан отмеченным
+     * — иначе человек не увидел бы в списке того, что выбрано.
      */
     private fun chooseDns() {
         val choices = Store.DNS_CHOICES
-        val labels = choices.map { dnsName(it) + "  ·  " + it }.toTypedArray()
-        val current = choices.indexOf(store.dns)
+        val labels = choices.map { dnsName(it) + "  ·  " + it }.toMutableList()
+        var current = choices.indexOf(store.dns)
+        val custom = store.dns.takeIf { it !in choices }
+        if (custom != null) {
+            labels += host.getString(R.string.dns_custom_current, custom)
+            current = labels.lastIndex
+        }
+        labels += host.getString(R.string.dns_custom)
 
-        ChoiceSheet.show(host, theme(), host.getString(R.string.conn_dns), labels.toList(), current) { which ->
-            store.dns = choices[which]
-            renderConnection()
-            onRoutesChanged()
+        ChoiceSheet.show(host, theme(), host.getString(R.string.conn_dns), labels, current) { which ->
+            when {
+                which < choices.size -> {
+                    store.dns = choices[which]
+                    renderConnection()
+                    onRoutesChanged()
+                }
+                which == labels.lastIndex -> askDns(custom.orEmpty())
+            }
+        }
+    }
+
+    /**
+     * askDns — свой резолвер. Адрес проверяется до сохранения, с причиной
+     * под полем: узнать про опечатку при следующем подключении значит
+     * узнать о ней как «интернет не работает».
+     */
+    private fun askDns(was: String) {
+        val t = theme()
+        val field = android.widget.EditText(host).apply {
+            setHint(R.string.dns_custom_hint)
+            setText(was)
+            setSingleLine()
+            // Цифровая клавиатура с точкой: адрес — это четыре числа, и
+            // буквенная раскладка только подсовывала бы опечатки.
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789.")
+            setTextColor(t.fg)
+            setHintTextColor(t.dim)
+            backgroundTintList = ColorStateList.valueOf(t.acc)
+            minHeight = (54 * dp).toInt()
+        }
+        ChoiceSheet.form(host, t, host.getString(R.string.dns_custom_title), field, host.getString(R.string.dns_custom_save)) {
+            val address = field.text.toString().trim()
+            when (Store.checkDns(address)) {
+                Store.DnsCheck.OK -> {
+                    store.dns = address
+                    renderConnection()
+                    onRoutesChanged()
+                    true
+                }
+                Store.DnsCheck.LOCAL -> {
+                    field.error = host.getString(R.string.dns_custom_local)
+                    false
+                }
+                Store.DnsCheck.BAD -> {
+                    field.error = host.getString(R.string.dns_custom_bad)
+                    false
+                }
+            }
         }
     }
 

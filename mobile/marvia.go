@@ -143,10 +143,11 @@ type Tunnel struct {
 // prefer — нода, выбранная человеком руками; ноль — автовыбор. Выбор живёт
 // в приложении и переживает перезапуск туннеля: иначе страна, выбранная
 // вчера, молча сменилась бы на «самую быструю» после перезагрузки.
+// settings — настройки туннеля из приложения, JSON; см. tunnelSettings.
 //
 // Каталог передаёт приложение, а не выясняет ядро: на Android путь к своим
 // файлам знает только Context, и достать его из Go неоткуда.
-func Start(accountLink string, tunFD int, dns string, cacheDir string, prefer int64) (*Tunnel, error) {
+func Start(accountLink string, tunFD int, dns string, cacheDir string, prefer int64, settings string) (*Tunnel, error) {
 	if tunFD <= 0 {
 		return nil, fail(FailSystem, errors.New("не передан дескриптор сетевого интерфейса"))
 	}
@@ -165,10 +166,11 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string, prefer in
 	}
 
 	t := &Tunnel{running: true}
+	set := parseSettings(settings)
 
 	// Имя ноды переписываем при переезде: иначе окно будет показывать ту,
 	// через которую трафик давно не идёт.
-	dialer, err := connect(accountLink, cacheDir, prefer, client.Events{OnSwitch: t.switched, OnTrouble: t.trouble, OnRecovered: t.recovered})
+	dialer, err := connect(accountLink, cacheDir, prefer, client.Events{OnSwitch: t.switched, OnTrouble: t.trouble, OnRecovered: t.recovered}, set)
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +182,7 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string, prefer in
 		FD:      tunFD,
 		Dialer:  tunbridge.Metered(dialer, &t.up, &t.down),
 		DNS:     dns,
+		NoIPv6:  set.NoIPv6,
 		OnError: t.note,
 	})
 	if err != nil {
@@ -201,8 +204,9 @@ func Start(accountLink string, tunFD int, dns string, cacheDir string, prefer in
 // Вынесено отдельно не ради красоты: так эту часть можно проверить тестом, не
 // выдумывая дескриптор интерфейса. Выдуманный дескриптор в тесте — это номер,
 // который на Linux принадлежит чему-то настоящему.
-func connect(accountLink, cacheDir string, prefer int64, events client.Events) (client.Backend, error) {
+func connect(accountLink, cacheDir string, prefer int64, events client.Events, set tunnelSettings) (client.Backend, error) {
 	if isForeign(accountLink) {
+		foreign.SetFragment(set.Fragment)
 		return connectForeign(accountLink, cacheDir, prefer, events)
 	}
 	account, err := client.ParseAccountLink(accountLink)
@@ -237,6 +241,7 @@ func connect(accountLink, cacheDir string, prefer int64, events client.Events) (
 		Account:   account,
 		Key:       key,
 		CachePath: accountCachePath(cacheDir, account.SubscriptionURL),
+		Dial:      set.dial(),
 		Prefer:    prefer,
 		Log:       func(format string, args ...any) { log.Printf(format, args...) },
 	}, events)

@@ -445,6 +445,7 @@
     <string name="more_group_conn">ПОДКЛЮЧЕНИЕ</string>
     <string name="more_group_routes">МАРШРУТЫ И DNS</string>
     <string name="more_group_app">ПРИЛОЖЕНИЕ</string>
+    <string name="more_group_mask">МАСКИРОВКА</string>
     <string name="more_group_apps">ПРИЛОЖЕНИЯ</string>
     <string name="more_logs_row">Журнал соединений</string>
     <string name="more_logs_row_sub">без адресов сайтов</string>
@@ -476,6 +477,17 @@
     <string name="conn_dns_sub">резолвер внутри туннеля</string>
     <string name="conn_lan">Домашняя сеть мимо туннеля</string>
     <string name="conn_lan_sub">принтер, телевизор, роутер</string>
+    <string name="conn_ipv6">IPv6 через туннель</string>
+    <string name="conn_ipv6_sub">выключи, если сайты путают страну</string>
+    <string name="conn_fragment">Дробить приветствие</string>
+    <string name="conn_fragment_sub">если провайдер режет по имени сайта; без нужды не включай</string>
+    <string name="dns_custom">Свой адрес…</string>
+    <string name="dns_custom_current">Свой · %1$s</string>
+    <string name="dns_custom_title">Свой DNS</string>
+    <string name="dns_custom_hint">адрес IPv4, например 76.76.2.0</string>
+    <string name="dns_custom_save">Сохранить</string>
+    <string name="dns_custom_bad">Нужен адрес IPv4: четыре числа от 0 до 255 через точку</string>
+    <string name="dns_custom_local">Адрес локальной сети: из туннеля до него не достать</string>
 
     <string name="apps_mode_exclude">Мимо туннеля</string>
     <string name="apps_mode_include">Только эти</string>
