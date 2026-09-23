@@ -324,7 +324,9 @@
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
         <div style="{{ ghostBtn }}" onClick="{{ doLang }}" title="{{ d18.switchTitle }}">{{ d18.switchTo }}</div>
-        <div style="{{ ghostBtn }}" onClick="{{ doBackup }}">{{ d18.head.backup }}</div>
+        <sc-if value="{{ isAdmin }}">
+          <div style="{{ ghostBtn }}" onClick="{{ doBackup }}">{{ d18.head.backup }}</div>
+        </sc-if>
         <div style="{{ ghostBtn }}" onClick="{{ doReload }}">{{ reloadLabel }}</div>
         <div style="{{ ghostBtn }}" onClick="{{ doLogout }}">{{ d18.head.logout }}</div>
       </div>
@@ -1055,7 +1057,11 @@ async function api(path, method, body) {
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { /* не JSON */ }
-  if (!res.ok) throw new Error((data && data.error) || L().err.code(res.status));
+  if (!res.ok) {
+    const err = new Error((data && data.error) || L().err.code(res.status));
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -1136,12 +1142,19 @@ async function loadAll() {
   state.error = null;
   render();
   try {
+    // Ключи — только админу. Вошедший ключом бота получает на них 403, и
+    // это не ошибка загрузки, а ответ «кто ты»: разделы админа ему не
+    // показываем, а остальное грузим как обычно.
     const [users, nodes, stats, keys] = await Promise.all([
       api("/api/v1/users"),
       api("/api/v1/nodes"),
       api("/api/v1/stats?days=30"),
-      api("/api/v1/keys"),
+      api("/api/v1/keys").catch((err) => {
+        if (err.status === 403) return { denied: true };
+        throw err;
+      }),
     ]);
+    state.admin = !(keys && keys.denied);
     state.users = (users && users.users) || [];
     state.nodes = (nodes && nodes.nodes) || [];
     state.stats = stats || null;
@@ -2522,6 +2535,10 @@ function daysLeft(iso) {
 // держать их здесь значило бы иметь два места, где они разъезжаются.
 const PAGES = ["dash", "clients", "keys", "nodes", "stats", "alerts", "journal", "updates", "look"];
 
+// ADMIN_PAGES — разделы, которые открывает только админский токен. Ключу бота
+// их не показываем: кнопка, за которой всегда «не положено», — пустое обещание.
+const ADMIN_PAGES = ["keys", "alerts", "journal", "updates"];
+
 // Сколько строк на странице. Полсотни — столько влезает в экран прокруткой и
 // столько человек ещё готов просмотреть глазами, не листая.
 const ROWS = 50;
@@ -2694,7 +2711,7 @@ function renderVals() {
     look: d18.sub.look,
   };
 
-  const nav = PAGES.map((k) => ({
+  const nav = PAGES.filter((k) => state.admin !== false || !ADMIN_PAGES.includes(k)).map((k) => ({
     k, label: d18.nav[k], current: page === k ? "page" : null,
     onClick: () => setState({ page: k }),
     style: "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:" + t.r
@@ -3138,7 +3155,7 @@ function renderVals() {
   const steps = [
     [nodes.length > 0, ...d18.start.node, () => setState({ page: "nodes" })],
     [users.length > 0, ...d18.start.client, () => setState({ page: "clients" })],
-    [(state.keys || []).length > 0, ...d18.start.key, () => setState({ page: "keys" })],
+    [(state.keys || []).length > 0 || state.admin === false, ...d18.start.key, () => setState({ page: "keys" })],
   ];
   const startSteps = steps.map(([done, title, note, onClick], i) => ({
     num: done ? "✓" : String(i + 1),
@@ -3164,6 +3181,7 @@ function renderVals() {
     doLang: () => setLang(state.lang === "ru" ? "en" : "ru"),
     doLogout: logout,
     doBackup: downloadBackup,
+    isAdmin: state.admin !== false,
 
     nav,
     pageTitle: d18.nav[page],

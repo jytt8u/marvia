@@ -190,7 +190,7 @@ func TestBackupNeedsAdminToken(t *testing.T) {
 	_, body := do(t, srv, "POST", "/api/v1/keys", admin, `{"name":"бот","scopes":["users","nodes","read"]}`)
 	secret := between(t, body, `"secret":"`, `"`)
 
-	if code, _ := do(t, srv, "GET", "/api/v1/backup", secret, ""); code != http.StatusUnauthorized {
+	if code, _ := do(t, srv, "GET", "/api/v1/backup", secret, ""); code != http.StatusForbidden {
 		t.Errorf("ключ со всеми правами скачал копию базы: %d", code)
 	}
 	if code, _ := do(t, srv, "GET", "/api/v1/backup", "", ""); code != http.StatusUnauthorized {

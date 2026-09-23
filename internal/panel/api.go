@@ -189,13 +189,26 @@ func (a *API) scoped(scope string, next http.HandlerFunc) http.HandlerFunc {
 }
 
 // admin проверяет админский токен.
+//
+// Живой ключ бота здесь получает 403, а не 401. Это разные ответы: 401 — «такого
+// токена нет», и страница панели на нём выходит из учётной записи; 403 — «токен
+// есть, но это ему не положено». Раньше отвечали 401 всем, и поддержка,
+// вошедшая ключом с правом чтения, вылетала при первой же загрузке: страница
+// спрашивает список ключей, а он только для админа.
 func (a *API) admin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !TokensEqual(bearer(r), a.adminToken) {
-			fail(w, http.StatusUnauthorized, "нужен админский токен")
+		token := bearer(r)
+		if TokensEqual(token, a.adminToken) {
+			next(w, withActor(r, ActorAdmin))
 			return
 		}
-		next(w, withActor(r, ActorAdmin))
+		if token != "" {
+			if key, err := a.store.AuthenticateAPIKey(r.Context(), token); err == nil {
+				fail(w, http.StatusForbidden, "ключу «"+key.Name+"» это не положено: нужен админский токен")
+				return
+			}
+		}
+		fail(w, http.StatusUnauthorized, "нужен админский токен")
 	}
 }
 

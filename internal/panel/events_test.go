@@ -191,7 +191,7 @@ func TestJournalIsAdminOnly(t *testing.T) {
 		t.Fatalf("выпуск ключа: код %d", code)
 	}
 
-	if code := h.do(http.MethodGet, "/api/v1/events", key.Secret, nil, nil); code != http.StatusUnauthorized {
+	if code := h.do(http.MethodGet, "/api/v1/events", key.Secret, nil, nil); code != http.StatusForbidden {
 		t.Fatalf("ключ с правом read прочитал журнал: код %d", code)
 	}
 }

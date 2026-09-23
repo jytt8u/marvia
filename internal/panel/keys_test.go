@@ -107,8 +107,9 @@ func TestKeyCannotMintKeys(t *testing.T) {
 	_, body := do(t, srv, "POST", "/api/v1/keys", admin, `{"name":"всё","scopes":["users","nodes","read"]}`)
 	secret := between(t, body, `"secret":"`, `"`)
 
+	// 403, а не 401: ключ живой, но выпускать ключи ему не положено.
 	code, _ := do(t, srv, "POST", "/api/v1/keys", secret, `{"name":"ещё","scopes":["users"]}`)
-	if code != http.StatusUnauthorized {
+	if code != http.StatusForbidden {
 		t.Fatalf("ключ со всеми правами выпустил себе ещё один: %d", code)
 	}
 }
@@ -215,5 +216,23 @@ func TestVersionNeedsAuth(t *testing.T) {
 	code, body := do(t, srv, "GET", "/api/v1/version", admin, "")
 	if code != http.StatusOK || !strings.Contains(body, "v9.9.9") {
 		t.Errorf("под админским токеном версии нет: %d %s", code, body)
+	}
+}
+
+// TestBotKeyIsRefusedNotLoggedOut: живой ключ бота на админском маршруте
+// получает 403 «не положено», а не 401 «нет такого токена» — на 401 страница
+// выходит из учётной записи, и поддержка с ключом чтения вылетала сразу.
+func TestBotKeyIsRefusedNotLoggedOut(t *testing.T) {
+	srv, admin := keyPanel(t)
+	code, body := do(t, srv, http.MethodPost, "/api/v1/keys", admin, `{"name":"поддержка","scopes":["read"]}`)
+	if code != http.StatusOK {
+		t.Fatalf("выпуск ключа: %d %s", code, body)
+	}
+	secret := between(t, body, `"secret":"`, `"`)
+	if code, _ := do(t, srv, http.MethodGet, "/api/v1/keys", secret, ""); code != http.StatusForbidden {
+		t.Fatalf("ключ бота на админском маршруте: код %d", code)
+	}
+	if code, _ := do(t, srv, http.MethodGet, "/api/v1/keys", "чужой", ""); code != http.StatusUnauthorized {
+		t.Fatalf("чужой токен: код %d", code)
 	}
 }
