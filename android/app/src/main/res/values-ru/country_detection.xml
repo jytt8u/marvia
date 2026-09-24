@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="country_detection_explain">Marvia узнаёт страну по названию сервера. Если подсказки нет, после подключения проверяет выходной IP через VPN. Не удалось определить — оставляет без страны.</string>
+    <string name="country_from_exit_ip">по выходному IP</string>
+</resources>

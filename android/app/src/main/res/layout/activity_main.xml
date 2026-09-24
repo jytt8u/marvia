@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Семь экранов лежат друг на друге, видим всегда один. Так задумано: они
+    Экраны лежат друг на друге, видим всегда один. Так задумано: они
     переключаются нижней панелью мгновенно и без пересборки, а состояние
     подключения живёт в процессе и переживает любое переключение.
 -->
@@ -25,6 +25,10 @@
         <include
             android:id="@+id/connectScreen"
             layout="@layout/screen_connect" />
+
+        <include
+            android:id="@+id/insightsScreen"
+            layout="@layout/screen_insights" />
 
         <include
             android:id="@+id/serversScreen"

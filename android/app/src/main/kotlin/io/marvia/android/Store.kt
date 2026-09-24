@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import io.marvia.mobile.Mobile
 import java.io.File
+import java.security.MessageDigest
 
 /**
  * Store — то немногое, что приложение помнит между запусками.
@@ -114,9 +115,37 @@ class Store(context: Context) {
     fun removeSubscription(link: String) {
         subscriptions = subscriptions.filter { it.link != link }
         dropSubscriptionCache(link)
+        val prefix = exitCountryPrefix(link)
+        val edit = prefs.edit()
+        prefs.all.keys.filter { it.startsWith(prefix) }.forEach { edit.remove(it) }
+        edit.apply()
         // Убрали рабочую — остаёмся без ключа, а не с чужим втихую.
         if (accountLink == link) accountLink = ""
     }
+
+    /** Country of this node's exit IP, learned once through the active tunnel. */
+    fun exitCountry(link: String, nodeId: Long, name: String, endpoint: String): String {
+        val parts = prefs.getString(exitCountryKey(link, nodeId, name, endpoint), null)?.split('|') ?: return ""
+        if (parts.size != 2) return ""
+        val savedAt = parts[1].toLongOrNull() ?: return ""
+        if (System.currentTimeMillis() - savedAt !in 0..EXIT_COUNTRY_MAX_AGE) return ""
+        return Flags.countryOf(parts[0].lowercase()).orEmpty()
+    }
+
+    fun rememberExitCountry(link: String, nodeId: Long, name: String, endpoint: String, code: String) {
+        if (Flags.countryOf(code.lowercase()) == null) return
+        prefs.edit().putString(
+            exitCountryKey(link, nodeId, name, endpoint),
+            "${code.lowercase()}|${System.currentTimeMillis()}",
+        ).apply()
+    }
+
+    private fun exitCountryPrefix(link: String) = "exit_country_${hash(link)}_"
+    private fun exitCountryKey(link: String, nodeId: Long, name: String, endpoint: String) =
+        exitCountryPrefix(link) + hash("$nodeId\n$name\n$endpoint")
+
+    private fun hash(value: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(Charsets.UTF_8)).take(12).joinToString("") { "%02x".format(it.toInt() and 0xff) }
 
     /**
      * defaultSubscriptionName — имя, когда человек его не ввёл: домен подписки.
@@ -573,6 +602,7 @@ class Store(context: Context) {
     enum class DnsCheck { OK, BAD, LOCAL }
 
     companion object {
+        private const val EXIT_COUNTRY_MAX_AGE = 30L * 24 * 60 * 60 * 1000
         const val LANG_RU = "ru"
         const val LANG_EN = "en"
 

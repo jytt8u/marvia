@@ -455,5 +455,125 @@
                 </LinearLayout>
             </ScrollView>
         </LinearLayout>
+
+        <!-- Информация о приложении остаётся внутри Marvia и следует выбранной теме. -->
+        <ScrollView
+            android:id="@+id/sectionAbout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:visibility="gone">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:tag="card">
+                    <io.marvia.android.MarviaLogoView
+                        android:layout_width="64dp"
+                        android:layout_height="56dp"
+                        android:contentDescription="@string/app_name" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:tag="fg"
+                        android:text="@string/about_headline"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:tag="dim"
+                        android:text="@string/about_description"
+                        android:textSize="14sp" />
+                    <TextView
+                        android:id="@+id/aboutVersion"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="7dp"
+                        android:tag="chip"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/ThemeK"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginStart="4dp"
+                    android:text="@string/about_route_title" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
+                    android:tag="card">
+
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                        <TextView android:layout_width="36dp" android:layout_height="36dp" android:gravity="center" android:tag="btn" android:text="01" android:textSize="12sp" android:textStyle="bold" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="14dp" android:orientation="vertical">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:tag="fg" android:text="@string/about_step_device" android:textSize="16sp" android:textStyle="bold" />
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:tag="dim" android:text="@string/about_step_device_sub" android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                    <View android:layout_width="2dp" android:layout_height="24dp" android:layout_marginStart="17dp" android:tag="line" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                        <TextView android:layout_width="36dp" android:layout_height="36dp" android:gravity="center" android:tag="btn" android:text="02" android:textSize="12sp" android:textStyle="bold" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="14dp" android:orientation="vertical">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:tag="fg" android:text="@string/about_step_tunnel" android:textSize="16sp" android:textStyle="bold" />
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:tag="dim" android:text="@string/about_step_tunnel_sub" android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                    <View android:layout_width="2dp" android:layout_height="24dp" android:layout_marginStart="17dp" android:tag="line" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                        <TextView android:layout_width="36dp" android:layout_height="36dp" android:gravity="center" android:tag="btn" android:text="03" android:textSize="12sp" android:textStyle="bold" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="14dp" android:orientation="vertical">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:tag="fg" android:text="@string/about_step_node" android:textSize="16sp" android:textStyle="bold" />
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:tag="dim" android:text="@string/about_step_node_sub" android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                    <View android:layout_width="2dp" android:layout_height="24dp" android:layout_marginStart="17dp" android:tag="line" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                        <TextView android:layout_width="36dp" android:layout_height="36dp" android:gravity="center" android:tag="btn" android:text="04" android:textSize="12sp" android:textStyle="bold" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="14dp" android:orientation="vertical">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:tag="fg" android:text="@string/about_step_internet" android:textSize="16sp" android:textStyle="bold" />
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:tag="dim" android:text="@string/about_step_internet_sub" android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    style="@style/ThemeK"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginStart="4dp"
+                    android:text="@string/about_scope_title" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:tag="card">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:tag="fg" android:text="@string/about_scope_apps" android:textSize="14sp" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="14dp" android:tag="line" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:tag="dim" android:text="@string/about_scope_note" android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
     </FrameLayout>
 </LinearLayout>

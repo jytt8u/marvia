@@ -54,12 +54,13 @@ import kotlinx.coroutines.withContext
  */
 class MainActivity : AppCompatActivity() {
 
-    private enum class Screen { LANGUAGE, PERMS, KEY, CONNECT, SERVERS, STATS, THEME, MORE }
+    private enum class Screen { LANGUAGE, PERMS, KEY, CONNECT, INSIGHTS, SERVERS, STATS, THEME, MORE }
 
     private lateinit var ui: ActivityMainBinding
     private lateinit var store: Store
     private lateinit var servers: ServersScreen
     private lateinit var stats: StatsScreen
+    private lateinit var insights: InsightsScreen
     private lateinit var more: MoreScreen
     private lateinit var themeScreen: ThemeScreen
     private lateinit var language: LanguageScreen
@@ -144,6 +145,7 @@ class MainActivity : AppCompatActivity() {
             onSubscriptionChanged = { restartTunnel() },
         )
         stats = StatsScreen(host = this, ui = ui.statsScreen, theme = { theme }, traffic = Traffic(this), store = store)
+        insights = InsightsScreen(this, ui.insightsScreen, { theme }) { show(Screen.CONNECT) }
         themeScreen = ThemeScreen(this, ui.themeScreen, store, { pickBackdrop.launch("image/*") }, { pickLogo.launch("image/*") }) { repaint() }
         language = LanguageScreen(this, ui.languageScreen, store, { theme }) { afterLanguage() }
         perms = PermsScreen(this, ui.permsScreen, { theme }) {
@@ -264,6 +266,7 @@ class MainActivity : AppCompatActivity() {
         paintNav()
         servers.paint()
         stats.paint(theme)
+        insights.paint()
         themeScreen.paint(theme)
         more.paint()
         render(MarviaState.state.value)
@@ -340,6 +343,7 @@ class MainActivity : AppCompatActivity() {
 
         ui.keyScreen.root.isVisible = next == Screen.KEY
         ui.connectScreen.root.isVisible = next == Screen.CONNECT
+        ui.insightsScreen.root.isVisible = next == Screen.INSIGHTS
         ui.serversScreen.root.isVisible = next == Screen.SERVERS
         ui.statsScreen.root.isVisible = next == Screen.STATS
         ui.moreScreen.root.isVisible = next == Screen.MORE
@@ -351,6 +355,7 @@ class MainActivity : AppCompatActivity() {
         if (was != next) {
             val root = when (next) {
                 Screen.CONNECT -> ui.connectScreen.root
+                Screen.INSIGHTS -> ui.insightsScreen.root
                 Screen.SERVERS -> ui.serversScreen.root
                 Screen.STATS -> ui.statsScreen.root
                 Screen.THEME -> ui.themeScreen.root
@@ -378,7 +383,7 @@ class MainActivity : AppCompatActivity() {
         // Панель есть и без ключа: подписка добавляется на «Серверах», а тему
         // можно выбрать до подключения. На выборе языка её нет — это экран
         // одного действия.
-        ui.nav.root.isVisible = next != Screen.LANGUAGE && next != Screen.PERMS
+        ui.nav.root.isVisible = next != Screen.LANGUAGE && next != Screen.PERMS && next != Screen.INSIGHTS
         paintNav()
 
         when (next) {
@@ -390,6 +395,7 @@ class MainActivity : AppCompatActivity() {
             Screen.PERMS -> perms.open()
             Screen.KEY -> openKey()
             Screen.CONNECT -> Unit
+            Screen.INSIGHTS -> Unit
         }
 
         // Панель то появляется, то нет — а отступ под системной навигацией
@@ -441,8 +447,8 @@ class MainActivity : AppCompatActivity() {
         c.powerHint.setOnClickListener {
             if (store.accountLink.isBlank()) show(Screen.SERVERS)
         }
-        c.sessionCard.setOnClickListener { SessionDetails.showSession(this, theme) }
-        c.speedCard.setOnClickListener { SessionDetails.showSpeed(this, theme) }
+        c.sessionCard.setOnClickListener { show(Screen.INSIGHTS); insights.open(InsightsScreen.Mode.SESSIONS) }
+        c.speedCard.setOnClickListener { show(Screen.INSIGHTS); insights.open(InsightsScreen.Mode.SPEED) }
         c.todayCard.setOnClickListener { show(Screen.STATS) }
 
         // Нажатие на знак позволяет свернуть или вернуть подпись бренда.
@@ -476,6 +482,7 @@ class MainActivity : AppCompatActivity() {
                     c.todayBars.hours = t.hours
                     c.sessionValue.text = String.format(java.util.Locale.US, "%02d:%02d:%02d", t.seconds / 3600, t.seconds / 60 % 60, t.seconds % 60)
                     c.speedValue.text = getString(R.string.stats_mbps, String.format(java.util.Locale.getDefault(), "%.1f", t.bytesPerSecond * 8 / 1_000_000))
+                    if (screen == Screen.INSIGHTS) insights.refresh()
                 }
             }
         }

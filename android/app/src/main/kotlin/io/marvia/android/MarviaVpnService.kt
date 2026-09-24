@@ -47,6 +47,7 @@ class MarviaVpnService : VpnService() {
         }
     }
     private var worker: Job? = null
+    private var countryProbe: Job? = null
 
     /** Останавливались ли мы уже. См. [shutdown] — там объяснено, зачем. */
     private var finished = false
@@ -136,6 +137,7 @@ class MarviaVpnService : VpnService() {
             SessionDetails.begin()
             MarviaState.set(snapshot(started, node))
             goForeground(live.on(this@MarviaVpnService, node, 0))
+            detectExitCountry(started, store)
 
             // Российский список — сейчас, когда сеть точно есть. Приложение
             // исключено из туннеля, так что панель спрашивается напрямую, как
@@ -293,6 +295,7 @@ class MarviaVpnService : VpnService() {
             if (now != shownNode) {
                 shownNode = now
                 Journal.add(getString(R.string.log_moved, now), Journal.Level.WARN)
+                detectExitCountry(started, settings)
             }
 
             // Пересобираем целиком, а не только имя ноды: остаток трафика
@@ -315,6 +318,24 @@ class MarviaVpnService : VpnService() {
      */
     private var trafficHistory: TrafficHistory? = null
 
+    /** One bounded lookup per unknown node, only when it actually becomes active. */
+    private fun detectExitCountry(started: Core, store: Store) {
+        val link = store.accountLink
+        val row = runCatching { NodeRow.parse(started.nodes()).firstOrNull { it.current } }.getOrNull() ?: return
+        if (row.country.isNotBlank() || CountryGuess.fromName(row.name).isNotEmpty() ||
+            store.exitCountry(link, row.id, row.name, row.endpoint).isNotEmpty()
+        ) return
+        countryProbe?.cancel()
+        countryProbe = scope.launch {
+            val code = runCatching { started.exitCountry() }.getOrDefault("")
+            if (!isActive || core !== started || store.accountLink != link || code.isEmpty()) return@launch
+            val stillCurrent = runCatching { NodeRow.parse(started.nodes()).firstOrNull { it.current } }.getOrNull()
+            if (stillCurrent?.id != row.id || stillCurrent.name != row.name || stillCurrent.endpoint != row.endpoint) return@launch
+            store.rememberExitCountry(link, row.id, row.name, row.endpoint, code)
+            MarviaState.countryDetected.value += 1
+        }
+    }
+
     private fun snapshot(started: Core, node: String, warning: String = ""): TunnelState.On {
         // Расход снимаем здесь, а не на экране: экран бывает закрыт неделями,
         // а туннель всё это время работает. Новая сессия — новый отсчёт
@@ -323,13 +344,13 @@ class MarviaVpnService : VpnService() {
         val received = started.receivedBytes()
         val sent = started.sentBytes()
         SessionDetails.sample(received, sent)
-        MarviaState.traffic.value = trafficHistory!!.sample(
-            received + sent,
-            countryOf(node),
-        )
-        val rows = NodeRow.parse(started.nodes())
+        val store = Store(this)
+        val rows = NodeRow.parse(started.nodes()) { id, name, endpoint ->
+            store.exitCountry(store.accountLink, id, name, endpoint)
+        }
         val current = rows.firstOrNull { it.current }
         val chosen = rows.firstOrNull { it.chosen }
+        MarviaState.traffic.value = trafficHistory!!.sample(received + sent, current?.group.orEmpty())
 
         // Ядро отдаёт последний замер именно текущей ноды.
         val ms = current?.ms ?: 0
@@ -348,14 +369,6 @@ class MarviaVpnService : VpnService() {
             chosen = chosen?.title.orEmpty(),
         )
     }
-
-    /**
-     * countryOf — страна из имени ноды, которое отдаёт ядро.
-     *
-     * Продавец пишет «Финляндия · Хельсинки»: для доли в расходе нужна
-     * только страна, иначе каждый город станет своей долей.
-     */
-    private fun countryOf(node: String): String = node.substringBefore('·').trim()
 
     /** troubleText подбирает фразу под код беды из ядра. */
     private fun troubleText(code: String): String = when (code) {
@@ -390,13 +403,18 @@ class MarviaVpnService : VpnService() {
 
         worker?.cancel()
         worker = null
+        countryProbe?.cancel()
+        countryProbe = null
         core?.let { started ->
             // Последний отсчёт мог прийти после предыдущего опроса. Он нужен
             // и для итогов завершённой сессии, и для суточного расхода.
             runCatching { started.receivedBytes() to started.sentBytes() }.getOrNull()?.let { (received, sent) ->
                 SessionDetails.sample(received, sent)
-                val node = (MarviaState.state.value as? TunnelState.On)?.node.orEmpty()
-                trafficHistory?.sample(received + sent, countryOf(node))
+                val store = Store(this)
+                val country = NodeRow.parse(started.nodes()) { id, name, endpoint ->
+                    store.exitCountry(store.accountLink, id, name, endpoint)
+                }.firstOrNull { it.current }?.group.orEmpty()
+                trafficHistory?.sample(received + sent, country)
             }
             SessionDetails.finish(this)
         }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="insights_back">Назад к туннелю</string>
+    <string name="insights_subtitle">Этот телефон · через туннель VPN</string>
+    <string name="insights_live">СКОРОСТЬ СЕЙЧАС</string>
+    <string name="insights_window">Последние 120 замеров</string>
+    <string name="insights_speed_legend">↓ приём   ↑ отдача</string>
+    <string name="insights_speed_chart">График скорости приёма и отдачи</string>
+    <string name="insights_download">↓ Приём</string>
+    <string name="insights_upload">↑ Отдача</string>
+    <string name="insights_this_session">Текущая сессия</string>
+    <string name="insights_average">В среднем · %1$s</string>
+    <string name="insights_peak">Общий пик · %1$s</string>
+    <string name="insights_current_traffic">↓ %1$s принято     ↑ %2$s отправлено</string>
+    <string name="insights_not_connected">Сейчас нет сессии</string>
+    <string name="insights_traffic_split">Доли принятого и отправленного трафика</string>
+    <string name="insights_recent_chart">Последние сессии</string>
+    <string name="insights_session_chart">Расход в последних сессиях</string>
+    <string name="insights_chart_note">Трафик каждой сессии на этом телефоне</string>
+    <string name="insights_history_count">История · %1$d</string>
+    <string name="insights_recent">Последние</string>
+    <string name="insights_all">Все</string>
+    <string name="insights_show_more">Показать ещё сессии</string>
+    <string name="insights_session_item">%1$s · %2$s</string>
+    <string name="insights_session_bytes">↓ %1$s    ↑ %2$s</string>
+</resources>

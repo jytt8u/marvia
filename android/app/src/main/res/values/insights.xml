@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="insights_back">Back to tunnel</string>
+    <string name="insights_subtitle">This phone · VPN tunnel</string>
+    <string name="insights_live">LIVE SPEED</string>
+    <string name="insights_window">Last 120 samples</string>
+    <string name="insights_speed_legend">↓ download   ↑ upload</string>
+    <string name="insights_speed_chart">Live download and upload speed graph</string>
+    <string name="insights_download">↓ Download</string>
+    <string name="insights_upload">↑ Upload</string>
+    <string name="insights_this_session">Current session</string>
+    <string name="insights_average">Average · %1$s</string>
+    <string name="insights_peak">Combined peak · %1$s</string>
+    <string name="insights_current_traffic">↓ %1$s received     ↑ %2$s sent</string>
+    <string name="insights_not_connected">No active session</string>
+    <string name="insights_traffic_split">Received and sent traffic proportions</string>
+    <string name="insights_recent_chart">Recent sessions</string>
+    <string name="insights_session_chart">Traffic in recent sessions</string>
+    <string name="insights_chart_note">Traffic per session on this phone</string>
+    <string name="insights_history_count">History · %1$d</string>
+    <string name="insights_recent">Recent</string>
+    <string name="insights_all">All</string>
+    <string name="insights_show_more">Show more sessions</string>
+    <string name="insights_session_item">%1$s · %2$s</string>
+    <string name="insights_session_bytes">↓ %1$s    ↑ %2$s</string>
+</resources>
