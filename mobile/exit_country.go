@@ -58,7 +58,7 @@ func queryExitCountry(ctx context.Context, dial func(context.Context, vp1.Addres
 	}
 	defer transport.CloseIdleConnections()
 	httpClient := &http.Client{
-		Transport: transport,
+		Transport:     transport,
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse },
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
