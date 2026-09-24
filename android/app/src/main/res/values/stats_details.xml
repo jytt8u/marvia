@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="stats_observed_average">Average %1$s per observed day</string>
+    <string name="stats_observed_average">Average %1$s/day</string>
     <string name="stats_days_observed">days since first use</string>
     <string name="stats_speed_connect">Connect to see live speed.</string>
     <string name="stats_speed_down">Download now: %1$s</string>

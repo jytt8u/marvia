@@ -140,6 +140,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
+                            android:gravity="center"
+                            android:maxWidth="204dp"
                             android:tag="dim"
                             android:textSize="12sp" />
                     </LinearLayout>
