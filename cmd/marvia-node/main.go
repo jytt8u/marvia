@@ -327,27 +327,35 @@ func setupUsers(ctx context.Context, opts serverOptions) (*users.Registry, strin
 // Локальный снимок расхода нужен и в этом режиме: между перезапуском ноды и
 // первой успешной синхронизацией она должна знать, кто сколько израсходовал,
 // иначе после каждой перезагрузки квоты начинались бы заново.
-func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, string, error) {
+func preparePanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, string, *nodesync.Client, error) {
 	token := opts.panelToken
 	if token == "" {
 		token = envvar.Get("MARVIA_NODE_TOKEN")
 	}
 	if token == "" {
-		return nil, "", errors.New("не задан токен ноды: укажи -panel-token или MARVIA_NODE_TOKEN")
+		return nil, "", nil, errors.New("не задан токен ноды: укажи -panel-token или MARVIA_NODE_TOKEN")
 	}
 
 	// Имена прикрытия нода сообщает панели сама: иначе один и тот же список
 	// пришлось бы держать руками и здесь флагом, и там полем, а разойдясь,
 	// они молча ломают подключение — клиент стучится именем, которого нода
 	// уже не принимает.
-	client := nodesync.New(opts.panelURL, token).
+	usagePath := opts.usageFile
+	if usagePath == "" {
+		usagePath = "veil-node.usage.json"
+	}
+	saved, usageErr := users.LoadUsage(usagePath)
+	if usageErr != nil {
+		return nil, "", nil, fmt.Errorf("расход не восстановлен: %w", usageErr)
+	}
+	client := nodesync.New(opts.panelURL, token).WithSnapshot(usagePath+".access").
 		WithCoverNames(splitList(opts.realitySNI)).
 		WithBuild(version, runtime.GOARCH)
 
 	// Первый список забираем синхронно: стартовать, не зная пользователей,
 	// значит на несколько секунд открыть ноду для всех подряд.
 	first, cancel := context.WithTimeout(ctx, panelFirstFetchTimeout)
-	list, err := client.FetchUsers(first)
+	list, restored, offline, err := client.Bootstrap(first, saved)
 	cancel()
 
 	switch {
@@ -364,24 +372,29 @@ func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, 
 		list = nil
 
 	case err != nil:
-		return nil, "", fmt.Errorf("панель %s: %w", opts.panelURL, err)
+		return nil, "", nil, fmt.Errorf("панель %s: %w", opts.panelURL, err)
 	}
 
 	registry, err := users.NewRegistry(list)
 	if err != nil {
+		return nil, "", nil, err
+	}
+
+	registry.RestoreUsage(restored)
+	if offline {
+		log.Printf("панель недоступна: восстановлен снимок доступа, действующий не более 24 часов")
+	}
+	if err := client.SnapshotError(); err != nil {
+		log.Printf("снимок доступа не сохранён: %v", err)
+	}
+	return registry, usagePath, client, nil
+}
+
+func setupPanelUsers(ctx context.Context, opts serverOptions) (*users.Registry, string, error) {
+	registry, usagePath, client, err := preparePanelUsers(ctx, opts)
+	if err != nil {
 		return nil, "", err
 	}
-
-	usagePath := opts.usageFile
-	if usagePath == "" {
-		usagePath = "veil-node.usage.json"
-	}
-	if saved, err := users.LoadUsage(usagePath); err != nil {
-		log.Printf("расход не восстановлен (%v), счётчики начнутся с нуля", err)
-	} else {
-		registry.RestoreUsage(saved)
-	}
-
 	go client.Run(ctx, registry, panelSyncInterval, nodesync.Events{
 		OnUsers: func(count int) {
 			if count == 0 {

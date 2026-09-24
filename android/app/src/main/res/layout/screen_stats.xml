@@ -140,6 +140,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
+                            android:gravity="center"
+                            android:maxWidth="204dp"
                             android:tag="dim"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -235,7 +237,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="@string/stats_days_in_range"
+                            android:text="@string/stats_days_observed"
                             android:tag="dim"
                             android:textSize="11sp" />
                     </LinearLayout>

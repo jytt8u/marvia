@@ -90,7 +90,7 @@ class ServersScreen(
             host.getString(R.string.servers_add_clipboard),
             host.getString(R.string.servers_add_manual),
         )
-        ChoiceSheet.show(host, theme(), host.getString(R.string.servers_add), items) { which ->
+        ChoiceSheet.show(host, theme(), host.getString(R.string.servers_add_key), items) { which ->
             if (which == 0) fromClipboard() else byHand()
         }
     }

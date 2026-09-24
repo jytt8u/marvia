@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stats_observed_average">в среднем %1$s/день</string>
+    <string name="stats_days_observed">дней с начала учёта</string>
+    <string name="stats_speed_connect">Подключитесь, чтобы видеть скорость.</string>
+    <string name="stats_speed_down">Сейчас вниз: %1$s</string>
+    <string name="stats_speed_up">Сейчас вверх: %1$s</string>
+    <string name="stats_speed_average">В среднем за сессию: %1$s</string>
+    <string name="stats_speed_peak">Пик суммарной скорости: %1$s</string>
+    <string name="stats_speed_sample_note">По трафику VPN на этом телефоне.</string>
+    <string name="stats_session_current">Текущая сессия</string>
+    <string name="stats_sessions_previous">Прошлые сессии на этом телефоне</string>
+    <string name="stats_sessions_empty">Сессий пока нет.</string>
+</resources>

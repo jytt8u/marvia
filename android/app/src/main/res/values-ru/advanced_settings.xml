@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="advanced_title">Дополнительные настройки VPN</string>
+    <string name="advanced_mtu">Размер пакета (MTU)</string>
+    <string name="advanced_live">Обновление при включённом экране</string>
+    <string name="advanced_idle">Обновление при погашенном экране</string>
+    <string name="advanced_ping">Проверка отклика</string>
+    <string name="advanced_mtu_value">Размер пакета (MTU) · %1$d</string>
+    <string name="advanced_live_value">Экран включён · каждые %1$d с</string>
+    <string name="advanced_idle_value">Экран погашен · каждые %1$d с</string>
+    <string name="advanced_ping_value">Проверка отклика · %1$s</string>
+    <string name="advanced_seconds">%1$d с</string>
+    <string name="advanced_off">Выключена</string>
+</resources>

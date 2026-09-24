@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="advanced_title">Advanced VPN settings</string>
+    <string name="advanced_mtu">Packet size (MTU)</string>
+    <string name="advanced_live">Update interval with screen on</string>
+    <string name="advanced_idle">Update interval with screen off</string>
+    <string name="advanced_ping">Latency check interval</string>
+    <string name="advanced_mtu_value">Packet size (MTU) · %1$d</string>
+    <string name="advanced_live_value">Screen on · every %1$d s</string>
+    <string name="advanced_idle_value">Screen off · every %1$d s</string>
+    <string name="advanced_ping_value">Latency checks · %1$s</string>
+    <string name="advanced_seconds">%1$d s</string>
+    <string name="advanced_off">Off</string>
+</resources>

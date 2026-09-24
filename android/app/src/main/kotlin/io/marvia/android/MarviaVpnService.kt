@@ -130,6 +130,10 @@ class MarviaVpnService : VpnService() {
             Journal.add(getString(R.string.log_connected, node))
             connectedAt = System.currentTimeMillis()
             live.reset(started)
+            // Счётчики ядра начинаются заново с каждым туннелем. Отдельно
+            // сбрасываем базу подённого учёта и открываем локальную сессию.
+            Traffic(this@MarviaVpnService).beginSession()
+            SessionDetails.begin()
             MarviaState.set(snapshot(started, node))
             goForeground(live.on(this@MarviaVpnService, node, 0))
 
@@ -147,7 +151,7 @@ class MarviaVpnService : VpnService() {
     private fun openInterface(store: Store): ParcelFileDescriptor {
         val builder = Builder()
             .setSession(getString(R.string.app_name))
-            .setMtu(MTU)
+            .setMtu(store.vpnMtu)
             .addAddress(ADDRESS_V4, PREFIX_V4)
             .addRoute("0.0.0.0", 0)
             // IPv6 заворачиваем в туннель, даже если у ноды его нет. Оставить
@@ -257,18 +261,23 @@ class MarviaVpnService : VpnService() {
     private suspend fun watch(started: Core, node: String) {
         var shownNode = node
         var previousWarning = ""
-        var tick = 0
+        var lastPingAt = 0L
         val power = getSystemService(android.os.PowerManager::class.java)
+        val settings = Store(this)
         while (scope.isActive && started.running()) {
-            // Экран погашен — смотреть на скорость некому: опрос реже в пять
-            // раз. Туннель от этого не зависит, только счётчики и уведомление.
-            delay(if (power?.isInteractive != false) POLL_INTERVAL_MS else POLL_IDLE_MS)
-            tick++
+            // Экран погашен — смотреть на скорость некому. Интервал можно
+            // настроить: он меняет только счётчики и уведомление, не туннель.
+            val seconds = if (power?.isInteractive != false) settings.liveRefreshSeconds else settings.idleRefreshSeconds
+            delay(seconds * 1000L)
 
-            // Отклик — сам, раз в несколько кругов: один запрос-ответ по уже
-            // открытой сессии, без нового соединения. Число на главной и в
-            // уведомлении живое, а не снятое в момент подключения.
-            if (tick % PING_EVERY == 1) started.ping()
+            // Отклик мерим независимо от опроса счётчиков: если человек
+            // снизил частоту обновления ради батареи, проверка не учащается.
+            val pingEvery = settings.pingIntervalSeconds
+            val nowPing = android.os.SystemClock.elapsedRealtime()
+            if (pingEvery > 0 && (lastPingAt == 0L || nowPing - lastPingAt >= pingEvery * 1000L)) {
+                started.ping()
+                lastPingAt = nowPing
+            }
 
             // Держащаяся беда важнее разовой ошибки и показывается вместо неё.
             //
@@ -311,8 +320,11 @@ class MarviaVpnService : VpnService() {
         // а туннель всё это время работает. Новая сессия — новый отсчёт
         // длительности и скорости; счёт по дням живёт дольше, в Traffic.
         if (MarviaState.state.value !is TunnelState.On) trafficHistory = TrafficHistory(this)
+        val received = started.receivedBytes()
+        val sent = started.sentBytes()
+        SessionDetails.sample(received, sent)
         MarviaState.traffic.value = trafficHistory!!.sample(
-            started.receivedBytes() + started.sentBytes(),
+            received + sent,
             countryOf(node),
         )
         val rows = NodeRow.parse(started.nodes())
@@ -378,6 +390,16 @@ class MarviaVpnService : VpnService() {
 
         worker?.cancel()
         worker = null
+        core?.let { started ->
+            // Последний отсчёт мог прийти после предыдущего опроса. Он нужен
+            // и для итогов завершённой сессии, и для суточного расхода.
+            runCatching { started.receivedBytes() to started.sentBytes() }.getOrNull()?.let { (received, sent) ->
+                SessionDetails.sample(received, sent)
+                val node = (MarviaState.state.value as? TunnelState.On)?.node.orEmpty()
+                trafficHistory?.sample(received + sent, countryOf(node))
+            }
+            SessionDetails.finish(this)
+        }
         // Хвост учёта — на диск сейчас: книга пишется раз в минуту, и
         // выключение туннеля не должно терять последние секунды.
         Traffic(this).flush()
@@ -489,11 +511,8 @@ class MarviaVpnService : VpnService() {
     }
 
     /**
-     * mark — знак для уведомления: в цвет темы, на её фоне, кругом.
-     *
-     * Без крупного значка система рисует белый кружок со смазанным силуэтом —
-     * так и было, и уведомление выглядело чужим. Картинка та же, что в шапке
-     * приложения: если своей нет в кэше, берём исходный серый знак.
+     * mark — прозрачный знак для уведомления в цвет темы. Подложка вокруг
+     * него на Samsung рисовалась белым диском и перекрывала сам знак.
      */
     private var markCache: Pair<Int, android.graphics.Bitmap>? = null
 
@@ -507,11 +526,11 @@ class MarviaVpnService : VpnService() {
         val out = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(out)
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG)
-        paint.color = if (t.dark) t.surf else 0xFF15181E.toInt()
-        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+        // Прозрачный фон: залитый круг превращался у Samsung в белую плашку
+        // слева от текста уведомления.
         val tinted = LogoAtlas.peek(this, t.acc) {}
         val logo = tinted ?: LogoAtlas.stock(this)
-        val w = size * 0.6f
+        val w = size * 0.8f
         val h = w * logo.height / logo.width
         canvas.drawBitmap(logo, null, android.graphics.RectF((size - w) / 2, (size - h) / 2, (size + w) / 2, (size + h) / 2), paint)
         if (tinted != null) markCache = t.acc to out
@@ -593,23 +612,12 @@ class MarviaVpnService : VpnService() {
         private const val TAG = "Veil"
         private const val CHANNEL = "veil.tunnel"
         private const val NOTIFICATION_ID = 1
-        // Два круга в секунду были бы дороги для батареи, пять секунд —
-        // слишком редко для скорости в уведомлении: она прыгала бы ступенями.
-        private const val POLL_INTERVAL_MS = 2_000L
-
-        /** Опрос с погашенным экраном. */
-        private const val POLL_IDLE_MS = 10_000L
-
-        /** Отклик — каждый пятый круг, то есть раз в десять секунд. */
-        private const val PING_EVERY = 5
-
         // Адреса внутри туннеля. Наружу они не выходят и ни с чем не спорят:
         // это частные диапазоны, видимые только сетевому стеку телефона.
         private const val ADDRESS_V4 = "10.19.84.2"
         private const val PREFIX_V4 = 32
         private const val ADDRESS_V6 = "fdfe:dcba:9876::2"
         private const val PREFIX_V6 = 126
-        private const val MTU = 1500
 
         /**
          * Частные диапазоны домашней сети — те, что не уходят за роутер.

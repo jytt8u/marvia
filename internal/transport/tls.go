@@ -14,6 +14,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/jytt8u/marvia/internal/netpath"
 	utls "github.com/refraction-networking/utls"
 )
 
@@ -74,7 +75,7 @@ func Dial(ctx context.Context, addr string, cfg ClientConfig) (net.Conn, error) 
 		return nil, fmt.Errorf("не задано имя сервера (SNI)")
 	}
 
-	dialer := &net.Dialer{}
+	dialer := netpath.Dialer()
 	began := time.Now()
 	raw, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {

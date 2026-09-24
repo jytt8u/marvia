@@ -59,7 +59,7 @@ class MoreScreen(
     /** Открыть выбор языка: он общий с первым запуском. */
     private val onLanguage: () -> Unit,
     /** Что-то из этого применяется только на следующем подключении. */
-    private val onRoutesChanged: () -> Unit,
+    private val onRoutesChanged: (Boolean) -> Unit,
     /** Настройка ядра, не маршрутов, — тоже со следующего подключения. */
     private val onNextConnect: () -> Unit,
     /** Человек сбросил всё: выключить туннель и начать с чистого листа. */
@@ -107,8 +107,7 @@ class MoreScreen(
         paintModes()
         renderConnection()
         ui.searchBox.background = Paint.rounded(t.surf, minOf(t.r, 12), dp)
-        ui.presetChip.background = Paint.rounded(t.surf2, minOf(t.r, 12), dp)
-        ui.presetChip.setTextColor(t.dim)
+        ui.appList.background = Paint.rounded(t.surf, t.r, dp)
         ui.appsSpinner.indeterminateTintList = ColorStateList.valueOf(t.acc)
         if (section == Section.LOGS) {
             renderLogs()
@@ -117,6 +116,15 @@ class MoreScreen(
     }
 
     fun openLogs() { section = Section.LOGS }
+
+    /** Подсказка внутри экрана вместо системного Toast поверх навигации. */
+    fun showPendingConnectionChange() {
+        ui.pendingConnectionNotice.isVisible = MarviaState.state.value is TunnelState.On
+    }
+
+    fun clearPendingConnectionChange() {
+        ui.pendingConnectionNotice.isVisible = false
+    }
 
     /** back уводит с подэкрана на страницу настроек; false — мы уже на ней. */
     fun back(): Boolean {
@@ -127,6 +135,7 @@ class MoreScreen(
 
     private fun show(next: Section) {
         section = next
+        if (MarviaState.state.value !is TunnelState.On) ui.pendingConnectionNotice.isVisible = false
         ui.sectionConn.isVisible = next == Section.CONN
         ui.sectionApps.isVisible = next == Section.APPS
         ui.sectionLogs.isVisible = next == Section.LOGS
@@ -178,18 +187,19 @@ class MoreScreen(
         }
 
         ui.rowAlwaysOn.setOnClickListener { openAlwaysOn() }
+        ui.rowAdvanced.setOnClickListener { AdvancedVpnSettings.show(host, store, theme, onNextConnect) }
         ui.rowDns.setOnClickListener { chooseDns() }
 
         ui.rowLan.setOnClickListener {
             store.lanOutside = !store.lanOutside
             renderConnection()
-            onRoutesChanged()
+            onRoutesChanged(false)
         }
 
         ui.rowRussian.setOnClickListener {
             store.bypassRussian = !store.bypassRussian
             renderConnection()
-            onRoutesChanged()
+            onRoutesChanged(store.bypassRussian)
         }
 
         // Обе настройки ядро читает при подключении: работающему туннелю
@@ -279,7 +289,7 @@ class MoreScreen(
                 which < choices.size -> {
                     store.dns = choices[which]
                     renderConnection()
-                    onRoutesChanged()
+                    onRoutesChanged(false)
                 }
                 which == labels.lastIndex -> askDns(custom.orEmpty())
             }
@@ -312,7 +322,7 @@ class MoreScreen(
                 Store.DnsCheck.OK -> {
                     store.dns = address
                     renderConnection()
-                    onRoutesChanged()
+                    onRoutesChanged(false)
                     true
                 }
                 Store.DnsCheck.LOCAL -> {
@@ -404,20 +414,6 @@ class MoreScreen(
         ui.modeInclude.setOnClickListener { setMode(Store.BYPASS_INCLUDE) }
         ui.modeOff.setOnClickListener { setMode(Store.BYPASS_OFF) }
 
-        // Набор одной кнопкой: отмечает госуслуги и банки из тех, что стоят.
-        // Только добавляет — снимать чужие отметки за человека нельзя.
-        ui.presetChip.setOnClickListener {
-            val chosen = store.bypassed.toMutableSet()
-            val installed = apps.all.map { it.pkg }.toSet()
-            val added = Bypass.PRESET.filter { it in installed && chosen.add(it) }
-            if (added.isEmpty()) {
-                Toast.makeText(host, R.string.apps_preset_none, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            store.bypassed = chosen
-            apps.notifyDataSetChanged()
-            afterAppsChanged()
-        }
     }
 
     private fun setMode(mode: String) {
@@ -432,7 +428,7 @@ class MoreScreen(
         paintModes()
         ui.moreSub.text = appsSummary()
         ui.appsSummary.text = appsSummary()
-        onRoutesChanged()
+        onRoutesChanged(false)
     }
 
     private fun paintModes() {
@@ -448,7 +444,6 @@ class MoreScreen(
                 else -> R.string.apps_note_exclude
             },
         )
-        ui.presetChip.isVisible = mode != Store.BYPASS_OFF
     }
 
     /**
@@ -528,12 +523,14 @@ class MoreScreen(
 
             b.appName.text = entry.label
             b.appPackage.text = entry.pkg
-            b.appIcon.setImageDrawable(host.packageManager.defaultActivityIcon)
             b.appIcon.tag = entry.pkg
-            host.lifecycleScope.launch {
+            val cachedIcon = iconCache.get(entry.pkg)
+            b.appIcon.setImageDrawable(cachedIcon ?: host.packageManager.defaultActivityIcon)
+            if (cachedIcon == null) host.lifecycleScope.launch {
                 val icon = withContext(Dispatchers.IO) {
-                    iconCache.get(entry.pkg) ?: runCatching { host.packageManager.getApplicationIcon(entry.pkg) }.getOrNull()?.also { iconCache.put(entry.pkg, it) }
+                    runCatching { host.packageManager.getApplicationIcon(entry.pkg) }.getOrNull()
                 }
+                if (icon != null) iconCache.put(entry.pkg, icon)
                 if (b.appIcon.tag == entry.pkg && icon != null) b.appIcon.setImageDrawable(icon)
             }
 

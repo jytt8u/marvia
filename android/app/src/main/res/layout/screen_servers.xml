@@ -77,7 +77,7 @@
             android:clickable="true"
             android:focusable="true"
             android:tag="btn"
-            android:contentDescription="@string/servers_add">
+            android:contentDescription="@string/servers_add_key">
 
             <ImageView
                 android:layout_width="22dp"

@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/jytt8u/marvia/internal/netpath"
 	"net"
 	"net/http"
 	"net/url"
@@ -260,7 +261,7 @@ func DialWS(ctx context.Context, addr string, cfg WSDialConfig) (net.Conn, error
 
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
-			var d net.Dialer
+			d := netpath.Dialer()
 			return d.DialContext(ctx, network, addr)
 		},
 		DialTLSContext: func(ctx context.Context, _, _ string) (net.Conn, error) {

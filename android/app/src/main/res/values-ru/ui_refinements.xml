@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connect_add_key_in_servers">Добавьте ключ во вкладке «Серверы»</string>
+    <string name="servers_add_key">Добавить ключ</string>
+    <string name="vpn_advanced_title">Дополнительно</string>
+    <string name="vpn_advanced_sub">Параметры сети и обновления показателей</string>
+</resources>

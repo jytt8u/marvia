@@ -63,6 +63,12 @@
         </LinearLayout>
     </LinearLayout>
 
+    <TextView android:id="@+id/pendingConnectionNotice"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:paddingHorizontal="22dp" android:paddingBottom="12dp"
+        android:text="@string/bypass_restart" android:textSize="12sp" android:tag="dim"
+        android:visibility="gone" android:accessibilityLiveRegion="polite" />
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -128,6 +134,17 @@
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
                     <TextView style="@style/VeilRowTitle" android:text="@string/settings_always_on" />
                     <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:text="@string/settings_always_on_sub" />
+                </LinearLayout>
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="8dp" android:contentDescription="@null" android:src="@drawable/ic_chevron_right" android:tag="icon:dim" />
+            </LinearLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:tag="line" />
+            <LinearLayout android:id="@+id/rowAdvanced" style="@style/VeilRow">
+                <FrameLayout android:layout_width="34dp" android:layout_height="34dp" android:layout_marginEnd="12dp" android:tag="icon.box">
+                    <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/ic_nav_more" android:tag="icon:acc" />
+                </FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/VeilRowTitle" android:text="@string/vpn_advanced_title" />
+                    <TextView style="@style/VeilRowSub" android:layout_marginTop="2dp" android:text="@string/vpn_advanced_sub" />
                 </LinearLayout>
                 <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="8dp" android:contentDescription="@null" android:src="@drawable/ic_chevron_right" android:tag="icon:dim" />
             </LinearLayout>
@@ -289,20 +306,11 @@
                 android:orientation="horizontal"
                 android:paddingBottom="10dp">
 
-                <LinearLayout android:id="@+id/searchBox" android:layout_width="0dp" android:layout_height="40dp" android:layout_weight="1" android:layout_marginEnd="8dp" android:gravity="center_vertical" android:paddingHorizontal="12dp">
+                <LinearLayout android:id="@+id/searchBox" android:layout_width="match_parent" android:layout_height="44dp" android:gravity="center_vertical" android:paddingHorizontal="12dp">
                     <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginEnd="8dp" android:contentDescription="@null" android:src="@drawable/ic_search" android:tag="icon:dim" />
                     <EditText android:id="@+id/appSearch" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@null" android:hint="@string/apps_search" android:imeOptions="actionSearch" android:importantForAutofill="no" android:inputType="text" android:singleLine="true" android:tag="fg" android:textSize="13sp" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/presetChip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="10dp"
-                    android:tag="chip"
-                    android:text="@string/bypass_preset"
-                    android:textSize="12sp" />
             </LinearLayout>
 
             <!-- Пока список читается — крупное кольцо по центру и подпись под ним.
@@ -338,7 +346,12 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:clipToPadding="false"
-                android:paddingBottom="18dp" />
+                android:fadingEdgeLength="16dp"
+                android:requiresFadingEdge="vertical"
+                android:overScrollMode="never"
+                android:scrollbars="vertical"
+                android:layout_marginBottom="12dp"
+                android:paddingVertical="8dp" />
         </LinearLayout>
 
         <!-- ═══════════════════════════════════════ Логи -->

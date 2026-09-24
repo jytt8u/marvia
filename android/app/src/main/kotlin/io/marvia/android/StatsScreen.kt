@@ -70,6 +70,7 @@ class StatsScreen(
         val days = traffic.lastDays(count)
         val values = days.map { it.bytes }
         val total = values.sum()
+        val observed = traffic.observedDays(count)
         val peak = values.maxOrNull() ?: 0L
         val peakBack = if (peak > 0) values.size - 1 - values.indexOf(peak) else -1
 
@@ -84,11 +85,11 @@ class StatsScreen(
         ui.rangeDial.show(values)
         ui.dialLabel.setText(if (week) R.string.stats_dial_week else R.string.stats_dial_month)
         ui.dialTotal.text = Format.size(host, total)
-        ui.dialPerDay.text = host.getString(R.string.stats_per_day, Format.size(host, total / count))
+        ui.dialPerDay.text = host.getString(R.string.stats_observed_average, Format.size(host, total / observed.coerceAtLeast(1)))
 
         ui.factPeak.text = Format.size(host, peak)
         ui.factPeakWhen.text = host.getString(R.string.stats_peak, ago(peakBack))
-        ui.factDays.text = count.toString()
+        ui.factDays.text = observed.toString()
         paintFacts(t)
 
         ui.trendTitle.setText(if (week) R.string.stats_range_title_week else R.string.stats_range_title_month)
