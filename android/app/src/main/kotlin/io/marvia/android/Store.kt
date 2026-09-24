@@ -202,6 +202,26 @@ class Store(context: Context) {
             prefs.edit().putBoolean(KEY_IPV6, value).apply()
         }
 
+    /** MTU интерфейса Android: уменьшение помогает сетям, где крупные пакеты теряются. */
+    var vpnMtu: Int
+        get() = prefs.getInt(KEY_VPN_MTU, 1500).takeIf { it in MTU_CHOICES } ?: 1500
+        set(value) { prefs.edit().putInt(KEY_VPN_MTU, value.takeIf { it in MTU_CHOICES } ?: 1500).apply() }
+
+    /** Как часто обновлять скорость и счётчики при открытом экране. */
+    var liveRefreshSeconds: Int
+        get() = prefs.getInt(KEY_LIVE_REFRESH, 2).takeIf { it in LIVE_REFRESH_CHOICES } ?: 2
+        set(value) { prefs.edit().putInt(KEY_LIVE_REFRESH, value.takeIf { it in LIVE_REFRESH_CHOICES } ?: 2).apply() }
+
+    /** С погашенным экраном счётчики нужны значительно реже. */
+    var idleRefreshSeconds: Int
+        get() = prefs.getInt(KEY_IDLE_REFRESH, 30).takeIf { it in IDLE_REFRESH_CHOICES } ?: 30
+        set(value) { prefs.edit().putInt(KEY_IDLE_REFRESH, value.takeIf { it in IDLE_REFRESH_CHOICES } ?: 30).apply() }
+
+    /** Интервал фоновой проверки отклика; ноль отключает только повторный замер. */
+    var pingIntervalSeconds: Int
+        get() = prefs.getInt(KEY_PING_INTERVAL, 30).takeIf { it in PING_INTERVAL_CHOICES } ?: 30
+        set(value) { prefs.edit().putInt(KEY_PING_INTERVAL, value.takeIf { it in PING_INTERVAL_CHOICES } ?: 30).apply() }
+
     /**
      * tunnelSettings — настройки туннеля для ядра (Mobile.start и
      * Mobile.measureNodes), одной строкой JSON. Замер нод получает те же:
@@ -566,6 +586,10 @@ class Store(context: Context) {
          * checkDns.
          */
         val DNS_CHOICES = listOf("1.1.1.1", "8.8.8.8", "9.9.9.9", "94.140.14.14")
+        val MTU_CHOICES = listOf(1280, 1400, 1500)
+        val LIVE_REFRESH_CHOICES = listOf(2, 5, 10)
+        val IDLE_REFRESH_CHOICES = listOf(10, 30, 60)
+        val PING_INTERVAL_CHOICES = listOf(0, 10, 30, 60)
 
         /**
          * checkDns — годится ли адрес в свои резолверы.
@@ -646,6 +670,10 @@ class Store(context: Context) {
         private const val KEY_DNS = "dns"
         private const val KEY_FRAGMENT = "fragment"
         private const val KEY_IPV6 = "ipv6"
+        private const val KEY_VPN_MTU = "vpn_mtu"
+        private const val KEY_LIVE_REFRESH = "live_refresh_seconds"
+        private const val KEY_IDLE_REFRESH = "idle_refresh_seconds"
+        private const val KEY_PING_INTERVAL = "ping_interval_seconds"
         private const val KEY_LAN_OUTSIDE = "lan_outside"
         private const val KEY_BYPASS_RU = "bypass_russian"
         private const val KEY_BYPASS_ASKED = "bypass_asked"

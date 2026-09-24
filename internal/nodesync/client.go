@@ -56,6 +56,10 @@ type Client struct {
 	// Отчёт тогда уходит в прежнем виде, а через полчаса пробуем снова —
 	// панель могли за это время обновить.
 	quietUntil time.Time
+
+	snapshotPath  string
+	snapshotUsage map[string]users.Usage
+	snapshotErr   error
 }
 
 // buildRetry — через сколько снова сообщать сборку панели, которая её не
@@ -91,6 +95,8 @@ func (c *Client) WithBuild(version, arch string) *Client {
 // нажатием — нода обязана дожить до этого нажатия.
 var ErrNodeDisabled = errors.New("нода выключена в панели")
 
+var ErrNodeUnauthorized = errors.New("панель отозвала токен ноды")
+
 // FetchUsers забирает список пользователей для этой ноды.
 func (c *Client) FetchUsers(ctx context.Context) ([]users.User, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/api/v1/node/users", nil)
@@ -104,6 +110,10 @@ func (c *Client) FetchUsers(ctx context.Context) ([]users.User, error) {
 		return nil, fmt.Errorf("запрос списка: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		c.forgetSnapshot()
+		return nil, ErrNodeUnauthorized
+	}
 
 	// Отключённую ноду отличаем от всего остального отдельной ошибкой.
 	//
@@ -121,6 +131,7 @@ func (c *Client) FetchUsers(ctx context.Context) ([]users.User, error) {
 	if resp.StatusCode == http.StatusForbidden {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		if panelSaysDisabled(raw) {
+			c.forgetSnapshot()
 			return nil, ErrNodeDisabled
 		}
 		return nil, fmt.Errorf("панель ответила %s", resp.Status)
@@ -137,6 +148,14 @@ func (c *Client) FetchUsers(ctx context.Context) ([]users.User, error) {
 		return nil, fmt.Errorf("разбор списка: %w", err)
 	}
 	c.upgradeTo = body.UpgradeTo
+	if _, err := users.NewRegistry(body.Users); err != nil {
+		return nil, fmt.Errorf("неверный список доступов: %w", err)
+	}
+	if c.snapshotPath != "" {
+		now := time.Now()
+		c.snapshotErr = c.saveSnapshot(body.Users, now)
+		body.Users = lease(body.Users, now.Add(OfflineTTL))
+	}
 	return body.Users, nil
 }
 
@@ -206,6 +225,10 @@ func (c *Client) postUsage(ctx context.Context, body map[string]any) error {
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if resp.StatusCode == http.StatusUnauthorized {
+		c.forgetSnapshot()
+		return ErrNodeUnauthorized
+	}
 
 	// Тот же 403, что и у FetchUsers: выключенная нода получает его и здесь.
 	// Отдаём ту же ErrNodeDisabled, чтобы цикл синхронизации распознал отказ
@@ -214,6 +237,7 @@ func (c *Client) postUsage(ctx context.Context, body map[string]any) error {
 	// (WAF) телом не подтверждается и остаётся обычной ошибкой.
 	if resp.StatusCode == http.StatusForbidden {
 		if panelSaysDisabled(raw) {
+			c.forgetSnapshot()
 			return ErrNodeDisabled
 		}
 		return fmt.Errorf("панель ответила %s", resp.Status)
@@ -324,11 +348,18 @@ func (c *Client) Run(ctx context.Context, registry *users.Registry, interval tim
 
 	sync := func() {
 		report, presence := gather(registry)
+		c.snapshotUsage = report
 		usageErr := c.ReportUsage(ctx, report, presence)
 
 		list, err := c.FetchUsers(ctx)
+		// Явный отзыв из ответа на отчёт важнее временной ошибки запроса
+		// списка. Иначе отозванная нода могла бы доработать по снимку.
+		if errors.Is(usageErr, ErrNodeDisabled) || errors.Is(usageErr, ErrNodeUnauthorized) {
+			err = usageErr
+			c.forgetSnapshot()
+		}
 		switch {
-		case errors.Is(err, ErrNodeDisabled):
+		case errors.Is(err, ErrNodeDisabled), errors.Is(err, ErrNodeUnauthorized):
 			// Ноду выключили в середине жизни — ведём себя ровно как при старте
 			// с выключенной нодой: очищаем реестр (никого не пускаем), но живём
 			// и продолжаем спрашивать панель. Включат обратно — сами возобновим
@@ -349,6 +380,9 @@ func (c *Client) Run(ctx context.Context, registry *users.Registry, interval tim
 			}
 			events.fail(err)
 			return
+		}
+		if c.snapshotErr != nil {
+			events.fail(fmt.Errorf("снимок доступа: %w", c.snapshotErr))
 		}
 
 		// Список получен — нода включена. Если её только что включили обратно,

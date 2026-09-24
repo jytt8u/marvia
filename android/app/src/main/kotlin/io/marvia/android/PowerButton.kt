@@ -16,7 +16,6 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.graphics.ColorUtils
-import kotlin.math.sin
 
 /**
  * PowerButton — кнопка питания из макета: объёмный диск и дуга вокруг.
@@ -27,17 +26,9 @@ import kotlin.math.sin
  * референсе. Диск при этом остаётся диском: у него свой объём и свои варианты
  * из темы (обычный, сплошной, стекло, без диска).
  *
- * Состояния не сменяются скачком: дуга дорастает из отрезка в три четверти,
- * свечение проявляется, — кнопка перетекает, а не переключается. Пока
- * подключено, свечение дышит. Всё это — из макета, где кнопка живая.
- *
- * Свечение рисуется здесь же, внутри вьюхи, а не отдельным слоем за ней:
- * тогда оно есть и на главной, и в предпросмотре темы, и выглядит одинаково.
- * Ради него у дуги запас до края вьюхи.
- *
- * Градиенты собираются один раз на размер и тему, а не на каждый кадр: во
- * время вращения и дыхания кадров шестьдесят в секунду, и шесть новых
- * шейдеров на каждый — это мусор для сборщика и рывки на слабом телефоне.
+ * Дуга плавно меняет состояние. При подключении она вращается, затем
+ * останавливается: постоянная анимация на главной расходовала батарею.
+ * Подсветка остаётся узкой линией вокруг дуги, без цветного пятна на фоне.
  */
 class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : AppCompatButton(context, attrs) {
     enum class State { OFF, CONNECTING, ON, FAILED }
@@ -48,6 +39,11 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
         set(value) {
             if (field == value) return
             field = value
+            // Цвет дуги раньше оставался от предыдущей темы до смены состояния.
+            morpher?.cancel()
+            from = arc(state)
+            to = from
+            mix = 1f
             dirty = true
             invalidate()
         }
@@ -60,7 +56,6 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
             to = arc(value)
             morph()
             spin(value == State.CONNECTING)
-            breathe(value == State.ON)
             invalidate()
         }
 
@@ -89,9 +84,12 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private var turn = 0f
     private var spinner: ValueAnimator? = null
 
-    /** Дыхание свечения: 0..1 по синусу, живёт только пока подключено. */
-    private var breath = 1f
-    private var breather: ValueAnimator? = null
+    /** Предпросмотр не запускает анимацию подключения или переходов. */
+    var motionEnabled: Boolean = true
+        set(value) {
+            field = value
+            if (!value) stopAnimations() else if (state == State.CONNECTING) spin(true)
+        }
 
     /** Волна от нажатия: 0 — не идёт, иначе доля пути от диска к краю. */
     private var pulse = 0f
@@ -107,7 +105,6 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private var reach = 0f
     private val box = RectF()
     private val iconBox = RectF()
-    private var glowShader: Shader? = null
     private var shadowShader: Shader? = null
     private var discShader: Shader? = null
     private var innerShader: Shader? = null
@@ -128,7 +125,7 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private fun animationsAllowed(): Boolean {
         // Уважаем системный запрет на анимации — тогда всё просто стоит.
         val scale = android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
-        return scale != 0f
+        return motionEnabled && scale != 0f && isAttachedToWindow && isShown && windowVisibility == View.VISIBLE
     }
 
     private fun morph() {
@@ -158,50 +155,38 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
         }
     }
 
-    private fun breathe(on: Boolean) {
-        breather?.cancel()
-        breather = null
-        breath = 1f
-        if (!on || !animationsAllowed() || theme.glowA <= 0) return
-        // Вдох-выдох за 3,6 с, как у ореола в макете; амплитуда небольшая,
-        // чтобы это читалось как жизнь, а не как мигание.
-        breather = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 3600
-            repeatCount = ValueAnimator.INFINITE
-            interpolator = LinearInterpolator()
-            addUpdateListener {
-                breath = 0.82f + 0.18f * ((sin((it.animatedValue as Float) * Math.PI * 2).toFloat() + 1f) / 2f)
-                invalidate()
-            }
-            start()
-        }
+    private fun stopAnimations() {
+        spinner?.cancel(); spinner = null
+        morpher?.cancel(); morpher = null
+        pulser?.cancel(); pulser = null
+        pulse = 0f
+        mix = 1f
     }
 
     override fun onDetachedFromWindow() {
+        stopAnimations()
         super.onDetachedFromWindow()
-        spinner?.cancel(); spinner = null
-        breather?.cancel(); breather = null
-        morpher?.cancel(); morpher = null
-        pulser?.cancel(); pulser = null
-        mix = 1f
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         if (state == State.CONNECTING) spin(true)
-        if (state == State.ON) breathe(true)
     }
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
-        // Экран не виден — не жжём кадры дыханием и вращением.
+        // Экран не виден — не жжём кадры вращением.
         if (isShown) {
             if (state == State.CONNECTING && spinner == null) spin(true)
-            if (state == State.ON && breather == null) breathe(true)
         } else {
-            spinner?.cancel(); spinner = null
-            breather?.cancel(); breather = null
+            stopAnimations()
         }
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (visibility != View.VISIBLE) stopAnimations()
+        else if (state == State.CONNECTING && spinner == null) spin(true)
     }
 
     private fun rebuild() {
@@ -219,15 +204,6 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val solid = theme.btn == "solid"
         val white = 0xFFFFFFFF.toInt()
 
-        // Свечение — акцент от края диска наружу в ничто; сила — через alpha кисти.
-        val glowAlpha = (theme.glowA * 210).toInt().coerceIn(0, 255)
-        glowShader = if (glowAlpha > 0 && theme.btn != "bare") RadialGradient(
-            cx, cy, reach,
-            intArrayOf((glowAlpha shl 24) or (theme.acc and 0xFFFFFF), theme.acc and 0xFFFFFF),
-            floatArrayOf(radius / reach * 0.9f, 1f),
-            Shader.TileMode.CLAMP,
-        ) else null
-
         // Тень под диском: макет кладёт её вниз на 24px с размытием 48. На
         // светлой теме — вполсилы: чёрная тень на светлом фоне читалась грязью.
         shadowShader = RadialGradient(
@@ -241,13 +217,13 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val top = if (solid) ColorUtils.blendARGB(theme.acc, white, 0.28f) else ColorUtils.blendARGB(theme.surf2, white, if (theme.dark) 0.16f else 0.45f)
         val mid = if (solid) theme.acc else ColorUtils.blendARGB(theme.surf2, theme.acc, if (theme.dark) .19f else .08f)
         val low = if (solid) ColorUtils.blendARGB(theme.acc, 0xFF000000.toInt(), 0.18f) else ColorUtils.blendARGB(theme.surf, theme.bg, .55f)
-        discShader = RadialGradient(
+        discShader = if (theme.btn == "ring") null else RadialGradient(
             cx - radius * .32f, cy - radius * .58f, radius * 1.85f,
             intArrayOf(top, mid, low), floatArrayOf(0f, 0.52f, 1f), Shader.TileMode.CLAMP,
         )
 
         // Подсветка изнутри снизу: акцент отражается в диске; сила — alpha кисти.
-        innerShader = RadialGradient(
+        innerShader = if (theme.btn == "ring") null else RadialGradient(
             cx + radius * .4f, cy + radius, radius * 1.4f,
             intArrayOf(ColorUtils.setAlphaComponent(theme.acc, 80), ColorUtils.setAlphaComponent(theme.acc, 0)), null, Shader.TileMode.CLAMP,
         )
@@ -288,22 +264,20 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val sweepDeg = lerp(from.sweep, target.sweep, t)
         val ring = lerp(from.ring, target.ring, t)
         val lit = lerp(from.glow, target.glow, t)
-        val glow = lit * breath
+        val glow = lit
         val color = ColorUtils.blendARGB(from.color, target.color, t)
 
         brush.style = Paint.Style.FILL
         brush.shader = null
         brush.alpha = 255
-        // Свечение — только когда есть чему светиться: «контур» из макета —
-        // прозрачный круг с одной линией, заливка под ним превращала бы его
-        // в диск, которого человек не выбирал.
-        val gs = glowShader
-        if (gs != null && glow > 0.01f) {
-            brush.shader = gs
-            brush.alpha = (glow * 255).toInt().coerceIn(0, 255)
-            canvas.drawCircle(cx, cy, reach, brush)
-            brush.shader = null
-            brush.alpha = 255
+        // Мягкий обод вместо радиальной заливки: OLED сохраняет чёрный фон,
+        // а выбор силы свечения в теме по-прежнему меняет вид кнопки.
+        if (theme.glowA > 0 && glow > 0.01f) {
+            brush.style = Paint.Style.STROKE
+            brush.strokeWidth = (2f + theme.glowA.toFloat() * 2f) * dp
+            brush.color = ColorUtils.setAlphaComponent(theme.acc, (theme.glowA * glow * 72).toInt().coerceIn(0, 255))
+            canvas.drawCircle(cx, cy, arcR + 5 * dp, brush)
+            brush.style = Paint.Style.FILL
         }
 
         if (!bare) {
@@ -317,6 +291,12 @@ class PowerButton @JvmOverloads constructor(context: Context, attrs: AttributeSe
             "bare" -> Unit
             "glass" -> {
                 brush.color = theme.accSoft
+                canvas.drawCircle(cx, cy, radius, brush)
+            }
+            "ring" -> {
+                // Ровный диск без цветного отражения: в OLED радиальная
+                // заливка выглядела пятном даже при выключенном ореоле.
+                brush.color = theme.surf
                 canvas.drawCircle(cx, cy, radius, brush)
             }
             else -> {

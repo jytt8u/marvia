@@ -20,6 +20,18 @@ permissions:
   contents: read
 
 jobs:
+  windows:
+    name: Windows — сокеты и клиент
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Проверить сокеты и транспорты Windows
+        run: go test ./internal/netpath ./internal/foreign ./internal/transport ./internal/wintun ./cmd/marvia-windows
+
   check:
     name: Тесты и сборка
     runs-on: ubuntu-latest

@@ -86,6 +86,12 @@ class Traffic(context: Context) {
         }
     }
 
+    /** Нулевые дни после первого учёта входят в среднее, дни до установки — нет. */
+    fun observedDays(count: Int, at: Long = System.currentTimeMillis()): Int =
+        observedDays(days().keys, dayOf(at), count)
+
+    fun beginSession() = synchronized(Companion) { book.seen = 0 }
+
     /**
      * week — семь строк по 24 часа, от понедельника к воскресенью.
      *
@@ -136,6 +142,7 @@ class Traffic(context: Context) {
             hourKey = key
             if (delta <= 0) return
             days.getOrPut(day) { LongArray(24) }[hour] += delta
+            days.keys.removeAll { it < day - KEEP_DAYS + 1 }
             val title = place.trim()
             if (title.isNotEmpty()) places[title] = (places[title] ?: 0) + delta
         }
@@ -171,6 +178,11 @@ class Traffic(context: Context) {
 
         /** Сколько суток помним. Тридцать — столько же, сколько показываем. */
         const val KEEP_DAYS = 30
+
+        fun observedDays(recorded: Set<Long>, today: Long, count: Int): Int {
+            val first = recorded.filter { it <= today }.minOrNull() ?: return 0
+            return (today - first + 1).coerceIn(1, count.toLong()).toInt()
+        }
 
         /** Сколько стран помним: у продавца их единицы, а список не должен расти вечно. */
         private const val KEEP_PLACES = 24

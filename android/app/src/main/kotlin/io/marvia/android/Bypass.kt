@@ -20,32 +20,6 @@ import android.content.pm.PackageManager
  */
 object Bypass {
 
-    /**
-     * Что предлагаем одной кнопкой.
-     *
-     * Список российский и намеренно короткий: госуслуги, крупные банки, почта.
-     * Это не «все банки страны», а то, обо что спотыкаются в первый же день.
-     * Чего нет в телефоне, того в списке и не появится.
-     */
-    val PRESET = listOf(
-        "ru.gosuslugi.pgu",
-        "ru.rt.eq", // Госключ
-        "ru.sberbankmobile",
-        "ru.sberbank.sbbol",
-        "com.idamob.tinkoff.android",
-        "ru.vtb24.mobilebanking.android",
-        "ru.alfabank.mobile.android",
-        "ru.raiffeisennews",
-        "ru.gazprombank.android.mobilebank.app",
-        "com.openbank",
-        "ru.mts.paysdk",
-        "ru.pochta.tracker",
-        "ru.russianpost.android",
-        "ru.mos.polis", // ЕМИАС
-        "ru.nalog.lk",
-        "ru.fss.lk",
-    )
-
     /** Приложение, каким его видит человек. */
     data class Entry(val pkg: String, val label: String)
 

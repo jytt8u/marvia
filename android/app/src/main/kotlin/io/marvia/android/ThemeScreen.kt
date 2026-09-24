@@ -6,6 +6,7 @@ import android.graphics.Outline
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
@@ -96,14 +97,15 @@ class ThemeScreen(
                 false
             }
         }
-        ui.depthSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser) throttled { choose(store.look.copy(depth = (bar.progress + 8) / 100.0)) }
-            }
-            override fun onStartTrackingTouch(bar: SeekBar) = Unit
-            override fun onStopTrackingTouch(bar: SeekBar) {
-                choose(store.look.copy(depth = (bar.progress + 8) / 100.0))
-            }
+        dragPreview(ui.depthSeek, preview = { progress ->
+            val choice = store.look.copy(depth = (progress + 8) / 100.0)
+            val t = Look.theme(choice)
+            paintDepthNote(choice.depth)
+            stage?.background = photoBackdrop(t) ?: Backdrop(t)
+            ui.lamp.background = Backdrop(Look.theme(choice.copy(kind = if (choice.kind == "flat") "linear" else choice.kind)), Store.PATTERN_NONE)
+        }, commit = { progress ->
+            val depth = (progress + 8) / 100.0
+            if (store.look.depth != depth) choose(store.look.copy(depth = depth))
         })
 
         ui.bgPick.setOnClickListener { onPickBackdrop() }
@@ -112,21 +114,12 @@ class ThemeScreen(
             store.clearBackdrop()
             onChanged()
         }
-        // Затемнение перекрашивает приложение на каждом шаге ползунка: пелена
-        // рисуется поверх фото, и человек должен видеть, что получает, а не
-        // угадывать по числу.
-        ui.bgDimSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
-                if (!fromUser) return
-                ui.bgDimNote.text = "$progress%"
-                throttled {
-                    store.backdropDim = bar.progress
-                    onChanged()
-                }
-            }
-            override fun onStartTrackingTouch(bar: SeekBar) = Unit
-            override fun onStopTrackingTouch(bar: SeekBar) {
-                store.backdropDim = bar.progress
+        dragPreview(ui.bgDimSeek, preview = { progress ->
+            ui.bgDimNote.text = "$progress%"
+            stage?.background = photoBackdrop(Look.theme(store.look), progress)
+        }, commit = { progress ->
+            if (store.backdropDim != progress) {
+                store.backdropDim = progress
                 onChanged()
             }
         })
@@ -210,34 +203,51 @@ class ThemeScreen(
     private var zoomAnim: android.animation.ValueAnimator? = null
 
     /**
-     * throttled — не чаще раза в 80 мс, последнее значение — обязательно.
-     *
-     * Каждый шаг ползунка перекрашивал всё приложение — обходил дерево,
-     * пересобирал фоны и предпросмотр. Палец даёт шаг на каждый кадр, и
-     * при быстром движении экран не успевал: ползунок заметно тормозил.
-     * Восемьдесят миллисекунд глаз не замечает, а работы вдесятеро меньше.
+     * Пока палец на ручке, меняется только свет в предпросмотре. Полная
+     * пересборка карточек и запись настроек происходят один раз при отпускании.
+     * Родительская прокрутка не перехватывает горизонтальное перетаскивание.
      */
-    private var pending: (() -> Unit)? = null
-    private var lastRun = 0L
-
-    private fun throttled(block: () -> Unit) {
-        val now = android.os.SystemClock.uptimeMillis()
-        val wait = 80 - (now - lastRun)
-        if (wait <= 0 && pending == null) {
-            lastRun = now
-            block()
-            return
+    private fun dragPreview(bar: SeekBar, preview: (Int) -> Unit, commit: (Int) -> Unit) {
+        var tracking = false
+        var queued = false
+        var lastFrame = 0L
+        val redraw = Runnable {
+            queued = false
+            lastFrame = android.os.SystemClock.uptimeMillis()
+            preview(bar.progress)
         }
-        val first = pending == null
-        pending = block
-        if (first) {
-            ui.root.postDelayed({
-                val run = pending ?: return@postDelayed
-                pending = null
-                lastRun = android.os.SystemClock.uptimeMillis()
-                run()
-            }, wait.coerceAtLeast(16))
+        bar.minimumHeight = (48 * dp).toInt()
+        bar.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> view.parent.requestDisallowInterceptTouchEvent(true)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.parent.requestDisallowInterceptTouchEvent(false)
+            }
+            false
         }
+        bar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onStartTrackingTouch(seek: SeekBar) { tracking = true }
+            override fun onProgressChanged(seek: SeekBar, progress: Int, fromUser: Boolean) {
+                if (!fromUser) return
+                if (!tracking) { commit(progress); return }
+                if (!queued) {
+                    queued = true
+                    // Большой предпросмотр пересоздаёт градиент при каждом
+                    // изменении. 30 кадров/с достаточно для перетаскивания,
+                    // а освобождённое время остаётся самому ползунку.
+                    val wait = (33L - (android.os.SystemClock.uptimeMillis() - lastFrame)).coerceAtLeast(0L)
+                    bar.postDelayed(redraw, wait)
+                }
+            }
+            override fun onStopTrackingTouch(seek: SeekBar) {
+                tracking = false
+                bar.removeCallbacks(redraw)
+                queued = false
+                // Последний кадр мог быть в очереди. Доводим предпросмотр
+                // до значения под пальцем даже если оно вернулось к исходному.
+                preview(seek.progress)
+                commit(seek.progress)
+            }
+        })
     }
 
     private fun zoomTo(animate: Boolean) {
@@ -521,8 +531,8 @@ class ThemeScreen(
         fun <T : View> id(id: Int): T? = s.findViewById(id)
         when (previewScreen) {
             Screen.MAIN -> {
-                id<PowerButton>(R.id.powerAction)?.apply { theme = t; state = PowerButton.State.ON }
-                id<TextView>(R.id.powerHint)?.setText(R.string.power_hint_stop)
+                id<PowerButton>(R.id.powerAction)?.apply { motionEnabled = false; theme = t; state = PowerButton.State.ON }
+                id<TextView>(R.id.powerHint)?.isVisible = false
                 id<HaloView>(R.id.halo)?.apply { theme = t; lit = true }
                 id<TextView>(R.id.statusText)?.apply { setText(R.string.status_on); setTextColor(if (t.dark) t.fg else t.acc) }
                 id<TextView>(R.id.nodeLine)?.text = host.getString(R.string.theme_preview_country) + " · " + host.getString(R.string.theme_preview_place)
@@ -533,7 +543,7 @@ class ThemeScreen(
                 // Шапка — как настоящая: знак по выбору из «Ещё», имя шрифтом темы.
                 // Иначе вкладка «Ещё» меняла бы то, чего в предпросмотре не видно.
                 val custom = if (store.logo == Store.LOGO_CUSTOM) store.logoBitmap() else null
-                id<View>(R.id.heroName)?.isVisible = true
+                id<View>(R.id.heroName)?.isVisible = tab == Tab.MORE
                 id<View>(R.id.heroMarkButton)?.isVisible = store.logo != Store.LOGO_NONE
                 id<View>(R.id.heroMark)?.isVisible = store.logo == Store.LOGO_MARVIA || (store.logo == Store.LOGO_CUSTOM && custom == null)
                 id<ImageView>(R.id.heroCustom)?.apply {
@@ -828,7 +838,10 @@ class ThemeScreen(
         // Густота тени: ползунок 8…98 — SeekBar считает от нуля, отсюда сдвиг.
         ui.depthSeek.progress = ((choice.depth * 100).toInt() - 8).coerceIn(0, 90)
         tintSeek(ui.depthSeek, t)
-        val d = choice.depth
+        paintDepthNote(choice.depth)
+    }
+
+    private fun paintDepthNote(d: Double) {
         ui.depthNote.text = host.getString(
             when {
                 d <= 0.3 -> R.string.depth_0
@@ -935,7 +948,7 @@ class ThemeScreen(
     private var photo: android.graphics.Bitmap? = null
     private var photoStamp = 0L
 
-    private fun photoBackdrop(t: Theme): android.graphics.drawable.Drawable? {
+    private fun photoBackdrop(t: Theme, dim: Int = store.backdropDim): android.graphics.drawable.Drawable? {
         val stamp = store.backdropStamp()
         if (stamp == 0L) {
             photo = null
@@ -947,7 +960,7 @@ class ThemeScreen(
             photoStamp = stamp
         }
         val bmp = photo ?: return null
-        val a = store.backdropDim.coerceIn(0, 95) * 255 / 100
+        val a = dim.coerceIn(0, 95) * 255 / 100
         return BackdropImage(bmp, store.backdropFit, t.bg, (a shl 24) or (t.bg and 0x00FFFFFF), store.backdropFrame)
     }
 

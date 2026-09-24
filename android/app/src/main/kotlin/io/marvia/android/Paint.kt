@@ -99,7 +99,12 @@ object Paint {
     }
 
     private fun paint(v: View, t: Theme) {
-        if (v.isClickable && v !is android.widget.EditText && v !is MaterialSwitch && v !is PowerButton) {
+        if (v.isClickable && inNavbar(v)) {
+            // На нижней панели уже есть компактная отметка вкладки. Общая
+            // рябь разрасталась на всю ячейку и закрывала соседние значки.
+            v.foreground = null
+            v.stateListAnimator = null
+        } else if (v.isClickable && v !is android.widget.EditText && v !is MaterialSwitch && v !is PowerButton) {
             v.foreground = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(t.accSoft), null, rounded(android.graphics.Color.WHITE, t.r, v.resources.displayMetrics.density))
             // Нажатие чуть вжимает кнопку, как в макете (scale .96): без этого
             // экран отвечает только рябью, и кажется, что ничего не произошло.
@@ -150,6 +155,15 @@ object Paint {
             val tag = p.tag as? String
             if (tag != null && tag.split(' ').any { it == CARD || it == CARD_PAD || it == NAVBAR || it == CHIP || it == BTN }) return true
             p = p.parent
+        }
+        return false
+    }
+
+    private fun inNavbar(v: View): Boolean {
+        var current: View? = v
+        while (current != null) {
+            if (current.tag == NAVBAR) return true
+            current = current.parent as? View
         }
         return false
     }

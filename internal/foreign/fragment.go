@@ -38,7 +38,7 @@ type fragmentDialer struct {
 }
 
 func (d fragmentDialer) Dial(ctx context.Context, src xnet.Address, dest xnet.Destination, sockopt *internet.SocketConfig) (xnet.Conn, error) {
-	c, err := d.SystemDialer.Dial(ctx, src, dest, sockopt)
+	c, err := dialSystem(d.SystemDialer, ctx, src, dest, sockopt)
 	if err != nil || dest.Network != xnet.Network_TCP || !fragmentFor(ctx) {
 		return c, err
 	}

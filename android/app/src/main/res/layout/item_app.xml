@@ -3,13 +3,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    android:background="@drawable/bg_card"
+    android:minHeight="72dp"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingHorizontal="14dp"
-    android:paddingVertical="10dp"
-    android:tag="card">
+    android:paddingVertical="12dp">
 
     <ImageView android:id="@+id/appIcon" android:layout_width="40dp" android:layout_height="40dp" android:scaleType="fitCenter" android:contentDescription="@null" />
 
@@ -22,12 +20,18 @@
 
         <TextView
             android:id="@+id/appName"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:tag="fg"
             style="@style/VeilRowTitle" />
 
         <TextView
             android:id="@+id/appPackage"
             style="@style/VeilRowSub"
             android:fontFamily="monospace"
+            android:maxLines="1"
+            android:ellipsize="middle"
+            android:tag="dim"
             android:textSize="10.5sp" />
     </LinearLayout>
 

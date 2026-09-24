@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.IpPrefix
 import android.net.InetAddresses
 import android.os.Build
+import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import io.marvia.mobile.Mobile
 import java.io.File
@@ -27,6 +28,9 @@ object RuRoutes {
 
     /** Как часто спрашиваем панель. Список меняется раз в месяц, чаще незачем. */
     private const val MAX_AGE_MS = 7L * 24 * 60 * 60 * 1000
+    private const val RETRY_AFTER_FAILURE_MS = 15L * 60 * 1000
+    private var lastAccountLink = ""
+    private var nextRetryAt = 0L
 
     /**
      * load читает подсети из файла и превращает в то, что понимает система.
@@ -77,10 +81,22 @@ object RuRoutes {
      * Вызывается с выключенным туннелем: качать его через свой же туннель
      * незачем, а до включения панель обычно доступна напрямую.
      */
+    @Synchronized
     fun refresh(context: Context, accountLink: String, force: Boolean = false): Result<Int> {
+        if (accountLink != lastAccountLink) {
+            lastAccountLink = accountLink
+            nextRetryAt = 0
+            lastError = ""
+        }
         val file = File(context.filesDir, FILE)
         if (!force && file.exists() && System.currentTimeMillis() - file.lastModified() < MAX_AGE_MS) {
             return Result.success(file.readLines().size)
+        }
+        // Экран настроек и служба могут попросить список одновременно. После
+        // таймаута новая попытка каждые несколько секунд тратила батарею и
+        // забивала журнал одной и той же ошибкой.
+        if (!force && SystemClock.elapsedRealtime() < nextRetryAt) {
+            return Result.failure(IllegalStateException(lastError))
         }
 
         return try {
@@ -97,9 +113,15 @@ object RuRoutes {
             tmp.writeText(text + "\n")
             tmp.renameTo(file)
             lastError = ""
+            nextRetryAt = 0
             Result.success(count)
         } catch (t: Throwable) {
-            lastError = MarviaVpnService.failureOf(t).detail
+            nextRetryAt = SystemClock.elapsedRealtime() + RETRY_AFTER_FAILURE_MS
+            val detail = MarviaVpnService.failureOf(t).detail
+            lastError = if (detail.contains("deadline exceeded", ignoreCase = true) ||
+                detail.contains("timed out", ignoreCase = true) || detail.contains("timeout", ignoreCase = true)) {
+                context.getString(R.string.routes_retry_later)
+            } else detail
             Journal.add(context.getString(R.string.log_bypass_failed, lastError), Journal.Level.WARN)
             Result.failure(t)
         }

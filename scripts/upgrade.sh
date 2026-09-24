@@ -3,7 +3,7 @@
 #
 # Запускать на сервере, от root:
 #
-#   curl -fsSL https://raw.githubusercontent.com/jytt8u/marvia/main/scripts/upgrade.sh | sh
+#   сначала проверить подпись скрипта по docs/release-0.12.md
 #
 # Установщик панели этого не делает и делать не должен: он отказывается
 # трогать каталог, в котором лежит база с подписчиками, и это верно. Но
@@ -18,7 +18,7 @@
 
 set -eu
 
-REPO=${REPO:-jytt8u/marvia}
+REPO=jytt8u/marvia
 PANEL_DIR=${PANEL_DIR:-/opt/marvia}
 NODE_DIR=${NODE_DIR:-/opt/marvia-node}
 
@@ -29,26 +29,12 @@ die()  { printf '\033[31m%s\033[0m\n' "$1" >&2; exit 1; }
 
 [ "$(id -u)" = 0 ] || die 'нужен root'
 
-# installed_version — версия установленного бинарника, спрошенная не от root,
-# а от имени хозяина его файла или каталога.
-#
-# Каталоги панели и ноды принадлежат marvia: службы пишут туда базу и расход.
-# Значит, и бинарник там может переписать всякий, кто получил права marvia, —
-# например, взломав панель. Запусти такой файл root, и взлом панели стал бы
-# взломом сервера при первом же обновлении, а с кнопкой обновления в панели —
-# по требованию. Поэтому от root здесь запускаются только свежие бинарники из
-# сверенного архива во временном каталоге, а установленные — от имени хозяина.
+# Установленная версия неизвестна: исполнять файл из каталога службы
+# ради информационной строки нельзя, независимо от владельца файла.
 installed_version() {
-	file=$1
-	owner=$(stat -c %U "$file" 2>/dev/null || echo root)
-	[ "$owner" = root ] && owner=$(stat -c %U "$(dirname "$file")" 2>/dev/null || echo root)
-	if [ "$owner" = root ]; then
-		"$file" -version 2>/dev/null || echo '?'
-	elif command -v runuser >/dev/null 2>&1; then
-		runuser -u "$owner" -- "$file" -version 2>/dev/null || echo '?'
-	else
-		echo '?'
-	fi
+	# Ни владелец файла, ни владелец ближайшего каталога не доказывают,
+	# что путь нельзя заменить. Старый бинарник не исполняем вообще.
+	echo '?'
 }
 
 # ─────────────────────────────────────────────── что здесь вообще стоит
@@ -148,7 +134,15 @@ aarch64|arm64) arch=arm64 ;;
 *) die "неизвестная разрядность: $arch" ;;
 esac
 
-base="https://github.com/$REPO/releases/latest/download"
+command -v gh >/dev/null 2>&1 || die 'нужен GitHub CLI с gh attestation verify; установи его из доверенного источника'
+command -v ss >/dev/null 2>&1 || die 'нужен ss из iproute2 для проверки запуска службы'
+tag=${MARVIA_RELEASE_TAG:-}
+if [ -z "$tag" ]; then
+	url=$(curl --proto '=https' --proto-redir '=https' -fsSL --max-time 60 -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest") || die 'не удалось узнать релиз'
+	case "$url" in "https://github.com/$REPO/releases/tag/"*) tag=${url##*/} ;; *) die 'GitHub вернул посторонний адрес релиза' ;; esac
+fi
+printf '%s\n' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' || die 'неверный тег релиза'
+base="https://github.com/$REPO/releases/download/$tag"
 say ''
 say "качаю свежий релиз ($arch)"
 
@@ -160,6 +154,12 @@ curl -fsSL -o "$tmp/$archive" "$base/$archive" \
 	|| die 'не скачался архив релиза'
 curl -fsSL -o "$tmp/SHA256SUMS" "$base/SHA256SUMS" \
 	|| die 'не скачались контрольные суммы'
+curl --proto '=https' --proto-redir '=https' -fsSL --max-time 120 -o "$tmp/SHA256SUMS.sigstore.json" "$base/SHA256SUMS.sigstore.json" \
+	|| die 'не скачалась подпись контрольных сумм'
+gh attestation verify "$tmp/SHA256SUMS" --bundle "$tmp/SHA256SUMS.sigstore.json" \
+	--repo "$REPO" --cert-identity "https://github.com/$REPO/.github/workflows/release.yml@refs/tags/$tag" \
+	--source-ref "refs/tags/$tag" --deny-self-hosted-runners \
+	|| die 'подпись релиза не прошла проверку; ничего не установлено'
 
 # Сверяем до распаковки. Скачанный не тем бинарником сервер — это ровно та
 # беда, ради которой суммы и публикуются.
@@ -201,7 +201,7 @@ swap() {
 
 	say ''
 	if [ "$was" = '?' ]; then
-		say "$name: прежняя версия неизвестна (старый бинарник молчит на -version) → $now"
+		say "$name: прежняя версия не исполнялась для проверки → $now"
 	else
 		say "$name: $was → $now"
 	fi
@@ -212,23 +212,28 @@ swap() {
 		"$after_stop"
 	fi
 
-	# Прежний бинарник держим рядом: если новый не встанет, вернём за секунду.
-	keep="$dir/$name.before-upgrade"
+	# Копия для отката лежит в каталоге root, недоступном службе.
+	keep="$tmp/$name.before-upgrade"
 	cp "$dir/$name" "$keep"
 	install -m 755 "$fresh" "$dir/$name"
 
-	systemctl start "$service"
+	systemctl start "$service" || true
 
 	# Даём подняться. Панель при первом запуске может заказывать сертификат,
 	# нода — синхронно забирать список пользователей; и то и другое небыстро.
 	i=0
-	while [ "$i" -lt 15 ]; do
-		[ "$(systemctl is-active "$service")" = active ] && break
+	ready=0
+	while [ "$i" -lt 60 ]; do
+		pid=$(systemctl show "$service" --property=MainPID --value 2>/dev/null || echo 0)
+		if [ "$pid" -gt 0 ] && [ "$(systemctl is-active "$service")" = active ] && ss -H -ltnp | grep -F "pid=$pid," >/dev/null; then
+			ready=1
+			break
+		fi
 		i=$((i + 1))
 		sleep 1
 	done
 
-	if [ "$(systemctl is-active "$service")" != active ]; then
+	if [ "$ready" != 1 ]; then
 		bad "$service не поднялась на новой версии — возвращаю прежнюю"
 		# Явно останавливаем: служба могла умирать не сразу, а перезапускаться
 		# по кругу, и возвращать файлы под пишущим процессом нельзя.
@@ -368,7 +373,8 @@ refresh_dist() {
 	now=$("$tmp/marvia-panel" -version 2>/dev/null | awk '{print $2}' | sed 's/^v//')
 	for app in marvia-android.apk marvia-windows.exe; do
 		# Не скачалось — оставляем прежнее: старое приложение лучше никакого.
-		if curl -fsSL --max-time 300 -o "$tmp/$app" "$base/$app" 2>/dev/null; then
+		if curl -fsSL --max-time 300 -o "$tmp/$app" "$base/$app" 2>/dev/null &&
+			(cd "$tmp" && grep "[ *]$app\$" SHA256SUMS | sha256sum -c - >/dev/null 2>&1); then
 			install -m 644 "$tmp/$app" "$dist/$app"
 			if [ -n "$now" ]; then
 				printf '%s
@@ -378,7 +384,7 @@ refresh_dist() {
 			fi
 			ok "$app: $now"
 		else
-			bad "$app не скачалось — оставляю прежнее"
+			bad "$app не скачалось или не прошло проверку суммы — оставляю прежнее"
 		fi
 	done
 }

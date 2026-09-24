@@ -62,6 +62,16 @@ class TrafficTest {
     }
 
     @Test
+    fun averageUsesObservedDaysRatherThanAllEmptySlotsInTheChart() {
+        val today = 20_000L
+        assertEquals(1, Traffic.observedDays(setOf(today), today, 30))
+        assertEquals(200L, 200L / Traffic.observedDays(setOf(today), today, 30))
+        assertEquals(3, Traffic.observedDays(setOf(today - 2), today, 30))
+        assertEquals(30, Traffic.observedDays(setOf(today - 50), today, 30))
+        assertEquals(0, Traffic.observedDays(emptySet(), today, 30))
+    }
+
+    @Test
     fun placesSurviveWritingAndReading() {
         val places = mapOf("Финляндия" to 30L, "ОАЭ" to 70L)
         val back = Traffic.decodePlaces(Traffic.encodePlaces(places))

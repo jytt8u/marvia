@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/jytt8u/marvia/internal/netpath"
 	"io"
 	"net"
 	"time"
@@ -122,7 +123,7 @@ func DialReality(ctx context.Context, addr string, cfg RealityDialConfig) (net.C
 		return nil, err
 	}
 
-	dialer := &net.Dialer{}
+	dialer := netpath.Dialer()
 	began := time.Now()
 	raw, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {

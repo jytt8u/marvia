@@ -49,8 +49,8 @@ import kotlinx.coroutines.withContext
  * состояние туннеля живёт в процессе, и переключение вкладок не должно
  * пересобирать экран и терять то, что человек уже видел.
  *
- * Ключ — не вкладка: пока его нет, показывать нечего, и нижняя панель вместе
- * с остальными экранами просто не появляется.
+ * Ключ добавляется на «Серверах»: оформление и настройки доступны до
+ * первого подключения.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -159,21 +159,15 @@ class MainActivity : AppCompatActivity() {
                 languageFromSettings = true
                 show(Screen.LANGUAGE)
             },
-            onRoutesChanged = {
-                refreshRoutes()
-                // Исключения читаются при поднятии туннеля: менять маршруты у
-                // работающего VPN нельзя, его надо пересобрать.
-                if (MarviaState.state.value is TunnelState.On) {
-                    Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
-                }
+            onRoutesChanged = { forceRoutes ->
+                if (store.bypassRussian && forceRoutes) refreshRoutes(force = true)
+                more.showPendingConnectionChange()
             },
             // IPv6 и дробление тоже читаются при подключении, но к маршрутам
             // отношения не имеют: звать ради них российский список у панели —
             // лишний запрос на каждое касание переключателя.
             onNextConnect = {
-                if (MarviaState.state.value is TunnelState.On) {
-                    Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
-                }
+                more.showPendingConnectionChange()
             },
             onReset = { resetAll() },
         )
@@ -422,19 +416,12 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Активная вкладка отмечена заливкой акцента и контрастным значком.
-     * Таблетка, которая только что стала активной, чуть подпрыгивает: так
-     * видно, что нажатие принято, ещё до того, как сменился экран.
+     * Без внешнего ripple: широкое пятно закрывало соседние подписи.
      */
     private fun paintTab(pill: View, icon: ImageView, label: TextView, active: Boolean) {
         val dp = resources.displayMetrics.density
         val color = if (active) theme.acc else theme.dim
-        val wasActive = pill.background != null
         pill.background = if (active) Paint.rounded(theme.acc, 999, dp) else null
-        if (active && !wasActive && pill.isAttachedToWindow) {
-            pill.scaleX = .6f; pill.scaleY = .6f; pill.alpha = .3f
-            pill.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(340)
-                .setInterpolator(android.view.animation.OvershootInterpolator(1.8f)).start()
-        }
         ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(if (active) theme.accFg else color))
         label.setTextColor(color)
         label.typeface = if (active) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
@@ -448,9 +435,19 @@ class MainActivity : AppCompatActivity() {
         c.powerAction.setOnClickListener { toggle() }
         c.techText.setOnClickListener { more.openLogs(); show(Screen.MORE) }
         c.nodeLine.setOnClickListener { show(Screen.SERVERS) }
+        c.statusText.setOnClickListener {
+            if (store.accountLink.isBlank()) show(Screen.SERVERS)
+        }
+        c.powerHint.setOnClickListener {
+            if (store.accountLink.isBlank()) show(Screen.SERVERS)
+        }
+        c.sessionCard.setOnClickListener { SessionDetails.showSession(this, theme) }
+        c.speedCard.setOnClickListener { SessionDetails.showSpeed(this, theme) }
+        c.todayCard.setOnClickListener { show(Screen.STATS) }
 
         // Нажатие на знак позволяет свернуть или вернуть подпись бренда.
         c.heroTagline.text = getString(R.string.hero_subtitle)
+        c.heroName.isVisible = false
         c.heroWord.setTag(R.id.keep_font, true)
         // Имя — металлом, как знак: сверху светлое, книзу в приглушённый.
         c.heroWord.doOnLayout {
@@ -461,6 +458,7 @@ class MainActivity : AppCompatActivity() {
             c.heroWord.invalidate()
         }
         c.heroMarkButton.setOnClickListener {
+            c.heroName.animate().cancel()
             val show = !c.heroName.isVisible
             if (show) {
                 c.heroName.alpha = 0f
@@ -486,6 +484,7 @@ class MainActivity : AppCompatActivity() {
     private fun render(state: TunnelState) {
         val c = ui.connectScreen
         val hasKey = store.accountLink.isNotBlank()
+        if (state !is TunnelState.On) more.clearPendingConnectionChange()
 
         c.techText.isVisible = false
         c.powerAction.state = when (state) {
@@ -505,11 +504,14 @@ class MainActivity : AppCompatActivity() {
         if (state is TunnelState.On) lastNode = state.node
         c.nodeLine.isVisible = c.nodeLine.text.isNotEmpty()
         c.powerHint.setText(when (state) {
-            TunnelState.Off -> if (hasKey) R.string.power_hint_start else R.string.connect_add_key
+            TunnelState.Off -> if (hasKey) R.string.power_hint_start else R.string.connect_add_key_in_servers
             TunnelState.Connecting -> R.string.power_hint_cancel
             is TunnelState.On -> R.string.power_hint_stop
             is TunnelState.Failed -> R.string.connect_retry
         })
+        c.powerHint.isVisible = state !is TunnelState.On
+        c.statusText.isClickable = !hasKey
+        c.statusText.isFocusable = !hasKey
 
         when (state) {
             TunnelState.Off -> {
@@ -541,7 +543,6 @@ class MainActivity : AppCompatActivity() {
                     c.techText.isVisible = true
                 }
 
-                offerRussianBypass()
             }
 
             is TunnelState.Failed -> {
@@ -777,31 +778,6 @@ class MainActivity : AppCompatActivity() {
 
     // ------------------------------------------------------------- прочее
 
-    /**
-     * offerRussianBypass предлагает увести российские сайты мимо туннеля.
-     *
-     * Спрашиваем один раз при включении, а не прячем в настройки: человек
-     * узнаёт про эту возможность ровно тогда, когда у него не открылись
-     * госуслуги, — то есть уже разозлившись.
-     */
-    private fun offerRussianBypass() {
-        if (!RuRoutes.supported() || store.bypassRussian || store.bypassAsked) {
-            return
-        }
-        store.bypassAsked = true
-
-        ThemedDialogs.builder(this, theme)
-            .setTitle(R.string.bypass_ru_title)
-            .setMessage(R.string.bypass_ru_body)
-            .setPositiveButton(R.string.bypass_ru_yes) { _, _ ->
-                store.bypassRussian = true
-                refreshRoutes()
-                Toast.makeText(this, R.string.bypass_restart, Toast.LENGTH_LONG).show()
-            }
-            .setNegativeButton(R.string.bypass_ru_no, null)
-            .show()
-    }
-
     /** refreshRoutes подтягивает список подсетей с панели продавца. */
     private fun refreshRoutes(force: Boolean = true) {
         val link = store.accountLink.takeIf { it.isNotBlank() } ?: return
@@ -846,7 +822,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (store.accountLink.isBlank()) {
-            show(Screen.KEY)
+            show(Screen.SERVERS)
             return
         }
 

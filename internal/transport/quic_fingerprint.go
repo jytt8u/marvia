@@ -3,6 +3,7 @@ package transport
 import (
 	"context"
 	"fmt"
+	"github.com/jytt8u/marvia/internal/netpath"
 	"net"
 
 	uquic "github.com/refraction-networking/uquic"
@@ -44,7 +45,11 @@ func dialQUICMimicking(ctx context.Context, addr string, tlsCfg *utls.Config) (u
 	}
 
 	// Порт слушаем любой свободный, как это делает браузер.
-	udp, err := net.ListenUDP("udp", &net.UDPAddr{})
+	network, local := "udp6", "[::]:0"
+	if remote.IP.To4() != nil {
+		network, local = "udp4", "0.0.0.0:0"
+	}
+	udp, err := netpath.ListenPacket(ctx, network, local, remote.String())
 	if err != nil {
 		return nil, fmt.Errorf("сокет udp: %w", err)
 	}

@@ -67,6 +67,9 @@ WantedBy=multi-user.target
 // Нужен root. Повторный вызов обновляет файлы — upgrade.sh зовёт его при
 // каждом обновлении, чтобы служба приезжала вместе с релизом.
 func Install() error {
+	if _, err := exec.LookPath("gh"); err != nil {
+		return fmt.Errorf("нужен GitHub CLI с gh attestation verify: %w", err)
+	}
 	if err := os.MkdirAll(filepath.Dir(AgentPath), 0o755); err != nil {
 		return err
 	}
