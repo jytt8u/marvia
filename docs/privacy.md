@@ -1,150 +1,115 @@
-# Политика конфиденциальности Marvia
+# Конфиденциальность Marvia
 
-*English version below.*
+Обновлено 25 сентября 2026 года. English version below.
 
-Marvia — это приложение для подключения к VPN-серверу того, кто дал вам
-доступ. Ниже — что приложение хранит, что отправляет и кому. Здесь нет
-ничего, чего нет в коде: он открыт, и этот документ ему следует.
+Marvia — приложение для подключения к VPN-серверу по ключу или подписке,
+которые вы получили от владельца сервера. Приложение не продаёт доступ и не
+создаёт учётную запись в едином сервисе Marvia. Данные выбранной подписки
+обрабатывает её владелец; его условия хранения нужно узнавать у него.
 
-## Кто отвечает за ваши данные
+## На устройстве
 
-Приложение — инструмент. Сервер, к которому оно подключается, и панель,
-выдавшая вам ключ, принадлежат **тому, кто дал вам доступ**. Он и есть
-оператор ваших данных. Автор приложения не держит серверов, не получает от
-приложения ничего и не может узнать, кто им пользуется.
+Приложение хранит ключи и адреса подписок, список нод и их замеры, настройки
+VPN и темы, выбор приложений для обхода туннеля, локальный журнал, расход и
+историю сессий. Ключ VP1 содержит закрытый ключ и остаётся в хранилище
+приложения: подтверждение доступа не требует отправлять его панели или ноде.
+Для ключей других протоколов используются способы аутентификации этих
+протоколов. Резервное копирование данных приложения средствами Android
+выключено. «Сбросить всё» удаляет настройки, ключи, кэши подписок и учёт
+трафика; история сессий и диагностические файлы остаются до удаления
+приложения. Удаление приложения очищает его хранилище.
 
-## Что приложение хранит на устройстве
+## Во время подключения
 
-- **Ключ доступа** — ссылку `marvia://…`, которую вам прислали. В ней —
-  ваш приватный ключ. Он остаётся в закрытом хранилище приложения и не
-  покидает устройство: подключение доказывает владение ключом, не пересылая
-  его.
-- **Настройки**: язык, тема и её код, список приложений, идущих мимо
-  туннеля, выбранная страна.
-- **Журнал работы** — что происходило с подключением. Только на устройстве,
-  виден в «Ещё → Логи», никуда не отправляется.
+- **Панель подписки** получает запросы со списком нод, сроком и квотой. В
+  запросе может быть токен подписки. Для ключей Marvia приложение по умолчанию
+  передаёт панели результаты замеров нод; это можно выключить в дополнительных
+  настройках VPN. При использовании чужой подписки её адрес и правила
+  обработки определяет её владелец.
+- **VPN-нода** принимает зашифрованное соединение и направляет ваш трафик.
+  Ей доступен исходный сетевой адрес соединения; для учёта доступа и лимитов
+  она обрабатывает идентификатор ключа и объём трафика. Владелец ноды может
+  видеть трафик после выхода из туннеля в той мере, в какой его допускают
+  протоколы посещаемых сервисов. Приложение не даёт гарантий за чужую ноду.
+- **Определение страны выхода** иногда обращается к `ipapi.co`, когда у ноды
+  нет страны в подписке. Запрос идёт **через ноду**, так что сервис видит её
+  выходной IP-адрес, а не прямой адрес телефона. Ответ — двухбуквенный код
+  страны, который сохраняется локально.
+- **DNS и обход туннеля** зависят от выбранных вами настроек. Запросы имён
+  получает выбранный DNS-резолвер; отмеченные приложения и маршруты идут
+  напрямую и открывают адрес устройства соответствующим сервисам.
 
-Удалили приложение — всё это удалилось вместе с ним.
+Приложение не содержит рекламных и аналитических SDK. Локальный журнал и
+история сессий автоматически не отправляются автору приложения. Хранение
+данных на панели или ноде и их удаление определяет владелец подписки, а не
+кнопка удаления приложения с телефона.
 
-## Что приложение отправляет
+## Разрешения Android
 
-Приложение разговаривает ровно с двумя адресами, и оба принадлежат тому,
-кто дал вам доступ:
+`VpnService` нужен для маршрутизации трафика через туннель. Интернет нужен
+для получения подписки и соединения с нодой. Уведомление и служба на переднем
+плане показывают состояние VPN при погашенном экране. Запуск после перезагрузки
+работает, если вы его включили. Список установленных приложений используется
+для настройки обхода туннеля и хранится на устройстве.
 
-1. **Панель** (адрес записан в вашем ключе). Приложение забирает у неё
-   список серверов, срок и остаток трафика — по вашему токену подписки.
-   Обратно уходят замеры серверов: какой отвечает и за сколько миллисекунд.
-   Ни адрес вашего устройства, ни его модель, ни что-либо о вас в этих
-   запросах нет; панель адреса не записывает.
-2. **Сервер** (нода). Через него идёт ваш трафик. Сервер считает объём в
-   байтах — чтобы работали квота и лимит скорости — и знает ваш публичный
-   ключ. Если тот, кто дал доступ, ограничил число устройств, сервер держит
-   в памяти адрес вашего устройства — не дольше часа и не записывая. Куда
-   вы ходили, сервер не записывает: в нём нет такого журнала по устройству.
-
-Сторонних серверов, аналитики, рекламных и отслеживающих библиотек в
-приложении нет. Ни к Google, ни к кому-либо ещё оно не обращается.
-
-## Разрешения
-
-- **VPN** — чтобы направить трафик устройства через сервер. Приложение не
-  читает и не изменяет содержимое трафика.
-- **Интернет** — очевидно.
-- **Уведомление и служба на переднем плане** — так Android держит VPN
-  живым, когда экран выключен.
-- **Запуск после перезагрузки** — только если вы включили автозапуск.
-- **Список установленных приложений** — чтобы вы могли отметить, каким идти
-  мимо туннеля (банк, такси). Список остаётся на устройстве.
-
-## Ваш трафик
-
-Пока туннель включён, трафик устройства идёт через сервер того, кто дал
-вам доступ. Он зашифрован до сервера. Что происходит с трафиком после
-сервера — вопрос к его владельцу, как и у любого VPN.
-
-## Возраст
-
-Приложение не собирает данных и потому не имеет возрастных ограничений по
-этой части. Пользоваться им должен тот, кому выдан ключ.
-
-## Изменения
-
-Документ живёт в репозитории проекта вместе с кодом и меняется той же
-правкой, что и поведение приложения. История изменений — в истории
-репозитория.
+По вопросам о приложении можно открыть
+[issue в проекте](https://github.com/jytt8u/marvia/issues). По вопросам о
+данных на сервере обращайтесь к тому, кто выдал ключ доступа.
 
 ---
 
 # Marvia privacy policy
 
-Marvia is an app for connecting to a VPN server run by whoever gave you
-access. Below is what the app stores, what it sends and to whom. Nothing here
-goes beyond the code: it is open, and this document follows it.
+Updated 25 September 2026.
 
-## Who is responsible for your data
+Marvia connects to a VPN server using an access key or subscription supplied
+by the server operator. The app does not sell access or create an account in
+a central Marvia service. The operator of the subscription processes data on
+their panel and nodes; ask them about their retention and deletion terms.
 
-The app is a tool. The server it connects to and the panel that issued your
-key belong to **whoever gave you access**. They are the operator of your
-data. The app's author runs no servers, receives nothing from the app and
-cannot know who uses it.
+## On the device
 
-## What the app keeps on the device
+The app stores access keys and subscription URLs, node lists and measurements,
+VPN and appearance settings, the list of apps that bypass the VPN, local logs,
+usage and session history. A VP1 private key remains in the app's private
+storage: proving access does not require sending that key to the panel or
+node. Other protocols authenticate according to their own specifications.
+Android backup of app data is disabled. “Reset everything” removes settings,
+keys, subscription caches and traffic totals; session history and diagnostic
+files remain until the app is uninstalled. Uninstalling removes app storage.
 
-- **The access key** — the `marvia://…` link you were sent. It carries your
-  private key. It stays in the app's private storage and never leaves the
-  device: connecting proves possession of the key without sending it.
-- **Settings**: language, theme and its code, the list of apps that bypass
-  the tunnel, the chosen country.
-- **A log** of what happened to the connection. On the device only, visible
-  under "More → Logs", never sent anywhere.
+## During a connection
 
-Uninstall the app and all of this goes with it.
+- **The subscription panel** receives requests for nodes, expiry and quota.
+  A request may carry a subscription token. For Marvia keys, the app sends
+  node availability measurements by default; you can disable these reports
+  in the advanced VPN settings. Third-party subscriptions are governed by
+  their operators' terms.
+- **The VPN node** accepts the encrypted connection and forwards traffic. It
+  sees the connection's source IP address and processes a key identifier and
+  traffic volume for access and quota enforcement. Beyond the VPN exit, the
+  node operator may see traffic to the extent allowed by the destination's
+  protocols. The app cannot make promises about third-party nodes.
+- **Exit-country detection** sometimes queries `ipapi.co` when a subscription
+  does not specify the node's country. This request goes **through the node**:
+  the service sees its exit IP, not the phone's direct IP. The response is a
+  two-letter country code stored locally.
+- **DNS and VPN bypass** follow your settings. The selected DNS resolver
+  receives DNS queries. Apps and routes excluded from the VPN connect directly
+  and expose the device's address to their destinations.
 
-## What the app sends
+The app has no advertising or analytics SDK. Local logs and session history
+are not automatically sent to the app author. Deleting the app does not delete
+data held by a subscription panel or node; its operator controls that data.
 
-The app talks to exactly two addresses, both owned by whoever gave you
-access:
+## Android permissions
 
-1. **The panel** (its address is in your key). The app fetches the server
-   list, the expiry date and the remaining quota — by your subscription
-   token. It sends back server measurements: which server answers and in
-   how many milliseconds. Neither your device's address nor its model nor
-   anything about you is in those requests; the panel does not record
-   addresses.
-2. **The server** (node). Your traffic goes through it. The server counts
-   bytes — so that quotas and speed limits work — and knows your public
-   key. If whoever gave you access limited the number of devices, the
-   server keeps your device address in memory — for an hour at most and
-   without writing it down. It does not record where you went: there is no
-   such per-device log in it.
+`VpnService` routes device traffic into the tunnel. Internet access fetches
+subscriptions and connects to nodes. The foreground service and notification
+show VPN status while the screen is off. Starting after reboot is optional.
+The installed-app list lets you choose apps that bypass the VPN and stays on
+the device.
 
-There are no third-party servers, no analytics, no advertising or tracking
-libraries in the app. It contacts neither Google nor anyone else.
-
-## Permissions
-
-- **VPN** — to route the device's traffic through the server. The app does
-  not read or alter the traffic's contents.
-- **Internet** — obviously.
-- **Notification and foreground service** — that is how Android keeps a VPN
-  alive with the screen off.
-- **Start after reboot** — only if you enabled autostart.
-- **List of installed apps** — so you can mark which ones bypass the tunnel
-  (banking, taxi). The list stays on the device.
-
-## Your traffic
-
-While the tunnel is on, the device's traffic goes through the server of
-whoever gave you access. It is encrypted up to the server. What happens to
-it beyond the server is a question for the server's owner, as with any VPN.
-
-## Age
-
-The app collects no data and therefore has no age restriction on that
-account. It should be used by the person the key was issued to.
-
-## Changes
-
-This document lives in the project repository next to the code and changes
-in the same commit as the app's behaviour. Its history is the repository's
-history.
+For questions about the app, open a
+[project issue](https://github.com/jytt8u/marvia/issues). For data held on a
+server, contact whoever supplied your access key.
