@@ -538,12 +538,12 @@ func viewsJSON(dialer client.Backend, nodes []client.Node, measured []client.Mea
 	views := make([]NodeView, 0, len(nodes))
 	for _, n := range nodes {
 		v := NodeView{
-			ID:      n.ID,
-			Name:    n.Name,
-			Country: n.Country,
+			ID:       n.ID,
+			Name:     n.Name,
+			Country:  n.Country,
 			Endpoint: n.Address,
-			Current: n.ID == current,
-			Chosen:  chosen != 0 && n.ID == chosen,
+			Current:  n.ID == current,
+			Chosen:   chosen != 0 && n.ID == chosen,
 		}
 		if m, ok := byID[n.ID]; ok {
 			v.Alive = m.OK()
