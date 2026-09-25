@@ -2,9 +2,9 @@
 <!--
     «Настройки» по макету: одна прокручиваемая страница — карточка прокси по
     приложениям, группы «Подключение», «Маршруты и DNS», «Приложение».
-    Приложения и журнал — подэкраны с кнопкой «назад» в шапке. Здесь нет
-    ручек протокола: MTU, число соединений и прочее решает ядро, а нарисовать
-    ручку без действия — обещание, которое не выполняется.
+    Приложения, дополнительные настройки и журнал — подэкраны с кнопкой
+    «назад» в шапке. Число соединений и транспорт решает ядро; здесь только
+    настройки с реальным действием в Android или клиенте.
 
     Файл собран скриптом (scratchpad/gen_more.sh в сессии автора) — строки
     однотипные; править можно и руками, лишь бы они остались однотипными.
@@ -241,6 +241,23 @@
             </LinearLayout>
         </LinearLayout>
         </LinearLayout>
+        </ScrollView>
+
+        <!-- ═══════════════════════════════════════ Дополнительные настройки VPN -->
+        <ScrollView
+            android:id="@+id/sectionAdvanced"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:visibility="gone">
+            <LinearLayout
+                android:id="@+id/advancedRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="28dp" />
         </ScrollView>
 
         <!-- ═══════════════════════════════════════ Приложения -->

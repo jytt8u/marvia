@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * MoreScreen — «Настройки»: одна страница по макету, с подэкранами
- * приложений и журнала.
+ * приложений, дополнительных параметров, журнала и «О нас».
  *
  * Здесь нет ручек протокола:
  * ни числа соединений, ни выбора мультиплексора, ни отпечатка TLS. Такие
@@ -41,7 +41,7 @@ import kotlinx.coroutines.withContext
  *
  * Остаётся то, что зависит от него и от его сети, а ядру не видно: когда
  * включаться, кто отвечает на запросы имён, что пускать мимо, нужен ли
- * IPv6, что показать продавцу, когда что-то пошло не так. И одна ручка из
+ * IPv6, как учитывать лимитную сеть и что показать продавцу. И одна ручка из
  * маскировки — дробление приветствия: режет ли провайдер соединения по имени
  * сайта, клиент узнать не может, а без такого фильтра дробление вредно.
  *
@@ -66,7 +66,7 @@ class MoreScreen(
     private val onReset: () -> Unit,
 ) {
 
-    enum class Section { CONN, APPS, LOGS, ABOUT }
+    enum class Section { CONN, ADVANCED, APPS, LOGS, ABOUT }
 
     private var section = Section.CONN
 
@@ -76,6 +76,9 @@ class MoreScreen(
     private val apps = AppsAdapter()
     private val iconCache = android.util.LruCache<String, android.graphics.drawable.Drawable>(64)
     private val dp = host.resources.displayMetrics.density
+    private val advanced by lazy {
+        AdvancedVpnSettings(host, ui.sectionAdvanced, ui.advancedRows, store, theme, onNextConnect)
+    }
 
     private val version: String = try {
         host.packageManager.getPackageInfo(host.packageName, 0).versionName.orEmpty()
@@ -106,6 +109,7 @@ class MoreScreen(
         val t = theme()
         paintModes()
         renderConnection()
+        if (section == Section.ADVANCED) advanced.render()
         ui.searchBox.background = Paint.rounded(t.surf, minOf(t.r, 12), dp)
         ui.appList.background = Paint.rounded(t.surf, t.r, dp)
         ui.appsSpinner.indeterminateTintList = ColorStateList.valueOf(t.acc)
@@ -119,7 +123,8 @@ class MoreScreen(
 
     /** Подсказка внутри экрана вместо системного Toast поверх навигации. */
     fun showPendingConnectionChange() {
-        ui.pendingConnectionNotice.isVisible = MarviaState.state.value is TunnelState.On
+        val state = MarviaState.state.value
+        ui.pendingConnectionNotice.isVisible = state is TunnelState.On || state is TunnelState.Connecting
     }
 
     fun clearPendingConnectionChange() {
@@ -135,8 +140,10 @@ class MoreScreen(
 
     private fun show(next: Section) {
         section = next
-        if (MarviaState.state.value !is TunnelState.On) ui.pendingConnectionNotice.isVisible = false
+        val state = MarviaState.state.value
+        if (state !is TunnelState.On && state !is TunnelState.Connecting) ui.pendingConnectionNotice.isVisible = false
         ui.sectionConn.isVisible = next == Section.CONN
+        ui.sectionAdvanced.isVisible = next == Section.ADVANCED
         ui.sectionApps.isVisible = next == Section.APPS
         ui.sectionLogs.isVisible = next == Section.LOGS
         ui.sectionAbout.isVisible = next == Section.ABOUT
@@ -147,6 +154,7 @@ class MoreScreen(
         ui.moreTitle.setText(
             when (next) {
                 Section.CONN -> R.string.more_title
+                Section.ADVANCED -> R.string.advanced_title
                 Section.APPS -> R.string.more_apps_card
                 Section.LOGS -> R.string.more_logs_row
                 Section.ABOUT -> R.string.settings_about
@@ -154,6 +162,7 @@ class MoreScreen(
         )
         ui.moreSub.text = when (next) {
             Section.CONN -> host.getString(R.string.more_sub, version)
+            Section.ADVANCED -> host.getString(R.string.advanced_subtitle)
             Section.APPS -> appsSummary()
             Section.LOGS -> logsSub()
             Section.ABOUT -> host.getString(R.string.about_intro)
@@ -161,6 +170,7 @@ class MoreScreen(
 
         when (next) {
             Section.CONN -> renderConnection()
+            Section.ADVANCED -> advanced.render()
             Section.APPS -> openApps()
             Section.LOGS -> renderLogs()
             Section.ABOUT -> ui.aboutVersion.text = host.getString(R.string.about_version, version)
@@ -191,7 +201,7 @@ class MoreScreen(
         }
 
         ui.rowAlwaysOn.setOnClickListener { openAlwaysOn() }
-        ui.rowAdvanced.setOnClickListener { AdvancedVpnSettings.show(host, store, theme, onNextConnect) }
+        ui.rowAdvanced.setOnClickListener { show(Section.ADVANCED) }
         ui.rowDns.setOnClickListener { chooseDns() }
 
         ui.rowLan.setOnClickListener {

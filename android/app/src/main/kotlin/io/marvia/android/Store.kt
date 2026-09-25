@@ -251,6 +251,21 @@ class Store(context: Context) {
         get() = prefs.getInt(KEY_PING_INTERVAL, 30).takeIf { it in PING_INTERVAL_CHOICES } ?: 30
         set(value) { prefs.edit().putInt(KEY_PING_INTERVAL, value.takeIf { it in PING_INTERVAL_CHOICES } ?: 30).apply() }
 
+    /** true помечает VPN лимитной сетью; false наследует признак от исходной сети. */
+    var meteredVpn: Boolean
+        get() = prefs.getBoolean(KEY_METERED_VPN, false)
+        set(value) { prefs.edit().putBoolean(KEY_METERED_VPN, value).apply() }
+
+    /** Давать ли панели продавца результаты замеров нод после подключения. */
+    var sendNodeReports: Boolean
+        get() = prefs.getBoolean(KEY_SEND_NODE_REPORTS, true)
+        set(value) { prefs.edit().putBoolean(KEY_SEND_NODE_REPORTS, value).apply() }
+
+    /** Оставить в обязательном уведомлении статус, скрыв название ноды и скорость. */
+    var compactNotification: Boolean
+        get() = prefs.getBoolean(KEY_COMPACT_NOTIFICATION, false)
+        set(value) { prefs.edit().putBoolean(KEY_COMPACT_NOTIFICATION, value).apply() }
+
     /**
      * tunnelSettings — настройки туннеля для ядра (Mobile.start и
      * Mobile.measureNodes), одной строкой JSON. Замер нод получает те же:
@@ -261,6 +276,7 @@ class Store(context: Context) {
         org.json.JSONObject()
             .put("fragment", fragment)
             .put("no_ipv6", !ipv6)
+            .put("disable_reports", !sendNodeReports)
             .toString()
 
     /**
@@ -704,6 +720,9 @@ class Store(context: Context) {
         private const val KEY_LIVE_REFRESH = "live_refresh_seconds"
         private const val KEY_IDLE_REFRESH = "idle_refresh_seconds"
         private const val KEY_PING_INTERVAL = "ping_interval_seconds"
+        private const val KEY_METERED_VPN = "metered_vpn"
+        private const val KEY_SEND_NODE_REPORTS = "send_node_reports"
+        private const val KEY_COMPACT_NOTIFICATION = "compact_notification"
         private const val KEY_LAN_OUTSIDE = "lan_outside"
         private const val KEY_BYPASS_RU = "bypass_russian"
         private const val KEY_BYPASS_ASKED = "bypass_asked"
