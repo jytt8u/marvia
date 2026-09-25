@@ -1,14 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="advanced_title">Дополнительные настройки VPN</string>
+    <string name="advanced_subtitle">Сеть, приватность и фоновые проверки</string>
+    <string name="advanced_network_group">СЕТЬ</string>
+    <string name="advanced_monitor_group">ФОНОВАЯ РАБОТА</string>
     <string name="advanced_mtu">Размер пакета (MTU)</string>
+    <string name="advanced_mtu_sub">Если сайты открываются не полностью, попробуй 1280. После изменения переподключись.</string>
+    <string name="advanced_metered">Считать VPN лимитной сетью</string>
+    <string name="advanced_metered_sub">Приложения могут отложить крупные загрузки. По умолчанию VPN наследует тип Wi-Fi или мобильной сети.</string>
+    <string name="advanced_metered_auto">По сети</string>
+    <string name="advanced_metered_always">Всегда</string>
+    <string name="advanced_reports">Отчёты о доступности нод</string>
+    <string name="advanced_reports_sub">Для ключей Marvia: отправлять панели продавца результаты замеров при подключении. На выбор ноды не влияет.</string>
+    <string name="advanced_reports_on">Отправлять</string>
+    <string name="advanced_reports_off">Не отправлять</string>
+    <string name="advanced_notification">Уведомление о VPN</string>
+    <string name="advanced_notification_sub">Краткий вид скрывает ноду и скорость. Статус подключения остаётся виден.</string>
+    <string name="advanced_notification_full">Подробно</string>
+    <string name="advanced_notification_compact">Кратко</string>
+    <string name="notification_compact_status">VPN подключён</string>
+    <string name="notification_compact_detail">Marvia работает</string>
+    <string name="advanced_preset">Режим фоновой работы</string>
+    <string name="advanced_preset_sub">Меняет три интервала ниже. Можно настроить каждый отдельно.</string>
+    <string name="advanced_preset_battery">Экономия</string>
+    <string name="advanced_preset_balanced">Обычно</string>
+    <string name="advanced_preset_detailed">Подробно</string>
     <string name="advanced_live">Обновление при включённом экране</string>
+    <string name="advanced_live_sub">Как часто обновлять скорость, трафик и уведомление.</string>
     <string name="advanced_idle">Обновление при погашенном экране</string>
+    <string name="advanced_idle_sub">Реже проверять показатели в фоне — меньше работы для телефона.</string>
     <string name="advanced_ping">Проверка отклика</string>
-    <string name="advanced_mtu_value">Размер пакета (MTU) · %1$d</string>
-    <string name="advanced_live_value">Экран включён · каждые %1$d с</string>
-    <string name="advanced_idle_value">Экран погашен · каждые %1$d с</string>
-    <string name="advanced_ping_value">Проверка отклика · %1$s</string>
+    <string name="advanced_ping_sub">Задержка для экрана и уведомления. «Выкл.» не отключает проверку ноды для автоматического переезда.</string>
     <string name="advanced_seconds">%1$d с</string>
-    <string name="advanced_off">Выключена</string>
+    <string name="advanced_off_short">Выкл.</string>
+    <string name="advanced_next_connection">MTU, тип сети и отчёты — при следующем подключении. Интервалы и вид уведомления — без переподключения, при следующем обновлении.</string>
 </resources>

@@ -1,14 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="advanced_title">Advanced VPN settings</string>
+    <string name="advanced_subtitle">Network, privacy, and background checks</string>
+    <string name="advanced_network_group">NETWORK</string>
+    <string name="advanced_monitor_group">BACKGROUND ACTIVITY</string>
     <string name="advanced_mtu">Packet size (MTU)</string>
+    <string name="advanced_mtu_sub">If some sites load only partly, try 1280. Reconnect after changing this.</string>
+    <string name="advanced_metered">Treat VPN as metered</string>
+    <string name="advanced_metered_sub">Apps may defer large downloads. By default the VPN follows the underlying Wi-Fi or mobile network.</string>
+    <string name="advanced_metered_auto">Follow network</string>
+    <string name="advanced_metered_always">Always</string>
+    <string name="advanced_reports">Node availability reports</string>
+    <string name="advanced_reports_sub">For Marvia keys: send measurement results to the seller panel when connecting. Node selection is unaffected.</string>
+    <string name="advanced_reports_on">Send</string>
+    <string name="advanced_reports_off">Do not send</string>
+    <string name="advanced_notification">VPN notification</string>
+    <string name="advanced_notification_sub">Compact view hides the node and speed. Connection status stays visible.</string>
+    <string name="advanced_notification_full">Detailed</string>
+    <string name="advanced_notification_compact">Compact</string>
+    <string name="notification_compact_status">VPN connected</string>
+    <string name="notification_compact_detail">Marvia is running</string>
+    <string name="advanced_preset">Background activity mode</string>
+    <string name="advanced_preset_sub">Sets the three intervals below. Each can also be changed separately.</string>
+    <string name="advanced_preset_battery">Battery saver</string>
+    <string name="advanced_preset_balanced">Standard</string>
+    <string name="advanced_preset_detailed">Detailed</string>
     <string name="advanced_live">Update interval with screen on</string>
+    <string name="advanced_live_sub">How often speed, traffic, and the notification are refreshed.</string>
     <string name="advanced_idle">Update interval with screen off</string>
+    <string name="advanced_idle_sub">Check less often in the background to reduce phone activity.</string>
     <string name="advanced_ping">Latency check interval</string>
-    <string name="advanced_mtu_value">Packet size (MTU) · %1$d</string>
-    <string name="advanced_live_value">Screen on · every %1$d s</string>
-    <string name="advanced_idle_value">Screen off · every %1$d s</string>
-    <string name="advanced_ping_value">Latency checks · %1$s</string>
+    <string name="advanced_ping_sub">Latency shown on screen and in the notification. Off keeps node checks for automatic failover.</string>
     <string name="advanced_seconds">%1$d s</string>
-    <string name="advanced_off">Off</string>
+    <string name="advanced_off_short">Off</string>
+    <string name="advanced_next_connection">MTU, network type, and reports apply on the next connection. Intervals and notification view change on the next update without reconnecting.</string>
 </resources>

@@ -240,7 +240,9 @@ class MarviaVpnService : VpnService() {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            builder.setMetered(false)
+            // false наследует лимитность от исходной сети; true помечает VPN
+            // лимитной всегда, чтобы приложения сами отложили крупные загрузки.
+            builder.setMetered(store.meteredVpn)
         }
 
         return builder.establish()
@@ -557,12 +559,17 @@ class MarviaVpnService : VpnService() {
 
     /** Что уведомление показывает сейчас: одинаковое второй раз не отправляем. */
     private var shown: Live.Text? = null
+    private val notificationStore by lazy { Store(this) }
 
     private fun goForeground(content: Live.Text) {
+        val display = if (content.on && notificationStore.compactNotification) {
+            val status = getString(R.string.notification_compact_status)
+            Live.Text(status, getString(R.string.notification_compact_detail), status, true)
+        } else content
         // Простаивающий туннель даёт «0 Кбит/с» каждые две секунды, и каждое
         // такое обновление — будить системный процесс уведомлений впустую.
-        if (content == shown) return
-        shown = content
+        if (display == shown) return
+        shown = display
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -594,9 +601,9 @@ class MarviaVpnService : VpnService() {
             .setSmallIcon(R.drawable.ic_stat_marvia)
             .setLargeIcon(mark())
             .setColor(t.acc)
-            .setContentTitle(content.title)
-            .setContentText(content.text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content.big))
+            .setContentTitle(display.title)
+            .setContentText(display.text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(display.big))
             .setContentIntent(open)
             .setOngoing(true)
             // Обновляется каждые пару секунд — звука и вибрации на каждом
@@ -606,7 +613,7 @@ class MarviaVpnService : VpnService() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .addAction(R.drawable.ic_stat_marvia, getString(R.string.notification_stop), stop)
-        if (content.on && connectedAt > 0) {
+        if (display.on && connectedAt > 0) {
             builder.setShowWhen(true).setWhen(connectedAt).setUsesChronometer(true)
         } else {
             builder.setShowWhen(false)

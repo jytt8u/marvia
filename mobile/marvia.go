@@ -245,15 +245,17 @@ func connect(accountLink, cacheDir string, prefer int64, events client.Events, s
 		Log:       func(format string, args ...any) { log.Printf(format, args...) },
 	}, events)
 
-	// Отчёт уходит в любом случае, в том числе когда не подключилось ни к
-	// одной ноде: продавцу важнее всего узнать именно про такой случай.
-	go func() {
-		if err := client.SendReports(context.Background(), account.SubscriptionURL, client.ReportsFrom(measurements)); err != nil {
-			// Панель недоступна — не повод не работать. Туннель от неё не
-			// зависит, список нод уже получен.
-			_ = err
-		}
-	}()
+	// По умолчанию продавец узнаёт и о неудачном дозвоне. Человек может
+	// оставить результаты только на телефоне: выбор ноды от этого не меняется.
+	if !set.DisableReports {
+		go func() {
+			if err := client.SendReports(context.Background(), account.SubscriptionURL, client.ReportsFrom(measurements)); err != nil {
+				// Панель недоступна — не повод не работать. Туннель от неё не
+				// зависит, список нод уже получен.
+				_ = err
+			}
+		}()
+	}
 
 	if err != nil {
 		// Вид неудачи человека ведёт в разные стороны: до панели не

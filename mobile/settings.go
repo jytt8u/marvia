@@ -23,6 +23,10 @@ type tunnelSettings struct {
 	// туннеле, так что мимо IPv6 тоже не уходит: приложения видят «адресов
 	// IPv6 нет» и идут по IPv4.
 	NoIPv6 bool `json:"no_ipv6"`
+
+	// DisableReports оставляет замеры на телефоне: панель продавца их не
+	// получает. Дозвон и выбор ноды продолжают пользоваться этими замерами.
+	DisableReports bool `json:"disable_reports"`
 }
 
 // parseSettings разбирает настройки. Сломанная строка — не повод не
