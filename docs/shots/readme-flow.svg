@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="420" viewBox="0 0 1000 420" role="img" aria-labelledby="title desc">
+  <title id="title">Схема Marvia: управление отдельно от VPN-трафика</title>
+  <desc id="desc">Продавец управляет доступом через панель. Приложение направляет VPN-трафик напрямую к ноде; панель находится вне пути трафика.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#d7dfe7" stroke-width="2"/>
+    </marker>
+    <marker id="arrowSoft" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#8f9aa5" stroke-width="2"/>
+    </marker>
+  </defs>
+  <rect x="1" y="1" width="998" height="418" rx="28" fill="#202326" stroke="#464b50" stroke-width="2"/>
+  <text x="42" y="52" fill="#f3f5f7" font-family="Segoe UI,Arial,sans-serif" font-size="26" font-weight="700">Одна система. Два независимых пути.</text>
+  <text x="42" y="92" fill="#aeb8c1" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="2">УПРАВЛЕНИЕ ДОСТУПОМ</text>
+  <rect x="42" y="112" width="258" height="94" rx="18" fill="#30353a" stroke="#5b6269"/>
+  <text x="66" y="152" fill="#f3f5f7" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700">Владелец и бот</text>
+  <text x="66" y="181" fill="#b9c2ca" font-family="Segoe UI,Arial,sans-serif" font-size="18">выдают ключ</text>
+  <path d="M302 159 H352" fill="none" stroke="#929da8" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrowSoft)"/>
+  <rect x="369" y="112" width="258" height="94" rx="18" fill="#30353a" stroke="#5b6269"/>
+  <text x="393" y="152" fill="#f3f5f7" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700">Панель</text>
+  <text x="393" y="181" fill="#b9c2ca" font-family="Segoe UI,Arial,sans-serif" font-size="18">права и лимиты</text>
+  <path d="M629 159 H679" fill="none" stroke="#929da8" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrowSoft)"/>
+  <rect x="696" y="112" width="258" height="94" rx="18" fill="#30353a" stroke="#5b6269"/>
+  <text x="720" y="152" fill="#f3f5f7" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700">Нода</text>
+  <text x="720" y="181" fill="#b9c2ca" font-family="Segoe UI,Arial,sans-serif" font-size="18">проверяет доступ</text>
+  <line x1="42" y1="226" x2="958" y2="226" stroke="#484e54" stroke-width="2"/>
+  <text x="42" y="262" fill="#d8e0e7" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="2">VPN-ТРАФИК · ПАНЕЛЬ ВНЕ ПУТИ</text>
+  <rect x="42" y="285" width="258" height="94" rx="18" fill="#3b4147" stroke="#c7d0d8" stroke-width="2"/>
+  <text x="66" y="325" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700">Android / Windows</text>
+  <text x="66" y="354" fill="#c8d0d7" font-family="Segoe UI,Arial,sans-serif" font-size="18">подключается</text>
+  <path d="M302 332 H352" fill="none" stroke="#d7dfe7" stroke-width="4" marker-end="url(#arrow)"/>
+  <rect x="369" y="285" width="258" height="94" rx="18" fill="#3b4147" stroke="#c7d0d8" stroke-width="2"/>
+  <text x="393" y="325" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700">Нода</text>
+  <text x="393" y="354" fill="#c8d0d7" font-family="Segoe UI,Arial,sans-serif" font-size="18">передаёт пакеты</text>
+  <path d="M629 332 H679" fill="none" stroke="#d7dfe7" stroke-width="4" marker-end="url(#arrow)"/>
+  <rect x="696" y="285" width="258" height="94" rx="18" fill="#3b4147" stroke="#c7d0d8" stroke-width="2"/>
+  <text x="720" y="325" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700">Интернет</text>
+  <text x="720" y="354" fill="#c8d0d7" font-family="Segoe UI,Arial,sans-serif" font-size="18">сайты и сервисы</text>
+</svg>
