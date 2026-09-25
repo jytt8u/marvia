@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/shots/readme-hero.svg" alt="Marvia：Android 和 Windows VPN 客户端、面板与节点" width="1200">
+<img src="docs/shots/readme-brand.svg" alt="Marvia 原版标志与字标" width="1200">
 
 **面向 Android 和 Windows 的 VPN，包含自有面板、节点和 VP1 协议。**
 
@@ -34,6 +34,25 @@
 Ryzen 7 7700 上运行的 VP1 本机测试中位数为 **638 MB/s**；这不是互联网
 连接速度。[测试方法和原始结果](docs/performance.md)。目前没有相同设备和
 路线下的竞品测速。
+
+## 协议对比
+
+WireGuard 和 OpenVPN 传输 IP 数据包；下表其余协议属于代理。Android 上的
+Marvia 也会为第三方代理密钥创建系统 VPN 接口。
+
+| 协议 | 传输方式与特点 | Marvia 支持情况 |
+|---|---|---|
+| **[VP1](docs/protocol.md)** | 基于 Noise 的代理，可运行在 TLS/REALITY、WebSocket 或 QUIC 上；QUIC/UDP 不可用时回退到 TCP | 自有节点、Android 和 Windows |
+| [WireGuard](https://www.wireguard.com/protocol/) | 基于 UDP 的 IP 隧道；不自带 HTTPS 伪装 | Android：外部密钥 |
+| [OpenVPN](https://openvpn.net/community-docs/community-articles/openvpn-2-7-manual.html) | 基于 UDP 或 TCP、使用 TLS 的 IP 隧道；不是普通 HTTPS | 尚未集成 |
+| [VLESS + REALITY](https://xtls.github.io/en/config/transports/reality.html) | TCP 代理，TLS 握手伪装为目标网站 | 节点和 Android |
+| [Trojan](https://github.com/trojan-gfw/trojan/blob/master/docs/protocol.md) | TLS 内的代理，带网站伪装 | 节点和 Android |
+| [Shadowsocks](https://shadowsocks.org/doc/what-is-shadowsocks.html) | 加密的 TCP/UDP 代理；默认不伪装成 HTTPS | Android：外部密钥 |
+| [Hysteria 2](https://v2.hysteria.network/docs/developers/Protocol/) | 基于 QUIC/UDP 的代理，外观类似 HTTP/3；需要 UDP 可用 | Android：外部密钥 |
+
+**目前没有速度排名：**需要在相同服务器、路线和客户端上反复测试各协议。
+目前只有 VP1 的测量结果，见[测试方法](docs/performance.md)。VP1 不兼容
+WireGuard 或 Xray 客户端。
 
 ## 功能
 

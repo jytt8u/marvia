@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/shots/readme-hero.svg" alt="Marvia: VPN для Android и Windows, панель и ноды" width="1200">
+<img src="docs/shots/readme-brand.svg" alt="Фирменный знак и надпись Marvia" width="1200">
 
 **VPN для Android и Windows. Свои панель, ноды и протокол VP1.**
 
@@ -34,6 +34,25 @@
 VP1 на Ryzen 7 7700: медиана **638 МБ/с**, это не скорость интернета.
 [Методика и исходные результаты](docs/performance.md). Замеров конкурентов
 на том же сервере и маршруте пока нет.
+
+## Протоколы
+
+WireGuard и OpenVPN передают IP-пакеты; остальные строки — прокси. На Android
+Marvia создаёт системный VPN-интерфейс и для сторонних прокси-ключей.
+
+| Протокол | Транспорт и отличие | Поддержка Marvia |
+|---|---|---|
+| **[VP1](docs/protocol.md)** | Noise-прокси поверх TLS/REALITY, WebSocket или QUIC; QUIC при недоступном UDP переходит на TCP | Своя нода, Android и Windows |
+| [WireGuard](https://www.wireguard.com/protocol/) | IP-туннель через UDP; штатной маскировки под HTTPS нет | Android: сторонний ключ |
+| [OpenVPN](https://openvpn.net/community-docs/community-articles/openvpn-2-7-manual.html) | IP-туннель через UDP или TCP с TLS; это отдельный протокол, а не обычный HTTPS | Не встроен |
+| [VLESS + REALITY](https://xtls.github.io/en/config/transports/reality.html) | Прокси через TCP с маскировкой TLS под целевой сайт | Нода и Android |
+| [Trojan](https://github.com/trojan-gfw/trojan/blob/master/docs/protocol.md) | Прокси внутри TLS с сайтом-прикрытием | Нода и Android |
+| [Shadowsocks](https://shadowsocks.org/doc/what-is-shadowsocks.html) | Шифрованный TCP/UDP-прокси; сам по себе не выглядит как HTTPS | Android: сторонний ключ |
+| [Hysteria 2](https://v2.hysteria.network/docs/developers/Protocol/) | Прокси через QUIC/UDP с видом HTTP/3; требуется доступный UDP | Android: сторонний ключ |
+
+**Рейтинга скорости здесь нет:** для него нужны одинаковые сервер, маршрут,
+клиент и серия замеров каждого протокола. Пока измерен только VP1 — см.
+[методику](docs/performance.md). VP1 не совместим с клиентами WireGuard или Xray.
 
 ## Что внутри
 

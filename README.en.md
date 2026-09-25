@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/shots/readme-hero.svg" alt="Marvia: Android and Windows VPN clients, panel and nodes" width="1200">
+<img src="docs/shots/readme-brand.svg" alt="Original Marvia ribbon mark and wordmark" width="1200">
 
 **A VPN for Android and Windows, with its own panel, nodes and VP1 protocol.**
 
@@ -34,6 +34,25 @@ One [field measurement](docs/guide.md), Dubai → Helsinki, one stream,
 (96.5%). A separate local VP1 code-path benchmark on a Ryzen 7 7700 reached a
 **638 MB/s median**; that is not internet speed. [Method and raw runs](docs/performance.md).
 No competitor has been measured on the same machine and route.
+
+## Protocols
+
+WireGuard and OpenVPN tunnel IP packets; the others below are proxies. On
+Android, Marvia also creates a system VPN interface for third-party proxy keys.
+
+| Protocol | Transport and distinction | Marvia support |
+|---|---|---|
+| **[VP1](docs/protocol.md)** | Noise proxy over TLS/REALITY, WebSocket or QUIC; falls back to TCP if QUIC/UDP is unavailable | First-party node, Android and Windows |
+| [WireGuard](https://www.wireguard.com/protocol/) | IP tunnel over UDP; no built-in HTTPS disguise | Android: third-party key |
+| [OpenVPN](https://openvpn.net/community-docs/community-articles/openvpn-2-7-manual.html) | IP tunnel over UDP or TCP with TLS; a separate protocol, not ordinary HTTPS | Not integrated |
+| [VLESS + REALITY](https://xtls.github.io/en/config/transports/reality.html) | TCP proxy with TLS handshake disguised as a target site | Node and Android |
+| [Trojan](https://github.com/trojan-gfw/trojan/blob/master/docs/protocol.md) | Proxy inside TLS with a cover site | Node and Android |
+| [Shadowsocks](https://shadowsocks.org/doc/what-is-shadowsocks.html) | Encrypted TCP/UDP proxy; does not resemble HTTPS on its own | Android: third-party key |
+| [Hysteria 2](https://v2.hysteria.network/docs/developers/Protocol/) | QUIC/UDP proxy with HTTP/3 appearance; requires working UDP | Android: third-party key |
+
+**No speed ranking yet:** each protocol needs repeated measurements on the same
+server, route and client. Only VP1 has been measured so far; see the
+[method](docs/performance.md). VP1 is not compatible with WireGuard or Xray clients.
 
 ## What is included
 
