@@ -155,7 +155,7 @@ func viewJSON(sub client.Subscription, fetched time.Time, stale bool) (string, e
 		view.Until = until.Local().Format("2006-01-02")
 	}
 	for _, n := range sub.Nodes {
-		view.Nodes = append(view.Nodes, NodeView{ID: n.ID, Name: n.Name, Country: n.Country})
+		view.Nodes = append(view.Nodes, NodeView{ID: n.ID, Name: n.Name, Country: n.Country, Endpoint: n.Address})
 	}
 	out, err := json.Marshal(view)
 	if err != nil {

@@ -172,6 +172,17 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/countryDetectionNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="8dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="4dp"
+                android:text="@string/country_detection_explain"
+                android:tag="dim"
+                android:textSize="12sp" />
+
+            <TextView
                 android:id="@+id/serversEmpty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

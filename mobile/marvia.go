@@ -420,6 +420,9 @@ type NodeView struct {
 	// вроде vm-4823917 не значит для него ничего.
 	Name    string `json:"name"`
 	Country string `json:"country,omitempty"`
+	// Endpoint identifies the server for a local exit-country cache. It is
+	// already present in the subscription and is never shown as a country.
+	Endpoint string `json:"endpoint,omitempty"`
 
 	// MS — последний отклик внутри готового туннеля с этого телефона.
 	// Ноль означает, что успешного замера отклика нет.
@@ -535,11 +538,12 @@ func viewsJSON(dialer client.Backend, nodes []client.Node, measured []client.Mea
 	views := make([]NodeView, 0, len(nodes))
 	for _, n := range nodes {
 		v := NodeView{
-			ID:      n.ID,
-			Name:    n.Name,
-			Country: n.Country,
-			Current: n.ID == current,
-			Chosen:  chosen != 0 && n.ID == chosen,
+			ID:       n.ID,
+			Name:     n.Name,
+			Country:  n.Country,
+			Endpoint: n.Address,
+			Current:  n.ID == current,
+			Chosen:   chosen != 0 && n.ID == chosen,
 		}
 		if m, ok := byID[n.ID]; ok {
 			v.Alive = m.OK()

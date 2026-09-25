@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingStart="12dp" android:paddingEnd="20dp"
+        android:paddingTop="@dimen/header_pad" android:paddingBottom="12dp">
+        <TextView android:id="@+id/insightsBack" android:layout_width="48dp" android:layout_height="48dp"
+            android:gravity="center" android:text="‹" android:textSize="34sp" android:tag="fg"
+            android:clickable="true" android:focusable="true" android:contentDescription="@string/insights_back" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView android:id="@+id/insightsTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:tag="fg" android:textSize="26sp" android:textStyle="bold" />
+            <TextView android:id="@+id/insightsSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="2dp" android:tag="dim" android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <ScrollView android:id="@+id/insightsScroll" android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:fillViewport="true" android:clipToPadding="false">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingHorizontal="16dp" android:paddingTop="6dp" android:paddingBottom="24dp">
+
+            <LinearLayout android:id="@+id/speedSection" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card" android:tag="card" android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/insights_live" android:tag="dim" android:textSize="12sp" android:letterSpacing="0.13" />
+                    <TextView android:id="@+id/speedTotal" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:fontFamily="@font/mono" android:tag="acc"
+                        android:textSize="32sp" android:textStyle="bold" />
+                    <io.marvia.android.SpeedChartView android:id="@+id/speedChart"
+                        android:layout_width="match_parent" android:layout_height="170dp" android:layout_marginTop="18dp"
+                        android:contentDescription="@string/insights_speed_chart" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:text="@string/insights_window" android:tag="dim" android:textSize="11sp" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/insights_speed_legend" android:tag="dim" android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:layout_marginEnd="6dp" android:background="@drawable/bg_card" android:tag="card"
+                        android:orientation="vertical" android:padding="16dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/insights_download" android:tag="dim" android:textSize="12sp" />
+                        <TextView android:id="@+id/speedDown" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp" android:fontFamily="@font/mono" android:tag="fg"
+                            android:textSize="18sp" android:textStyle="bold" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:layout_marginStart="6dp" android:background="@drawable/bg_card" android:tag="card"
+                        android:orientation="vertical" android:padding="16dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/insights_upload" android:tag="dim" android:textSize="12sp" />
+                        <TextView android:id="@+id/speedUp" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp" android:fontFamily="@font/mono" android:tag="fg"
+                            android:textSize="18sp" android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:background="@drawable/bg_card" android:tag="card"
+                    android:orientation="vertical" android:padding="18dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/insights_this_session" android:tag="fg" android:textSize="16sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/speedAverage" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp" android:tag="dim" android:textSize="13sp" />
+                    <TextView android:id="@+id/speedPeak" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:tag="dim" android:textSize="13sp" />
+                    <TextView android:id="@+id/speedEmpty" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp" android:text="@string/stats_speed_connect" android:tag="dim" android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/sessionsSection" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:visibility="gone">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card" android:tag="card" android:orientation="vertical" android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/insights_this_session" android:tag="dim" android:textSize="12sp" android:letterSpacing="0.12" />
+                    <TextView android:id="@+id/sessionDuration" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp" android:fontFamily="@font/mono" android:tag="acc"
+                        android:textSize="31sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/sessionCurrentTraffic" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="9dp" android:tag="dim" android:textSize="13sp" />
+                    <io.marvia.android.SessionSplitView android:id="@+id/sessionSplit"
+                        android:layout_width="match_parent" android:layout_height="14dp" android:layout_marginTop="18dp"
+                        android:contentDescription="@string/insights_traffic_split" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/sessionChartCard" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:background="@drawable/bg_card" android:tag="card"
+                    android:orientation="vertical" android:padding="18dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="@string/insights_recent_chart" android:tag="fg" android:textSize="16sp" android:textStyle="bold" />
+                    <io.marvia.android.SessionBarsView android:id="@+id/sessionChart"
+                        android:layout_width="match_parent" android:layout_height="140dp" android:layout_marginTop="14dp"
+                        android:contentDescription="@string/insights_session_chart" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp" android:text="@string/insights_chart_note" android:tag="dim" android:textSize="11sp" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp" android:gravity="center_vertical" android:orientation="horizontal">
+                    <TextView android:id="@+id/sessionsCount" android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:tag="fg" android:textSize="17sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/sessionsRecent" android:layout_width="wrap_content" android:layout_height="44dp"
+                        android:gravity="center" android:paddingHorizontal="13dp" android:text="@string/insights_recent"
+                        android:clickable="true" android:focusable="true" android:textSize="12sp" />
+                    <TextView android:id="@+id/sessionsAll" android:layout_width="wrap_content" android:layout_height="44dp"
+                        android:gravity="center" android:paddingHorizontal="13dp" android:text="@string/insights_all"
+                        android:clickable="true" android:focusable="true" android:textSize="12sp" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/sessionsList" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:orientation="vertical" />
+                <TextView android:id="@+id/sessionsMore" android:layout_width="match_parent" android:layout_height="48dp"
+                    android:layout_marginTop="10dp" android:gravity="center" android:text="@string/insights_show_more"
+                    android:tag="acc" android:clickable="true" android:focusable="true" android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

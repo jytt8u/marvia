@@ -1,22 +1,24 @@
 package io.marvia.android
 
+import android.content.ContentValues
 import android.content.Context
-import androidx.appcompat.app.AppCompatActivity
-import java.text.DateFormat
-import java.util.Date
-import java.util.Locale
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+import android.os.SystemClock
 
-/** Только локальные счётчики; адреса сайтов и ключи здесь не хранятся. */
+/** Local tunnel counters only. No destination addresses or access keys are retained. */
 object SessionDetails {
     data class Sample(val at: Long, val down: Double, val up: Double)
     data class Session(val began: Long, val seconds: Long, val received: Long, val sent: Long)
+    data class SpeedSnapshot(val session: Session?, val samples: List<Sample>, val peak: Double)
+
     private val samples = ArrayDeque<Sample>()
     private var current: Session? = null
     private var lastAt = 0L
     private var startedAt = 0L
     private var peak = 0.0
 
-    @Synchronized fun begin(now: Long = android.os.SystemClock.elapsedRealtime()) {
+    @Synchronized fun begin(now: Long = SystemClock.elapsedRealtime()) {
         samples.clear()
         current = Session(System.currentTimeMillis(), 0, 0, 0)
         lastAt = now
@@ -24,7 +26,7 @@ object SessionDetails {
         peak = 0.0
     }
 
-    @Synchronized fun sample(received: Long, sent: Long, now: Long = android.os.SystemClock.elapsedRealtime()) {
+    @Synchronized fun sample(received: Long, sent: Long, now: Long = SystemClock.elapsedRealtime()) {
         val old = current ?: return
         if (now <= lastAt) return
         val dt = (now - lastAt) / 1000.0
@@ -36,44 +38,93 @@ object SessionDetails {
         lastAt = now
     }
 
+    @Synchronized fun snapshot(): SpeedSnapshot = SpeedSnapshot(current, samples.toList(), peak)
+
     @Synchronized fun finish(context: Context) {
         val s = current ?: return
-        val prefs = context.getSharedPreferences("veil", Context.MODE_PRIVATE)
-        val previous = prefs.getString("session_history", "").orEmpty().lineSequence().filter { it.isNotBlank() }.take(19)
-        prefs.edit().putString("session_history", (sequenceOf("${s.began},${s.seconds},${s.received},${s.sent}") + previous).joinToString("\n")).apply()
+        // Do not let a damaged history database bring down the VPN service.
+        try {
+            History(context).use { history ->
+                history.migrateLegacy(context)
+                history.insert(s)
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MarviaSessions", "Could not save session history", e)
+        }
         current = null
         samples.clear()
     }
 
-    fun showSpeed(host: AppCompatActivity, theme: Theme) {
-        val (session, points, maximum) = synchronized(this) { Triple(current, samples.toList(), peak) }
-        val last = points.lastOrNull()
-        val average = session?.let { (it.received + it.sent).toDouble() / it.seconds.coerceAtLeast(1) } ?: 0.0
-        val message = if (session == null) host.getString(R.string.stats_speed_connect) else listOf(
-            host.getString(R.string.stats_speed_down, MarviaVpnService.Live.rate(host, last?.down ?: 0.0)),
-            host.getString(R.string.stats_speed_up, MarviaVpnService.Live.rate(host, last?.up ?: 0.0)),
-            host.getString(R.string.stats_speed_average, MarviaVpnService.Live.rate(host, average)),
-            host.getString(R.string.stats_speed_peak, MarviaVpnService.Live.rate(host, maximum)),
-            host.getString(R.string.stats_speed_sample_note),
-        ).joinToString("\n\n")
-        ThemedDialogs.builder(host, theme).setTitle(R.string.stats_speed).setMessage(message).setPositiveButton(android.R.string.ok, null).show()
+    /** Read a page, newest first. History is no longer capped at 20 sessions. */
+    fun history(context: Context, limit: Int, offset: Int = 0): List<Session> = try {
+        History(context).use { db ->
+            db.migrateLegacy(context)
+            db.page(limit.coerceIn(1, 100), offset.coerceAtLeast(0))
+        }
+    } catch (e: Exception) {
+        android.util.Log.w("MarviaSessions", "Could not load session history", e)
+        emptyList()
     }
 
-    fun showSession(host: AppCompatActivity, theme: Theme) {
-        val active = synchronized(this) { current }
-        val date = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
-        fun line(s: Session): String = "${date.format(Date(s.began))} · ${duration(s.seconds)}\n↓ ${Format.size(host, s.received)}   ↑ ${Format.size(host, s.sent)}"
-        val saved = host.getSharedPreferences("veil", Context.MODE_PRIVATE).getString("session_history", "").orEmpty()
-            .lineSequence().mapNotNull { row ->
-                val v = row.split(',').mapNotNull { it.toLongOrNull()?.takeIf { n -> n >= 0 } }
-                if (v.size == 4) Session(v[0], v[1], v[2], v[3]) else null
-            }.take(20).toList()
-        val text = buildList {
-            if (active != null) add(host.getString(R.string.stats_session_current) + "\n" + line(active))
-            if (saved.isNotEmpty()) add(host.getString(R.string.stats_sessions_previous) + "\n\n" + saved.joinToString("\n\n", transform = ::line))
-        }.joinToString("\n\n").ifEmpty { host.getString(R.string.stats_sessions_empty) }
-        ThemedDialogs.builder(host, theme).setTitle(R.string.stats_session).setMessage(text).setPositiveButton(android.R.string.ok, null).show()
-    }
+    fun count(context: Context): Int = try {
+        History(context).use { db ->
+            db.migrateLegacy(context)
+            db.count()
+        }
+    } catch (_: Exception) { 0 }
 
-    private fun duration(s: Long): String = String.format(Locale.ROOT, "%02d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
+    private class History(context: Context) : SQLiteOpenHelper(context, "session_history.db", null, 1) {
+        override fun onCreate(db: SQLiteDatabase) {
+            db.execSQL("CREATE TABLE sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, began INTEGER NOT NULL, seconds INTEGER NOT NULL, received INTEGER NOT NULL, sent INTEGER NOT NULL)")
+            db.execSQL("CREATE INDEX sessions_recent ON sessions(began DESC, id DESC)")
+            db.execSQL("CREATE TABLE migration (name TEXT PRIMARY KEY)")
+        }
+
+        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+
+        fun insert(s: Session) {
+            writableDatabase.insertOrThrow("sessions", null, ContentValues().apply {
+                put("began", s.began)
+                put("seconds", s.seconds)
+                put("received", s.received)
+                put("sent", s.sent)
+            })
+        }
+
+        fun page(limit: Int, offset: Int): List<Session> {
+            val result = ArrayList<Session>(limit)
+            readableDatabase.rawQuery(
+                "SELECT began, seconds, received, sent FROM sessions ORDER BY began DESC, id DESC LIMIT ? OFFSET ?",
+                arrayOf(limit.toString(), offset.toString()),
+            ).use { cursor ->
+                while (cursor.moveToNext()) result += Session(cursor.getLong(0), cursor.getLong(1), cursor.getLong(2), cursor.getLong(3))
+            }
+            return result
+        }
+
+        fun count(): Int = readableDatabase.rawQuery("SELECT COUNT(*) FROM sessions", null).use {
+            if (it.moveToFirst()) it.getInt(0) else 0
+        }
+
+        fun migrateLegacy(context: Context) {
+            val prefs = context.getSharedPreferences("veil", Context.MODE_PRIVATE)
+            val saved = prefs.getString("session_history", "").orEmpty()
+            val db = writableDatabase
+            db.beginTransaction()
+            try {
+                val alreadyDone = db.rawQuery("SELECT 1 FROM migration WHERE name = 'legacy'", null).use { it.moveToFirst() }
+                if (alreadyDone) {
+                    db.setTransactionSuccessful()
+                    return
+                }
+                saved.lineSequence().forEach { row ->
+                    val values = row.split(',').mapNotNull { it.toLongOrNull()?.takeIf { n -> n >= 0 } }
+                    if (values.size == 4) insert(Session(values[0], values[1], values[2], values[3]))
+                }
+                db.execSQL("INSERT INTO migration(name) VALUES ('legacy')")
+                db.setTransactionSuccessful()
+            } finally { db.endTransaction() }
+            // The marker and imported rows commit together. Keep the old string as a recovery copy.
+        }
+    }
 }

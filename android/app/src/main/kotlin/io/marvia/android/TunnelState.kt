@@ -86,6 +86,8 @@ sealed interface TunnelState {
  */
 object MarviaState {
     val traffic = MutableStateFlow(TrafficSnapshot())
+    /** Changes only when an exit-IP country lookup succeeds. */
+    val countryDetected = MutableStateFlow(0L)
     private val current = MutableStateFlow<TunnelState>(TunnelState.Off)
 
     val state: StateFlow<TunnelState> = current.asStateFlow()

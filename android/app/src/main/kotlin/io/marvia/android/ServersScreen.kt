@@ -17,6 +17,7 @@ import io.marvia.android.databinding.ItemProviderBinding
 import io.marvia.android.databinding.ScreenServersBinding
 import io.marvia.mobile.Mobile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -74,6 +75,16 @@ class ServersScreen(
         ui.refreshAll.setOnClickListener { refreshAll() }
         ui.autoRow.setOnClickListener { pickAuto() }
         ui.addSubscription.setOnClickListener { askWhereFrom() }
+        host.lifecycleScope.launch {
+            MarviaState.countryDetected.collect {
+                for (p in providers.values) {
+                    p.rows = p.rows.map { row ->
+                        row.copy(exitCountry = store.exitCountry(p.sub.link, row.id, row.name, row.endpoint))
+                    }
+                }
+                render()
+            }
+        }
     }
 
     // --------------------------------------------------------- подписки
@@ -253,7 +264,7 @@ class ServersScreen(
             if (json.isNotEmpty()) take(p, json)
             if (active && core != null) {
                 val live = withContext(Dispatchers.IO) { runCatching { core.nodes() }.getOrDefault("[]") }
-                merge(p, NodeRow.parse(live))
+                merge(p, parseRows(p, live))
             }
             p.loaded = true
             p.refreshing = false
@@ -286,7 +297,7 @@ class ServersScreen(
             }
             if (json.isNotEmpty()) {
                 if (active && core != null) {
-                    val rows = NodeRow.parse(json)
+                    val rows = parseRows(p, json)
                     MarviaState.remember(rows)
                     merge(p, rows)
                 } else {
@@ -307,7 +318,7 @@ class ServersScreen(
     /** take разбирает ответ ядра про подписку. */
     private fun take(p: Provider, json: String) {
         val o = try { JSONObject(json) } catch (_: Throwable) { return }
-        val rows = NodeRow.parse(o.optJSONArray("nodes")?.toString() ?: "[]")
+        val rows = parseRows(p, o.optJSONArray("nodes")?.toString() ?: "[]")
         // Замеры с прошлого раза не теряем: ответ без времён — не повод
         // превращать список в прочерки.
         val known = p.rows.associateBy { it.id }
@@ -321,6 +332,10 @@ class ServersScreen(
         p.fetchedAt = o.optLong("fetched_at", 0)
         p.stale = o.optBoolean("stale", false)
         p.error = ""
+    }
+
+    private fun parseRows(p: Provider, json: String): List<NodeRow> = NodeRow.parse(json) { id, name, endpoint ->
+        store.exitCountry(p.sub.link, id, name, endpoint)
     }
 
     /** merge накладывает ответ ядра (текущая, выбранная, времена) на список подписки. */
@@ -425,6 +440,7 @@ class ServersScreen(
         ).joinToString(" · ")
 
         ui.serversEmpty.isVisible = list.isEmpty()
+        ui.countryDetectionNote.isVisible = list.isNotEmpty()
         ui.serversEmpty.setText(R.string.servers_no_subs)
         ui.autoRow.isVisible = active != null
         ui.refreshSpinner.isVisible = list.any { it.refreshing }
@@ -546,6 +562,7 @@ class ServersScreen(
         item.nodeNote.text = buildList {
             if (place.isNotEmpty()) add(place)
             add(row.name)
+            if (row.countryFromExit) add(host.getString(R.string.country_from_exit_ip))
             when {
                 down -> add(host.getString(R.string.node_down))
                 chosen && row.current -> add(host.getString(R.string.node_chosen_current))

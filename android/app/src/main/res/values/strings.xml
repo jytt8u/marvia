@@ -255,7 +255,22 @@
     <string name="settings_update">New version %1$s available</string>
     <string name="settings_update_sub">From the server of whoever gave you access, not from a store</string>
     <string name="settings_about">About us</string>
-    <string name="about_body">%1$s, version %2$s</string>
+    <string name="about_intro">How your connection works</string>
+    <string name="about_headline">Your connection, your choice</string>
+    <string name="about_description">Marvia connects selected apps to the internet through your chosen VPN node.</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_route_title">CONNECTION ROUTE</string>
+    <string name="about_step_device">Your device</string>
+    <string name="about_step_device_sub">An app sends a request</string>
+    <string name="about_step_tunnel">Encrypted tunnel</string>
+    <string name="about_step_tunnel_sub">Traffic travels to the chosen node</string>
+    <string name="about_step_node">VPN node</string>
+    <string name="about_step_node_sub">The node forwards the request</string>
+    <string name="about_step_internet">Internet</string>
+    <string name="about_step_internet_sub">Sites see the node’s IP address</string>
+    <string name="about_scope_title">WHAT GOES THROUGH THE TUNNEL</string>
+    <string name="about_scope_apps">Apps included in your VPN settings follow this route. Excluded apps connect directly.</string>
+    <string name="about_scope_note">The tunnel protects traffic between your device and the node. It does not replace a website’s own HTTPS protection.</string>
     <!--
         Экран темы. Названия пресетов — по ключу из таблицы internal/look:
         look_<ключ>. Тест в том пакете следит, что ни один пресет не остался

@@ -21,6 +21,10 @@ data class NodeRow(
     /** Её выбрал человек руками. */
     val chosen: Boolean,
     val setupMs: Long = 0,
+    /** Learned from the exit IP through this node; never sent back to the core. */
+    val exitCountry: String = "",
+    /** Only used to bind cached country to this exact node endpoint. */
+    val endpoint: String = "",
 ) {
 
     /**
@@ -29,7 +33,13 @@ data class NodeRow(
      * Продавец пишет страну вместе с городом: «ОАЭ · Дубай». Для группы нужна
      * только первая половина, иначе каждый город станет своей страной.
      */
-    val group: String get() = country.substringBefore('·').trim()
+    val group: String
+        get() = country.substringBefore('·').trim().ifEmpty {
+            CountryGuess.fromName(name).ifEmpty { exitCountry }
+        }
+
+    val countryFromExit: Boolean
+        get() = country.isBlank() && CountryGuess.fromName(name).isEmpty() && exitCountry.isNotBlank()
 
     /** Город, а если продавец его не написал — имя ноды. */
     val place: String
@@ -51,7 +61,7 @@ data class NodeRow(
          * Битый JSON здесь не беда, а пустой экран: ядро могло ещё не поднять
          * туннель. Падать из-за этого посреди выбора страны незачем.
          */
-        fun parse(json: String): List<NodeRow> = try {
+        fun parse(json: String, learnedCountry: (Long, String, String) -> String = { _, _, _ -> "" }): List<NodeRow> = try {
             val array = JSONArray(json)
             (0 until array.length()).mapNotNull { i ->
                 val o = array.optJSONObject(i) ?: return@mapNotNull null
@@ -64,6 +74,8 @@ data class NodeRow(
                     current = o.optBoolean("current"),
                     chosen = o.optBoolean("chosen"),
                     setupMs = o.optLong("setup_ms"),
+                    exitCountry = learnedCountry(o.optLong("id"), o.optString("name"), o.optString("endpoint")),
+                    endpoint = o.optString("endpoint"),
                 )
             }
         } catch (_: Throwable) {
@@ -83,14 +95,38 @@ object Flags {
 
     /** Пустая строка означает «страну не узнали». */
     fun of(country: String): String {
-        val key = country.lowercase().replace('ё', 'е').trim()
-        val code = CODES[key] ?: return ""
+        val code = codeOf(country) ?: return ""
 
         // Флаг в юникоде — это две буквы кода страны особыми знаками.
         val base = 0x1F1E6
         val first = base + (code[0].code - 'a'.code)
         val second = base + (code[1].code - 'a'.code)
         return String(Character.toChars(first)) + String(Character.toChars(second))
+    }
+
+    /** CountryGuess uses the same aliases as flag rendering. */
+    internal fun codeOf(name: String): String? {
+        val key = name.lowercase().replace('ё', 'е').trim()
+        return CODES[key] ?: key.takeIf { it.length == 2 && it in CODES.values }
+    }
+
+    internal fun countryOf(code: String): String? = when (code) {
+        "ae" -> "ОАЭ"
+        "us" -> "США"
+        "za" -> "ЮАР"
+        else -> CODES.entries
+            .firstOrNull { it.value == code && it.key.any { letter -> letter in 'а'..'я' } }
+            ?.key?.replaceFirstChar { it.titlecase() }
+    }
+
+    // Long names first: «Южная Корея» must win over «Корея».
+    private val namesInText by lazy {
+        CODES.entries.filter { it.key.length > 2 }.sortedByDescending { it.key.length }
+    }
+
+    internal fun codeInName(name: String): String? {
+        val padded = " $name "
+        return namesInText.firstOrNull { padded.contains(" ${it.key} ") }?.value
     }
 
     private val CODES: Map<String, String> = mapOf(
@@ -256,4 +292,70 @@ object Flags {
         "iran" to "ir",
         "pakistan" to "pk",
     )
+}
+
+/**
+ * A foreign subscription has no country field, but its node label often does.
+ * Infer only from an explicit flag, country, country code, or unambiguous city.
+ * No geolocation service is called: CDN entry addresses are frequently in a
+ * different country from the exit, and sending them to a third party would
+ * disclose private subscription endpoints.
+ */
+internal object CountryGuess {
+    private val separators = Regex("[^\\p{L}\\p{N}]+")
+    private val lowerCodePrefix = Regex("^\\s*([a-z]{2})[-_]\\d+(?:\\D|$)")
+    private val bracketedCode = Regex("\\[([A-Za-z]{2})]")
+
+    private val cities = mapOf(
+        "амстердам" to "nl", "amsterdam" to "nl",
+        "хельсинки" to "fi", "helsinki" to "fi",
+        "дубай" to "ae", "dubai" to "ae",
+        "франкфурт" to "de", "frankfurt" to "de",
+        "варшава" to "pl", "warsaw" to "pl",
+        "стокгольм" to "se", "stockholm" to "se",
+        "цюрих" to "ch", "zurich" to "ch",
+        "лондон" to "gb", "london" to "gb",
+        "париж" to "fr", "paris" to "fr",
+        "мадрид" to "es", "madrid" to "es",
+        "токио" to "jp", "tokyo" to "jp",
+        "сингапур" to "sg", "singapore" to "sg",
+    )
+
+    fun fromName(name: String): String {
+        val code = flagCode(name)
+            ?: explicitCode(name)
+            ?: run {
+                val normalized = name.lowercase().replace('ё', 'е')
+                    .replace(separators, " ").trim()
+                Flags.codeInName(normalized)
+                    ?: cities.entries.firstOrNull { " $normalized ".contains(" ${it.key} ") }?.value
+            }
+        return code?.let(Flags::countryOf).orEmpty()
+    }
+
+    private fun flagCode(name: String): String? {
+        var offset = 0
+        while (offset < name.length) {
+            val first = name.codePointAt(offset)
+            val next = offset + Character.charCount(first)
+            if (first in 0x1F1E6..0x1F1FF && next < name.length) {
+                val second = name.codePointAt(next)
+                if (second in 0x1F1E6..0x1F1FF) {
+                    val code = "${'a' + (first - 0x1F1E6)}${'a' + (second - 0x1F1E6)}"
+                    return Flags.codeOf(code)
+                }
+            }
+            offset = next
+        }
+        return null
+    }
+
+    private fun explicitCode(name: String): String? {
+        bracketedCode.find(name)?.groupValues?.get(1)?.let { Flags.codeOf(it)?.let { code -> return code } }
+        val first = name.trimStart().takeWhile { it.isLetter() }
+        if (first.length == 2 && first.all { it.isUpperCase() }) {
+            Flags.codeOf(first)?.let { return it }
+        }
+        return lowerCodePrefix.find(name)?.groupValues?.get(1)?.let(Flags::codeOf)
+    }
 }

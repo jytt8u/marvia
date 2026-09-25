@@ -66,7 +66,7 @@ class MoreScreen(
     private val onReset: () -> Unit,
 ) {
 
-    enum class Section { CONN, APPS, LOGS }
+    enum class Section { CONN, APPS, LOGS, ABOUT }
 
     private var section = Section.CONN
 
@@ -139,6 +139,7 @@ class MoreScreen(
         ui.sectionConn.isVisible = next == Section.CONN
         ui.sectionApps.isVisible = next == Section.APPS
         ui.sectionLogs.isVisible = next == Section.LOGS
+        ui.sectionAbout.isVisible = next == Section.ABOUT
 
         ui.moreBack.isVisible = next != Section.CONN
         // Подэкран — заголовок помельче: «Прокси по приложениям» в 26 не влезает.
@@ -148,18 +149,21 @@ class MoreScreen(
                 Section.CONN -> R.string.more_title
                 Section.APPS -> R.string.more_apps_card
                 Section.LOGS -> R.string.more_logs_row
+                Section.ABOUT -> R.string.settings_about
             },
         )
         ui.moreSub.text = when (next) {
             Section.CONN -> host.getString(R.string.more_sub, version)
             Section.APPS -> appsSummary()
             Section.LOGS -> logsSub()
+            Section.ABOUT -> host.getString(R.string.about_intro)
         }
 
         when (next) {
             Section.CONN -> renderConnection()
             Section.APPS -> openApps()
             Section.LOGS -> renderLogs()
+            Section.ABOUT -> ui.aboutVersion.text = host.getString(R.string.about_version, version)
         }
     }
 
@@ -216,7 +220,7 @@ class MoreScreen(
         }
 
         ui.rowLanguage.setOnClickListener { onLanguage() }
-        ui.rowAbout.setOnClickListener { about() }
+        ui.rowAbout.setOnClickListener { show(Section.ABOUT) }
         ui.rowReset.setOnClickListener { askReset() }
 
         // Исключать маршруты умеет только Android 13 и новее. На старых
@@ -384,15 +388,6 @@ class MoreScreen(
                 Toast.makeText(host, url, Toast.LENGTH_LONG).show()
             }
         }
-    }
-
-    /** about отвечает на «какая у тебя версия» — первый вопрос продавца. */
-    private fun about() {
-        ThemedDialogs.builder(host, theme())
-            .setTitle(R.string.settings_about)
-            .setMessage(host.getString(R.string.about_body, host.getString(R.string.app_name), version))
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
     }
 
     // ---------------------------------------------------------- приложения
