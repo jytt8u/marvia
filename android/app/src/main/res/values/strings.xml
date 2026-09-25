@@ -45,7 +45,11 @@
     <string name="perms_title">What you will need</string>
     <string name="perms_subtitle">Three permissions from Android. Without the first one the tunnel cannot work; the other two keep it awake and let it tell you what is going on.</string>
     <string name="perms_vpn">Create a VPN connection</string>
-    <string name="perms_vpn_why">the tunnel is impossible without it — that is how Android works</string>
+    <string name="perms_vpn_why">routes selected apps through an encrypted tunnel to your chosen node</string>
+    <string name="perms_vpn_disclosure_title">Before you allow VPN access</string>
+    <string name="perms_vpn_disclosure">Marvia will route traffic from the apps you include through an encrypted tunnel to the node supplied by your access key. The node operator can see your connection IP address, key identifier and traffic volume, and may see destination addresses after traffic exits the tunnel. If you use a subscription, its panel may receive your access token and node measurements. Apps and routes you exclude connect directly. Continue to Android’s VPN permission request?</string>
+    <string name="perms_vpn_accept">Continue</string>
+    <string name="perms_vpn_decline">Not now</string>
     <string name="perms_notify">Show notifications</string>
     <string name="perms_notify_why">country and speed in the shade, a warning if the node goes silent</string>
     <string name="perms_battery">Do not put to sleep in the background</string>
@@ -271,6 +275,9 @@
     <string name="about_scope_title">WHAT GOES THROUGH THE TUNNEL</string>
     <string name="about_scope_apps">Apps included in your VPN settings follow this route. Excluded apps connect directly.</string>
     <string name="about_scope_note">The tunnel protects traffic between your device and the node. It does not replace a website’s own HTTPS protection.</string>
+    <string name="about_privacy">Privacy policy ↗</string>
+    <string name="about_privacy_sub">What the app and your VPN operator can see</string>
+    <string name="about_privacy_unavailable">No browser could open the privacy policy</string>
     <!--
         Экран темы. Названия пресетов — по ключу из таблицы internal/look:
         look_<ключ>. Тест в том пакете следит, что ни один пресет не остался

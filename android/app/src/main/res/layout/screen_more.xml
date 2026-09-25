@@ -590,6 +590,32 @@
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="14dp" android:tag="line" />
                     <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:tag="dim" android:text="@string/about_scope_note" android:textSize="13sp" />
                 </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/aboutPrivacy"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_card"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:tag="card">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:tag="acc"
+                        android:text="@string/about_privacy"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:tag="dim"
+                        android:text="@string/about_privacy_sub"
+                        android:textSize="12sp" />
+                </LinearLayout>
             </LinearLayout>
         </ScrollView>
     </FrameLayout>

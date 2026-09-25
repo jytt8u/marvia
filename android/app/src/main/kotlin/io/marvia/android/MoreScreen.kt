@@ -231,6 +231,13 @@ class MoreScreen(
 
         ui.rowLanguage.setOnClickListener { onLanguage() }
         ui.rowAbout.setOnClickListener { show(Section.ABOUT) }
+        ui.aboutPrivacy.setOnClickListener {
+            try {
+                host.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/jytt8u/marvia/blob/main/docs/privacy.md")))
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(host, R.string.about_privacy_unavailable, Toast.LENGTH_LONG).show()
+            }
+        }
         ui.rowReset.setOnClickListener { askReset() }
 
         // Исключать маршруты умеет только Android 13 и новее. На старых

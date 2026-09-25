@@ -124,6 +124,16 @@ class PermsScreen(
     }
 
     private fun askVpn() {
+        if (vpnGranted()) return paint()
+        ThemedDialogs.builder(host, theme())
+            .setTitle(R.string.perms_vpn_disclosure_title)
+            .setMessage(R.string.perms_vpn_disclosure)
+            .setPositiveButton(R.string.perms_vpn_accept) { _, _ -> requestVpn() }
+            .setNegativeButton(R.string.perms_vpn_decline, null)
+            .show()
+    }
+
+    private fun requestVpn() {
         val intent = VpnService.prepare(host) ?: return paint()
         try {
             vpnConsent.launch(intent)

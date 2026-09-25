@@ -19,7 +19,11 @@
     <string name="perms_title">Что понадобится</string>
     <string name="perms_subtitle">Три разрешения от Android. Без первого туннель не заработает, остальные два — чтобы он не засыпал и говорил, что с ним.</string>
     <string name="perms_vpn">Создавать VPN-подключение</string>
-    <string name="perms_vpn_why">без этого туннель невозможен — так устроен Android</string>
+    <string name="perms_vpn_why">направляет выбранные приложения через зашифрованный туннель к вашей ноде</string>
+    <string name="perms_vpn_disclosure_title">Перед разрешением VPN</string>
+    <string name="perms_vpn_disclosure">Marvia направит трафик включённых приложений по зашифрованному туннелю к ноде из вашего ключа. Владелец ноды видит IP-адрес подключения, идентификатор ключа и объём трафика; после выхода из туннеля он может видеть адреса назначений. Если вы используете подписку, её панель может получать токен доступа и результаты замеров нод. Исключённые приложения и маршруты подключаются напрямую. Перейти к системному запросу Android?</string>
+    <string name="perms_vpn_accept">Продолжить</string>
+    <string name="perms_vpn_decline">Не сейчас</string>
     <string name="perms_notify">Показывать уведомления</string>
     <string name="perms_notify_why">страна и скорость в шторке, предупреждение, если нода замолчала</string>
     <string name="perms_battery">Не усыплять в фоне</string>
@@ -251,6 +255,9 @@
     <string name="about_scope_title">ЧТО ИДЁТ ЧЕРЕЗ ТУННЕЛЬ</string>
     <string name="about_scope_apps">Этим путём идут приложения, включённые в настройках VPN. Исключённые приложения подключаются напрямую.</string>
     <string name="about_scope_note">Туннель защищает трафик между телефоном и нодой. Он не заменяет собственную защиту HTTPS у сайта.</string>
+    <string name="about_privacy">Политика конфиденциальности ↗</string>
+    <string name="about_privacy_sub">Что видит приложение и владелец VPN-ноды</string>
+    <string name="about_privacy_unavailable">Не удалось открыть политику: нет браузера</string>
     <string name="theme_title">Тема</string>
     <string name="theme_tab_color">Цвет</string>
     <string name="theme_tab_light">Свет</string>
