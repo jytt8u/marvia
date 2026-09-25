@@ -1,19 +1,20 @@
 <div align="center">
 
-<img src="internal/look/assets/marvia-mark.png" alt="Marvia" height="76">
-
-# Marvia
+<img src="docs/shots/readme-hero.svg" alt="Marvia: VPN для Android и Windows, панель и ноды" width="1200">
 
 **VPN для Android и Windows. Свои панель, ноды и протокол VP1.**
 
-Русский · [English](README.en.md) · [简体中文](README.zh-CN.md)
+[![RU](https://img.shields.io/badge/RU-RUSSIAN-a78bfa?style=flat-square)](README.md)
+[![EN](https://img.shields.io/badge/EN-ENGLISH-51d9e3?style=flat-square)](README.en.md)
+[![ZH](https://img.shields.io/badge/ZH-CHINESE-f5b765?style=flat-square)](README.zh-CN.md)
 
-[![Релиз](https://img.shields.io/github/v/release/jytt8u/marvia?label=релиз&color=8b9cad)](https://github.com/jytt8u/marvia/releases/latest)
+[![Релиз](https://img.shields.io/github/v/release/jytt8u/marvia?label=релиз&color=51d9e3)](https://github.com/jytt8u/marvia/releases/latest)
 [![Проверки](https://github.com/jytt8u/marvia/actions/workflows/check.yml/badge.svg)](https://github.com/jytt8u/marvia/actions)
 
-[**Скачать**](https://github.com/jytt8u/marvia/releases/latest) ·
-[**Установить панель**](#установка-панели) ·
-[**Документация**](docs/guide.md)
+[![Android APK](https://img.shields.io/badge/ANDROID-APK-39c9bd?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
+[![Windows EXE](https://img.shields.io/badge/WINDOWS-EXE-9a7af7?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)
+[![Панель](https://img.shields.io/badge/PANEL-INSTALL-e5aa61?style=for-the-badge)](#установка-панели)
+[![Документация](https://img.shields.io/badge/DOCS-GUIDE-6887e8?style=for-the-badge)](docs/guide.md)
 
 </div>
 
@@ -56,9 +57,11 @@ Marvia пока уступает по автоматическому месяч�
 
 ## Начать
 
-**Получили ключ?** Скачайте [Android APK](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
-или [Windows-клиент](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe),
-добавьте ссылку `marvia://…` во вкладке «Серверы» и подключитесь.
+> [!TIP]
+> **Получили ключ?** Скачайте [Android APK](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
+> или [Windows-клиент](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe),
+> добавьте ссылку `marvia://…` во вкладке «Серверы» и подключитесь.
+
 Android также принимает VLESS, VMess, Trojan, Shadowsocks, Hysteria2 и WireGuard.
 В Google Play приложения пока нет.
 

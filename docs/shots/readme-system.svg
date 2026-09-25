@@ -4,8 +4,8 @@
   <defs>
     <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M30 0H0V30" fill="none" stroke="#1b3340" stroke-width="1"/></pattern>
     <marker id="cyan-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#66d5d1" stroke-width="2"/></marker>
-    <marker id="grey-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#8ea6b0" stroke-width="2"/></marker>
-    <linearGradient id="panel" x2="0" y2="1"><stop stop-color="#122a32"/><stop offset="1" stop-color="#0d1b23"/></linearGradient>
+    <marker id="violet-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#ac91f7" stroke-width="2"/></marker>
+    <linearGradient id="panel" x2="0" y2="1"><stop stop-color="#211c35"/><stop offset="1" stop-color="#151c2d"/></linearGradient>
   </defs>
   <rect width="1200" height="560" rx="18" fill="#09141b"/>
   <rect width="1200" height="560" rx="18" fill="url(#grid)" opacity=".75"/>
@@ -15,21 +15,21 @@
   <text x="102" y="52" fill="#eaf4f5" font-family="Consolas,monospace" font-size="21" font-weight="700">MARVIA / SYSTEM TOPOLOGY</text>
   <text x="1145" y="51" text-anchor="end" fill="#8ea6b0" font-family="Consolas,monospace" font-size="15">CONTROL ≠ DATA</text>
 
-  <text x="56" y="110" fill="#8ea6b0" font-family="Consolas,monospace" font-size="16" letter-spacing="2">01 / CONTROL PLANE</text>
+  <text x="56" y="110" fill="#c3aaff" font-family="Consolas,monospace" font-size="16" letter-spacing="2">01 / CONTROL PLANE</text>
   <path d="M225 91H1138" stroke="#38505c" stroke-dasharray="5 6"/>
-  <g fill="url(#panel)" stroke="#607b87" stroke-width="1.5">
+  <g fill="url(#panel)" stroke="#8069bb" stroke-width="1.5">
     <rect x="55" y="144" width="250" height="118" rx="8"/>
     <rect x="475" y="144" width="250" height="118" rx="8"/>
     <rect x="895" y="144" width="250" height="118" rx="8"/>
   </g>
   <g font-family="Consolas,monospace">
-    <text x="77" y="173" fill="#66d5d1" font-size="16">ADMIN / BOT</text><text x="77" y="209" fill="#f2f7f8" font-size="24" font-weight="700">Access policy</text><text x="77" y="239" fill="#8ea6b0" font-size="15">keys · quotas · devices</text>
-    <text x="497" y="173" fill="#66d5d1" font-size="16">PANEL / API</text><text x="497" y="209" fill="#f2f7f8" font-size="24" font-weight="700">Entitlements</text><text x="497" y="239" fill="#8ea6b0" font-size="15">sync · audit · updates</text>
-    <text x="917" y="173" fill="#66d5d1" font-size="16">NODE / GATE</text><text x="917" y="209" fill="#f2f7f8" font-size="24" font-weight="700">Authorize</text><text x="917" y="239" fill="#8ea6b0" font-size="15">24 h encrypted snapshot</text>
+    <text x="77" y="173" fill="#c3aaff" font-size="16">ADMIN / BOT</text><text x="77" y="209" fill="#f2f7f8" font-size="24" font-weight="700">Access policy</text><text x="77" y="239" fill="#a9a6c4" font-size="15">keys · quotas · devices</text>
+    <text x="497" y="173" fill="#c3aaff" font-size="16">PANEL / API</text><text x="497" y="209" fill="#f2f7f8" font-size="24" font-weight="700">Entitlements</text><text x="497" y="239" fill="#a9a6c4" font-size="15">sync · audit · updates</text>
+    <text x="917" y="173" fill="#c3aaff" font-size="16">NODE / GATE</text><text x="917" y="209" fill="#f2f7f8" font-size="24" font-weight="700">Authorize</text><text x="917" y="239" fill="#a9a6c4" font-size="15">24 h encrypted snapshot</text>
   </g>
-  <path d="M307 203H457M727 203H877" stroke="#8ea6b0" stroke-width="2.5" stroke-dasharray="8 5" marker-end="url(#grey-arrow)"/>
-  <text x="381" y="192" fill="#b9cbd1" text-anchor="middle" font-family="Consolas,monospace" font-size="14">API</text>
-  <text x="802" y="192" fill="#b9cbd1" text-anchor="middle" font-family="Consolas,monospace" font-size="14">SYNC</text>
+  <path d="M307 203H457M727 203H877" stroke="#ac91f7" stroke-width="2.5" stroke-dasharray="8 5" marker-end="url(#violet-arrow)"/>
+  <text x="381" y="192" fill="#d9c9ff" text-anchor="middle" font-family="Consolas,monospace" font-size="14">API</text>
+  <text x="802" y="192" fill="#d9c9ff" text-anchor="middle" font-family="Consolas,monospace" font-size="14">SYNC</text>
 
   <text x="56" y="314" fill="#66d5d1" font-family="Consolas,monospace" font-size="16" letter-spacing="2">02 / DATA PLANE</text>
   <path d="M205 296H1138" stroke="#38505c" stroke-dasharray="5 6"/>

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="330" viewBox="0 0 1200 330" role="img" aria-labelledby="title desc">
+  <title id="title">Marvia: Android and Windows VPN clients, nodes and panel</title>
+  <desc id="desc">A dark technical banner with a violet Marvia mark and colored connection traces.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1"><stop stop-color="#101624"/><stop offset="1" stop-color="#09131d"/></linearGradient>
+    <linearGradient id="mark" x2="1" y2="1"><stop stop-color="#a78bfa"/><stop offset=".52" stop-color="#55d8dd"/><stop offset="1" stop-color="#f8bd70"/></linearGradient>
+    <linearGradient id="data" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#60d9e8"/><stop offset="1" stop-color="#7df1c2"/></linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#243249" stroke-width="1"/></pattern>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="12"/></filter>
+  </defs>
+  <rect width="1200" height="330" rx="20" fill="url(#background)"/>
+  <rect width="1200" height="330" rx="20" fill="url(#grid)" opacity=".43"/>
+  <path d="M25 26H1175M25 304H1175" stroke="#405068"/>
+  <text x="52" y="56" fill="#aabbd0" font-family="Consolas,monospace" font-size="15" letter-spacing="2">OPEN SOURCE / VPN STACK</text>
+  <circle cx="1125" cy="49" r="5" fill="#79e4bb"/><text x="1106" y="55" text-anchor="end" fill="#79e4bb" font-family="Consolas,monospace" font-size="14">CLIENT · NODE · PANEL</text>
+
+  <path d="M53 118L75 99L101 119L127 99L149 118V179L125 198V138L101 157L77 138V198L53 179Z" fill="url(#mark)"/>
+  <text x="180" y="181" fill="#f4f7fc" font-family="Segoe UI,Arial,sans-serif" font-size="80" font-weight="800" letter-spacing="5">MARVIA</text>
+  <text x="55" y="233" fill="#b9c9dc" font-family="Consolas,monospace" font-size="19">Android + Windows  /  VP1 + VLESS + Trojan</text>
+  <g font-family="Consolas,monospace" font-size="14" font-weight="700" letter-spacing="1">
+    <rect x="55" y="261" width="101" height="27" rx="7" fill="#24213b" stroke="#8f79d7"/><text x="105" y="280" text-anchor="middle" fill="#cbbcff">CLIENT</text>
+    <rect x="168" y="261" width="83" height="27" rx="7" fill="#12353c" stroke="#4ebed0"/><text x="209" y="280" text-anchor="middle" fill="#9cedee">NODE</text>
+    <rect x="263" y="261" width="92" height="27" rx="7" fill="#3a2b1d" stroke="#dca75e"/><text x="309" y="280" text-anchor="middle" fill="#f7d08d">PANEL</text>
+  </g>
+
+  <path d="M690 161C782 161 789 84 883 84S990 161 1128 161" fill="none" stroke="#9164df" stroke-width="25" opacity=".14" filter="url(#glow)"/>
+  <path d="M684 228C790 228 784 272 886 272S1024 228 1131 228" fill="none" stroke="#51d9d8" stroke-width="27" opacity=".17" filter="url(#glow)"/>
+  <path d="M685 161C781 161 789 84 883 84S991 161 1132 161" fill="none" stroke="#a78bfa" stroke-width="3" stroke-dasharray="8 8"/>
+  <path d="M684 228C790 228 785 272 886 272S1025 228 1132 228" fill="none" stroke="url(#data)" stroke-width="4"/>
+  <g fill="#0f1929" stroke-width="3"><circle cx="704" cy="161" r="17" stroke="#a78bfa"/><circle cx="883" cy="84" r="17" stroke="#a78bfa"/><circle cx="1107" cy="161" r="17" stroke="#a78bfa"/><circle cx="704" cy="228" r="17" stroke="#67dce5"/><circle cx="886" cy="272" r="17" stroke="#67dce5"/><circle cx="1107" cy="228" r="17" stroke="#81efc1"/></g>
+  <g fill="#fff" font-family="Consolas,monospace" font-size="15" font-weight="700"><text x="704" y="166" text-anchor="middle">01</text><text x="883" y="89" text-anchor="middle">02</text><text x="1107" y="166" text-anchor="middle">03</text><text x="704" y="233" text-anchor="middle">01</text><text x="886" y="277" text-anchor="middle">02</text><text x="1107" y="233" text-anchor="middle">03</text></g>
+  <text x="737" y="143" fill="#cbbcff" font-family="Consolas,monospace" font-size="13">ACCESS CONTROL</text>
+  <text x="740" y="251" fill="#a6f5e4" font-family="Consolas,monospace" font-size="13">ENCRYPTED DATA</text>
+</svg>

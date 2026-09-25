@@ -17,15 +17,15 @@
   <g stroke="#31505b" stroke-width="1"><path d="M240 166V348M335 166V348M430 166V348M525 166V348M620 166V348"/></g>
   <g fill="#69808b" font-family="Consolas,monospace" font-size="14"><text x="240" y="367" text-anchor="middle">0</text><text x="335" y="367" text-anchor="middle">25</text><text x="430" y="367" text-anchor="middle">50</text><text x="525" y="367" text-anchor="middle">75</text><text x="620" y="367" text-anchor="middle">100</text></g>
   <g font-family="Consolas,monospace" font-size="18" fill="#eaf4f5"><text x="56" y="224">DIRECT</text><text x="56" y="311">VP1</text></g>
-  <rect x="240" y="190" width="327" height="46" rx="4" fill="#52636c"/><rect x="240" y="277" width="315" height="46" rx="4" fill="url(#bar)"/>
-  <g font-family="Consolas,monospace" font-size="23" font-weight="700"><text x="580" y="220" fill="#f3f8f9">86 Mb/s</text><text x="568" y="307" fill="#76e4d5">83 Mb/s</text></g>
+  <rect x="240" y="190" width="327" height="46" rx="4" fill="#9b82e1"/><rect x="240" y="277" width="315" height="46" rx="4" fill="url(#bar)"/>
+  <g font-family="Consolas,monospace" font-size="23" font-weight="700"><text x="580" y="220" fill="#cbbcff">86 Mb/s</text><text x="568" y="307" fill="#76e4d5">83 Mb/s</text></g>
   <path d="M55 396H653" stroke="#38505c"/>
   <text x="56" y="425" fill="#b7c9d0" font-family="Consolas,monospace" font-size="16">VP1 / DIRECT = 96.5% · one observation, not a guarantee</text>
 
   <path d="M694 93V430" stroke="#38505c"/>
-  <text x="724" y="112" fill="#66d5d1" font-family="Consolas,monospace" font-size="18" font-weight="700">B / LOCAL CODE PATH</text>
+  <text x="724" y="112" fill="#f6c27c" font-family="Consolas,monospace" font-size="18" font-weight="700">B / LOCAL CODE PATH</text>
   <text x="724" y="139" fill="#a2bac3" font-family="Consolas,monospace" font-size="15">Ryzen 7 7700 · Windows · TCP loopback · 3 runs</text>
-  <text x="724" y="203" fill="#f2f7f8" font-family="Consolas,monospace" font-size="42" font-weight="700">638 <tspan font-size="22">MB/s</tspan></text>
+  <text x="724" y="203" fill="#f6c27c" font-family="Consolas,monospace" font-size="42" font-weight="700">638 <tspan font-size="22">MB/s</tspan></text>
   <text x="724" y="235" fill="#a2bac3" font-family="Consolas,monospace" font-size="16">median VP1 transfer · 64 KiB writes</text>
   <path d="M724 282H1123" stroke="#36535d" stroke-width="8" stroke-linecap="round"/>
   <path d="M812 282H1089" stroke="#66d5d1" stroke-width="8" stroke-linecap="round"/>

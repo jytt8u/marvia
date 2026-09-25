@@ -1,19 +1,20 @@
 <div align="center">
 
-<img src="internal/look/assets/marvia-mark.png" alt="Marvia" height="76">
-
-# Marvia
+<img src="docs/shots/readme-hero.svg" alt="Marvia: Android and Windows VPN clients, panel and nodes" width="1200">
 
 **A VPN for Android and Windows, with its own panel, nodes and VP1 protocol.**
 
-[Русский](README.md) · English · [简体中文](README.zh-CN.md)
+[![RU](https://img.shields.io/badge/RU-RUSSIAN-a78bfa?style=flat-square)](README.md)
+[![EN](https://img.shields.io/badge/EN-ENGLISH-51d9e3?style=flat-square)](README.en.md)
+[![ZH](https://img.shields.io/badge/ZH-CHINESE-f5b765?style=flat-square)](README.zh-CN.md)
 
 [![Release](https://img.shields.io/github/v/release/jytt8u/marvia?label=release)](https://github.com/jytt8u/marvia/releases/latest)
 [![Checks](https://github.com/jytt8u/marvia/actions/workflows/check.yml/badge.svg)](https://github.com/jytt8u/marvia/actions)
 
-[**Download**](https://github.com/jytt8u/marvia/releases/latest) ·
-[**Install panel**](#install-the-panel) ·
-[**Guide (Russian)**](docs/guide.md)
+[![Android APK](https://img.shields.io/badge/ANDROID-APK-39c9bd?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
+[![Windows EXE](https://img.shields.io/badge/WINDOWS-EXE-9a7af7?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)
+[![Panel](https://img.shields.io/badge/PANEL-INSTALL-e5aa61?style=for-the-badge)](#install-the-panel)
+[![Docs](https://img.shields.io/badge/DOCS-GUIDE-6887e8?style=for-the-badge)](docs/guide.md)
 
 </div>
 
@@ -56,11 +57,13 @@ supports the feature comparison; no matched speed ranking is available.
 
 ## Get started
 
-**Have a key?** Download the [Android APK](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
-or [Windows client](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe),
-add a `marvia://…` link in **Servers**, and connect. Android also accepts VLESS,
-VMess, Trojan, Shadowsocks, Hysteria2 and WireGuard links. The app is not yet on
-Google Play.
+> [!TIP]
+> **Have a key?** Download the [Android APK](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
+> or [Windows client](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe),
+> add a `marvia://…` link in **Servers**, and connect.
+
+Android also accepts VLESS, VMess, Trojan, Shadowsocks, Hysteria2 and WireGuard
+links. The app is not yet on Google Play.
 
 ### Install the panel
 

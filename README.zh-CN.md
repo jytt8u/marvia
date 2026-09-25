@@ -1,19 +1,20 @@
 <div align="center">
 
-<img src="internal/look/assets/marvia-mark.png" alt="Marvia" height="76">
-
-# Marvia
+<img src="docs/shots/readme-hero.svg" alt="Marvia：Android 和 Windows VPN 客户端、面板与节点" width="1200">
 
 **面向 Android 和 Windows 的 VPN，包含自有面板、节点和 VP1 协议。**
 
-[Русский](README.md) · [English](README.en.md) · 简体中文
+[![RU](https://img.shields.io/badge/RU-RUSSIAN-a78bfa?style=flat-square)](README.md)
+[![EN](https://img.shields.io/badge/EN-ENGLISH-51d9e3?style=flat-square)](README.en.md)
+[![ZH](https://img.shields.io/badge/ZH-CHINESE-f5b765?style=flat-square)](README.zh-CN.md)
 
 [![版本](https://img.shields.io/github/v/release/jytt8u/marvia?label=release)](https://github.com/jytt8u/marvia/releases/latest)
 [![检查](https://github.com/jytt8u/marvia/actions/workflows/check.yml/badge.svg)](https://github.com/jytt8u/marvia/actions)
 
-[**下载**](https://github.com/jytt8u/marvia/releases/latest) ·
-[**安装面板**](#安装面板) ·
-[**使用指南（俄语）**](docs/guide.md)
+[![Android APK](https://img.shields.io/badge/ANDROID-APK-39c9bd?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
+[![Windows EXE](https://img.shields.io/badge/WINDOWS-EXE-9a7af7?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)
+[![Panel](https://img.shields.io/badge/PANEL-INSTALL-e5aa61?style=for-the-badge)](#安装面板)
+[![Docs](https://img.shields.io/badge/DOCS-GUIDE-6887e8?style=for-the-badge)](docs/guide.md)
 
 </div>
 
@@ -56,11 +57,13 @@ Clash/sing-box 订阅格式。功能比较以表中的项目文档为依据；�
 
 ## 开始使用
 
-**已有密钥？** 下载 [Android APK](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
-或 [Windows 客户端](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)，
-在「服务器」页添加 `marvia://…` 链接，然后连接。Android 还支持 VLESS、
-VMess、Trojan、Shadowsocks、Hysteria2 和 WireGuard 链接。目前尚未上架
-Google Play。
+> [!TIP]
+> **已有密钥？** 下载 [Android APK](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
+> 或 [Windows 客户端](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)，
+> 在「服务器」页添加 `marvia://…` 链接，然后连接。
+
+Android 还支持 VLESS、VMess、Trojan、Shadowsocks、Hysteria2 和 WireGuard 链接。
+目前尚未上架 Google Play。
 
 ### 安装面板
 
