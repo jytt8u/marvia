@@ -10,7 +10,7 @@
   сохранённый снимок локального стенда панели. В README они подписаны отдельно.
 - `readme-flow.svg` — схема управления доступом и пути трафика.
 - `readme-protocol-benchmark.svg` — график Matplotlib из
-  [`2026-09-26-summary.json`](../benchmarks/2026-09-26-summary.json).
+  [`2026-09-26-record-fit/summary.json`](../benchmarks/2026-09-26-record-fit/summary.json).
   Пересоздание: `python scripts/plot-benchmark.py` из корня проекта
   (понадобится `matplotlib`). [Условия измерений](../performance.md).
 

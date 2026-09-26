@@ -42,7 +42,9 @@ Windows 0.9.3 и локальный стенд панели. Android выше �
 
 ## Бенчмарк
 
-<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 427.7 MB/s, VLESS + TLS 924.2 MB/s, Trojan + TLS 906.3 MB/s; median of five runs" width="1200">
+<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 678.3 MB/s, VLESS + TLS 974.6 MB/s, Trojan + TLS 973.1 MB/s; median of five runs" width="1200">
+
+**Оптимизация до следующего релиза: VP1 435 → 678 МБ/с (+56%).** Пять парных прогонов старой и новой сборок; шифрование и совместимость сохранены. [До и после](docs/benchmarks/2026-09-26-record-fit/README.md).
 
 **VP1, VLESS и Trojan — на одном ПК, с одинаковым TLS 1.3.**
 Пять чередующихся прогонов по 512 МиБ; Ryzen 7 7700, Windows, Go 1.26.6.

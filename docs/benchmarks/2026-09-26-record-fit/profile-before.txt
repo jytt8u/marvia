@@ -1,0 +1,23 @@
+File: marvia-bench-profile.test.exe
+Type: cpu
+Time: 2026-09-26 15:45:58 MSK
+Duration: 11.85s, Total samples = 13.74s (115.94%)
+Showing nodes accounting for 13.19s, 96.00% of 13.74s total
+Dropped 153 nodes (cum <= 0.07s)
+Showing top 15 nodes out of 77
+      flat  flat%   sum%        cum   cum%
+     9.74s 70.89% 70.89%      9.75s 70.96%  runtime.cgocall
+     1.07s  7.79% 78.68%      1.07s  7.79%  golang.org/x/crypto/chacha20poly1305.chacha20Poly1305Seal
+     0.70s  5.09% 83.77%      0.70s  5.09%  crypto/internal/fips140/aes/gcm.gcmAesEnc
+     0.44s  3.20% 86.97%      0.44s  3.20%  runtime.netpollQueueTimer
+     0.38s  2.77% 89.74%      0.38s  2.77%  golang.org/x/crypto/chacha20poly1305.chacha20Poly1305Open
+     0.36s  2.62% 92.36%      0.80s  5.82%  runtime.netpoll
+     0.20s  1.46% 93.81%      0.20s  1.46%  crypto/internal/fips140/aes/gcm.gcmAesDec
+     0.08s  0.58% 94.40%      0.08s  0.58%  runtime.memmove
+     0.07s  0.51% 94.91%      0.07s  0.51%  runtime.semawakeup
+     0.04s  0.29% 95.20%      0.08s  0.58%  sync.(*Pool).Get
+     0.03s  0.22% 95.41%     11.34s 82.53%  github.com/jytt8u/marvia/internal/vp1.(*Conn).Write
+     0.03s  0.22% 95.63%      9.84s 71.62%  internal/poll.(*FD).execIO
+     0.02s  0.15% 95.78%      9.23s 67.18%  internal/poll.(*FD).Write.func2
+     0.02s  0.15% 95.92%      9.40s 68.41%  net.(*conn).Write
+     0.01s 0.073% 96.00%      0.72s  5.24%  crypto/internal/fips140/aes/gcm.(*GCMWithXORCounterNonce).Seal

@@ -1,0 +1,85 @@
+{
+  "date": "2026-09-26",
+  "method": "Five paired CLI runs; version order alternates; modes TCP, TLS, VP1+TLS, VLESS+TLS, Trojan+TLS; 512 MiB each; 1000 echoes",
+  "results": {
+    "before": [
+      {
+        "mode": "TCP",
+        "median_MBps": 2395.807141578944,
+        "min_MBps": 2182.3657085390037,
+        "max_MBps": 2540.477175635083,
+        "median_echo_us": 25.5228
+      },
+      {
+        "mode": "TLS",
+        "median_MBps": 954.3087481382506,
+        "min_MBps": 922.990996696892,
+        "max_MBps": 961.7647126265464,
+        "median_echo_us": 27.567700000000002
+      },
+      {
+        "mode": "VP1+TLS",
+        "median_MBps": 435.0013409689428,
+        "min_MBps": 425.10377520364955,
+        "max_MBps": 446.62118631476545,
+        "median_echo_us": 31.5364
+      },
+      {
+        "mode": "VLESS+TLS",
+        "median_MBps": 965.3343862862946,
+        "min_MBps": 958.2642714414101,
+        "max_MBps": 982.0774633845808,
+        "median_echo_us": 28.0359
+      },
+      {
+        "mode": "Trojan+TLS",
+        "median_MBps": 964.9724458389082,
+        "min_MBps": 725.9889203950383,
+        "max_MBps": 971.6026756806746,
+        "median_echo_us": 28.028299999999998
+      }
+    ],
+    "after": [
+      {
+        "mode": "TCP",
+        "median_MBps": 2449.7773543252615,
+        "min_MBps": 2215.1411470836038,
+        "max_MBps": 2654.6398488518766,
+        "median_echo_us": 25.515400000000003
+      },
+      {
+        "mode": "TLS",
+        "median_MBps": 974.2212286123355,
+        "min_MBps": 965.5592174895646,
+        "max_MBps": 977.5237684608875,
+        "median_echo_us": 27.520599999999998
+      },
+      {
+        "mode": "VP1+TLS",
+        "median_MBps": 678.3203831852336,
+        "min_MBps": 673.2928324101026,
+        "max_MBps": 685.8605326878989,
+        "median_echo_us": 31.025
+      },
+      {
+        "mode": "VLESS+TLS",
+        "median_MBps": 974.6232266260652,
+        "min_MBps": 963.418636422284,
+        "max_MBps": 978.1398085117895,
+        "median_echo_us": 27.5263
+      },
+      {
+        "mode": "Trojan+TLS",
+        "median_MBps": 973.0662491202688,
+        "min_MBps": 967.7907973232799,
+        "max_MBps": 978.4665765118847,
+        "median_echo_us": 27.527099999999997
+      }
+    ]
+  },
+  "source": {
+    "base_revision": "3287cee3cba3fd3fbd73c3ba4a7a4d6ddb58cb2e",
+    "conn_sha256": "2ec9ea680919f17075e8fac606968254380feaea94b6d750126a22233e304017",
+    "benchmark_sha256": "983309a9c013f0b236fe9ad96105e1af971355ab00613c3afdea6322ec37cdf1"
+  }
+}

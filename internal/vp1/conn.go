@@ -12,8 +12,8 @@ import (
 
 const (
 	// MaxPlaintext — сколько байт уезжает в один кадр после добивки.
-	// 16 КиБ выбраны не случайно: столько же в TLS-рекорде, и наш трафик
-	// не должен выделяться на общем фоне размером кадров.
+	// Это прежний предел приёма: его нельзя уменьшать, иначе новые клиенты
+	// перестанут читать полные кадры уже установленных нод.
 	MaxPlaintext = 16384
 
 	// tagLen — размер аутентификационного тега ChaCha20-Poly1305.
@@ -50,6 +50,12 @@ const frameCap = frameLenHeader + MaxPlaintext + tagLen
 
 // frameLenHeader — заголовок кадра на проводе: длина шифротекста.
 const frameLenHeader = 2
+
+// Полный кадр, включая внешний заголовок и тег Noise, должен помещаться
+// в 16 КиБ данных TLS. Иначе каждая крупная запись распадается на полный
+// TLS-рекорд и хвост в 18 байт, почти удваивая число отправок в сокет.
+// Меняется только нарезка при отправке, формат и предел приёма прежние.
+const writePayload = 16384 - frameLenHeader - frameHeaderLen - tagLen
 
 func newConn(transport net.Conn, send, recv *noise.CipherState) *Conn {
 	return &Conn{
@@ -114,8 +120,8 @@ func (c *Conn) Write(p []byte) (int, error) {
 		// TLS-рекорд при скачивании; мелкому и среднему оставлено место под
 		// добивку. framePad для всего, что длиннее MaxPayload, даёт ноль,
 		// так что кадр всегда помещается в wbuf.
-		if len(chunk) > BulkPayload {
-			chunk = chunk[:BulkPayload]
+		if len(chunk) > writePayload {
+			chunk = chunk[:writePayload]
 		}
 		if err := c.writeFramed(chunk); err != nil {
 			return written, err

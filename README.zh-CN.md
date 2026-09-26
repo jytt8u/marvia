@@ -42,7 +42,9 @@ Windows 0.9.3 与本地面板实例。上方 Android 截图来自当前 0.12.2 �
 
 ## 基准测试
 
-<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 427.7 MB/s, VLESS + TLS 924.2 MB/s, Trojan + TLS 906.3 MB/s; median of five runs" width="1200">
+<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 678.3 MB/s, VLESS + TLS 974.6 MB/s, Trojan + TLS 973.1 MB/s; median of five runs" width="1200">
+
+**尚未发布的优化：VP1 从 435 提升至 678 MB/s（+56%）。** 新旧构建进行了五组配对测试；加密和协议兼容性保持不变。[前后对比数据](docs/benchmarks/2026-09-26-record-fit/README.md)。
 
 **同一台电脑、相同 TLS 1.3，对比 VP1、VLESS 与 Trojan。**
 交错运行五轮，每次传输 512 MiB；Ryzen 7 7700、Windows、Go 1.26.6。

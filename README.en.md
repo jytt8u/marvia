@@ -42,7 +42,9 @@ The panel grants access; VPN packets pass through a node, not the panel.
 
 ## Benchmark
 
-<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 427.7 MB/s, VLESS + TLS 924.2 MB/s, Trojan + TLS 906.3 MB/s; median of five runs" width="1200">
+<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 678.3 MB/s, VLESS + TLS 974.6 MB/s, Trojan + TLS 973.1 MB/s; median of five runs" width="1200">
+
+**Unreleased optimization: VP1 435 → 678 MB/s (+56%).** Five paired runs of the old and new builds; encryption and wire compatibility are unchanged. [Before/after data](docs/benchmarks/2026-09-26-record-fit/README.md).
 
 **VP1, VLESS and Trojan on one PC, with the same TLS 1.3.**
 Five interleaved 512 MiB runs; Ryzen 7 7700, Windows, Go 1.26.6.
