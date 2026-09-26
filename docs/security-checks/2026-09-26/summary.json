@@ -1,0 +1,194 @@
+{
+  "date": "2026-09-26",
+  "base_revision": "ff12f0781a0a8f9218fb7f2b582274ff7c38b80f",
+  "go_mod_sha256": "3eb3b5e95ab2c67db4d5ec4b59c27c65b3b30d0b4561784ccb327d09633233bb",
+  "scans": [
+    {
+      "stage": "before",
+      "platform": "windows/amd64",
+      "command": "govulncheck -json ./...",
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.8.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-09-24T20:07:49Z",
+        "go_version": "go1.26.6",
+        "scan_level": "symbol",
+        "scan_mode": "source"
+      },
+      "raw_sha256": "11c9d81adb98b0e572a63f987f9eea90e7d1cbd5900a5afa7c7d14cf6cec14d0",
+      "findings": [
+        {
+          "id": "GO-2026-5932",
+          "summary": "The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design, and has known security issues",
+          "reachable_trace_count": 0,
+          "affected_modules": [
+            "golang.org/x/crypto@v0.56.0"
+          ],
+          "functions": []
+        },
+        {
+          "id": "GO-2026-6061",
+          "summary": "Vulnerabilities in the xDS RBAC authorization engine and the HTTP/2 transport server implementation in google.golang.org/grpc",
+          "reachable_trace_count": 17,
+          "affected_modules": [
+            "google.golang.org/grpc@v1.80.0"
+          ],
+          "functions": [
+            "google.golang.org/grpc/internal/transport.*ClientStream.Close",
+            "google.golang.org/grpc/internal/transport.*ClientStream.Header",
+            "google.golang.org/grpc/internal/transport.*ClientStream.Read",
+            "google.golang.org/grpc/internal/transport.*ClientStream.RecvCompress",
+            "google.golang.org/grpc/internal/transport.*ClientStream.TrailersOnly",
+            "google.golang.org/grpc/internal/transport.*ClientStream.Write",
+            "google.golang.org/grpc/internal/transport.*ServerStream.Read",
+            "google.golang.org/grpc/internal/transport.*ServerStream.Write",
+            "google.golang.org/grpc/internal/transport.*ServerStream.WriteStatus",
+            "google.golang.org/grpc/internal/transport.*Stream.ReadMessageHeader",
+            "google.golang.org/grpc/internal/transport.*http2Client.Close",
+            "google.golang.org/grpc/internal/transport.*http2Client.GracefulClose",
+            "google.golang.org/grpc/internal/transport.*http2Client.NewStream",
+            "google.golang.org/grpc/internal/transport.*http2Server.Drain",
+            "google.golang.org/grpc/internal/transport.*http2Server.HandleStreams",
+            "google.golang.org/grpc/internal/transport..NewHTTP2Client",
+            "google.golang.org/grpc/internal/transport..NewServerTransport"
+          ]
+        },
+        {
+          "id": "GO-2026-6348",
+          "summary": "Heap Memory Exhaustion (OOM) via HTTP/2 DATA Frame Fragmentation in google.golang.org/grpc",
+          "reachable_trace_count": 18,
+          "affected_modules": [
+            "google.golang.org/grpc@v1.80.0"
+          ],
+          "functions": [
+            "google.golang.org/grpc/internal/transport.*ClientStream.Close",
+            "google.golang.org/grpc/internal/transport.*ClientStream.Header",
+            "google.golang.org/grpc/internal/transport.*ClientStream.Read",
+            "google.golang.org/grpc/internal/transport.*ClientStream.RecvCompress",
+            "google.golang.org/grpc/internal/transport.*ClientStream.TrailersOnly",
+            "google.golang.org/grpc/internal/transport.*ServerStream.Read",
+            "google.golang.org/grpc/internal/transport.*Stream.ReadMessageHeader",
+            "google.golang.org/grpc/internal/transport.*http2Client.Close",
+            "google.golang.org/grpc/internal/transport.*http2Client.GracefulClose",
+            "google.golang.org/grpc/internal/transport.*http2Client.NewStream",
+            "google.golang.org/grpc/internal/transport.*http2Server.Close",
+            "google.golang.org/grpc/internal/transport.*http2Server.HandleStreams",
+            "google.golang.org/grpc/internal/transport..NewHTTP2Client",
+            "google.golang.org/grpc/internal/transport..NewServerTransport",
+            "google.golang.org/grpc/mem..IsBelowBufferPoolingThreshold",
+            "google.golang.org/grpc/mem..NewBuffer",
+            "google.golang.org/grpc/mem..ReadAll",
+            "google.golang.org/grpc/mem.BufferSlice.MaterializeToBuffer"
+          ]
+        },
+        {
+          "id": "GO-2026-6441",
+          "summary": "Bypass of xDS RBAC HTTP filter header matching in google.golang.org/grpc",
+          "reachable_trace_count": 0,
+          "affected_modules": [
+            "google.golang.org/grpc@v1.80.0"
+          ],
+          "functions": []
+        },
+        {
+          "id": "GO-2026-6443",
+          "summary": "Server panic via missing authority or Host headers in google.golang.org/grpc",
+          "reachable_trace_count": 1,
+          "affected_modules": [
+            "google.golang.org/grpc@v1.80.0"
+          ],
+          "functions": [
+            "google.golang.org/grpc/internal/transport.*http2Server.HandleStreams"
+          ]
+        }
+      ]
+    },
+    {
+      "stage": "after",
+      "platform": "windows/amd64",
+      "command": "govulncheck -json ./...",
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.8.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-09-24T20:07:49Z",
+        "go_version": "go1.26.6",
+        "scan_level": "symbol",
+        "scan_mode": "source"
+      },
+      "raw_sha256": "33aedcb0dd3c145451428a145e2a1ee1bc1711c48b545847bb4fc7dea44c8bd3",
+      "findings": [
+        {
+          "id": "GO-2026-5932",
+          "summary": "The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design, and has known security issues",
+          "reachable_trace_count": 0,
+          "affected_modules": [
+            "golang.org/x/crypto@v0.56.0"
+          ],
+          "functions": []
+        }
+      ]
+    },
+    {
+      "stage": "after",
+      "platform": "linux/amd64 (CGO_ENABLED=0)",
+      "command": "govulncheck -json ./...",
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.8.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-09-24T20:07:49Z",
+        "go_version": "go1.26.6",
+        "scan_level": "symbol",
+        "scan_mode": "source"
+      },
+      "raw_sha256": "89d10690a8efd9f9db5fe00bec8ebe7f606498dff63a7bdb59c56db14d8c21b6",
+      "findings": [
+        {
+          "id": "GO-2026-5932",
+          "summary": "The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design, and has known security issues",
+          "reachable_trace_count": 0,
+          "affected_modules": [
+            "golang.org/x/crypto@v0.56.0"
+          ],
+          "functions": []
+        }
+      ]
+    }
+  ],
+  "fuzz": [
+    {
+      "target": "FuzzReadFrame",
+      "duration_budget_seconds": 30,
+      "workers": 2,
+      "executions": 2083878,
+      "status": "pass"
+    },
+    {
+      "target": "FuzzUnpackPadded",
+      "duration_budget_seconds": 30,
+      "workers": 2,
+      "executions": 2067999,
+      "status": "pass"
+    },
+    {
+      "target": "FuzzReadRequest",
+      "duration_budget_seconds": 30,
+      "workers": 2,
+      "executions": 2347212,
+      "status": "pass"
+    },
+    {
+      "target": "FuzzReadDatagram",
+      "duration_budget_seconds": 30,
+      "workers": 2,
+      "executions": 2046937,
+      "status": "pass"
+    }
+  ],
+  "total_fuzz_executions": 8546026
+}

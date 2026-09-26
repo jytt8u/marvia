@@ -49,6 +49,11 @@ encryption do not rely solely on the outer TLS channel. This is an architectural
 distinction, not proof that VP1 is safer than every alternative.
 [Comparison, sources and protection boundaries](docs/security-comparison.md).
 
+VP1 access records contain **0 client private keys**; nodes only need public keys.
+[Automated checks, 26 Sep 2026](docs/security-checks/2026-09-26/README.md):
+0 reachable known vulnerabilities after dependency updates;
+8.55 million executions across four fuzz targets with no failure found. This is not an independent audit.
+
 ## A faster VP1
 
 <img src="docs/shots/readme-vp1-progress.svg" alt="VP1 before and after optimization: 435.0 → 678.3 MB/s, +55.9% in a local test; medians and ranges of five paired runs" width="1200">

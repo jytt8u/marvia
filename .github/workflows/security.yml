@@ -1,0 +1,60 @@
+name: Проверка безопасности
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    name: Зависимости — ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Установить сканер известной версии
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+      # Текстовый режим возвращает ошибку при достижимой уязвимости.
+      # JSON сам по себе возвращает 0 даже при находках, для запрета он не годится.
+      - name: Проверить достижимые известные уязвимости
+        run: govulncheck ./...
+
+  fuzz:
+    name: VP1 — повреждённые входные данные
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Проверить границы кадров, запросов и датаграмм
+        shell: bash
+        run: |
+          set -euo pipefail
+          for target in FuzzReadFrame FuzzUnpackPadded FuzzReadRequest FuzzReadDatagram; do
+            go test ./internal/vp1 -run '^$' -fuzz "^${target}$" -fuzztime=30s -parallel=2
+          done
+      - name: Проверить гонки в хендшейках и списке доступа
+        run: go test -race ./internal/vp1 ./internal/users
+      - name: Сохранить входные данные найденного сбоя
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vp1-fuzz-failures
+          path: internal/vp1/testdata/fuzz/
+          if-no-files-found: ignore
+          retention-days: 14

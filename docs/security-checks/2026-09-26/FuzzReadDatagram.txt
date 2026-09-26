@@ -1,0 +1,15 @@
+fuzz: elapsed: 0s, gathering baseline coverage: 0/6 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 6/6 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 183698 (61220/sec), new interesting: 5 (total: 11)
+fuzz: elapsed: 6s, execs: 283421 (33241/sec), new interesting: 5 (total: 11)
+fuzz: elapsed: 9s, execs: 675934 (130846/sec), new interesting: 5 (total: 11)
+fuzz: elapsed: 12s, execs: 873988 (66018/sec), new interesting: 5 (total: 11)
+fuzz: elapsed: 15s, execs: 1069995 (65340/sec), new interesting: 5 (total: 11)
+fuzz: elapsed: 18s, execs: 1266064 (65358/sec), new interesting: 6 (total: 12)
+fuzz: elapsed: 21s, execs: 1459555 (64491/sec), new interesting: 6 (total: 12)
+fuzz: elapsed: 24s, execs: 1656409 (65622/sec), new interesting: 6 (total: 12)
+fuzz: elapsed: 27s, execs: 1851783 (65126/sec), new interesting: 6 (total: 12)
+fuzz: elapsed: 30s, execs: 2046937 (65048/sec), new interesting: 6 (total: 12)
+fuzz: elapsed: 30s, execs: 2046937 (0/sec), new interesting: 6 (total: 12)
+PASS
+ok  	github.com/jytt8u/marvia/internal/vp1	30.407s
