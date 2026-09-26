@@ -40,6 +40,15 @@ Windows 0.9.3 and a local panel instance. Android above is the current 0.12.2 re
 The panel grants access; VPN packets pass through a node, not the panel.
 [Trust boundaries](docs/architecture.md).
 
+## VP1 security
+
+<img src="docs/shots/readme-security-en.svg" alt="Noise inside TLS, with a comparison of VP1, WireGuard, VLESS and Trojan security mechanisms" width="1200">
+
+**A separate Noise session inside TLS:** node-key verification and payload
+encryption do not rely solely on the outer TLS channel. This is an architectural
+distinction, not proof that VP1 is safer than every alternative.
+[Comparison, sources and protection boundaries](docs/security-comparison.md).
+
 ## A faster VP1
 
 <img src="docs/shots/readme-vp1-progress.svg" alt="VP1 before and after optimization: 435.0 → 678.3 MB/s, +55.9% in a local test; medians and ranges of five paired runs" width="1200">

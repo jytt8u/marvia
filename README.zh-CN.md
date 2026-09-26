@@ -40,6 +40,14 @@ Windows 0.9.3 与本地面板实例。上方 Android 截图来自当前 0.12.2 �
 面板管理访问权限；VPN 数据包由节点转发，不经过面板。
 [信任边界](docs/architecture.md)。
 
+## VP1 的安全机制
+
+<img src="docs/shots/readme-security-en.svg" alt="TLS 内的 Noise，以及 VP1、WireGuard、VLESS 和 Trojan 安全机制对比（英文图示）" width="1200">
+
+**TLS 内独立的 Noise 会话：**节点密钥验证和数据加密不完全依赖外层 TLS。
+这是架构上的区别，并不证明 VP1 比所有其他协议更安全。
+[对比、来源与保护范围（俄语）](docs/security-comparison.md)。
+
 ## 更快的 VP1
 
 <img src="docs/shots/readme-vp1-progress.svg" alt="VP1 优化前后：435.0 → 678.3 MB/s，本地测试提升 55.9%；五组配对测试的中位数及范围" width="1200">

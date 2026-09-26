@@ -9,6 +9,10 @@
 - `windows.png` — сохранённый снимок Windows 0.9.3; `panel-clients.png` —
   сохранённый снимок локального стенда панели. В README они подписаны отдельно.
 - `readme-flow.svg` — схема управления доступом и пути трафика.
+- `readme-security-ru.svg`, `readme-security-en.svg` — схема Noise внутри TLS
+  и сравнение механизмов защиты пяти конфигураций, без баллов безопасности.
+  Источники: [security-comparison.md](../security-comparison.md).
+  Пересоздание: `python scripts/draw-security-comparison.py`, без зависимостей.
 - `readme-vp1-progress.svg` — сравнение VP1 до и после оптимизации для README.
   `readme-protocol-benchmark.svg` — полное сравнение протоколов в `performance.md`.
   Оба графика Matplotlib строятся из
