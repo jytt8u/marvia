@@ -1,10 +1,29 @@
 package vp1
 
 import (
+	"bytes"
+	"encoding/binary"
 	"io"
 	"net"
 	"testing"
 )
+
+// Отдельно видна цена чтения заголовка без аллокаций и шифрования TLS.
+func BenchmarkReadFrameReuse(b *testing.B) {
+	wire := make([]byte, frameCap)
+	binary.BigEndian.PutUint16(wire[:2], uint16(len(wire)-2))
+	buf := make([]byte, MaxPlaintext+tagLen)
+	r := bytes.NewReader(wire)
+	b.SetBytes(int64(len(wire)))
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.Reset(wire)
+		if _, err := readFrameInto(r, buf); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
 
 // Бенчмарк пути данных: сколько байт в секунду прогоняет одно соединение VP1
 // через TCP на петле. Петля, а не net.Pipe: тот синхронный и мерил бы себя.

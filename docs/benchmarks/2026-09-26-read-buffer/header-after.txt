@@ -1,0 +1,9 @@
+goos: windows
+goarch: amd64
+pkg: github.com/jytt8u/marvia/internal/vp1
+cpu: AMD Ryzen 7 7700 8-Core Processor
+BenchmarkReadFrameReuse-16    	20185640	       119.7 ns/op	136995.84 MB/s	       0 B/op	       0 allocs/op
+BenchmarkReadFrameReuse-16    	20269550	       135.1 ns/op	121431.72 MB/s	       0 B/op	       0 allocs/op
+BenchmarkReadFrameReuse-16    	18833055	       133.7 ns/op	122670.48 MB/s	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/jytt8u/marvia/internal/vp1	8.301s

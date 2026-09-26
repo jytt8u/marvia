@@ -224,11 +224,16 @@ func readFrame(r io.Reader, max int) ([]byte, error) {
 // readFrameInto читает кадр в готовый буфер — путь данных, где выделять
 // память на каждый кадр слишком дорого. Лимит длины — ёмкость буфера.
 func readFrameInto(r io.Reader, buf []byte) ([]byte, error) {
-	var head [2]byte
-	if _, err := io.ReadFull(r, head[:]); err != nil {
+	// Длина нужна лишь до чтения тела. Переиспользуем начало готового
+	// буфера: отдельный head через io.Reader уходит в кучу на каждом кадре.
+	if len(buf) < frameLenHeader {
+		return nil, errors.New("буфер короче заголовка кадра")
+	}
+	head := buf[:frameLenHeader]
+	if _, err := io.ReadFull(r, head); err != nil {
 		return nil, err
 	}
-	n := int(binary.BigEndian.Uint16(head[:]))
+	n := int(binary.BigEndian.Uint16(head))
 	if n == 0 {
 		return nil, errors.New("кадр нулевой длины")
 	}

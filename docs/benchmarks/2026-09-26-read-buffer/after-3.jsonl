@@ -1,0 +1,6 @@
+{"arch":"amd64","chunk_bytes":65536,"cpus":16,"date_utc":"2026-09-26T13:17:37Z","direction":"server to client","echo_bytes":1400,"echoes":1000,"go":"go1.26.6","gomaxprocs":16,"kind":"environment","mib":512,"os":"windows","revision":"e7097ab + reusable frame header","rounds":1,"tls":"TLS 1.3, X25519, ECDSA P-256 certificate, session tickets disabled","warmup_mib":8}
+{"round":1,"mode":"TCP","delivered_bytes":536870912,"transfer_seconds":0.2036598,"MB_per_second":2636.1162684044666,"echo_mean_us":25.5032}
+{"round":1,"mode":"TLS","delivered_bytes":536870912,"transfer_seconds":0.5542416,"MB_per_second":968.6586355120221,"echo_mean_us":29.026799999999998,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":1,"mode":"VP1+TLS","delivered_bytes":536870912,"transfer_seconds":0.7993115,"MB_per_second":671.6666931477903,"echo_mean_us":30.5439,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":1,"mode":"VLESS+TLS","delivered_bytes":536870912,"transfer_seconds":0.5566665,"MB_per_second":964.4390528260637,"echo_mean_us":28.0207,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":1,"mode":"Trojan+TLS","delivered_bytes":536870912,"transfer_seconds":0.5550507,"MB_per_second":967.246617290997,"echo_mean_us":28.5228,"tls_cipher":"TLS_AES_128_GCM_SHA256"}

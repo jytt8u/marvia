@@ -3,10 +3,47 @@ package vp1
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
 	"net"
 	"testing"
 )
+
+func TestFrameReaderRejectsTruncatedAndOversizedFrames(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		wire []byte
+		want error
+	}{
+		{"короткий заголовок", []byte{0}, io.ErrUnexpectedEOF},
+		{"короткое тело", []byte{0, 4, 1, 2}, io.ErrUnexpectedEOF},
+		{"нулевая длина", []byte{0, 0}, nil},
+		{"превышен буфер", []byte{0, 9}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := readFrameInto(bytes.NewReader(tc.wire), make([]byte, 8)); err == nil || (tc.want != nil && !errors.Is(err, tc.want)) {
+				t.Fatalf("неверная ошибка: %v", err)
+			}
+		})
+	}
+}
+
+// Раздельные короткие чтения заголовка и тела не должны смешивать кадры
+// при повторном использовании одного буфера.
+func TestFrameReaderReusesBufferAcrossFragmentedFrames(t *testing.T) {
+	reader := &oneByteReader{r: bytes.NewReader([]byte{0, 3, 11, 12, 13, 0, 2, 21, 22})}
+	buf := make([]byte, 8)
+	for _, want := range [][]byte{{11, 12, 13}, {21, 22}} {
+		got, err := readFrameInto(reader, buf)
+		if err != nil || !bytes.Equal(got, want) {
+			t.Fatalf("кадр %v, ошибка %v; ожидался %v", got, err, want)
+		}
+	}
+}
+
+type oneByteReader struct{ r io.Reader }
+
+func (r *oneByteReader) Read(p []byte) (int, error) { return r.r.Read(p[:min(1, len(p))]) }
 
 type capturedWrites struct {
 	net.Conn
