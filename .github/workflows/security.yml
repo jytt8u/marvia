@@ -32,9 +32,13 @@ jobs:
         run: govulncheck ./...
 
   fuzz:
-    name: VP1 — повреждённые входные данные
+    name: Фаззинг — ${{ matrix.target }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [FuzzReadFrame, FuzzUnpackPadded, FuzzReadRequest, FuzzReadDatagram]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -45,16 +49,38 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for target in FuzzReadFrame FuzzUnpackPadded FuzzReadRequest FuzzReadDatagram; do
-            go test ./internal/vp1 -run '^$' -fuzz "^${target}$" -fuzztime=30s -parallel=2
-          done
-      - name: Проверить гонки в хендшейках и списке доступа
-        run: go test -race ./internal/vp1 ./internal/users
+          go test ./internal/vp1 -run '^$' -fuzz '^${{ matrix.target }}$' -fuzztime=60s -parallel=2
       - name: Сохранить входные данные найденного сбоя
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: vp1-fuzz-failures
+          name: vp1-fuzz-failures-${{ matrix.target }}
           path: internal/vp1/testdata/fuzz/
           if-no-files-found: ignore
           retention-days: 14
+
+  protocol-attacks:
+    name: VP1 — подмена, повторы и гонки
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Проверить атаки и передачу данных с детектором гонок
+        run: go test -race -count=1 -timeout=5m -v ./internal/vp1 ./internal/users
+
+  access-and-updates:
+    name: Панель, снимки доступа и обновления — безопасность
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Проверить права, шифрование снимков и доверие к обновлениям
+        run: go test -race -count=1 -timeout=10m -v ./internal/panel ./internal/nodesync ./internal/updater
