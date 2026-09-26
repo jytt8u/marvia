@@ -40,21 +40,18 @@ Windows 0.9.3 and a local panel instance. Android above is the current 0.12.2 re
 The panel grants access; VPN packets pass through a node, not the panel.
 [Trust boundaries](docs/architecture.md).
 
-## Benchmark
+## A faster VP1
 
-<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 678.3 MB/s, VLESS + TLS 974.6 MB/s, Trojan + TLS 973.1 MB/s; median of five runs" width="1200">
+<img src="docs/shots/readme-vp1-progress.svg" alt="VP1 before and after optimization: 435.0 → 678.3 MB/s, +55.9% in a local test; medians and ranges of five paired runs" width="1200">
 
-**Unreleased optimization: VP1 435 → 678 MB/s (+56%).** Five paired runs of the old and new builds; encryption and wire compatibility are unchanged. [Before/after data](docs/benchmarks/2026-09-26-record-fit/README.md).
+**56% more throughput than the previous VP1 build.** Fewer unnecessary TLS records; encryption and wire compatibility are unchanged. This optimization is planned for the next release.
 
-**VP1, VLESS and Trojan on one PC, with the same TLS 1.3.**
-Five interleaved 512 MiB runs; Ryzen 7 7700, Windows, Go 1.26.6.
-This measures Marvia implementations over loopback, without Internet or TUN.
-VP1 adds Noise and framing; it is slower in this test.
+Five paired 512 MiB runs on one PC, without Internet or TUN.
+This is a local throughput gain, not a promise of 56% faster Internet.
 
-[Method, ranges and raw data](docs/performance.md) · [Benchmark source](cmd/marvia-bench)
-
-An earlier Internet test measured **83 Mb/s via VP1 vs 86 directly**.
-That single observation is separate from these local MB/s measurements.
+[Before/after data](docs/benchmarks/2026-09-26-record-fit/README.md) ·
+[Full comparison with VLESS and Trojan](docs/performance.md) · [Benchmark source](cmd/marvia-bench)
+VLESS and Trojan remain faster than VP1 in the full local comparison.
 
 ## Protocols
 

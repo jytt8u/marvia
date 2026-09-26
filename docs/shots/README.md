@@ -9,7 +9,9 @@
 - `windows.png` — сохранённый снимок Windows 0.9.3; `panel-clients.png` —
   сохранённый снимок локального стенда панели. В README они подписаны отдельно.
 - `readme-flow.svg` — схема управления доступом и пути трафика.
-- `readme-protocol-benchmark.svg` — график Matplotlib из
+- `readme-vp1-progress.svg` — сравнение VP1 до и после оптимизации для README.
+  `readme-protocol-benchmark.svg` — полное сравнение протоколов в `performance.md`.
+  Оба графика Matplotlib строятся из
   [`2026-09-26-record-fit/summary.json`](../benchmarks/2026-09-26-record-fit/summary.json).
   Пересоздание: `python scripts/plot-benchmark.py` из корня проекта
   (понадобится `matplotlib`). [Условия измерений](../performance.md).

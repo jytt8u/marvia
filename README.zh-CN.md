@@ -40,21 +40,18 @@ Windows 0.9.3 与本地面板实例。上方 Android 截图来自当前 0.12.2 �
 面板管理访问权限；VPN 数据包由节点转发，不经过面板。
 [信任边界](docs/architecture.md)。
 
-## 基准测试
+## 更快的 VP1
 
-<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 678.3 MB/s, VLESS + TLS 974.6 MB/s, Trojan + TLS 973.1 MB/s; median of five runs" width="1200">
+<img src="docs/shots/readme-vp1-progress.svg" alt="VP1 优化前后：435.0 → 678.3 MB/s，本地测试提升 55.9%；五组配对测试的中位数及范围" width="1200">
 
-**尚未发布的优化：VP1 从 435 提升至 678 MB/s（+56%）。** 新旧构建进行了五组配对测试；加密和协议兼容性保持不变。[前后对比数据](docs/benchmarks/2026-09-26-record-fit/README.md)。
+**比上一版 VP1 吞吐量提高 56%。** 减少不必要的 TLS 记录；加密和协议兼容性保持不变。该优化计划随下一版本发布。
 
-**同一台电脑、相同 TLS 1.3，对比 VP1、VLESS 与 Trojan。**
-交错运行五轮，每次传输 512 MiB；Ryzen 7 7700、Windows、Go 1.26.6。
-测试对象为 Marvia 的本地回环实现，不包含互联网与 TUN。
-VP1 额外使用 Noise 加密和分帧，在本次测试中速度较低。
+同一台电脑上进行五组配对测试，每次传输 512 MiB，不包含互联网与 TUN。
+这是本地吞吐量的提升，不代表互联网速度一定提高 56%。
 
-[方法、范围与原始数据](docs/performance.md) · [测试代码](cmd/marvia-bench)
-
-此前一次互联网测试得到 **VP1 83 Mb/s，直连 86 Mb/s**。
-该单次结果与本地 MB/s 测量条件不同，不能直接比较。
+[前后对比数据](docs/benchmarks/2026-09-26-record-fit/README.md) ·
+[与 VLESS、Trojan 的完整对比](docs/performance.md) · [测试代码](cmd/marvia-bench)
+在完整的本地测试中，VLESS 和 Trojan 仍比 VP1 更快。
 
 ## 协议对比
 

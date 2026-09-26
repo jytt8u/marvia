@@ -1,4 +1,4 @@
-"""Строит график README из опубликованных результатов, без ручной подгонки столбцов.
+"""Строит сравнение протоколов и прогресс VP1 из опубликованных результатов.
 
 Зависимость: matplotlib. Запуск из любой папки: python scripts/plot-benchmark.py
 """
@@ -47,4 +47,40 @@ plt.close(fig)
 
 # Стабильные переводы строк и отсутствие пробелов в конце строк SVG.
 svg = root / "docs/shots/readme-protocol-benchmark.svg"
+svg.write_text("\n".join(line.rstrip() for line in svg.read_text(encoding="utf-8").splitlines()) + "\n", encoding="utf-8", newline="\n")
+
+# На обложке сравниваются две версии VP1, а не разные протоколы.
+# Та же серия и нулевая ось сохраняют смысл измерений при смене подачи.
+before = next(row for row in data["results"]["before"] if row["mode"] == "VP1+TLS")
+after = rows["VP1+TLS"]
+gain = (after["median_MBps"] / before["median_MBps"] - 1) * 100
+fig = plt.figure(figsize=(12, 5.0), facecolor=bg)
+fig.text(0.045, 0.88, "VP1 / PERFORMANCE UPDATE", color=dim, fontsize=12, fontfamily="DejaVu Sans Mono")
+fig.text(0.045, 0.74, f"+{gain:.1f}%", color=fg, fontsize=40, weight="bold")
+fig.text(0.39, 0.79, "More throughput. Same encryption.", color=fg, fontsize=17, weight="bold")
+fig.text(0.39, 0.73, "Compared with the previous VP1 build", color=dim, fontsize=12)
+ax = fig.add_axes([0.16, 0.24, 0.66, 0.36], facecolor=bg)
+for y, (label, row) in enumerate([("Before", before), ("Optimized", after)]):
+    median = row["median_MBps"]
+    ax.barh(y, median, height=0.38, color="#73808e" if y == 0 else "#c4cdd7", zorder=2)
+    ax.errorbar(median, y, xerr=[[median - row["min_MBps"]], [row["max_MBps"] - median]],
+                fmt="none", ecolor=fg, elinewidth=1.5, capsize=5, capthick=1.5, zorder=3)
+    ax.text(1.02, y, f"{median:.1f}", transform=ax.get_yaxis_transform(), va="center",
+            color=fg, fontsize=19, fontfamily="DejaVu Sans Mono")
+ax.set_yticks([0, 1], ["Before", "Optimized"])
+ax.set_ylim(1.65, -0.65)
+ax.set_xlim(0, 800)
+ax.set_xticks([0, 200, 400, 600, 800])
+ax.tick_params(axis="y", colors=fg, length=0, labelsize=13, pad=16)
+ax.tick_params(axis="x", colors=dim, length=0, labelsize=10, pad=9)
+ax.grid(axis="x", color="#353d46", linewidth=0.7, zorder=0)
+for spine in ax.spines.values():
+    spine.set_visible(False)
+fig.text(0.89, 0.60, "MB/s", color=dim, fontsize=11, ha="center")
+fig.add_artist(plt.Line2D([0.045, 0.955], [0.15, 0.15], color="#414952", linewidth=0.8))
+fig.text(0.045, 0.09, "5 paired runs · median + min–max · 512 MiB / run · Ryzen 7 7700 · 26 Sep 2026", color=dim, fontsize=10)
+fig.text(0.045, 0.045, "Unreleased code · VP1 + TLS · TCP loopback · no TUN · handshake excluded · not Internet speed", color=dim, fontsize=10)
+svg = root / "docs/shots/readme-vp1-progress.svg"
+fig.savefig(svg, metadata={"Date": None, "Title": "VP1: 55.9% more local throughput versus the previous build"})
+plt.close(fig)
 svg.write_text("\n".join(line.rstrip() for line in svg.read_text(encoding="utf-8").splitlines()) + "\n", encoding="utf-8", newline="\n")
