@@ -1,39 +1,58 @@
 <div align="center">
 
-<img src="docs/shots/readme-brand.svg" alt="Marvia 原版标志与字标" width="1200">
+<img src="docs/shots/readme-brand.png" alt="Marvia" width="1000">
 
-**面向 Android 和 Windows 的 VPN，包含自有面板、节点和 VP1 协议。**
+**适用于 Android 和 Windows 的 VPN。面板、节点与 VP1 协议。**
 
-[![RU](https://img.shields.io/badge/RU-RUSSIAN-a78bfa?style=flat-square)](README.md)
-[![EN](https://img.shields.io/badge/EN-ENGLISH-51d9e3?style=flat-square)](README.en.md)
-[![ZH](https://img.shields.io/badge/ZH-CHINESE-f5b765?style=flat-square)](README.zh-CN.md)
+[Русский](README.md) · [English](README.en.md) · [简体中文](README.zh-CN.md)
 
-[![版本](https://img.shields.io/github/v/release/jytt8u/marvia?label=release)](https://github.com/jytt8u/marvia/releases/latest)
-[![检查](https://github.com/jytt8u/marvia/actions/workflows/check.yml/badge.svg)](https://github.com/jytt8u/marvia/actions)
+[![Android APK](https://img.shields.io/badge/ANDROID-APK-687482?style=for-the-badge&labelColor=30353b)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
+[![Windows EXE](https://img.shields.io/badge/WINDOWS-EXE-687482?style=for-the-badge&labelColor=30353b)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)
+[![Panel](https://img.shields.io/badge/PANEL-INSTALL-687482?style=for-the-badge&labelColor=30353b)](#安装面板)
+[![Docs](https://img.shields.io/badge/DOCS-GUIDE-687482?style=for-the-badge&labelColor=30353b)](docs/guide.md)
 
-[![Android APK](https://img.shields.io/badge/ANDROID-APK-39c9bd?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
-[![Windows EXE](https://img.shields.io/badge/WINDOWS-EXE-9a7af7?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)
-[![Panel](https://img.shields.io/badge/PANEL-INSTALL-e5aa61?style=for-the-badge)](#安装面板)
-[![Docs](https://img.shields.io/badge/DOCS-GUIDE-6887e8?style=for-the-badge)](docs/guide.md)
+[Releases](https://github.com/jytt8u/marvia/releases) · [CI](https://github.com/jytt8u/marvia/actions) · [Privacy](docs/privacy.md)
 
 </div>
 
+## 应用界面
+
+Android 0.12.2 · 模拟器真实截图 · 尚未添加密钥
+
+| 主页 | VPN 设置 | 网络与隐私 |
+|:---:|:---:|:---:|
+| <img src="docs/shots/android-home.png" alt="主页" width="260"> | <img src="docs/shots/android-settings.png" alt="VPN 设置" width="260"> | <img src="docs/shots/android-advanced.png" alt="网络与隐私" width="260"> |
+
+<details>
+<summary>Windows 与面板：历史截图</summary>
+
+Windows 0.9.3 与本地面板实例。上方 Android 截图来自当前 0.12.2 版本。
+
+<img src="docs/shots/windows.png" alt="Windows 0.9.3" width="1000">
+<img src="docs/shots/panel-clients.png" alt="Marvia Partner" width="1000">
+
+</details>
+
 ## 架构
 
-<img src="docs/shots/readme-system.svg" alt="技术架构图：访问控制与 VPN 数据传输分离" width="1200">
+<img src="docs/shots/readme-flow.svg" alt="技术架构图：访问控制与 VPN 数据传输分离" width="1200">
 
 面板管理访问权限；VPN 数据包由节点转发，不经过面板。
 [信任边界](docs/architecture.md)。
 
-## 速度
+## 基准测试
 
-<img src="docs/shots/readme-benchmark.svg" alt="同一路线测速：直连 86 Mb/s、经 VP1 为 83 Mb/s；另有独立的本机 VP1 基准测试" width="1200">
+<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 427.7 MB/s, VLESS + TLS 924.2 MB/s, Trojan + TLS 906.3 MB/s; median of five runs" width="1200">
 
-一次[实际路线测试](docs/guide.md)：2026 年 9 月 14 日，迪拜 → 赫尔辛基，
-单连接。经 VP1 **83 Mb/s**，直连 **86 Mb/s**，比值为 96.5%。另一次在
-Ryzen 7 7700 上运行的 VP1 本机测试中位数为 **638 MB/s**；这不是互联网
-连接速度。[测试方法和原始结果](docs/performance.md)。目前没有相同设备和
-路线下的竞品测速。
+**同一台电脑、相同 TLS 1.3，对比 VP1、VLESS 与 Trojan。**
+交错运行五轮，每次传输 512 MiB；Ryzen 7 7700、Windows、Go 1.26.6。
+测试对象为 Marvia 的本地回环实现，不包含互联网与 TUN。
+VP1 额外使用 Noise 加密和分帧，在本次测试中速度较低。
+
+[方法、范围与原始数据](docs/performance.md) · [测试代码](cmd/marvia-bench)
+
+此前一次互联网测试得到 **VP1 83 Mb/s，直连 86 Mb/s**。
+该单次结果与本地 MB/s 测量条件不同，不能直接比较。
 
 ## 协议对比
 
@@ -50,9 +69,8 @@ Marvia 也会为第三方代理密钥创建系统 VPN 接口。
 | [Shadowsocks](https://shadowsocks.org/doc/what-is-shadowsocks.html) | 加密的 TCP/UDP 代理；默认不伪装成 HTTPS | Android：外部密钥 |
 | [Hysteria 2](https://v2.hysteria.network/docs/developers/Protocol/) | 基于 QUIC/UDP 的代理，外观类似 HTTP/3；需要 UDP 可用 | Android：外部密钥 |
 
-**目前没有速度排名：**需要在相同服务器、路线和客户端上反复测试各协议。
-目前只有 VP1 的测量结果，见[测试方法](docs/performance.md)。VP1 不兼容
-WireGuard 或 Xray 客户端。
+本次基准测试未运行 WireGuard、OpenVPN、Hysteria 2 或 Xray。
+VP1 不兼容 WireGuard 或 Xray 客户端。
 
 ## 功能
 
@@ -76,7 +94,6 @@ Clash/sing-box 订阅格式。功能比较以表中的项目文档为依据；�
 
 ## 开始使用
 
-> [!TIP]
 > **已有密钥？** 下载 [Android APK](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
 > 或 [Windows 客户端](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)，
 > 在「服务器」页添加 `marvia://…` 链接，然后连接。
@@ -99,7 +116,7 @@ sh install-panel.sh --domain panel.example.com --email you@example.com
 
 ## 尚待完成
 
-- Google Play：实体设备验证、应用内隐私政策、声明及测试。
+- Google Play：新版实体设备验证、声明及测试。
   [发布计划（俄语）](docs/google-play.md)。
 - 每月自动重置额度；保留原有链接的用户迁移。
 - iOS、Clash/sing-box 订阅、TUIC、Shadowsocks 插件，以及共享密钥时

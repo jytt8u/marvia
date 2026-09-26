@@ -1,39 +1,58 @@
 <div align="center">
 
-<img src="docs/shots/readme-brand.svg" alt="Фирменный знак и надпись Marvia" width="1200">
+<img src="docs/shots/readme-brand.png" alt="Marvia" width="1000">
 
-**VPN для Android и Windows. Свои панель, ноды и протокол VP1.**
+**VPN для Android и Windows. Панель, ноды и протокол VP1.**
 
-[![RU](https://img.shields.io/badge/RU-RUSSIAN-a78bfa?style=flat-square)](README.md)
-[![EN](https://img.shields.io/badge/EN-ENGLISH-51d9e3?style=flat-square)](README.en.md)
-[![ZH](https://img.shields.io/badge/ZH-CHINESE-f5b765?style=flat-square)](README.zh-CN.md)
+[Русский](README.md) · [English](README.en.md) · [简体中文](README.zh-CN.md)
 
-[![Релиз](https://img.shields.io/github/v/release/jytt8u/marvia?label=релиз&color=51d9e3)](https://github.com/jytt8u/marvia/releases/latest)
-[![Проверки](https://github.com/jytt8u/marvia/actions/workflows/check.yml/badge.svg)](https://github.com/jytt8u/marvia/actions)
+[![Android APK](https://img.shields.io/badge/ANDROID-APK-687482?style=for-the-badge&labelColor=30353b)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
+[![Windows EXE](https://img.shields.io/badge/WINDOWS-EXE-687482?style=for-the-badge&labelColor=30353b)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)
+[![Panel](https://img.shields.io/badge/PANEL-INSTALL-687482?style=for-the-badge&labelColor=30353b)](#установка-панели)
+[![Docs](https://img.shields.io/badge/DOCS-GUIDE-687482?style=for-the-badge&labelColor=30353b)](docs/guide.md)
 
-[![Android APK](https://img.shields.io/badge/ANDROID-APK-39c9bd?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
-[![Windows EXE](https://img.shields.io/badge/WINDOWS-EXE-9a7af7?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)
-[![Панель](https://img.shields.io/badge/PANEL-INSTALL-e5aa61?style=for-the-badge)](#установка-панели)
-[![Документация](https://img.shields.io/badge/DOCS-GUIDE-6887e8?style=for-the-badge)](docs/guide.md)
+[Releases](https://github.com/jytt8u/marvia/releases) · [CI](https://github.com/jytt8u/marvia/actions) · [Privacy](docs/privacy.md)
 
 </div>
 
+## Приложение
+
+Android 0.12.2 · реальные снимки эмулятора · без добавленного ключа
+
+| Главная | Настройки VPN | Сеть и приватность |
+|:---:|:---:|:---:|
+| <img src="docs/shots/android-home.png" alt="Главная" width="260"> | <img src="docs/shots/android-settings.png" alt="Настройки VPN" width="260"> | <img src="docs/shots/android-advanced.png" alt="Сеть и приватность" width="260"> |
+
+<details>
+<summary>Windows и панель — сохранённые снимки</summary>
+
+Windows 0.9.3 и локальный стенд панели. Android выше — актуальный релиз 0.12.2.
+
+<img src="docs/shots/windows.png" alt="Windows 0.9.3" width="1000">
+<img src="docs/shots/panel-clients.png" alt="Marvia Partner" width="1000">
+
+</details>
+
 ## Архитектура
 
-<img src="docs/shots/readme-system.svg" alt="Техническая схема Marvia: управление доступом отделено от пути VPN-пакетов" width="1200">
+<img src="docs/shots/readme-flow.svg" alt="Техническая схема Marvia: управление доступом отделено от пути VPN-пакетов" width="1200">
 
 Панель управляет доступом; пакеты идут через ноду без панели.
 [Границы доверия](docs/architecture.md).
 
-## Скорость
+## Бенчмарк
 
-<img src="docs/shots/readme-benchmark.svg" alt="Замеры: 86 Мбит/с напрямую, 83 Мбит/с через VP1 на одном маршруте; отдельный локальный тест ядра VP1" width="1200">
+<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 427.7 MB/s, VLESS + TLS 924.2 MB/s, Trojan + TLS 906.3 MB/s; median of five runs" width="1200">
 
-Один [полевой замер](docs/guide.md): Дубай → Хельсинки, один поток, 14.09.2026.
-**83 против 86 Мбит/с** — 96,5% скорости прямого пути. Локальный тест ядра
-VP1 на Ryzen 7 7700: медиана **638 МБ/с**, это не скорость интернета.
-[Методика и исходные результаты](docs/performance.md). Замеров конкурентов
-на том же сервере и маршруте пока нет.
+**VP1, VLESS и Trojan — на одном ПК, с одинаковым TLS 1.3.**
+Пять чередующихся прогонов по 512 МиБ; Ryzen 7 7700, Windows, Go 1.26.6.
+Измерены реализации Marvia на loopback, без интернета и TUN. VP1 дополнительно
+использует Noise и кадрирование; в этом тесте он медленнее.
+
+[Методика, диапазоны и сырые данные](docs/performance.md) · [Код теста](cmd/marvia-bench)
+
+Через интернет ранее получено **83 Мбит/с через VP1 против 86 напрямую**.
+Это отдельный единичный замер, его нельзя смешивать с локальными МБ/с.
 
 ## Протоколы
 
@@ -50,9 +69,8 @@ Marvia создаёт системный VPN-интерфейс и для сто
 | [Shadowsocks](https://shadowsocks.org/doc/what-is-shadowsocks.html) | Шифрованный TCP/UDP-прокси; сам по себе не выглядит как HTTPS | Android: сторонний ключ |
 | [Hysteria 2](https://v2.hysteria.network/docs/developers/Protocol/) | Прокси через QUIC/UDP с видом HTTP/3; требуется доступный UDP | Android: сторонний ключ |
 
-**Рейтинга скорости здесь нет:** для него нужны одинаковые сервер, маршрут,
-клиент и серия замеров каждого протокола. Пока измерен только VP1 — см.
-[методику](docs/performance.md). VP1 не совместим с клиентами WireGuard или Xray.
+WireGuard, OpenVPN, Hysteria 2 и Xray в этом бенчмарке не запускались.
+VP1 не совместим с клиентами WireGuard или Xray.
 
 ## Что внутри
 
@@ -76,7 +94,6 @@ Marvia пока уступает по автоматическому месяч�
 
 ## Начать
 
-> [!TIP]
 > **Получили ключ?** Скачайте [Android APK](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
 > или [Windows-клиент](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe),
 > добавьте ссылку `marvia://…` во вкладке «Серверы» и подключитесь.
@@ -99,8 +116,7 @@ sh install-panel.sh --domain panel.example.com --email you@example.com
 
 ## Что пока не готово
 
-- Google Play: физическая проверка сборки, политика конфиденциальности в
-  приложении, декларации и тестирование. [План публикации](docs/google-play.md).
+- Google Play: проверка новой сборки на телефоне, декларации и тестирование. [План публикации](docs/google-play.md).
 - Автоматический месячный сброс квоты и импорт покупателей с сохранением ссылок.
 - iOS, подписки Clash/sing-box, TUIC, плагины Shadowsocks и раздельный отзыв
   устройств с общим ключом.

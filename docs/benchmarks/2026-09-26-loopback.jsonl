@@ -1,0 +1,26 @@
+{"arch":"amd64","chunk_bytes":65536,"cpus":16,"date_utc":"2026-09-26T12:15:10Z","direction":"server to client","echo_bytes":1400,"echoes":1000,"go":"go1.26.6","gomaxprocs":16,"kind":"environment","mib":512,"os":"windows","revision":"12d395a8cc2466bc6e758a6950fff0980664e076","rounds":5,"tls":"TLS 1.3, X25519, ECDSA P-256 certificate, session tickets disabled","warmup_mib":8}
+{"round":1,"mode":"TCP","delivered_bytes":536870912,"transfer_seconds":0.2255769,"MB_per_second":2379.990646205352,"echo_mean_us":26.509900000000002}
+{"round":1,"mode":"TLS","delivered_bytes":536870912,"transfer_seconds":0.5978908,"MB_per_second":897.9414167269342,"echo_mean_us":28.5152,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":1,"mode":"VP1+TLS","delivered_bytes":536870912,"transfer_seconds":1.2738394,"MB_per_second":421.4588683628407,"echo_mean_us":37.0358,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":1,"mode":"VLESS+TLS","delivered_bytes":536870912,"transfer_seconds":0.5901607,"MB_per_second":909.7029198996139,"echo_mean_us":27.511599999999998,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":1,"mode":"Trojan+TLS","delivered_bytes":536870912,"transfer_seconds":0.5865247,"MB_per_second":915.3423751804486,"echo_mean_us":26.528200000000002,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":2,"mode":"TLS","delivered_bytes":536870912,"transfer_seconds":0.5808483,"MB_per_second":924.2876530756827,"echo_mean_us":30.048299999999998,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":2,"mode":"VP1+TLS","delivered_bytes":536870912,"transfer_seconds":1.2485814,"MB_per_second":429.9847106484207,"echo_mean_us":30.0631,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":2,"mode":"VLESS+TLS","delivered_bytes":536870912,"transfer_seconds":0.5764221,"MB_per_second":931.3850249669468,"echo_mean_us":30.0366,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":2,"mode":"Trojan+TLS","delivered_bytes":536870912,"transfer_seconds":0.5923518,"MB_per_second":906.3379430939519,"echo_mean_us":30.2637,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":2,"mode":"TCP","delivered_bytes":536870912,"transfer_seconds":0.2026035,"MB_per_second":2649.860007354266,"echo_mean_us":24.0085}
+{"round":3,"mode":"VP1+TLS","delivered_bytes":536870912,"transfer_seconds":1.2553624,"MB_per_second":427.6620934321436,"echo_mean_us":30.534599999999998,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":3,"mode":"VLESS+TLS","delivered_bytes":536870912,"transfer_seconds":0.5809206,"MB_per_second":924.1726184266835,"echo_mean_us":27.5177,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":3,"mode":"Trojan+TLS","delivered_bytes":536870912,"transfer_seconds":0.5950612,"MB_per_second":902.2112549095791,"echo_mean_us":28.1644,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":3,"mode":"TCP","delivered_bytes":536870912,"transfer_seconds":0.2322863,"MB_per_second":2311.246560817405,"echo_mean_us":26.0237}
+{"round":3,"mode":"TLS","delivered_bytes":536870912,"transfer_seconds":0.5725602,"MB_per_second":937.6671867866471,"echo_mean_us":30.166900000000002,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":4,"mode":"VLESS+TLS","delivered_bytes":536870912,"transfer_seconds":0.5753151,"MB_per_second":933.1771615241804,"echo_mean_us":27.5059,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":4,"mode":"Trojan+TLS","delivered_bytes":536870912,"transfer_seconds":0.581542,"MB_per_second":923.1851044292587,"echo_mean_us":29.0217,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":4,"mode":"TCP","delivered_bytes":536870912,"transfer_seconds":0.1925703,"MB_per_second":2787.9216680869276,"echo_mean_us":26.047400000000003}
+{"round":4,"mode":"TLS","delivered_bytes":536870912,"transfer_seconds":0.5750023,"MB_per_second":933.6848078694643,"echo_mean_us":29.0416,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":4,"mode":"VP1+TLS","delivered_bytes":536870912,"transfer_seconds":1.2487399,"MB_per_second":429.93013356904834,"echo_mean_us":32.0218,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":5,"mode":"Trojan+TLS","delivered_bytes":536870912,"transfer_seconds":0.6035643,"MB_per_second":889.5007739854725,"echo_mean_us":28.0198,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":5,"mode":"TCP","delivered_bytes":536870912,"transfer_seconds":0.2061011,"MB_per_second":2604.891055894413,"echo_mean_us":26.0013}
+{"round":5,"mode":"TLS","delivered_bytes":536870912,"transfer_seconds":0.5855246,"MB_per_second":916.9058174498562,"echo_mean_us":28.5081,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":5,"mode":"VP1+TLS","delivered_bytes":536870912,"transfer_seconds":1.2608229,"MB_per_second":425.8099309585827,"echo_mean_us":32.5363,"tls_cipher":"TLS_AES_128_GCM_SHA256"}
+{"round":5,"mode":"VLESS+TLS","delivered_bytes":536870912,"transfer_seconds":0.5911677,"MB_per_second":908.1533243443442,"echo_mean_us":29.5186,"tls_cipher":"TLS_AES_128_GCM_SHA256"}

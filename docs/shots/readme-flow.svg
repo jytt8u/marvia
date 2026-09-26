@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="390" viewBox="0 0 1200 390" role="img" aria-labelledby="title desc">
+  <title id="title">Marvia — access and traffic</title>
+  <desc id="desc">The administrator manages keys and quotas through the panel. The panel synchronizes access with the node. Client traffic flows through the node to the internet without passing through the panel.</desc>
+  <defs>
+    <linearGradient id="surface" x2="1" y2="1"><stop stop-color="#25292e"/><stop offset="1" stop-color="#121519"/></linearGradient>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1L7 4L1 7" fill="none" stroke="#c4cdd7" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="1200" height="390" rx="20" fill="url(#surface)"/>
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <text x="60" y="64" font-size="15" letter-spacing="3" fill="#89939f">ACCESS</text>
+    <text x="60" y="106" font-size="25" fill="#ecf0f4" font-weight="600">Admin / bot</text>
+    <text x="60" y="133" font-size="17" fill="#a5afb9">Keys · quotas · expiry</text>
+    <path d="M300 102H440" fill="none" stroke="#8f9aa6" stroke-width="2" stroke-dasharray="6 7" marker-end="url(#arrow)"/>
+    <rect x="470" y="53" width="260" height="96" rx="14" fill="#30353b" stroke="#4a515a"/>
+    <text x="600" y="94" text-anchor="middle" font-size="25" fill="#ecf0f4" font-weight="600">Panel</text>
+    <text x="600" y="122" text-anchor="middle" font-size="17" fill="#a5afb9">Subscription / API</text>
+    <path d="M600 150V235" fill="none" stroke="#8f9aa6" stroke-width="2" stroke-dasharray="6 7" marker-end="url(#arrow)"/>
+    <text x="621" y="199" font-size="16" fill="#a5afb9">sync</text>
+    <text x="880" y="91" font-size="19" fill="#bdc6d0">Traffic bypasses the panel.</text>
+    <text x="880" y="120" font-size="17" fill="#89939f">Control and data stay separate.</text>
+    <text x="60" y="220" font-size="15" letter-spacing="3" fill="#89939f">TRAFFIC</text>
+    <g fill="#30353b" stroke="#606b78"><rect x="60" y="249" width="260" height="95" rx="14"/><rect x="470" y="249" width="260" height="95" rx="14"/><rect x="880" y="249" width="260" height="95" rx="14"/></g>
+    <g fill="#f0f3f6" font-size="25" font-weight="600" text-anchor="middle"><text x="190" y="288">Marvia client</text><text x="600" y="288">VPN node</text><text x="1010" y="288">Internet</text></g>
+    <g fill="#aab4c0" font-size="17" text-anchor="middle"><text x="190" y="319">Android / Windows</text><text x="600" y="319">Access check / forwarding</text><text x="1010" y="319">Sites / applications</text></g>
+    <g fill="none" stroke="#c4cdd7" stroke-width="2.5" marker-end="url(#arrow)"><path d="M331 298H448"/><path d="M741 298H858"/></g>
+    <text x="389" y="275" text-anchor="middle" font-size="15" fill="#bfc8d2">encrypted</text>
+  </g>
+</svg>

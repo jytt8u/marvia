@@ -1,39 +1,58 @@
 <div align="center">
 
-<img src="docs/shots/readme-brand.svg" alt="Original Marvia ribbon mark and wordmark" width="1200">
+<img src="docs/shots/readme-brand.png" alt="Marvia" width="1000">
 
-**A VPN for Android and Windows, with its own panel, nodes and VP1 protocol.**
+**VPN for Android and Windows. Panel, nodes and the VP1 protocol.**
 
-[![RU](https://img.shields.io/badge/RU-RUSSIAN-a78bfa?style=flat-square)](README.md)
-[![EN](https://img.shields.io/badge/EN-ENGLISH-51d9e3?style=flat-square)](README.en.md)
-[![ZH](https://img.shields.io/badge/ZH-CHINESE-f5b765?style=flat-square)](README.zh-CN.md)
+[Русский](README.md) · [English](README.en.md) · [简体中文](README.zh-CN.md)
 
-[![Release](https://img.shields.io/github/v/release/jytt8u/marvia?label=release)](https://github.com/jytt8u/marvia/releases/latest)
-[![Checks](https://github.com/jytt8u/marvia/actions/workflows/check.yml/badge.svg)](https://github.com/jytt8u/marvia/actions)
+[![Android APK](https://img.shields.io/badge/ANDROID-APK-687482?style=for-the-badge&labelColor=30353b)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
+[![Windows EXE](https://img.shields.io/badge/WINDOWS-EXE-687482?style=for-the-badge&labelColor=30353b)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)
+[![Panel](https://img.shields.io/badge/PANEL-INSTALL-687482?style=for-the-badge&labelColor=30353b)](#install-the-panel)
+[![Docs](https://img.shields.io/badge/DOCS-GUIDE-687482?style=for-the-badge&labelColor=30353b)](docs/guide.md)
 
-[![Android APK](https://img.shields.io/badge/ANDROID-APK-39c9bd?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
-[![Windows EXE](https://img.shields.io/badge/WINDOWS-EXE-9a7af7?style=for-the-badge)](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe)
-[![Panel](https://img.shields.io/badge/PANEL-INSTALL-e5aa61?style=for-the-badge)](#install-the-panel)
-[![Docs](https://img.shields.io/badge/DOCS-GUIDE-6887e8?style=for-the-badge)](docs/guide.md)
+[Releases](https://github.com/jytt8u/marvia/releases) · [CI](https://github.com/jytt8u/marvia/actions) · [Privacy](docs/privacy.md)
 
 </div>
 
+## The app
+
+Android 0.12.2 · actual emulator captures · no key added
+
+| Home | VPN settings | Network and privacy |
+|:---:|:---:|:---:|
+| <img src="docs/shots/android-home.png" alt="Home" width="260"> | <img src="docs/shots/android-settings.png" alt="VPN settings" width="260"> | <img src="docs/shots/android-advanced.png" alt="Network and privacy" width="260"> |
+
+<details>
+<summary>Windows and panel — archived captures</summary>
+
+Windows 0.9.3 and a local panel instance. Android above is the current 0.12.2 release.
+
+<img src="docs/shots/windows.png" alt="Windows 0.9.3" width="1000">
+<img src="docs/shots/panel-clients.png" alt="Marvia Partner" width="1000">
+
+</details>
+
 ## Architecture
 
-<img src="docs/shots/readme-system.svg" alt="Technical diagram: access control is separate from the VPN data path" width="1200">
+<img src="docs/shots/readme-flow.svg" alt="Technical diagram: access control is separate from the VPN data path" width="1200">
 
 The panel grants access; VPN packets pass through a node, not the panel.
 [Trust boundaries](docs/architecture.md).
 
-## Speed
+## Benchmark
 
-<img src="docs/shots/readme-benchmark.svg" alt="Measurements: 86 Mb/s direct and 83 Mb/s through VP1 on one route; a separate local VP1 benchmark" width="1200">
+<img src="docs/shots/readme-protocol-benchmark.svg" alt="Local Marvia benchmark: VP1 + TLS 427.7 MB/s, VLESS + TLS 924.2 MB/s, Trojan + TLS 906.3 MB/s; median of five runs" width="1200">
 
-One [field measurement](docs/guide.md), Dubai → Helsinki, one stream,
-14 September 2026: **83 vs 86 Mb/s** through VP1 and directly, respectively
-(96.5%). A separate local VP1 code-path benchmark on a Ryzen 7 7700 reached a
-**638 MB/s median**; that is not internet speed. [Method and raw runs](docs/performance.md).
-No competitor has been measured on the same machine and route.
+**VP1, VLESS and Trojan on one PC, with the same TLS 1.3.**
+Five interleaved 512 MiB runs; Ryzen 7 7700, Windows, Go 1.26.6.
+This measures Marvia implementations over loopback, without Internet or TUN.
+VP1 adds Noise and framing; it is slower in this test.
+
+[Method, ranges and raw data](docs/performance.md) · [Benchmark source](cmd/marvia-bench)
+
+An earlier Internet test measured **83 Mb/s via VP1 vs 86 directly**.
+That single observation is separate from these local MB/s measurements.
 
 ## Protocols
 
@@ -50,9 +69,8 @@ Android, Marvia also creates a system VPN interface for third-party proxy keys.
 | [Shadowsocks](https://shadowsocks.org/doc/what-is-shadowsocks.html) | Encrypted TCP/UDP proxy; does not resemble HTTPS on its own | Android: third-party key |
 | [Hysteria 2](https://v2.hysteria.network/docs/developers/Protocol/) | QUIC/UDP proxy with HTTP/3 appearance; requires working UDP | Android: third-party key |
 
-**No speed ranking yet:** each protocol needs repeated measurements on the same
-server, route and client. Only VP1 has been measured so far; see the
-[method](docs/performance.md). VP1 is not compatible with WireGuard or Xray clients.
+WireGuard, OpenVPN, Hysteria 2 and Xray were not run in this benchmark.
+VP1 is not compatible with WireGuard or Xray clients.
 
 ## What is included
 
@@ -76,7 +94,6 @@ supports the feature comparison; no matched speed ranking is available.
 
 ## Get started
 
-> [!TIP]
 > **Have a key?** Download the [Android APK](https://github.com/jytt8u/marvia/releases/latest/download/marvia-android.apk)
 > or [Windows client](https://github.com/jytt8u/marvia/releases/latest/download/marvia-windows.exe),
 > add a `marvia://…` link in **Servers**, and connect.
@@ -99,7 +116,7 @@ client in the panel. [Full guide (Russian)](docs/guide.md) · [Bot API](docs/bot
 
 ## Still to do
 
-- Google Play: physical-device verification, in-app privacy policy, declarations
+- Google Play: physical-device verification, declarations
   and testing. [Publication plan (Russian)](docs/google-play.md).
 - Monthly quota resets and buyer migration with stable links.
 - iOS, Clash/sing-box subscriptions, TUIC, Shadowsocks plugins, and per-device

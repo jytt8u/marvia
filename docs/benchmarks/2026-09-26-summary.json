@@ -1,0 +1,83 @@
+{
+  "date": "2026-09-26",
+  "scope": "Marvia data paths, TCP loopback, not Internet or third-party cores",
+  "unit": "MB/s (decimal)",
+  "cpu": "AMD Ryzen 7 7700 8-Core Processor",
+  "windows": "10.0.26200",
+  "benchmark_sha256": "983309a9c013f0b236fe9ad96105e1af971355ab00613c3afdea6322ec37cdf1",
+  "environment": {
+    "arch": "amd64",
+    "chunk_bytes": 65536,
+    "cpus": 16,
+    "date_utc": "2026-09-26T12:15:10Z",
+    "direction": "server to client",
+    "echo_bytes": 1400,
+    "echoes": 1000,
+    "go": "go1.26.6",
+    "gomaxprocs": 16,
+    "kind": "environment",
+    "mib": 512,
+    "os": "windows",
+    "revision": "12d395a8cc2466bc6e758a6950fff0980664e076",
+    "rounds": 5,
+    "tls": "TLS 1.3, X25519, ECDSA P-256 certificate, session tickets disabled",
+    "warmup_mib": 8
+  },
+  "results": [
+    {
+      "mode": "TCP",
+      "samples": 5,
+      "delivered_bytes_per_sample": 536870912,
+      "median_MBps": 2604.891055894413,
+      "min_MBps": 2311.246560817405,
+      "max_MBps": 2787.9216680869276,
+      "median_echo_us": 26.0237,
+      "min_echo_us": 24.0085,
+      "max_echo_us": 26.509900000000002
+    },
+    {
+      "mode": "TLS",
+      "samples": 5,
+      "delivered_bytes_per_sample": 536870912,
+      "median_MBps": 924.2876530756827,
+      "min_MBps": 897.9414167269342,
+      "max_MBps": 937.6671867866471,
+      "median_echo_us": 29.0416,
+      "min_echo_us": 28.5081,
+      "max_echo_us": 30.166900000000002
+    },
+    {
+      "mode": "VP1+TLS",
+      "samples": 5,
+      "delivered_bytes_per_sample": 536870912,
+      "median_MBps": 427.6620934321436,
+      "min_MBps": 421.4588683628407,
+      "max_MBps": 429.9847106484207,
+      "median_echo_us": 32.0218,
+      "min_echo_us": 30.0631,
+      "max_echo_us": 37.0358
+    },
+    {
+      "mode": "VLESS+TLS",
+      "samples": 5,
+      "delivered_bytes_per_sample": 536870912,
+      "median_MBps": 924.1726184266835,
+      "min_MBps": 908.1533243443442,
+      "max_MBps": 933.1771615241804,
+      "median_echo_us": 27.5177,
+      "min_echo_us": 27.5059,
+      "max_echo_us": 30.0366
+    },
+    {
+      "mode": "Trojan+TLS",
+      "samples": 5,
+      "delivered_bytes_per_sample": 536870912,
+      "median_MBps": 906.3379430939519,
+      "min_MBps": 889.5007739854725,
+      "max_MBps": 923.1851044292587,
+      "median_echo_us": 28.1644,
+      "min_echo_us": 26.528200000000002,
+      "max_echo_us": 30.2637
+    }
+  ]
+}
